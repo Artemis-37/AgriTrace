@@ -9,7 +9,7 @@
     "start:dev": "nest start --watch",
     "migrate": "node scripts/migrate.js",
     "test": "jest",
-    "test:e2e": "node scripts/e2e-p1.js && node scripts/e2e-p2-p3.js && node scripts/e2e-p4.js && node scripts/e2e-p4b.js && node scripts/e2e-parcelles.js && node scripts/e2e-recus.js && node scripts/e2e-geo.js && node scripts/e2e-taches.js && node scripts/e2e-ventes.js && node scripts/e2e-etape-e.js && node scripts/e2e-messagerie.js && node scripts/e2e-replication.js"
+    "test:e2e": "node scripts/e2e-p1.js && node scripts/e2e-p2-p3.js && node scripts/e2e-p4.js && node scripts/e2e-p4b.js && node scripts/e2e-parcelles.js && node scripts/e2e-recus.js && node scripts/e2e-geo.js && node scripts/e2e-taches.js && node scripts/e2e-ventes.js && node scripts/e2e-etape-e.js && node scripts/e2e-messagerie.js && node scripts/e2e-convois.js && node scripts/e2e-replication.js"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.0",

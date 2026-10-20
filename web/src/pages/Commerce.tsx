@@ -170,6 +170,9 @@ function ShipmentDetail({ id, onClose }: { id: string; onClose: () => void }) {
   const { data: s, loading, error, reload } = useAsync(() => get<any>(`/shipments/${id}`), [id]);
   const act = useAction();
   const [recv, setRecv] = useState('');
+  const [bl, setBl] = useState('');
+  const [port, setPort] = useState('');
+  const [exporter, setExporter] = useState('');
   const [qty, setQty] = useState<Record<string, string>>({});
   const logi = useAsync(async () => (can('logistics:read') ? { carriers: await get<any[]>('/carriers'), vehicles: await get<any[]>('/vehicles'), drivers: await get<any[]>('/drivers') } : { carriers: [], vehicles: [], drivers: [] }), []);
   const [asg, setAsg] = useState<{ carrier_id?: string; vehicle_id?: string; driver_id?: string }>({});
@@ -180,6 +183,7 @@ function ShipmentDetail({ id, onClose }: { id: string; onClose: () => void }) {
       {s && (
         <>
           <p><StatusBadge map={SHIPMENT_STATUS} value={s.status} /> · vers {s.destination}</p>
+          {s.bill_of_lading_no && <p>N° de connaissement (B/L) : <strong>{s.bill_of_lading_no}</strong>{s.port ? ` · Port : ${s.port}` : ''}{s.exporter_name ? ` · Exportateur : ${s.exporter_name}` : ''}</p>}
           <p className="muted">
             Transporteur : {logi.data?.carriers.find((x: any) => x.id === s.carrier_id)?.name ?? '—'} · Véhicule : {logi.data?.vehicles.find((x: any) => x.id === s.vehicle_id)?.plate ?? '—'} · Chauffeur : {logi.data?.drivers.find((x: any) => x.id === s.driver_id)?.full_name ?? '—'}
           </p>
@@ -212,7 +216,11 @@ function ShipmentDetail({ id, onClose }: { id: string; onClose: () => void }) {
           )}
           <div className="modal-foot">
             {manage && s.status === 'planned' && <button className="btn" disabled={act.busy} onClick={() => act.run(async () => { await post(`/shipments/${id}/load`, {}); reload(); })}>Confirmer le chargement</button>}
-            {manage && s.status === 'loaded' && <button className="btn" disabled={act.busy} onClick={() => act.run(async () => { await post(`/shipments/${id}/depart`); reload(); })}>Départ</button>}
+            {manage && s.status === 'loaded' && <>
+              <Field label="N° de connaissement (B/L) — obligatoire" hint="Document remis par la compagnie maritime pour l'expédition vers le port."><input value={bl} onChange={(e) => setBl(e.target.value)} maxLength={60} /></Field>
+              <Field label="Port de chargement"><input value={port} onChange={(e) => setPort(e.target.value)} maxLength={120} /></Field>
+              <Field label="Exportateur"><input value={exporter} onChange={(e) => setExporter(e.target.value)} maxLength={150} /></Field>
+              <button className="btn" disabled={act.busy || bl.trim().length < 3} onClick={() => act.run(async () => { await post(`/shipments/${id}/depart`, { bill_of_lading_no: bl.trim(), ...(port.trim() && { port: port.trim() }), ...(exporter.trim() && { exporter_name: exporter.trim() }) }); reload(); })}>Départ</button></>}
             {manage && s.status === 'in_transit' && <button className="btn" disabled={act.busy || recv.trim().length < 2 || (hasGap(s.items, qty) && (gapReason.trim().length < 3 || !handler))} onClick={() => act.run(async () => {
               await post(`/shipments/${id}/deliver`, { received_by_name: recv, items: s.items.map((i: any) => ({ item_id: i.id, delivered_kg: qty[i.id] ?? i.loaded_kg, ...(Number(qty[i.id] ?? i.loaded_kg) !== Number(i.loaded_kg) && { reason: gapReason, handler_id: handler }) })) }); reload();
             })}>Enregistrer la livraison</button>}

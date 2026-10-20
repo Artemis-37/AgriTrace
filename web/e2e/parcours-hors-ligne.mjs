@@ -23,22 +23,22 @@ await step('connexion', async () => {
   must(await page.getByText('Bonjour').count(), 'tableau de bord absent');
 });
 await step('en ligne : les écrans utiles sont chargés une fois (mise en mémoire du poste)', async () => {
-  await nav('Déclarations'); await page.getByRole('button', { name: 'Saisir un achat' }).click(); await page.waitForTimeout(1200);
+  await nav('Mes achats'); await page.getByRole('button', { name: 'Déclarer un achat' }).click(); await page.waitForTimeout(1200);
   must((await page.locator('[role=dialog]').innerText()).includes('Producteur'), 'formulaire absent');
   await page.locator('[role=dialog]').getByRole('button', { name: 'Annuler' }).click();
   await nav('Messages'); await page.waitForTimeout(500);
 });
 await step('le serveur devient injoignable : bandeau « Hors connexion »', async () => {
   await ctx.setOffline(true);
-  await page.getByRole('link', { name: /Déclarations/ }).first().click(); await page.waitForTimeout(1500);
+  await page.getByRole('link', { name: /Mes achats/ }).first().click(); await page.waitForTimeout(1500);
   must((await page.locator('.offline-bar').innerText()).includes('Hors connexion'), 'bandeau absent');
 });
 await step('hors connexion : la liste des déclarations reste lisible (copie du poste)', async () => {
   must(!(await page.locator('main').innerText()).includes('Hors connexion : ces données'), 'copie absente');
-  must(await page.getByRole('button', { name: 'Saisir un achat' }).count(), 'bouton absent');
+  must(await page.getByRole('button', { name: 'Déclarer un achat' }).count(), 'bouton absent');
 });
 await step('hors connexion : saisie d\'un achat enregistrée sur le poste', async () => {
-  await page.getByRole('button', { name: 'Saisir un achat' }).click(); await page.waitForTimeout(1200);
+  await page.getByRole('button', { name: 'Déclarer un achat' }).click(); await page.waitForTimeout(1200);
   const m = page.locator('[role=dialog]');
   await m.getByLabel('Producteur').selectOption({ index: 1 }); await m.getByLabel('Filière').selectOption({ index: 1 });
   await page.waitForTimeout(200); await m.getByLabel('Campagne').selectOption({ index: 1 });

@@ -10,6 +10,7 @@
 | §7 | Filières, campagnes, prix | Prix versionnés |
 | §8–10 | Parcelles, import/export 5 formats, doublons, chevauchements, remplacement contrôlé | Code `CODE_PRODUCTEUR-Pn` ; voir `CARTOGRAPHIE.md` |
 | §11 | Missions et tâches | Voir `MISSIONS.md` |
+| Métier | Connaissement et convois | N° de connaissement (B/L) saisi, obligatoire au départ des expéditions vers le port ; convois des collecteurs (n° de convoi, chauffeur, camion) → réception au magasin central (poids total, sacs) → file de la caisse → crédit du compte du collecteur (014–015) ; voir `CONVOIS.md` |
 | §13–14 | Achats, reçu d'achat (modes physique/généré, conflits, corrections, recherche), pesée, réception | |
 | §15 | Magasins, mouvements (réception, entrée, transfert, sortie, chargement, retour, perte, détérioration, déclassement, quarantaine/libération, ajustement), inventaire approuvé par une autre personne | Ajustements, jamais de suppression |
 | §16 | Lots, généalogie, traçabilité ascendante **et descendante** | Le lien exact achat → parcelle n'est pas saisi : signalé comme « non disponible » |
@@ -52,3 +53,8 @@
 - **Non vérifié** : l'installateur `.exe` et le comportement sous Windows (construit seulement par le workflow GitHub, jamais exécuté ici) ; signature de code absente.
 - Non couvert : sens central → local, plusieurs serveurs locaux pour une même coopérative, rattachement d'une coopérative déjà peuplée au central, TLS sur le réseau local, mise à jour automatique de l'application.
 - Postes clients : fonctionnement hors connexion (achat et messages rejoués au retour du serveur, session conservée au redémarrage), messagerie interne, thèmes doux et nuit, nom et rôle du poste choisis à l'installation. Non couvert : validation, paiements et stocks hors connexion ; messages poste à poste sans serveur ; lecture hors connexion d'un écran jamais ouvert en ligne.
+
+## Convois, connaissement et espaces par nature de compte
+- Livré : B/L obligatoire au départ ; convois, réception, caisse, compte du collecteur (écriture immuable, montant exact poids × prix) ; `/me` renvoie la nature du compte (collecteur, coach, personnel) ; le collecteur ne voit que ses convois, ses achats, ses producteurs (filières affectées) et son stock ; menus « Mes achats / Mon stock / Historique » du portail.
+- Vérifié : e2e convois (36 contrôles), parcours navigateur (collecteur, magasinier, caisse), mobile non compilé ici (**écran de convoi Flutter écrit mais jamais compilé ni exécuté**).
+- Non couvert : liaison d'un convoi à des déclarations précises, écart de poids bloquant, paiement en espèces depuis la caisse après le crédit du compte, écrans mobiles de stock/historique du collecteur, périmètre des coachs limité aux missions déjà existantes.

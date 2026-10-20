@@ -45,6 +45,12 @@ class ShipmentDto {
   @IsOptional() @IsISO8601() planned_departure?: string;
   @IsArray() @ArrayMinSize(1) @ArrayMaxSize(50) @ValidateNested({ each: true }) @Type(() => ShipItemDto) items: ShipItemDto[];
 }
+class DepartDto {
+  /** N° de connaissement (B/L) saisi : obligatoire pour que l'expédition parte vers le port. */
+  @IsOptional() @IsString() @Length(3, 60) bill_of_lading_no?: string;
+  @IsOptional() @IsString() @Length(2, 120) port?: string;
+  @IsOptional() @IsString() @Length(2, 150) exporter_name?: string;
+}
 class LoadItemDto { @IsUUID() item_id: string; @Dec(3) loaded_kg: string; }
 class LoadDto {
   @IsOptional() @IsArray() @ArrayMaxSize(20) @IsString({ each: true }) seals?: string[];
@@ -265,14 +271,18 @@ export class LogisticsController {
   }
 
   @Post('shipments/:id/depart') @RequirePermissions('shipments:manage')
-  async depart(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
+  async depart(@Param('id', ParseUUIDPipe) id: string, @Req() req: any, @Body() b: DepartDto = {}) {
     return this.db.tx(req.org.id, async (c) => {
       const s = await this.ship(c, id);
       if (s.status === 'in_transit') return s;
       if (s.status !== 'loaded') throw new ConflictException('L\'expédition doit être chargée avant le départ');
       if (!s.vehicle_id || !s.driver_id) throw new BadRequestException('Véhicule et conducteur requis pour partir');
-      const r = (await c.query(`UPDATE shipments SET status = 'in_transit', departed_at = now(), updated_at = now(), version = version + 1 WHERE id = $1 RETURNING *`, [id])).rows[0];
-      await this.log(req, 'shipment.depart', 'shipment', id); return r;
+      const bl = (b?.bill_of_lading_no ?? s.bill_of_lading_no ?? '').trim();
+      if (bl.length < 3) throw new BadRequestException('Le numéro de connaissement (B/L) doit être saisi avant le départ');
+      const r = (await c.query(
+        `UPDATE shipments SET status = 'in_transit', departed_at = now(), bill_of_lading_no = $2, port = coalesce($3, port), exporter_name = coalesce($4, exporter_name),
+                updated_at = now(), version = version + 1 WHERE id = $1 RETURNING *`, [id, bl, b?.port ?? null, b?.exporter_name ?? null])).rows[0];
+      await this.log(req, 'shipment.depart', 'shipment', id, { bill_of_lading_no: bl }); return r;
     });
   }
 

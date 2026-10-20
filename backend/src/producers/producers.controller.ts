@@ -59,6 +59,7 @@ export class ProducersController {
   list(@Req() req: any, @Query('q') q?: string, @Query('section') section?: string, @Query('village') village?: string,
        @Query('value_chain_id') vc?: string, @Query('limit') limit?: string, @Query('offset') offset?: string) {
     const like = q ? `%${q.replace(/[%_\\]/g, '\\$&').toLowerCase()}%` : null;
+    const staff = req.org.permissions.has('declarations:validate');
     return this.db.tx(req.org.id, async (c) =>
       (await c.query(
         `SELECT p.id, p.internal_code, p.last_name, p.first_names, p.phone, p.region, p.department, p.section, p.village, p.joined_on, p.status
@@ -66,8 +67,12 @@ export class ProducersController {
           WHERE ($1::text IS NULL OR lower(p.internal_code) LIKE $1 OR lower(p.last_name) LIKE $1 OR lower(p.first_names) LIKE $1 OR coalesce(p.phone,'') LIKE $1)
             AND ($2::text IS NULL OR p.section = $2) AND ($3::text IS NULL OR p.village = $3)
             AND ($4::uuid IS NULL OR EXISTS (SELECT 1 FROM producer_value_chains x WHERE x.producer_id = p.id AND x.value_chain_id = $4))
+            AND ($7::boolean OR NOT EXISTS (SELECT 1 FROM collectors k WHERE k.user_id = $8 AND k.status = 'active')
+                 OR EXISTS (SELECT 1 FROM collectors k JOIN collector_assignments a ON a.collector_id = k.id
+                              JOIN producer_value_chains x ON x.value_chain_id = a.value_chain_id
+                             WHERE k.user_id = $8 AND k.status = 'active' AND x.producer_id = p.id))
           ORDER BY p.last_name, p.first_names LIMIT $5 OFFSET $6`,
-        [like, section ?? null, village ?? null, vc ?? null, Math.min(Number(limit) || 50, 200), Number(offset) || 0])).rows);
+        [like, section ?? null, village ?? null, vc ?? null, Math.min(Number(limit) || 50, 200), Number(offset) || 0, staff, req.user.id])).rows);
   }
 
   @Get('imports/template')
@@ -92,6 +97,12 @@ export class ProducersController {
       const p = await c.query(`SELECT * FROM producers WHERE id = $1`, [id]);
       if (!p.rowCount) return null;
       const vc = await c.query(`SELECT value_chain_id FROM producer_value_chains WHERE producer_id = $1`, [id]);
+      if (!req.org.permissions.has('declarations:validate') && (await c.query(`SELECT 1 FROM collectors WHERE user_id = $1 AND status = 'active'`, [req.user.id])).rowCount) {
+        const ok = await c.query(
+          `SELECT 1 FROM collectors k JOIN collector_assignments a ON a.collector_id = k.id
+            WHERE k.user_id = $1 AND k.status = 'active' AND a.value_chain_id = ANY($2::uuid[])`, [req.user.id, vc.rows.map((r) => r.value_chain_id)]);
+        if (!ok.rowCount) return null;
+      }
       return { ...p.rows[0], value_chain_ids: vc.rows.map((r) => r.value_chain_id) };
     });
     if (!row) throw new NotFoundException();

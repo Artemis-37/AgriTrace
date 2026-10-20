@@ -9,6 +9,7 @@ import { CreateDeclarationDto, DeclarationsController } from '../declarations/de
 import { FinanceController, TransactionDto } from '../finance/finance.controller';
 import { TaskEntryDto, TasksController } from '../tasks/tasks.controller';
 import { MessagesController, SendMessageDto } from '../messages/messages.controller';
+import { ConvoysController, CreateConvoyDto, ReceiveConvoyDto } from '../convoys/convoys.controller';
 import { CreateWeighingDto, ReceptionController } from '../reception/reception.controller';
 
 class SyncOperationDto {
@@ -51,6 +52,8 @@ export class SyncController {
       'message.send': { controller: MessagesController, permission: 'messages:use', dto: SendMessageDto, run: (ctl, p, req) => ctl.send(p, req) },
       'weighing.create': { controller: ReceptionController, permission: 'weighings:create', dto: CreateWeighingDto,
         run: (ctl, p, req) => ctl.createWeighing(p, req) },
+      'convoy.create': { controller: ConvoysController, permission: 'convoys:create', dto: CreateConvoyDto, run: (ctl, p, req) => ctl.create(p, req) },
+      'convoy.receive': { controller: ConvoysController, permission: 'convoys:receive', dto: ReceiveConvoyDto, run: (ctl, p, req) => ctl.receive(p, req) },
       'task.start': { controller: TasksController, permission: 'tasks:execute', run: (ctl, p, req) => ctl.start(this.uuid(p), req) },
       'task.submit': { controller: TasksController, permission: 'tasks:execute', run: (ctl, p, req) => ctl.submit(this.uuid(p), req) },
       'task.entry': { controller: TasksController, permission: 'tasks:execute', run: (ctl, p, req) => {

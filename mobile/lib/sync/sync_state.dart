@@ -61,3 +61,4 @@ bool isRetryable(String opStatus) => opStatus == 'pending' || opStatus == 'pendi
 /// Les données ne sont plus utilisables si la permission de synchroniser a été retirée.
 bool canSync(List<String> permissions) => permissions.contains('sync:use');
 bool canCreateDeclaration(List<String> permissions) => permissions.contains('declarations:create');
+bool canCreateConvoy(List<String> permissions) => permissions.contains('convoys:create');

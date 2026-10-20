@@ -12,6 +12,8 @@ import Cartographie from './pages/Cartographie';
 import Declarations from './pages/Declarations';
 import Finance from './pages/Finance';
 import Login from './pages/Login';
+import { Historique, MesAchats, MonStock } from './pages/EspaceCollecteur';
+import Convois from './pages/Convois';
 import Messages from './pages/Messages';
 import OfflineBar from './OfflineBar';
 import Synchronisation from './pages/Synchronisation';
@@ -26,18 +28,22 @@ import { Loading } from './ui';
 const THEMES: [string, string][] = [['doux', 'Thème doux'], ['night', 'Thème nuit']];
 const readTheme = () => { try { return localStorage.getItem('agritrace.theme') ?? ''; } catch { return ''; } };
 
-const NAV: { to: string; label: string; icon: string; perm: string[]; any?: boolean }[] = [
+const NAV: { to: string; label: string; icon: string; perm: string[]; any?: boolean; only?: 'collector'; notFor?: 'collector' }[] = [
   { to: '/', label: 'Tableau de bord', icon: '▦', perm: [] },
+  { to: '/mes-achats', label: 'Mes achats', icon: '✚', perm: ['declarations:create'], only: 'collector' },
+  { to: '/mon-stock', label: 'Mon stock', icon: '▤', perm: ['collector:stock'], only: 'collector' },
+  { to: '/historique', label: 'Historique', icon: '↺', perm: ['declarations:read'], only: 'collector' },
   { to: '/producteurs', label: 'Producteurs', icon: '☺', perm: ['producers:read'] },
   { to: '/parcelles', label: 'Parcelles', icon: '◩', perm: ['parcels:read'] },
   { to: '/cartographie', label: 'Cartographie', icon: '⌖', perm: ['geo:anomalies'] },
   { to: '/commerce', label: 'Commerce', icon: '⇄', perm: ['buyers:read', 'logistics:read', 'invoices:read'], any: true },
+  { to: '/convois', label: 'Convois', icon: '⛟', perm: ['convoys:read', 'convoys:receive', 'convoys:settle'], any: true },
   { to: '/inventaire', label: 'Inventaire', icon: '☰', perm: ['stock:count'] },
   { to: '/prefinancement', label: 'Préfinancement', icon: '◈', perm: ['prefinancing:read'] },
   { to: '/messages', label: 'Messages', icon: '✉', perm: ['messages:use'] },
   { to: '/synchronisation', label: 'Synchronisation', icon: '⇅', perm: ['replication:manage'] },
   { to: '/equipe', label: 'Équipe', icon: '⚙', perm: ['users:read'] },
-  { to: '/declarations', label: 'Déclarations d\'achat', icon: '✎', perm: ['declarations:read'] },
+  { to: '/declarations', label: 'Déclarations d\'achat', icon: '✎', perm: ['declarations:read'], notFor: 'collector' },
   { to: '/missions', label: 'Missions', icon: '⚑', perm: ['tasks:read'] },
   { to: '/stocks', label: 'Stocks et lots', icon: '▤', perm: ['warehouses:read'] },
   { to: '/finances', label: 'Finances', icon: '₣', perm: ['finance:read'] },
@@ -74,7 +80,7 @@ export default function App() {
       <aside className={`sidebar ${open ? 'open' : ''}`}>
         <div className="brand"><strong>Agri<span>Trace</span></strong><small>La traçabilité agricole, de la parcelle au marché.</small></div>
         <nav className="nav" aria-label="Navigation principale" onClick={() => setOpen(false)}>
-          {NAV.filter((n) => (n.any ? n.perm.some((p) => can(p)) : can(...n.perm))).map((n) => (
+          {NAV.filter((n) => (n.any ? n.perm.some((p) => can(p)) : can(...n.perm)) && (!n.only || me?.account_kind === n.only) && (!n.notFor || me?.account_kind !== n.notFor)).map((n) => (
             <NavLink key={n.to} to={n.to} end={n.to === '/'}><span aria-hidden="true">{n.icon}</span>{n.label}{n.to === '/messages' && msgUnread > 0 && <span className="badge badge-bad" style={{ marginLeft: 'auto' }} aria-label={`${msgUnread} message(s) non lu(s)`}>{msgUnread}</span>}</NavLink>
           ))}
           <NavLink to="/notifications"><span aria-hidden="true">🔔</span>Notifications{unread > 0 && <span className="badge badge-bad" style={{ marginLeft: 'auto' }} aria-label={`${unread} non lue(s)`}>{unread}</span>}</NavLink>
@@ -87,12 +93,17 @@ export default function App() {
       <main className="main">
         <OfflineBar />
         {managed && <p className="notice" role="status">Lecture seule : cette coopérative est gérée par son serveur local (« {managed} »). Les modifications se font là-bas ; elles arrivent ici par synchronisation.</p>}
+        {me?.mobile_first && <p className="notice" role="status">Votre compte ({me.account_kind === 'collector' ? 'collecteur' : 'coach'}) est conçu pour l'application mobile, qui fonctionne aussi dans les villages sans réseau. Ce portail affiche uniquement ce qui vous concerne.</p>}
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/producteurs" element={<Producers />} />
           <Route path="/parcelles" element={<Parcels />} />
           <Route path="/cartographie" element={<Cartographie />} />
           <Route path="/commerce" element={<Commerce />} />
+          <Route path="/mes-achats" element={<MesAchats />} />
+          <Route path="/mon-stock" element={<MonStock />} />
+          <Route path="/historique" element={<Historique />} />
+          <Route path="/convois" element={<Convois />} />
           <Route path="/inventaire" element={<Inventaire />} />
           <Route path="/prefinancement" element={<Prefinancement />} />
           <Route path="/messages" element={<Messages onChange={refreshUnread} />} />

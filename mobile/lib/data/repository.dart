@@ -104,6 +104,16 @@ class Repository {
     return id;
   }
 
+  /// Convoi vers le magasin central : mis en file d'envoi, envoyé dès que le réseau revient (idempotent).
+  Future<void> queueConvoy({required String convoyNo, required String driverName, required String truckNo, int? declaredBags, String? declaredKg}) async {
+    final key = 'convoy-${_uuid.v4()}';
+    final payload = {
+      'idempotency_key': key, 'convoy_no': convoyNo.trim(), 'driver_name': driverName.trim(), 'truck_no': truckNo.trim(),
+      if (declaredBags != null) 'declared_bags': declaredBags, if (declaredKg != null && declaredKg.isNotEmpty) 'declared_kg': declaredKg,
+    };
+    await db.raw.insert('outbox', {'idempotency_key': key, 'op_type': 'convoy.create', 'payload': jsonEncode(payload), 'entity_id': key, 'created_at': DateTime.now().toIso8601String()});
+  }
+
   Future<List<Map<String, Object?>>> declarations() => db.raw.rawQuery('''
     SELECT d.*, p.last_name || ' ' || p.first_names AS producer_name, p.internal_code AS producer_code
       FROM declarations d LEFT JOIN producers p ON p.id = d.producer_id

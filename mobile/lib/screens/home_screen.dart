@@ -4,6 +4,7 @@ import '../main.dart';
 import '../sync/sync_engine.dart';
 import '../sync/sync_state.dart';
 import 'login_screen.dart';
+import 'new_convoy_screen.dart';
 import 'new_declaration_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -17,6 +18,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _pending = 0;
   int _problems = 0;
   bool _canCreate = false;
+  bool _canConvoy = false;
 
   @override
   void initState() {
@@ -37,7 +39,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final problems = await services.db.problemCount();
     final perms = await services.repo.permissions();
     if (!mounted) return;
-    setState(() { _items = items; _pending = pending; _problems = problems; _canCreate = canCreateDeclaration(perms); });
+    setState(() { _items = items; _pending = pending; _problems = problems; _canCreate = canCreateDeclaration(perms); _canConvoy = canCreateConvoy(perms); });
   }
 
   Color _color(String localState, String? status) {
@@ -68,6 +70,12 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Déclarations d\'achat'), actions: [
+        if (_canConvoy)
+          IconButton(tooltip: 'Déclarer un convoi', icon: const Icon(Icons.local_shipping_outlined), onPressed: () async {
+            await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const NewConvoyScreen()));
+            await _reload();
+            services.sync.run();
+          }),
         IconButton(tooltip: 'Synchroniser', icon: const Icon(Icons.sync), onPressed: () => services.sync.run()),
         IconButton(tooltip: 'Se déconnecter', icon: const Icon(Icons.logout), onPressed: _signOut),
       ]),

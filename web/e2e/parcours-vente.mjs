@@ -65,6 +65,7 @@ await step('charger, puis départ refusé sans véhicule ni chauffeur', async ()
   await page.locator('button.link').first().click(); await page.waitForTimeout(500);
   const m = modal();
   await m.getByRole('button', { name: 'Confirmer le chargement' }).click(); await page.waitForTimeout(900);
+  await m.getByLabel(/connaissement/).fill('MEDU9988776');
   await m.getByRole('button', { name: 'Départ' }).click(); await page.waitForTimeout(900);
   must(/Véhicule et conducteur requis/.test(await text()), 'refus du départ non affiché');
   expectedRefusals++;
@@ -73,8 +74,14 @@ await step('affecter véhicule et chauffeur, puis départ', async () => {
   const m = modal();
   await m.locator('select[aria-label=Véhicule]').selectOption({ index: 1 }); await m.locator('select[aria-label=Chauffeur]').selectOption({ index: 1 });
   await m.getByRole('button', { name: 'Affecter' }).click(); await page.waitForTimeout(900);
+  must(await m.getByRole('button', { name: 'Départ' }).isDisabled() === false, 'départ désactivé alors que le B/L est saisi');
+  await m.getByLabel(/connaissement/).fill('');
+  must(await m.getByRole('button', { name: 'Départ' }).isDisabled(), 'départ possible sans n° de connaissement');
+  await m.getByLabel(/connaissement/).fill('MEDU9988776');
+  await m.getByLabel('Port de chargement').fill('San Pedro');
   await m.getByRole('button', { name: 'Départ' }).click(); await page.waitForTimeout(900);
   must((await text()).includes('En transit'), 'statut En transit absent');
+  must((await text()).includes('MEDU9988776'), 'n° de connaissement non affiché');
 });
 await step('livraison avec écart : motif et responsable exigés', async () => {
   const m = modal();

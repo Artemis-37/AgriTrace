@@ -8,7 +8,7 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:ui": "node e2e/parcours-vente.mjs && node e2e/parcours-terrain.mjs && node e2e/parcours-central.mjs && node e2e/parcours-hors-ligne.mjs"
+    "test:ui": "node e2e/parcours-vente.mjs && node e2e/parcours-terrain.mjs && node e2e/parcours-central.mjs && node e2e/parcours-hors-ligne.mjs && node e2e/parcours-convois.mjs"
   },
   "dependencies": {
     "react": "18.3.1",
