@@ -15,6 +15,7 @@ export default function Convois() {
   const tabs: [string, string][] = [];
   if (can('convoys:read')) tabs.push(['list', 'Convois']);
   if (can('convoys:receive')) tabs.push(['receive', 'Réception au magasin']);
+  if (can('weighings:approve')) tabs.push(['variance', 'Écarts de poids']);
   if (can('convoys:settle')) tabs.push(['cash', 'Caisse'], ['accounts', 'Comptes collecteurs']);
   else if (can('collector:stock')) tabs.push(['mine', 'Ma fiche']);
   const dl = useDeepLink(tabs.map((t) => t[0]));
@@ -25,6 +26,7 @@ export default function Convois() {
       <Tabs tabs={tabs as any} value={tab as any} onChange={setTab as any} />
       {tab === 'list' && <List />}
       {tab === 'receive' && <Receive />}
+      {tab === 'variance' && <Variance />}
       {tab === 'cash' && <Cash />}
       {tab === 'accounts' && <Accounts />}
       {tab === 'mine' && <Card><Fiche collectorId={undefined} /></Card>}
@@ -98,13 +100,18 @@ function Receive() {
   const [wh, setWh] = useState('');
   const [kg, setKg] = useState('');
   const [bags, setBags] = useState('');
+  const [notes, setNotes] = useState('');
   const [done, setDone] = useState('');
   if (loading) return <Loading />;
   if (error || !data) return <ErrorBox message={error ?? 'Chargement impossible'} onRetry={reload} />;
   const collectors = [...new Map(data.expected.map((v) => [v.collector_id, v.collector_name])).entries()];
   const mine = data.expected.filter((v) => v.collector_id === collector);
   const expected = mine.find((v) => v.convoy_no === convoyNo.trim());
-  const valid = collector && convoyNo.trim().length >= 2 && wh && /^\d+(\.\d{1,3})?$/.test(kg) && Number(kg) > 0 && /^[1-9]\d*$/.test(bags);
+  const declared = expected?.declared_kg != null ? Number(expected.declared_kg) : 0;
+  const gapPct = declared > 0 && /^\d+(\.\d{1,3})?$/.test(kg) ? Math.abs(Number(kg) - declared) * 100 / declared : 0;
+  const tol = Number(expected?.weight_tolerance_pct ?? 2);
+  const blocked = gapPct > tol;
+  const valid = collector && convoyNo.trim().length >= 2 && wh && (!blocked || notes.trim().length >= 5) && /^\d+(\.\d{1,3})?$/.test(kg) && Number(kg) > 0 && /^[1-9]\d*$/.test(bags);
   return (
     <Card title="Réceptionner un convoi">
       <Field label="Collecteur"><select value={collector} onChange={(e) => { setCollector(e.target.value); setConvoyNo(''); }}><option value="">—</option>{collectors.map(([id, n]) => <option key={id} value={id}>{n}</option>)}</select></Field>
@@ -115,12 +122,60 @@ function Receive() {
       <Field label="Magasin"><select value={wh} onChange={(e) => setWh(e.target.value)}><option value="">—</option>{data.whs.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}</select></Field>
       <Field label="Poids total pesé (kg)"><input inputMode="decimal" value={kg} onChange={(e) => setKg(e.target.value)} /></Field>
       <Field label="Nombre de sacs"><input inputMode="numeric" value={bags} onChange={(e) => setBags(e.target.value)} /></Field>
+      {blocked && <p className="notice" role="status">Écart de {gapPct.toFixed(1)} % avec le poids annoncé (tolérance {tol} %) : la réception sera retenue jusqu'à validation par un responsable, et la cause est obligatoire.</p>}
+      <Field label={blocked ? 'Cause de l\'écart (obligatoire)' : 'Observations (facultatif)'}><textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={500} /></Field>
       {act.error && <ErrorBox message={act.error} />}
       {done && <p className="notice" role="status">{done}</p>}
       <div className="modal-actions"><button className="btn" disabled={act.busy || !valid || !org} onClick={() => act.run(async () => {
-        await enqueue(org!.id, 'convoy.receive', { idempotency_key: idem(), collector_id: collector, convoy_no: convoyNo.trim(), warehouse_id: wh, total_kg: kg, bags: Number(bags) }, `Réception du convoi ${convoyNo.trim()}`);
-        setDone(`Convoi ${convoyNo.trim()} enregistré : il sera transmis à la caisse dès l'envoi au serveur.`); setConvoyNo(''); setKg(''); setBags(''); reload();
+        await enqueue(org!.id, 'convoy.receive', { idempotency_key: idem(), collector_id: collector, convoy_no: convoyNo.trim(), warehouse_id: wh, total_kg: kg, bags: Number(bags), ...(notes.trim() && { notes: notes.trim() }) }, `Réception du convoi ${convoyNo.trim()}`);
+        setDone(`Convoi ${convoyNo.trim()} enregistré : il sera transmis à la caisse dès l'envoi au serveur.`); setConvoyNo(''); setKg(''); setBags(''); setNotes(''); reload();
       })}>Valider la réception et transmettre à la caisse</button></div>
+    </Card>
+  );
+}
+
+function Variance() {
+  const { data, loading, error, reload } = useAsync(() => get<any[]>('/convoys/variance-queue'), []);
+  const [sel, setSel] = useState<any>(null);
+  const [comment, setComment] = useState('');
+  const act = useAction();
+  const { can } = useAuth();
+  const cfg = useAsync(() => (can('convoys:settle') ? get<any>('/convoys/settings') : Promise.resolve(null)), []);
+  const [tol, setTol] = useState<string | null>(null);
+  return (
+    <Card title="Écarts de poids à valider">
+      {cfg.data && (
+        <div className="toolbar">
+          <label>Tolérance entre connaissement et pesée (%){' '}
+            <input inputMode="decimal" size={5} value={tol ?? String(Number(cfg.data.weight_tolerance_pct))} onChange={(e) => setTol(e.target.value)} /></label>{' '}
+          <button className="btn btn-secondary" disabled={act.busy || tol === null || !/^\d+(\.\d{1,3})?$/.test(tol)} onClick={() => act.run(async () => {
+            await post('/convoys/settings', { transport_unit: String(cfg.data.transport_unit), retention_per_kg: String(cfg.data.retention_per_kg), weight_tolerance_pct: tol }); setTol(null); cfg.reload();
+          })}>Enregistrer</button>
+        </div>
+      )}
+      <p className="muted">Le poids pesé s'écarte du connaissement au-delà de la tolérance. La validation doit être faite par un autre utilisateur que celui qui a réceptionné ; la caisse ne peut pas régler avant.</p>
+      {error && <ErrorBox message={error} onRetry={reload} />}
+      {loading ? <Loading /> : (
+        <Table rows={data ?? []} empty="Aucun écart en attente." columns={[
+          { header: 'N° de convoi', render: (r) => r.convoy_no }, { header: 'Collecteur', render: (r) => r.collector_name },
+          { header: 'Annoncé (kg)', align: 'right', render: (r) => num(r.declared_kg) }, { header: 'Pesé (kg)', align: 'right', render: (r) => num(r.total_kg) },
+          { header: 'Écart', align: 'right', render: (r) => <Badge tone="warn">{num(r.variance_kg)} kg ({Number(r.variance_pct).toFixed(1)} %)</Badge> },
+          { header: 'Cause indiquée', render: (r) => r.notes },
+          { header: '', render: (r) => <button className="btn" onClick={() => { setSel(r); setComment(''); }}>Examiner</button> },
+        ]} />
+      )}
+      {sel && (
+        <Modal title={`Écart de poids — ${sel.convoy_no}`} onClose={() => setSel(null)}>
+          <p>Annoncé {num(sel.declared_kg)} kg, pesé {num(sel.total_kg)} kg : {num(sel.variance_kg)} kg ({Number(sel.variance_pct).toFixed(1)} %).</p>
+          <p className="muted">Cause indiquée à la réception : {sel.notes}</p>
+          <Field label="Motif de la validation (5 caractères au moins)"><textarea rows={2} value={comment} onChange={(e) => setComment(e.target.value)} maxLength={500} /></Field>
+          {act.error && <ErrorBox message={act.error} />}
+          <div className="modal-actions">
+            <button className="btn btn-secondary" onClick={() => setSel(null)}>Fermer</button>
+            <button className="btn" disabled={act.busy || comment.trim().length < 5} onClick={() => act.run(async () => { await post(`/convoy-receptions/${sel.id}/approve-variance`, { comment: comment.trim() }); setSel(null); reload(); })}>Accepter l'écart et transmettre à la caisse</button>
+          </div>
+        </Modal>
+      )}
     </Card>
   );
 }

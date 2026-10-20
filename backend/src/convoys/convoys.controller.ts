@@ -42,7 +42,10 @@ class SettleDto {
 class SettingsDto {
   @Dec(4) transport_unit: string;
   @Dec(4) retention_per_kg: string;
+  /** Écart de poids toléré entre le connaissement et la pesée, en % du poids déclaré (défaut 2). */
+  @IsOptional() @Dec(3) weight_tolerance_pct?: string;
 }
+class VarianceDto { @IsString() @Length(5, 500) comment: string; }
 export class AdvanceDto {
   @IsString() @Length(8, 100) idempotency_key: string;
   @IsUUID() collector_id: string;
@@ -119,7 +122,8 @@ export class ConvoysController {
   @RequirePermissions('convoys:receive')
   expected(@Req() req: any, @Query('collector_id') collectorId?: string) {
     return this.db.tx(req.org.id, async (c) => (await c.query(
-      `SELECT v.id, v.convoy_no, v.collector_id, u.full_name AS collector_name, v.driver_name, v.truck_no, v.declared_bags, v.declared_kg, v.created_at
+      `SELECT v.id, v.convoy_no, v.collector_id, u.full_name AS collector_name, v.driver_name, v.truck_no, v.declared_bags, v.declared_kg, v.created_at,
+              coalesce((SELECT convoy_weight_tolerance_pct FROM org_settings), 2) AS weight_tolerance_pct
          FROM convoys v JOIN collectors k ON k.id = v.collector_id JOIN users u ON u.id = k.user_id WHERE v.status = 'in_transit' AND ($1::uuid IS NULL OR v.collector_id = $1) ORDER BY v.created_at`, [collectorId ?? null])).rows);
   }
 
@@ -165,12 +169,19 @@ export class ConvoysController {
       const w = (await c.query(`SELECT status FROM warehouses WHERE id = $1`, [b.warehouse_id])).rows[0];
       if (!w || w.status !== 'active') throw new BadRequestException('Magasin inconnu ou fermé');
       const variance = v.declared_kg == null ? null : (await c.query(`SELECT $1::numeric - $2::numeric AS d`, [b.total_kg, v.declared_kg])).rows[0].d;
+      // Écart au-delà de la tolérance : la caisse ne peut pas payer avant la validation d'un second utilisateur.
+      const tol = (await c.query(`SELECT coalesce((SELECT convoy_weight_tolerance_pct FROM org_settings), 2) AS t`)).rows[0].t;
+      const vpct = variance == null || Number(v.declared_kg) <= 0 ? null : (await c.query(`SELECT round(abs($1::numeric) * 100 / $2::numeric, 3) AS p`, [variance, v.declared_kg])).rows[0].p;
+      const held = vpct != null && Number(vpct) > Number(tol);
+      if (held && (!b.notes || b.notes.trim().length < 5)) throw new BadRequestException(`Écart de poids de ${vpct} % (tolérance ${Number(tol)} %) : précisez la cause dans les observations`);
       const ins = (await c.query(
-        `INSERT INTO convoy_receptions(organization_id, idempotency_key, convoy_id, warehouse_id, total_kg, bags, variance_kg, received_by, notes)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
-        [req.org.id, b.idempotency_key, v.id, b.warehouse_id, b.total_kg, b.bags, variance, req.user.id, b.notes ?? null])).rows[0];
+        `INSERT INTO convoy_receptions(organization_id, idempotency_key, convoy_id, warehouse_id, total_kg, bags, variance_kg, variance_pct, received_by, notes, status)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
+        [req.org.id, b.idempotency_key, v.id, b.warehouse_id, b.total_kg, b.bags, variance, vpct, req.user.id, b.notes ?? null, held ? 'pending_variance' : 'pending_cashier'])).rows[0];
       await c.query(`UPDATE convoys SET status = 'received' WHERE id = $1`, [v.id]);
-      await this.notif.notifyPermission(c, req.org.id, 'convoys:settle', { kind: 'convoy_received', severity: 'warning', title: `Réception à traiter en caisse : ${v.convoy_no}`,
+      if (held) await this.notif.notifyPermission(c, req.org.id, 'weighings:approve', { kind: 'convoy_variance', severity: 'warning', title: `Écart de poids à valider : convoi ${v.convoy_no}`,
+        body: `${variance} kg (${vpct} %) · ${b.notes}`, entityType: 'convoy', entityId: v.id, dedupe: `convoy_variance:${v.id}` });
+      else await this.notif.notifyPermission(c, req.org.id, 'convoys:settle', { kind: 'convoy_received', severity: 'warning', title: `Réception à traiter en caisse : ${v.convoy_no}`,
         body: `${b.total_kg} kg · ${b.bags} sacs`, entityType: 'convoy', entityId: v.id, dedupe: `convoy_received:${v.id}` });
       await this.notif.notifyUsers(c, req.org.id, [(await c.query(`SELECT user_id FROM collectors WHERE id = $1`, [v.collector_id])).rows[0]?.user_id], { kind: 'convoy_received_mine',
         title: `Votre convoi ${v.convoy_no} a été reçu au magasin`, body: `${b.total_kg} kg · ${b.bags} sacs pesés`, entityType: 'convoy', entityId: v.id, dedupe: `convoy_received_mine:${v.id}` });
@@ -178,6 +189,38 @@ export class ConvoysController {
     });
     if (!replay) await this.log(req, 'convoy.receive', row.convoy_id, { total_kg: row.total_kg, bags: row.bags, variance_kg: row.variance_kg });
     return { ...row, replayed: replay };
+  }
+
+  /** Écarts de poids en attente de validation (au-delà de la tolérance). */
+  @Get('convoys/variance-queue')
+  @RequirePermissions('weighings:approve')
+  varianceQueue(@Req() req: any) {
+    return this.db.tx(req.org.id, async (c) => (await c.query(
+      `SELECT r.id, r.convoy_id, v.convoy_no, v.collector_id, u.full_name AS collector_name, v.declared_kg, r.total_kg, r.variance_kg, r.variance_pct, r.notes, r.received_at
+         FROM convoy_receptions r JOIN convoys v ON v.id = r.convoy_id JOIN collectors k ON k.id = v.collector_id JOIN users u ON u.id = k.user_id
+        WHERE r.status = 'pending_variance' ORDER BY r.received_at`)).rows);
+  }
+
+  /** Validation de l'écart par un autre utilisateur que celui qui a réceptionné : la réception passe alors en caisse. */
+  @Post('convoy-receptions/:id/approve-variance')
+  @RequirePermissions('weighings:approve')
+  async approveVariance(@Param('id', ParseUUIDPipe) id: string, @Body() b: VarianceDto, @Req() req: any) {
+    const r = await this.db.tx(req.org.id, async (c) => {
+      const cur = (await c.query(`SELECT * FROM convoy_receptions WHERE id = $1 FOR UPDATE`, [id])).rows[0];
+      if (!cur) throw new NotFoundException();
+      if (cur.status !== 'pending_variance') throw new ConflictException('Cette réception n\'attend pas de validation d\'écart');
+      if (cur.received_by === req.user.id) throw new ForbiddenException('L\'écart doit être validé par un autre utilisateur que celui qui a réceptionné le convoi');
+      const upd = (await c.query(
+        `UPDATE convoy_receptions SET status = 'pending_cashier', variance_approved_by = $2, variance_approved_at = now(), variance_comment = $3 WHERE id = $1 RETURNING *`,
+        [id, req.user.id, b.comment])).rows[0];
+      const v = (await c.query(`SELECT convoy_no FROM convoys WHERE id = $1`, [cur.convoy_id])).rows[0];
+      await c.query(`UPDATE notifications SET read_at = coalesce(read_at, now()) WHERE kind = 'convoy_variance' AND entity_type = 'convoy' AND entity_id = $1`, [cur.convoy_id]);
+      await this.notif.notifyPermission(c, req.org.id, 'convoys:settle', { kind: 'convoy_received', severity: 'warning', title: `Réception à traiter en caisse : ${v.convoy_no}`,
+        body: `${cur.total_kg} kg · ${cur.bags} sacs · écart validé`, entityType: 'convoy', entityId: cur.convoy_id, dedupe: `convoy_received:${cur.convoy_id}` });
+      return upd;
+    });
+    await this.log(req, 'convoy.variance_approved', r.convoy_id, { variance_kg: r.variance_kg, variance_pct: r.variance_pct });
+    return r;
   }
 
   /** File d'attente de la caisse : réceptions en attente de traitement. */
@@ -200,6 +243,7 @@ export class ConvoysController {
       const r = (await c.query(`SELECT * FROM convoy_receptions WHERE id = $1 FOR UPDATE`, [id])).rows[0];
       if (!r) throw new NotFoundException();
       if (r.status === 'settled') return { row: r, replay: true };
+      if (r.status === 'pending_variance') throw new ConflictException('Écart de poids non validé : la réception doit d\'abord être validée par un responsable');
       const v = (await c.query(`SELECT * FROM convoys WHERE id = $1`, [r.convoy_id])).rows[0];
       const u = (await c.query(`SELECT u.full_name FROM collectors k JOIN users u ON u.id = k.user_id WHERE k.id = $1`, [v.collector_id])).rows[0];
       let acc = (await c.query(`SELECT id, currency, accounting_code FROM financial_accounts WHERE owner_type = 'collector' AND owner_id = $1 AND status = 'active' FOR UPDATE`, [v.collector_id])).rows[0];
@@ -272,16 +316,17 @@ export class ConvoysController {
   @RequirePermissions('convoys:settle')
   settings(@Req() req: any) {
     return this.db.tx(req.org.id, async (c) => (await c.query(
-      `SELECT coalesce((SELECT convoy_transport_unit FROM org_settings), 0) AS transport_unit, coalesce((SELECT convoy_retention_per_kg FROM org_settings), 0) AS retention_per_kg`)).rows[0]);
+      `SELECT coalesce((SELECT convoy_transport_unit FROM org_settings), 0) AS transport_unit, coalesce((SELECT convoy_retention_per_kg FROM org_settings), 0) AS retention_per_kg, coalesce((SELECT convoy_weight_tolerance_pct FROM org_settings), 2) AS weight_tolerance_pct`)).rows[0]);
   }
 
   @Post('convoys/settings')
   @RequirePermissions('convoys:settle')
   async putSettings(@Body() b: SettingsDto, @Req() req: any) {
     await this.db.tx(req.org.id, (c) => c.query(
-      `INSERT INTO org_settings(organization_id, convoy_transport_unit, convoy_retention_per_kg, updated_by) VALUES ($1,$2,$3,$4)
-       ON CONFLICT (organization_id) DO UPDATE SET convoy_transport_unit = EXCLUDED.convoy_transport_unit, convoy_retention_per_kg = EXCLUDED.convoy_retention_per_kg, updated_at = now(), updated_by = EXCLUDED.updated_by`,
-      [req.org.id, b.transport_unit, b.retention_per_kg, req.user.id]));
+      `INSERT INTO org_settings(organization_id, convoy_transport_unit, convoy_retention_per_kg, convoy_weight_tolerance_pct, updated_by) VALUES ($1,$2,$3,coalesce($5::numeric, 2),$4)
+       ON CONFLICT (organization_id) DO UPDATE SET convoy_transport_unit = EXCLUDED.convoy_transport_unit, convoy_retention_per_kg = EXCLUDED.convoy_retention_per_kg,
+         convoy_weight_tolerance_pct = coalesce($5::numeric, org_settings.convoy_weight_tolerance_pct), updated_at = now(), updated_by = EXCLUDED.updated_by`,
+      [req.org.id, b.transport_unit, b.retention_per_kg, req.user.id, b.weight_tolerance_pct ?? null]));
     await this.log(req, 'convoy.settings', req.org.id, b);
     return b;
   }
