@@ -304,6 +304,8 @@ function InvoiceDetail({ id, onClose }: { id: string; onClose: () => void }) {
   const [key, setKey] = useState(idem());
   const [cancel, setCancel] = useState(false);
   const act = useAction();
+  const banks = useAsync(async () => (can('cash:operate') && can('finance:read') ? (await get<any[]>('/financial-accounts')).filter((a) => a.owner_type === 'other' && a.status === 'active') : []), []);
+  const [acct, setAcct] = useState('');
   return (
     <Modal title={i ? `Facture ${i.number}` : 'Facture'} onClose={onClose}>
       {loading && <Loading />}{error && <ErrorBox message={error} onRetry={reload} />}{act.error && <ErrorBox message={act.error} />}
@@ -319,7 +321,8 @@ function InvoiceDetail({ id, onClose }: { id: string; onClose: () => void }) {
               <input aria-label="Date" type="date" value={p.received_on} onChange={(e) => setP({ ...p, received_on: e.target.value })} />
               <select aria-label="Mode" value={p.method} onChange={(e) => setP({ ...p, method: e.target.value })}>{Object.entries(METHODS).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
               <input aria-label="Référence" placeholder="Référence" value={p.reference} onChange={(e) => setP({ ...p, reference: e.target.value })} />
-              <button className="btn" disabled={act.busy || !p.amount} onClick={() => act.run(async () => { await post(`/invoices/${id}/payments`, { idempotency_key: key, amount: p.amount, received_on: p.received_on, method: p.method, ...(p.reference && { reference: p.reference }) }); setKey(idem()); setP({ ...p, amount: '', reference: '' }); reload(); })}>Enregistrer le paiement</button>
+              {!!banks.data?.length && <select aria-label="Compte de réception" value={acct} onChange={(e) => setAcct(e.target.value)}><option value="">Sans écriture comptable</option>{banks.data.map((a: any) => <option key={a.id} value={a.id}>Comptabiliser sur {a.name}</option>)}</select>}
+              <button className="btn" disabled={act.busy || !p.amount} onClick={() => act.run(async () => { await post(`/invoices/${id}/payments`, { idempotency_key: key, amount: p.amount, received_on: p.received_on, method: p.method, ...(p.reference && { reference: p.reference }), ...(acct && { account_id: acct }) }); setKey(idem()); setP({ ...p, amount: '', reference: '' }); reload(); })}>Enregistrer le paiement</button>
             </div>
           )}
           <DocumentsPanel subjectType="invoice" subjectId={id} kinds={['invoice_copy', 'payment_proof', 'other']} locked={i.status === 'cancelled'} />

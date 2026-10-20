@@ -34,7 +34,7 @@
 - Pas de versions de géométrie en table dédiée : l'historique des modifications garde l'ancienne et la nouvelle géométrie.
 
 **Commerce et finance**
-- Les paiements reçus des acheteurs ne sont pas comptabilisés automatiquement (ni en caisse, ni en écritures).
+- Paiements des acheteurs : comptabilisés (compte financier crédité + écriture 411/banque ou caisse) lorsqu'un compte de réception est choisi ; sans choix, le paiement reste enregistré seul (comportement antérieur conservé).
 - Pas d'avoir, pas de retour de stock après chargement (un incident est enregistré), pas d'accès externe pour acheteurs/partenaires.
 - Le préfinancement reçu n'est pas relié à un compte financier ni à des écritures.
 

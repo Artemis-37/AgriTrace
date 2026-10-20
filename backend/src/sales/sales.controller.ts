@@ -1,5 +1,5 @@
 import {
-  BadRequestException, Body, ConflictException, Controller, Get, NotFoundException, Param, ParseUUIDPipe, Post, Query, Req, UnprocessableEntityException,
+  BadRequestException, Body, ConflictException, Controller, ForbiddenException, Get, NotFoundException, Param, ParseUUIDPipe, Post, Query, Req, UnprocessableEntityException,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiHeader, ApiTags } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
@@ -7,6 +7,7 @@ import { ArrayMaxSize, ArrayMinSize, IsArray, IsEmail, IsIn, IsInt, IsOptional, 
 import { PoolClient } from 'pg';
 import { RequirePermissions } from '../access/decorators';
 import { AuditService } from '../audit/audit.service';
+import { accountingCodeOf, postEntry, today } from '../accounting/accounting.helpers';
 import { Dec, isUniqueViolation } from '../common/dto';
 import { DbService } from '../db/db.service';
 import { addLotEvent, nextNumber, pad } from '../stock/stock.helpers';
@@ -64,6 +65,9 @@ class PaymentDto {
   @Matches(DATE) received_on: string;
   @IsIn(['cash', 'bank_transfer', 'mobile_money', 'cheque', 'other']) method: string;
   @IsOptional() @IsString() @Length(1, 100) reference?: string;
+  /** Compte financier qui reçoit l'argent (caisse ou banque) : comptabilise l'encaissement. */
+  @IsOptional() @IsUUID() account_id?: string;
+  @IsOptional() @IsUUID() cash_session_id?: string;
 }
 class ClaimDto {
   @IsUUID() buyer_id: string;
@@ -391,6 +395,26 @@ export class SalesController {
         [req.org.id, b.idempotency_key, id, b.amount, b.received_on, b.method, b.reference ?? null, req.user.id])).rows[0];
       const rest = (await c.query(`SELECT ($1::numeric - $2::numeric - $3::numeric) AS r`, [i.total, paid, b.amount])).rows[0].r;
       await c.query(`UPDATE invoices SET status = $2 WHERE id = $1`, [id, Number(rest) === 0 ? 'paid' : 'partially_paid']);
+      if (b.account_id) {
+        if (!req.org.permissions.has('cash:operate')) throw new ForbiddenException('Comptabiliser un encaissement exige le droit « cash:operate »');
+        const a = (await c.query(`SELECT * FROM financial_accounts WHERE id = $1 AND status = 'active' FOR UPDATE`, [b.account_id])).rows[0];
+        if (!a) throw new BadRequestException('Compte de réception inconnu ou clôturé');
+        const isCash = a.owner_type === 'cash_register';
+        if (isCash) {
+          const ok = b.cash_session_id && (await c.query(`SELECT 1 FROM cash_sessions s JOIN cash_registers r ON r.id = s.register_id WHERE s.id = $1 AND s.status = 'open' AND r.account_id = $2`, [b.cash_session_id, a.id])).rowCount;
+          if (!ok) throw new BadRequestException('Un encaissement en caisse exige une session ouverte de cette caisse');
+        }
+        const reason = `Encaissement facture ${i.number}`;
+        const tx = (await c.query(
+          `INSERT INTO financial_transactions(organization_id, idempotency_key, account_id, cash_session_id, direction, amount, currency, reason, reference_type, reference_id, created_by)
+           VALUES ($1,$2,$3,$4,'in',$5,$6,$7,'invoice_payment',$8,$9) RETURNING id`,
+          [req.org.id, 'invpay:' + b.idempotency_key, a.id, isCash ? b.cash_session_id : null, b.amount, a.currency, reason, p.id, req.user.id])).rows[0];
+        await postEntry(c, {
+          orgId: req.org.id, userId: req.user.id, journal: isCash ? 'CAI' : 'BQ', date: b.received_on || today(), label: reason,
+          lines: [{ code: accountingCodeOf(a), debit: b.amount }, { code: '411', credit: b.amount }],
+          idempotencyKey: 'invpay-entry:' + b.idempotency_key, referenceType: 'invoice_payment', referenceId: tx.id,
+        });
+      }
       await this.log(req, 'invoice.payment', 'invoice', id, { amount: b.amount, method: b.method });
       return { ...p, balance: rest };
     });

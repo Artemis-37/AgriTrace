@@ -196,7 +196,16 @@ const num = (x) => Number(x);
   const st = (await call('GET', `/buyers/${buyer.id}/statement`, J(A, com.t))).body;
   check('situation acheteur : facturé 742 500, encaissé 442 500, solde 300 000, en retard 300 000', st.totals.invoiced === '742500.00' && st.totals.paid === '442500.00' && st.totals.balance === '300000.00' && st.totals.overdue === '300000.00', st.totals);
   check('clôture refusée tant qu\'une facture est impayée', (await call('POST', `/sales-orders/${orderId}/close`, J(A, com.t))).status === 409);
-  await call('POST', `/invoices/${i2.body.id}/payments`, { ...J(A, com.t), body: { idempotency_key: key('p'), amount: '300000', received_on: '2026-03-05', method: 'mobile_money' } });
+  const bank = (await call('POST', '/financial-accounts', { ...J(A, A.t), body: { owner_type: 'other', name: 'Banque principale' } })).body;
+  const accPay = { idempotency_key: key('p'), amount: '300000', received_on: '2026-03-05', method: 'bank_transfer', account_id: bank.id };
+  check('encaissement comptabilisé : droit de caisse exigé', (await call('POST', `/invoices/${i2.body.id}/payments`, { ...J(A, com.t), body: accPay })).status === 403);
+  const ap = await call('POST', `/invoices/${i2.body.id}/payments`, { ...J(A, A.t), body: accPay });
+  check('encaissement comptabilisé : paiement enregistré', ap.status === 201 && ap.body.balance === '0.00', ap.body);
+  await call('POST', `/invoices/${i2.body.id}/payments`, { ...J(A, A.t), body: accPay });
+  const bk = (await call('GET', '/financial-accounts', J(A, A.t))).body.find((a) => a.id === bank.id);
+  check('compte bancaire crédité une seule fois (renvoi idempotent)', Number(bk.balance) === 300000, bk);
+  const tbv = JSON.stringify((await call('GET', '/accounting/trial-balance', J(A, A.t))).body);
+  check('écriture comptable : clients (411) et banque (521)', tbv.includes('411') && tbv.includes('521'), tbv.slice(0, 300));
   check('commande clôturée une fois soldée', (await call('POST', `/sales-orders/${orderId}/close`, J(A, com.t))).body.status === 'closed');
   check('commande clôturée non annulable', (await call('POST', `/sales-orders/${orderId}/cancel`, { ...J(A, com.t), body: { reason: 'x y z' } })).status === 409);
 
