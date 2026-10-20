@@ -39,7 +39,7 @@
 - Le préfinancement reçu n'est pas relié à un compte financier ni à des écritures.
 
 **Notifications**
-- Persistées, consultables et filtrées selon les droits ; cloche sur le portail et le mobile ; aucune poussée distante (FCM) ni courriel (le mobile ne les reçoit qu'avec du réseau). Alertes « documents manquants » et « opérations financières à approuver » non générées automatiquement (visibles via les alertes P4b / listes existantes).
+- Persistées, consultables et filtrées selon les droits ; cloche sur le portail et le mobile ; aucune poussée distante (FCM) ni courriel (le mobile ne les reçoit qu'avec du réseau). Alertes « documents manquants » (expédition partie ou livrée sans pièce jointe, prêt approuvé sans justificatif) et « à approuver » (prêts/préfinancements, inventaires, achats en attente depuis plus de 2 jours) générées par la recherche d'alertes, une fois par jour et par destinataire selon ses droits.
 
 **Tableaux de bord et rapports (§26)**
 - **Rapports d'achats livrés** : page Rapports (`reports:read`), filtres période/section/collecteur/filière, regroupements, totaux, export Excel. Non couvert : rapports financiers, stock ou qualité unifiés ; envoi automatique.

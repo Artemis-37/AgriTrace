@@ -134,6 +134,10 @@ const num = (x) => Number(x);
   const dep = await call('POST', `/shipments/${s1.id}/depart`, { ...J(A, log.t), body: { bill_of_lading_no: 'MEDU1234567', port: 'San Pedro', exporter_name: 'Exportateur SA' } });
   check('départ avec B/L saisi', dep.body.status === 'in_transit' && dep.body.bill_of_lading_no === 'MEDU1234567' && dep.body.port === 'San Pedro', dep.body);
 
+  const sc = await call('POST', '/notifications/scan', J(A));
+  check('alerte « documents manquants » pour une expédition partie sans pièce jointe', sc.status === 201 && sc.body.created.documents_missing >= 1, sc.body);
+  check('l\'alerte est visible de qui gère les expéditions', (await call('GET', '/notifications?kind=documents_missing', J(A))).body.some((n) => n.entity_id === s1.id));
+
   console.log('Livraison, écarts, preuves, validation');
   const s1d = (await call('GET', `/shipments/${s1.id}`, J(A, log.t))).body;
   const it1 = s1d.items[0];

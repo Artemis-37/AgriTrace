@@ -82,6 +82,26 @@ export class NotificationsService implements OnApplicationBootstrap, OnApplicati
       for (const a of (await c.query(`SELECT count(*)::int AS n FROM parcel_anomalies WHERE status = 'open'`)).rows.filter((r) => r.n > 0))
         await add('geo_anomalies_open', await this.notifyPermission(c, orgId, 'geo:anomalies', { kind: 'geo_anomalies_open', severity: 'warning', title: `${a.n} anomalie(s) cartographique(s) ouverte(s)`,
           dedupe: `geo_anomalies_open:${day}` }));
+      // Opérations financières et de stock en attente d'une approbation (CDC §25)
+      for (const l of (await c.query(`SELECT count(*)::int AS n FROM loans WHERE status IN ('requested','in_analysis')`)).rows.filter((r) => r.n > 0))
+        await add('loans_to_approve', await this.notifyPermission(c, orgId, 'loans:approve', { kind: 'loans_to_approve', severity: 'warning', title: `${l.n} prêt(s) ou préfinancement(s) à approuver`,
+          dedupe: `loans_to_approve:${day}` }));
+      for (const k of (await c.query(`SELECT count(*)::int AS n FROM stock_counts WHERE status = 'submitted'`)).rows.filter((r) => r.n > 0))
+        await add('counts_to_approve', await this.notifyPermission(c, orgId, 'stock:count_approve', { kind: 'counts_to_approve', severity: 'warning', title: `${k.n} inventaire(s) à approuver`,
+          dedupe: `counts_to_approve:${day}` }));
+      for (const d of (await c.query(`SELECT count(*)::int AS n FROM purchase_declarations WHERE status IN ('received','in_review') AND updated_at < now() - interval '2 days'`)).rows.filter((r) => r.n > 0))
+        await add('declarations_waiting', await this.notifyPermission(c, orgId, 'declarations:validate', { kind: 'declarations_waiting', severity: 'warning', title: `${d.n} achat(s) en attente de vérification depuis plus de 2 jours`,
+          dedupe: `declarations_waiting:${day}` }));
+      // Documents manquants : expédition partie ou livrée sans aucune pièce jointe (bon d'expédition, connaissement scanné, preuve)
+      for (const s of (await c.query(
+        `SELECT s.id, s.reference FROM shipments s WHERE s.status IN ('in_transit','delivered')
+            AND NOT EXISTS (SELECT 1 FROM documents d WHERE d.subject_type = 'shipment' AND d.subject_id = s.id)`)).rows)
+        await add('documents_missing', await this.notifyPermission(c, orgId, 'shipments:manage', { kind: 'documents_missing', severity: 'warning', title: `Documents manquants : expédition ${s.reference}`,
+          body: 'Aucune pièce jointe (connaissement, bon d\'expédition, preuve de livraison)', entityType: 'shipment', entityId: s.id, dedupe: `documents_missing:shipment:${s.id}:${day}` }));
+      for (const l of (await c.query(
+        `SELECT l.id FROM loans l WHERE l.status IN ('approved','disbursed') AND NOT EXISTS (SELECT 1 FROM documents d WHERE d.subject_type = 'loan' AND d.subject_id = l.id)`)).rows)
+        await add('documents_missing', await this.notifyPermission(c, orgId, 'loans:read', { kind: 'documents_missing', severity: 'warning', title: 'Documents manquants : prêt approuvé sans justificatif',
+          entityType: 'loan', entityId: l.id, dedupe: `documents_missing:loan:${l.id}:${day}` }));
       return { scanned_at: new Date().toISOString(), created: found };
     });
   }
