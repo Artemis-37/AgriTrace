@@ -33,8 +33,8 @@ function registerClientProtocol() {
       try {
         return await send();
       } catch {
-        // Le serveur a peut-être changé d'adresse (box/DHCP) : on le cherche seul, sans rien demander à l'utilisateur.
-        if (await refindServer()) { try { return await send(); } catch { /* injoignable */ } }
+        // Le serveur a peut-être changé d'adresse (box/DHCP) : on le cherche seul, sans rien demander à l'utilisateur ; la requête suivante utilisera la nouvelle adresse.
+        void refindServer().catch(() => undefined);   // en arrière-plan : la réponse « hors connexion » n'attend jamais la recherche
         return new Response(JSON.stringify({ message: 'Serveur injoignable', offline: true }), { status: 503, headers: { 'content-type': 'application/json', 'x-agritrace-offline': '1' } });
       }
     }
