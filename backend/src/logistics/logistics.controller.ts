@@ -62,6 +62,11 @@ class DeliverDto {
   @IsString() @Length(2, 150) received_by_name: string;
   @IsArray() @ArrayMinSize(1) @ValidateNested({ each: true }) @Type(() => DeliverItemDto) items: DeliverItemDto[];
 }
+class AssignDto {
+  @IsOptional() @IsUUID() carrier_id?: string;
+  @IsOptional() @IsUUID() vehicle_id?: string;
+  @IsOptional() @IsUUID() driver_id?: string;
+}
 class ValidateDto { @IsOptional() @IsString() @Length(1, 500) note?: string; }
 class CancelDto { @IsString() @Length(3, 300) reason: string; }
 class IncidentDto {
@@ -238,6 +243,23 @@ export class LogisticsController {
         [id, b.seals ?? [], b.transport_doc_no ?? null])).rows[0];
       await this.refreshOrder(c, s.order_id);
       await this.log(req, 'shipment.load', 'shipment', id, { total_kg: total, seals: b.seals });
+      return r;
+    });
+  }
+
+  /** Affecte ou change transporteur, véhicule et conducteur tant que l'expédition n'est pas partie (sinon une expédition chargée sans eux resterait bloquée). */
+  @Post('shipments/:id/assign') @RequirePermissions('shipments:manage')
+  async assign(@Param('id', ParseUUIDPipe) id: string, @Body() b: AssignDto, @Req() req: any) {
+    if (!b.carrier_id && !b.vehicle_id && !b.driver_id) throw new BadRequestException('Aucune affectation fournie');
+    return this.db.tx(req.org.id, async (c) => {
+      const s = await this.ship(c, id);
+      if (!['planned', 'loaded'].includes(s.status)) throw new ConflictException('Affectation impossible : l\'expédition est déjà partie ou terminée');
+      for (const [tbl, v, label] of [['carriers', b.carrier_id, 'Transporteur'], ['vehicles', b.vehicle_id, 'Véhicule'], ['drivers', b.driver_id, 'Conducteur']] as const)
+        if (v && !(await c.query(`SELECT 1 FROM ${tbl} WHERE id = $1 AND status = 'active'`, [v])).rowCount) throw new BadRequestException(`${label} inconnu ou inactif`);
+      const r = (await c.query(
+        `UPDATE shipments SET carrier_id = coalesce($2, carrier_id), vehicle_id = coalesce($3, vehicle_id), driver_id = coalesce($4, driver_id), updated_at = now(), version = version + 1 WHERE id = $1 RETURNING *`,
+        [id, b.carrier_id ?? null, b.vehicle_id ?? null, b.driver_id ?? null])).rows[0];
+      await this.log(req, 'shipment.assign', 'shipment', id, { carrier_id: b.carrier_id, vehicle_id: b.vehicle_id, driver_id: b.driver_id });
       return r;
     });
   }

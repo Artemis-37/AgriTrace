@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { get, idem, post } from '../api';
+import { useRef } from 'react';
+import { get, idem, post, postForm } from '../api';
 import { useAuth } from '../auth';
 import { INVOICE_STATUS, ORDER_STATUS, SHIPMENT_STATUS, date, kg, money } from '../format';
 import { Badge, Card, ErrorBox, Field, Loading, Modal, PageHeader, Stat, StatusBadge, Table, Tabs, useAction, useAsync } from '../ui';
@@ -131,6 +132,8 @@ function OrderDetail({ id, onClose }: { id: string; onClose: () => void }) {
 }
 
 /* ---------------- Expéditions ---------------- */
+const hasGap = (items: any[], qty: Record<string, string>) => items.some((i) => Number(qty[i.id] ?? i.loaded_kg) !== Number(i.loaded_kg));
+const DOC_KIND: Record<string, string> = { proof_of_delivery: 'Preuve de livraison', transport_doc: 'Document de transport', weighing_ticket: 'Ticket de pesée', other: 'Autre' };
 function Shipments() {
   const { can } = useAuth();
   const [creating, setCreating] = useState(false);
@@ -159,11 +162,18 @@ function Shipments() {
 }
 
 function ShipmentDetail({ id, onClose }: { id: string; onClose: () => void }) {
-  const { can } = useAuth();
+  const { can, me } = useAuth();
+  const people = useAsync(async () => (can('users:read') ? (await get<any[]>('/users')).filter((u) => u.membership_status === 'active') : []), []);
+  const [gapReason, setGapReason] = useState('');
+  const [handler, setHandler] = useState('');
   const { data: s, loading, error, reload } = useAsync(() => get<any>(`/shipments/${id}`), [id]);
   const act = useAction();
   const [recv, setRecv] = useState('');
   const [qty, setQty] = useState<Record<string, string>>({});
+  const [docKind, setDocKind] = useState('proof_of_delivery');
+  const logi = useAsync(async () => (can('logistics:read') ? { carriers: await get<any[]>('/carriers'), vehicles: await get<any[]>('/vehicles'), drivers: await get<any[]>('/drivers') } : { carriers: [], vehicles: [], drivers: [] }), []);
+  const [asg, setAsg] = useState<{ carrier_id?: string; vehicle_id?: string; driver_id?: string }>({});
+  const fileRef = useRef<HTMLInputElement>(null);
   const manage = can('shipments:manage');
   return (
     <Modal title={s ? `Expédition ${s.reference}` : 'Expédition'} onClose={onClose}>
@@ -171,6 +181,17 @@ function ShipmentDetail({ id, onClose }: { id: string; onClose: () => void }) {
       {s && (
         <>
           <p><StatusBadge map={SHIPMENT_STATUS} value={s.status} /> · vers {s.destination}</p>
+          <p className="muted">
+            Transporteur : {logi.data?.carriers.find((x: any) => x.id === s.carrier_id)?.name ?? '—'} · Véhicule : {logi.data?.vehicles.find((x: any) => x.id === s.vehicle_id)?.plate ?? '—'} · Chauffeur : {logi.data?.drivers.find((x: any) => x.id === s.driver_id)?.full_name ?? '—'}
+          </p>
+          {manage && ['planned', 'loaded'].includes(s.status) && (
+            <div className="toolbar">
+              <select aria-label="Transporteur" value={asg.carrier_id ?? ''} onChange={(e) => setAsg({ ...asg, carrier_id: e.target.value })}><option value="">Transporteur…</option>{(logi.data?.carriers ?? []).map((x: any) => <option key={x.id} value={x.id}>{x.name}</option>)}</select>
+              <select aria-label="Véhicule" value={asg.vehicle_id ?? ''} onChange={(e) => setAsg({ ...asg, vehicle_id: e.target.value })}><option value="">Véhicule…</option>{(logi.data?.vehicles ?? []).map((x: any) => <option key={x.id} value={x.id}>{x.plate}</option>)}</select>
+              <select aria-label="Chauffeur" value={asg.driver_id ?? ''} onChange={(e) => setAsg({ ...asg, driver_id: e.target.value })}><option value="">Chauffeur…</option>{(logi.data?.drivers ?? []).map((x: any) => <option key={x.id} value={x.id}>{x.full_name}</option>)}</select>
+              <button className="btn btn-secondary" disabled={act.busy || !(asg.carrier_id || asg.vehicle_id || asg.driver_id)} onClick={() => act.run(async () => { await post(`/shipments/${id}/assign`, Object.fromEntries(Object.entries(asg).filter(([, v]) => v))); setAsg({}); reload(); })}>Affecter</button>
+            </div>
+          )}
           <Table rows={s.items} columns={[
             { header: 'Lot', render: (i: any) => i.lot_code }, { header: 'Prévu', align: 'right', render: (i: any) => kg(i.planned_kg) },
             { header: 'Chargé', align: 'right', render: (i: any) => kg(i.loaded_kg) },
@@ -179,13 +200,33 @@ function ShipmentDetail({ id, onClose }: { id: string; onClose: () => void }) {
             { header: 'Écart', align: 'right', render: (i: any) => Number(i.discrepancy_kg) ? <Badge tone="warn">{kg(i.discrepancy_kg)}</Badge> : '—' },
           ]} />
           {s.incidents.length > 0 && <><h3>Incidents</h3><ul>{s.incidents.map((x: any) => <li key={x.id}>{x.kind} — {x.description}{x.resolved_at ? ' (résolu)' : ''}</li>)}</ul></>}
-          <p className="muted">{s.documents.length} document(s) joint(s). {s.status === 'delivered' && 'La validation exige une preuve de livraison.'}</p>
+          <h3>Documents</h3>
+          <ul className="list">{s.documents.map((d: any) => <li key={d.id}>{DOC_KIND[d.kind] ?? d.kind} — {d.filename}</li>)}{!s.documents.length && <li className="muted">Aucun document. {s.status === 'delivered' && 'La validation exige une preuve de livraison.'}</li>}</ul>
+          {can('documents:upload') && !['cancelled', 'validated'].includes(s.status) && (
+            <div className="toolbar">
+              <select aria-label="Type de document" value={docKind} onChange={(e) => setDocKind(e.target.value)}>{Object.entries(DOC_KIND).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
+              <input ref={fileRef} type="file" aria-label="Fichier" accept=".pdf,.jpg,.jpeg,.png" />
+              <button className="btn btn-secondary" disabled={act.busy} onClick={() => act.run(async () => {
+                const f = fileRef.current?.files?.[0]; if (!f) throw new Error('Choisir un fichier (PDF, JPEG ou PNG, 10 Mo maximum)');
+                const form = new FormData(); form.append('file', f); form.append('subject_type', 'shipment'); form.append('subject_id', id); form.append('kind', docKind);
+                await postForm('/documents', form); if (fileRef.current) fileRef.current.value = ''; reload();
+              })}>Joindre</button>
+            </div>
+          )}
           {s.status === 'in_transit' && manage && <Field label="Réceptionnaire"><input value={recv} onChange={(e) => setRecv(e.target.value)} /></Field>}
+          {s.status === 'in_transit' && manage && hasGap(s.items, qty) && (
+            <>
+              <p className="notice">Écart constaté entre le chargé et le livré : un motif et un responsable de traitement sont obligatoires.</p>
+              <Field label="Motif de l'écart"><input value={gapReason} onChange={(e) => setGapReason(e.target.value)} /></Field>
+              <Field label="Responsable de traitement"><select value={handler} onChange={(e) => setHandler(e.target.value)}><option value="">—</option>
+                {(people.data?.length ? people.data : me ? [{ id: me.user.id, full_name: me.user.full_name }] : []).map((u: any) => <option key={u.id} value={u.id}>{u.full_name}</option>)}</select></Field>
+            </>
+          )}
           <div className="modal-foot">
             {manage && s.status === 'planned' && <button className="btn" disabled={act.busy} onClick={() => act.run(async () => { await post(`/shipments/${id}/load`, {}); reload(); })}>Confirmer le chargement</button>}
             {manage && s.status === 'loaded' && <button className="btn" disabled={act.busy} onClick={() => act.run(async () => { await post(`/shipments/${id}/depart`); reload(); })}>Départ</button>}
-            {manage && s.status === 'in_transit' && <button className="btn" disabled={act.busy || recv.trim().length < 2} onClick={() => act.run(async () => {
-              await post(`/shipments/${id}/deliver`, { received_by_name: recv, items: s.items.map((i: any) => ({ item_id: i.id, delivered_kg: qty[i.id] ?? i.loaded_kg, ...((qty[i.id] ?? i.loaded_kg) !== i.loaded_kg && { reason: 'Écart constaté à la livraison' }) })) }); reload();
+            {manage && s.status === 'in_transit' && <button className="btn" disabled={act.busy || recv.trim().length < 2 || (hasGap(s.items, qty) && (gapReason.trim().length < 3 || !handler))} onClick={() => act.run(async () => {
+              await post(`/shipments/${id}/deliver`, { received_by_name: recv, items: s.items.map((i: any) => ({ item_id: i.id, delivered_kg: qty[i.id] ?? i.loaded_kg, ...(Number(qty[i.id] ?? i.loaded_kg) !== Number(i.loaded_kg) && { reason: gapReason, handler_id: handler }) })) }); reload();
             })}>Enregistrer la livraison</button>}
             {can('shipments:validate') && s.status === 'delivered' && <button className="btn" disabled={act.busy} onClick={() => act.run(async () => { await post(`/shipments/${id}/validate`, {}); reload(); })}>Valider la livraison</button>}
           </div>

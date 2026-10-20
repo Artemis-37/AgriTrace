@@ -11,3 +11,7 @@
 ## Limites
 - Les paiements reçus ne sont pas encore comptabilisés automatiquement dans le module comptable ni dans une caisse.
 - Pas d'avoir (la facture est annulée ou la réclamation traitée hors facture), pas de retour de stock après chargement (incident à la place), pas d'accès externe acheteur, pas d'écran web/mobile.
+
+
+## Affectation tardive
+`POST /shipments/:id/assign` (permission `shipments:manage`) affecte ou change transporteur, véhicule et conducteur tant que l'expédition est planifiée ou chargée. Sans cela, une expédition chargée sans véhicule ni conducteur ne pouvait ni partir ni être annulée.

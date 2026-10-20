@@ -23,7 +23,7 @@ export function CreateShipment({ onClose, onDone }: { onClose: () => void; onDon
       <Field label="Magasin d'origine"><select value={f.warehouse_id} onChange={set('warehouse_id')}><option value="">—</option>{opt((whs.data ?? []).filter((w) => w.status === 'active'), (w) => w.name)}</select></Field>
       <Field label="Destination"><input value={f.destination} onChange={set('destination')} /></Field>
       <Field label="Transporteur"><select value={f.carrier_id} onChange={set('carrier_id')}><option value="">—</option>{opt(logi.data?.carriers, (c) => c.name)}</select></Field>
-      <Field label="Véhicule"><select value={f.vehicle_id} onChange={set('vehicle_id')}><option value="">—</option>{opt(logi.data?.vehicles, (v) => v.plate)}</select></Field>
+      <Field label="Véhicule" hint="Véhicule et chauffeur sont requis pour le départ ; ils peuvent être affectés plus tard."><select value={f.vehicle_id} onChange={set('vehicle_id')}><option value="">—</option>{opt(logi.data?.vehicles, (v) => v.plate)}</select></Field>
       <Field label="Chauffeur"><select value={f.driver_id} onChange={set('driver_id')}><option value="">—</option>{opt(logi.data?.drivers, (d) => d.full_name)}</select></Field>
       {f.order_id && (order.loading ? <Loading /> : (
         <Table rows={allocs} empty="Aucune réservation disponible : réservez d'abord du stock sur la commande." columns={[
