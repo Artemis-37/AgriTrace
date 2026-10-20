@@ -29,11 +29,11 @@ await step('en ligne : les écrans utiles sont chargés une fois (mise en mémoi
   await nav('Messages'); await page.waitForTimeout(500);
 });
 await step('le serveur devient injoignable : bandeau « Hors connexion »', async () => {
-  must((await page.locator('.conn-btn').getAttribute('aria-label')).includes('Connecté au serveur'), 'icône de connexion : pas « Connecté » au départ');
+  must((await page.locator('.ci').nth(1).getAttribute('aria-label')).includes('connecté'), 'icône serveur : pas « connecté » au départ');
   await ctx.setOffline(true);
   await page.getByRole('link', { name: /Mes achats/ }).first().click(); await page.waitForTimeout(1500);
   must((await page.locator('.offline-bar').innerText()).includes('Hors connexion'), 'bandeau absent');
-  must((await page.locator('.conn-btn').getAttribute('aria-label')).includes('Hors connexion'), 'icône de connexion : pas « Hors connexion »');
+  must((await page.locator('.ci').nth(1).getAttribute('aria-label')).includes('injoignable') && (await page.locator('.ci-ko').count()) >= 1, 'icône serveur : pas « injoignable » en rouge');
 });
 await step('hors connexion : la liste des déclarations reste lisible (copie du poste)', async () => {
   must(!(await page.locator('main').innerText()).includes('Hors connexion : ces données'), 'copie absente');
@@ -67,7 +67,7 @@ await step('le serveur ne contient encore rien', async () => {
 await step('retour du serveur : envoi automatique, bandeau disparu', async () => {
   await ctx.setOffline(false);
   for (let i = 0; i < 30; i++) { await page.waitForTimeout(1000); if (!(await page.locator('.offline-bar').count())) break; }
-  must((await page.locator('.conn-btn').getAttribute('aria-label')).includes('Connecté au serveur'), 'icône de connexion : pas revenue à « Connecté »');
+  must((await page.locator('.ci').nth(1).getAttribute('aria-label')).includes('connecté'), 'icône serveur : pas revenue à « connecté »');
   if (await page.locator('.offline-bar').count()) { await page.getByRole('button', { name: 'Détails' }).click(); await page.waitForTimeout(300); must(false, 'bandeau toujours là', await page.locator('[role=dialog]').innerText()); }
 });
 await step('l\'achat est au serveur, soumis', async () => {

@@ -50,9 +50,13 @@ La fiche papier devient le compte du collecteur. Colonnes reprises : A poids, B 
 - **Collecteur** : ses achats, convois, stock et fiche uniquement.
 - « Ajouter un utilisateur » (Équipe) crée le compte avec le rôle choisi.
 
-## Icônes de connexion
+## Poste unique / serveur / client et icônes de connexion (modèle CentriGest)
 
-Barre du haut du portail (et des postes de bureau) : trois icônes d'état, cliquables pour le détail.
-- **Wi-Fi** : ce poste ↔ serveur de la coopérative (vert connecté, bleu envoi en cours, orange hors connexion ou travail en attente, rouge opérations à traiter).
-- **Nuage** : serveur de la coopérative ↔ serveur central (synchronisé / en attente / échec / non relié) ; visible sur un serveur local.
-- **Écran + nombre** : postes actuellement connectés (battement toutes les 30 s ; oubliés après 90 s). Aucune donnée métier n'est exposée.
+Rôles d'un ordinateur de bureau, choisis à l'installation et visibles dans Fichier → « Poste et réseau… » :
+- **Poste unique** : données sur l'ordinateur, aucun autre poste ne peut s'y connecter (l'API n'écoute que sur ce poste).
+- **Serveur** : héberge les données et accepte les postes clients ; répond à la recherche réseau (balise UDP 8099, ouverte par l'installateur en réseau privé).
+- **Poste client** : ne garde pas les données ; bouton « Rechercher sur le réseau » (balise UDP puis balayage du sous-réseau), reconnexion automatique si le serveur change d'adresse.
+
+Barre du haut : quatre icônes carrées comme CentriGest, vert = bon, rouge = coupé, orange = en attente, gris = sans objet. **Réseau**, **Serveur de la coopérative**, **Serveur central** (sur un serveur local), **Synchronisation** (pastille = opérations en attente ou refusées). Un clic ouvre le panneau « Synchronisation » (voyants, postes connectés, « Synchroniser maintenant »).
+
+Pas encore repris de CentriGest : association d'un poste par code à 8 caractères (révocable), HTTPS auto-signé, installateur Inno Setup/PWA.

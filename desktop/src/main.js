@@ -7,10 +7,10 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { LocalServer } = require('./server-manager');
-const { discover } = require('./discovery');
+const { discover, findServer, startBeacon } = require('./discovery');
 
 const PORT = 3000;
-let cfg = null, server = null, win = null, tray = null, quitting = false;
+let stopBeacon = null, cfg = null, server = null, win = null, tray = null, quitting = false;
 const cfgFile = () => path.join(app.getPath('userData'), 'config.json');
 const loadCfg = () => { try { return JSON.parse(fs.readFileSync(cfgFile(), 'utf8')); } catch { return null; } };
 const saveCfg = (c) => { fs.mkdirSync(path.dirname(cfgFile()), { recursive: true }); fs.writeFileSync(cfgFile(), JSON.stringify(c, null, 2)); cfg = c; };
@@ -53,7 +53,7 @@ async function refindServer() {
   if (Date.now() - lastFind < 20000) return false;
   lastFind = Date.now();
   finding = (async () => {
-    const found = await discover({ port: PORT, known: cfg?.serverUrl });
+    const found = await findServer({ port: PORT, known: cfg?.serverUrl });
     const best = found.find((f) => f.mode === 'local') ?? found[0];
     if (!best) return false;
     if (best.origin !== cfg.serverUrl) { log(`serveur retrouvé à une nouvelle adresse (${best.origin})`); saveCfg({ ...cfg, serverUrl: best.origin }); }
@@ -77,13 +77,13 @@ function mainWindow(url) {
   });
   win.on('close', (e) => {
     // Sur le poste serveur, fermer la fenêtre ne coupe pas le serveur : les autres postes en ont besoin.
-    if (!quitting && cfg?.role === 'server') { e.preventDefault(); win.hide(); tray?.displayBalloon?.({ title: 'AgriTrace', content: 'Le serveur reste actif. Clic droit sur l\'icône pour quitter.' }); }
+    if (!quitting && (cfg?.role === 'server' || cfg?.role === 'single')) { e.preventDefault(); win.hide(); tray?.displayBalloon?.({ title: 'AgriTrace', content: 'Le serveur reste actif. Clic droit sur l\'icône pour quitter.' }); }
   });
   win.on('closed', () => { win = null; });
 }
 
 function buildMenu() {
-  const isServer = cfg?.role === 'server';
+  const isServer = cfg?.role === 'server' || cfg?.role === 'single';
   Menu.setApplicationMenu(Menu.buildFromTemplate([
     { label: 'Fichier', submenu: [
       ...(isServer ? [
@@ -92,7 +92,8 @@ function buildMenu() {
         { label: 'Démarrer avec Windows', type: 'checkbox', checked: app.getLoginItemSettings().openAtLogin, click: (i) => app.setLoginItemSettings({ openAtLogin: i.checked }) },
         { type: 'separator' },
       ] : []),
-      { label: 'Changer de mode (serveur / poste client)…', click: resetRole },
+      { label: 'Poste et réseau…', click: showNetwork },
+      { label: 'Changer de rôle (poste unique / serveur / client)…', click: resetRole },
       { label: 'Journal technique', click: () => shell.openPath(logFile()) },
       { type: 'separator' }, { label: isServer ? 'Quitter et arrêter le serveur' : 'Quitter', role: 'quit' },
     ] },
@@ -109,6 +110,17 @@ async function backupNow() {
     dialog.showMessageBox({ message: 'Sauvegarde terminée', detail: t });
   } catch (e) { dialog.showErrorBox('Sauvegarde impossible', e.message); }
 }
+// Équivalent de « Paramètres → Poste & réseau » : rôle de ce poste et état de la liaison, sans adresse affichée.
+async function showNetwork() {
+  const ROLE = { single: 'Poste unique — les données restent sur cet ordinateur, aucun autre poste ne peut s\'y connecter.', server: 'Serveur — héberge les données et accepte les postes clients du réseau du bureau.', client: 'Poste client — se connecte au serveur de la coopérative ; ne garde pas les données.' };
+  let detail = '';
+  if (cfg?.role === 'client') {
+    const r = await findServer({ port: PORT, known: cfg.serverUrl }).catch(() => []);
+    detail = r.length ? 'Serveur de la coopérative : trouvé et joignable.' : 'Serveur de la coopérative : introuvable pour le moment (le poste continue en mode hors connexion).';
+  }
+  const choice = await dialog.showMessageBox({ title: 'Poste et réseau', message: `Poste « ${cfg?.stationName ?? ''} »`, detail: `${ROLE[cfg?.role] ?? ''}\n${detail}`, buttons: cfg?.role === 'client' ? ['Fermer', 'Rechercher le serveur'] : ['Fermer'], cancelId: 0 });
+  if (choice.response === 1) { lastFind = 0; const ok = await refindServer(); dialog.showMessageBox({ message: ok ? 'Serveur trouvé et connecté.' : 'Aucun serveur trouvé sur le réseau.', detail: ok ? '' : 'Vérifiez que le poste serveur est allumé avec AgriTrace ouvert, sur le même réseau.' }); if (ok) win?.reload(); }
+}
 async function resetRole() {
   const r = await dialog.showMessageBox({ type: 'warning', buttons: ['Annuler', 'Changer de mode'], defaultId: 0, cancelId: 0, message: 'Changer de mode ?', detail: 'Les données du serveur sur ce poste ne sont PAS supprimées. Le serveur sera arrêté et le choix initial vous sera reproposé.' });
   if (r.response !== 1) return;
@@ -121,7 +133,8 @@ async function resetRole() {
 async function startServerRole() {
   const splash = new BrowserWindow({ width: 460, height: 260, frame: false, resizable: false, alwaysOnTop: true, webPreferences: { contextIsolation: true } });
   splash.loadFile(page('splash.html'));
-  server = new LocalServer({ dataDir: path.join(app.getPath('userData'), 'server'), appDir: appDir(), port: PORT, nodeBin: process.execPath, log });
+  const single = cfg.role === 'single';
+  server = new LocalServer({ dataDir: path.join(app.getPath('userData'), 'server'), appDir: appDir(), port: PORT, nodeBin: process.execPath, log, localOnly: single });
   server.version = app.getVersion();
   try {
     await server.start();
@@ -133,6 +146,7 @@ async function startServerRole() {
     app.exit(1); return;
   }
   splash.close();
+  if (!single) stopBeacon = startBeacon({ port: PORT, name: cfg.stationName ?? 'Serveur' });   // les postes clients trouvent ce serveur seuls
   tray = new Tray(nativeImage.createFromPath(path.join(__dirname, '..', 'build', 'icon.png')).resize({ width: 16, height: 16 }));
   tray.setToolTip('AgriTrace — serveur actif');
   tray.setContextMenu(Menu.buildFromTemplate([
@@ -156,7 +170,7 @@ async function main() {
     });
     buildMenu();
   }
-  if (cfg.role === 'server') await startServerRole();
+  if (cfg.role === 'server' || cfg.role === 'single') await startServerRole();
   else { registerClientProtocol(); mainWindow('agritrace://app/'); refindServer().catch(() => undefined); }
 }
 
@@ -169,7 +183,7 @@ ipcMain.handle('setup:check', async (_e, url) => {
   } catch (e) { return { ok: false, error: e.message }; }
 });
 ipcMain.handle('setup:discover', async () => {
-  const found = await discover({ port: PORT });
+  const found = await findServer({ port: PORT });
   const best = found.find((f) => f.mode === 'local') ?? found[0];
   return best ? { ok: true, mode: best.mode, origin: best.origin, count: found.length } : { ok: false };
 });
@@ -178,8 +192,8 @@ ipcMain.on('app:station', (e) => { e.returnValue = cfg?.stationName ?? 'Poste'; 
 ipcMain.handle('app:change', () => resetRole());
 
 app.whenReady().then(main);
-app.on('before-quit', () => { quitting = true; });
+app.on('before-quit', () => { quitting = true; stopBeacon?.(); });
 app.on('will-quit', async (e) => {
   if (server && server.state !== 'stopped') { e.preventDefault(); const s = server; server = null; await s.stop().catch(() => undefined); app.quit(); }
 });
-app.on('window-all-closed', () => { if (cfg?.role !== 'server') app.quit(); });
+app.on('window-all-closed', () => { if (cfg?.role !== 'server' && cfg?.role !== 'single') app.quit(); });

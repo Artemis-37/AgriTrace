@@ -21,6 +21,7 @@ class LocalServer {
   constructor(o) {
     this.dataDir = o.dataDir; this.appDir = o.appDir;
     this.port = o.port ?? 3000; this.pgPort = o.pgPort ?? 54329;
+    this.localOnly = !!o.localOnly;   // poste unique : l'API n'écoute que sur ce poste
     this.nodeBin = o.nodeBin ?? process.execPath;
     this.log = o.log ?? (() => {});
     this.pg = null; this.api = null; this.state = 'stopped';
@@ -112,7 +113,7 @@ class LocalServer {
     this.api = spawn(this.nodeBin, [path.join(backend, 'dist', 'main.js')], {
       cwd: backend, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'],
       env: this.backendEnv({
-        AGRITRACE_MODE: 'local', DATABASE_URL: this.appUrl(), JWT_SECRET: this.secrets().jwtSecret, PORT: String(this.port),
+        AGRITRACE_MODE: 'local', DATABASE_URL: this.appUrl(), JWT_SECRET: this.secrets().jwtSecret, PORT: String(this.port), ...(this.localOnly ? { HOST: '127.0.0.1' } : {}),
         DOCUMENTS_DIR: docs, WEB_DIR: path.join(this.appDir, 'web'), APP_VERSION: this.version ?? '0.1.0', THROTTLE_LIMIT: '600',
       }),
     });

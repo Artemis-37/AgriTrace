@@ -33,4 +33,46 @@ async function discover({ port = 3000, known, timeoutMs = 700, extraHosts = [], 
   return found;
 }
 
-module.exports = { discover, probe, localSubnets };
+// ---- Balise UDP (comme CentriGest) : le serveur répond « qui est là ? » sur le port 8099 ; le client diffuse et écoute. ----
+const dgram = require('dgram');
+const BEACON_PORT = 8099, ASK = 'AGRITRACE?';
+
+/** Côté serveur : répond aux demandes des postes clients avec son port. Renvoie une fonction d'arrêt. */
+function startBeacon({ port = 3000, name = 'Serveur', beaconPort = BEACON_PORT } = {}) {
+  const sock = dgram.createSocket({ type: 'udp4', reuseAddr: true });
+  sock.on('message', (msg, rinfo) => {
+    if (msg.toString() !== ASK) return;
+    sock.send(Buffer.from(JSON.stringify({ app: 'agritrace', port, name })), rinfo.port, rinfo.address);
+  });
+  sock.on('error', () => { try { sock.close(); } catch { /* ignoré */ } });
+  sock.bind(beaconPort);
+  return () => { try { sock.close(); } catch { /* ignoré */ } };
+}
+
+/** Côté client : diffuse la demande et collecte les réponses pendant `waitMs`. */
+function findByBeacon({ beaconPort = BEACON_PORT, waitMs = 1500, targets = ['255.255.255.255'] } = {}) {
+  return new Promise((resolve) => {
+    const found = new Map();
+    const sock = dgram.createSocket('udp4');
+    sock.on('error', () => resolve([]));
+    sock.on('message', (msg, rinfo) => {
+      try { const j = JSON.parse(msg.toString()); if (j.app === 'agritrace') found.set(`http://${rinfo.address}:${j.port}`, { origin: `http://${rinfo.address}:${j.port}`, name: j.name }); } catch { /* autre service */ }
+    });
+    sock.bind(0, () => {
+      try { sock.setBroadcast(true); } catch { /* ignoré */ }
+      for (const t of targets) sock.send(Buffer.from(ASK), beaconPort, t, () => undefined);
+      setTimeout(async () => { try { sock.close(); } catch { /* ignoré */ } resolve([...found.values()]); }, waitMs);
+    });
+  });
+}
+
+/** Recherche complète : balise UDP d'abord (rapide), balayage du sous-réseau ensuite si rien n'a répondu. */
+async function findServer(opts = {}) {
+  const viaBeacon = await findByBeacon(opts.beacon);
+  const checked = [];
+  for (const b of viaBeacon) { const r = await probe(b.origin, 1500); if (r) checked.push(r); }
+  if (checked.length) return checked;
+  return discover(opts);
+}
+
+module.exports = { discover, probe, localSubnets, startBeacon, findByBeacon, findServer, BEACON_PORT };

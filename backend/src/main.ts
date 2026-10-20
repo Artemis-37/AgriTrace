@@ -48,6 +48,8 @@ async function bootstrap() {
     // Toute adresse du portail (hors API) renvoie la page d'accueil : le routage se fait dans le navigateur.
     (app.getHttpAdapter().getInstance() as any).get(/^\/(?!v1(\/|$)).*/, (_req: any, res: any) => res.sendFile(path.join(webDir, 'index.html')));
   }
-  await app.listen(Number(process.env.PORT ?? 3000));
+  // HOST=127.0.0.1 : poste unique, non joignable depuis le réseau. Sans HOST : accessible aux autres postes.
+  if (process.env.HOST) await app.listen(Number(process.env.PORT ?? 3000), process.env.HOST);
+  else await app.listen(Number(process.env.PORT ?? 3000));
 }
 bootstrap();
