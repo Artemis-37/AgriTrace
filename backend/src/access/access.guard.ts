@@ -81,6 +81,12 @@ export class AccessGuard implements CanActivate {
     const required = this.reflector.getAllAndOverride<string[]>(PERMISSIONS, targets) ?? [];
     if (!hasAllPermissions(granted, required)) throw new ForbiddenException('Permission insuffisante');
 
+    // Au central, une coopérative gérée par un serveur local est en lecture seule : la réplication va dans un seul sens.
+    if (process.env.AGRITRACE_MODE !== 'local' && !['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
+      const owned = await this.db.query(`SELECT 1 FROM replication_sites WHERE organization_id = $1`, [orgId]);
+      if (owned.length) throw new ForbiddenException('Cette coopérative est gérée par son serveur local : le serveur central est en lecture seule pour elle.');
+    }
+
     req.org = { id: orgId, permissions: granted };
     return true;
   }

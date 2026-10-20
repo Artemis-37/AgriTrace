@@ -18,6 +18,8 @@ const path = require('path');
     await client.query(fs.readFileSync(path.join(dir, f), 'utf8'));
     await client.query('INSERT INTO schema_migrations(name) VALUES ($1)', [f]);
   }
+  // Les déclencheurs de réplication couvrent aussi les tables ajoutées par les migrations précédentes (idempotent).
+  await client.query('SELECT replication_install_triggers()');
   await client.end();
 })().catch((e) => {
   console.error(e);

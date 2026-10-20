@@ -28,7 +28,7 @@ export class AuthService {
       [email],
     );
     const invalid = new UnauthorizedException('Identifiants invalides');
-    if (!u || u.status !== 'active') throw invalid;
+    if (!u || u.status !== 'active' || String(u.password_hash).startsWith('!')) throw invalid; // '!' = compte copié depuis un serveur local, sans mot de passe ici
     if (u.locked_until && new Date(u.locked_until) > new Date())
       throw new UnauthorizedException('Compte temporairement verrouillé');
 

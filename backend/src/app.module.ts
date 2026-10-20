@@ -36,6 +36,8 @@ import { GeoController } from './geo/geo.controller';
 import { GeoImportService } from './geo/geo-import.service';
 import { GeoService } from './geo/geo.service';
 import { UsersController } from './users/users.controller';
+import { ReplicationController } from './replication/replication.controller';
+import { ReplicationService } from './replication/replication.service';
 
 @Module({
   imports: [
@@ -48,9 +50,9 @@ import { UsersController } from './users/users.controller';
     OrganizationsController, UsersController, ReferentialsController, ProducersController,
     CollectorsController, DeclarationsController, FinanceController,
     ReceptionController, StockController, LotsController, SyncController,
-    AccountingController, LoansController, PaymentsController, QualityController, ComplianceController, ParcelsController, GeoController, TasksController, LogisticsController, SalesController, NotificationsController, AccessAdminController, ProducerStatusController, PrefinancingController, StockCountController, MeController, OpsController,
+    AccountingController, LoansController, PaymentsController, QualityController, ComplianceController, ParcelsController, GeoController, TasksController, LogisticsController, SalesController, NotificationsController, AccessAdminController, ProducerStatusController, PrefinancingController, StockCountController, MeController, OpsController, ReplicationController,
   ],
-  providers: [NotificationsService, 
+  providers: [NotificationsService, ReplicationService, 
     GeoService, GeoImportService,
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: AccessGuard },
