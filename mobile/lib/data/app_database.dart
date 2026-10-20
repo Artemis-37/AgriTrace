@@ -73,11 +73,13 @@ class AppDatabase {
 
   Future<int> pendingCount() async {
     final r = await raw.rawQuery("SELECT count(*) c FROM outbox WHERE status IN ('pending','pending_validation')");
-    return (r.first['c'] as int?) ?? 0;
+    final ph = await raw.rawQuery("SELECT count(*) c FROM pending_uploads WHERE status = 'pending'");
+    return ((r.first['c'] as int?) ?? 0) + ((ph.first['c'] as int?) ?? 0);
   }
 
   Future<int> problemCount() async {
     final r = await raw.rawQuery("SELECT count(*) c FROM outbox WHERE status IN ('to_correct','rejected','conflict')");
-    return (r.first['c'] as int?) ?? 0;
+    final ph = await raw.rawQuery("SELECT count(*) c FROM pending_uploads WHERE status = 'error'");
+    return ((r.first['c'] as int?) ?? 0) + ((ph.first['c'] as int?) ?? 0);
   }
 }
