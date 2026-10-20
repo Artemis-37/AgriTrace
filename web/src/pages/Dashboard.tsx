@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { get } from '../api';
 import { useAuth } from '../auth';
-import { kg, money } from '../format';
+import { dateTime, kg, money } from '../format';
 import { Card, ErrorBox, Loading, PageHeader, Stat, useAsync } from '../ui';
 
 const ok = async <T,>(p: Promise<T>): Promise<T | null> => { try { return await p; } catch { return null; } };
@@ -9,7 +9,8 @@ const ok = async <T,>(p: Promise<T>): Promise<T | null> => { try { return await 
 export default function Dashboard() {
   const { can, me } = useAuth();
   const { data, loading, error, reload } = useAsync(async () => {
-    const [producers, parcels, decls, stocks, accounts, loans, alerts, invoices, orders, tasks, anomalies, prefin] = await Promise.all([
+    const [sync, producers, parcels, decls, stocks, accounts, loans, alerts, invoices, orders, tasks, anomalies, prefin] = await Promise.all([
+      ok(get<any>('/replication/status')),
       can('producers:read') ? ok(get<any[]>('/producers')) : null,
       can('parcels:read') ? ok(get<any[]>('/parcels')) : null,
       can('declarations:read') ? ok(get<any[]>('/purchase-declarations')) : null,
@@ -23,12 +24,12 @@ export default function Dashboard() {
       can('geo:anomalies') ? ok(get<any[]>('/geo/anomalies?status=open')) : null,
       can('prefinancing:read') ? ok(get<any>('/prefinancings/report')) : null,
     ]);
-    return { producers, parcels, decls, stocks, accounts, loans, alerts, invoices, orders, tasks, anomalies, prefin };
+    return { sync, producers, parcels, decls, stocks, accounts, loans, alerts, invoices, orders, tasks, anomalies, prefin };
   }, []);
 
   if (loading) return <Loading />;
   if (error || !data) return <ErrorBox message={error ?? 'Chargement impossible'} onRetry={reload} />;
-  const { producers, parcels, decls, stocks, accounts, loans, alerts, invoices, orders, tasks, anomalies, prefin } = data;
+  const { sync, producers, parcels, decls, stocks, accounts, loans, alerts, invoices, orders, tasks, anomalies, prefin } = data;
   const live = invoices?.filter((i) => i.status !== 'cancelled');
   const receivable = live?.reduce((s, i) => s + Number(i.balance), 0);
   const overdue = live?.reduce((s, i) => s + (i.overdue ? Number(i.balance) : 0), 0);
@@ -47,6 +48,12 @@ export default function Dashboard() {
     <>
       <PageHeader title={`Bonjour ${me?.user.full_name.split(' ')[0] ?? ''}`} subtitle="Vue d'ensemble de votre coopérative" />
       <div className="grid">
+        {sync?.mode === 'local' && (
+          <Stat label="Synchronisation avec le central"
+            value={!sync.linked ? 'Non reliée' : sync.last_error ? 'En erreur' : sync.pending_rows ? `${sync.pending_rows} en attente` : 'À jour'}
+            tone={!sync.linked ? 'neutral' : sync.last_error ? 'bad' : sync.pending_rows ? 'warn' : 'ok'}
+            hint={sync.linked ? (sync.last_ok_at ? `Dernier envoi : ${dateTime(sync.last_ok_at)}` : 'Aucun envoi réussi') : undefined} />
+        )}
         {producers && <Stat label="Producteurs" value={producers.length} />}
         {parcels && <Stat label="Parcelles" value={parcels.length} hint={`${parcels.filter((p) => p.verification_status === 'verified').length} vérifiée(s)`} />}
         {decls && <Stat label="Déclarations à traiter" value={pending} tone={pending ? 'warn' : 'ok'} />}

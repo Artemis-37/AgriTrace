@@ -4,7 +4,7 @@ import * as client from './api';
 export interface Org { id: string; code: string; name: string }
 interface Me { user: { id: string; email: string; full_name: string }; permissions: string[] }
 interface AuthState {
-  status: 'loading' | 'anonymous' | 'choose-org' | 'ready';
+  status: 'loading' | 'anonymous' | 'choose-org' | 'ready' | 'platform';
   orgs: Org[]; org: Org | null; me: Me | null;
   signIn: (email: string, password: string) => Promise<void>;
   chooseOrg: (id: string) => Promise<void>;
@@ -32,7 +32,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const saved = client.getOrg();
     if (saved && list.some((o) => o.id === saved)) return enter(list, saved);
     if (list.length === 1) return enter(list, list[0].id);
-    client.setOrg(null); setStatus(list.length ? 'choose-org' : 'anonymous');
+    client.setOrg(null);
+    if (!list.length) {
+      // Administrateur de plateforme : pas de coopérative, mais la console du serveur central.
+      const pf = await client.get<{ is_platform_admin: boolean; full_name: string }>('/me/platform').catch(() => null);
+      if (pf?.is_platform_admin) { setMe({ user: { id: '', email: '', full_name: pf.full_name }, permissions: [] }); setStatus('platform'); return; }
+      setStatus('anonymous');
+    } else setStatus('choose-org');
     if (!list.length) throw new client.ApiError(403, "Ce compte n'est rattaché à aucune coopérative.");
   }, [enter]);
 

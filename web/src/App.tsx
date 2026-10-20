@@ -12,6 +12,8 @@ import Cartographie from './pages/Cartographie';
 import Declarations from './pages/Declarations';
 import Finance from './pages/Finance';
 import Login from './pages/Login';
+import Synchronisation from './pages/Synchronisation';
+import CentralConsole from './pages/CentralConsole';
 import Missions from './pages/Missions';
 import Parcels from './pages/Parcels';
 import Producers from './pages/Producers';
@@ -27,6 +29,7 @@ const NAV: { to: string; label: string; icon: string; perm: string[]; any?: bool
   { to: '/commerce', label: 'Commerce', icon: '⇄', perm: ['buyers:read', 'logistics:read', 'invoices:read'], any: true },
   { to: '/inventaire', label: 'Inventaire', icon: '☰', perm: ['stock:count'] },
   { to: '/prefinancement', label: 'Préfinancement', icon: '◈', perm: ['prefinancing:read'] },
+  { to: '/synchronisation', label: 'Synchronisation', icon: '⇅', perm: ['replication:manage'] },
   { to: '/equipe', label: 'Équipe', icon: '⚙', perm: ['users:read'] },
   { to: '/declarations', label: 'Déclarations d\'achat', icon: '✎', perm: ['declarations:read'] },
   { to: '/missions', label: 'Missions', icon: '⚑', perm: ['tasks:read'] },
@@ -39,9 +42,15 @@ export default function App() {
   const { status, org, me, can, signOut } = useAuth();
   const [open, setOpen] = useState(false);
   const [unread, setUnread] = useState(0);
+  const [managed, setManaged] = useState<string | null>(null);
+  useEffect(() => {
+    if (status !== 'ready') return;
+    get<any>('/replication/status').then((r) => setManaged(r.mode === 'central' && r.site ? r.site.name : null)).catch(() => setManaged(null));
+  }, [status, org?.id]);
   const refreshUnread = useCallback(() => { get<{ unread: number }>('/notifications/unread-count').then((r) => setUnread(r.unread)).catch(() => undefined); }, []);
   useEffect(() => { if (status !== 'ready') return; refreshUnread(); const t = setInterval(refreshUnread, 60000); return () => clearInterval(t); }, [status, org?.id, refreshUnread]);
   if (status === 'loading') return <div style={{ padding: '3rem' }}><Loading /></div>;
+  if (status === 'platform') return <CentralConsole />;
   if (status !== 'ready') return <Login />;
 
   return (
@@ -64,6 +73,7 @@ export default function App() {
         </div>
       </aside>
       <main className="main">
+        {managed && <p className="notice" role="status">Lecture seule : cette coopérative est gérée par son serveur local (« {managed} »). Les modifications se font là-bas ; elles arrivent ici par synchronisation.</p>}
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/producteurs" element={<Producers />} />
@@ -72,6 +82,7 @@ export default function App() {
           <Route path="/commerce" element={<Commerce />} />
           <Route path="/inventaire" element={<Inventaire />} />
           <Route path="/prefinancement" element={<Prefinancement />} />
+          <Route path="/synchronisation" element={<Synchronisation />} />
           <Route path="/equipe" element={<Equipe />} />
           <Route path="/notifications" element={<Notifications onChange={refreshUnread} />} />
           <Route path="/declarations" element={<Declarations />} />
