@@ -15,7 +15,7 @@ async function seed() {
 }
 
 const browser = await chromium.launch({ args: ['--no-sandbox'], executablePath: process.env.CHROMIUM_PATH || undefined });
-const page = await browser.newPage({ viewport: { width: 1300, height: 1000 } });
+const page = await browser.newPage({ viewport: { width: 1300, height: 1000 }, acceptDownloads: true });
 const problems = [];
 page.on('pageerror', (e) => problems.push('erreur JavaScript : ' + e.message));
 let expectedRefusals = 0;
@@ -111,6 +111,10 @@ await step('trop-perçu refusé puis encaissement en deux fois jusqu\'à « Pay�
   await pay('2000000'); must(/supérieur au solde/.test(await text()), 'trop-perçu non refusé'); expectedRefusals++;
   await pay('500000'); must((await text()).includes('Part. payée'), 'statut Part. payée absent');
   await pay('495000'); must((await text()).includes('Payée'), 'statut Payée absent');
+  await m.locator('input[type=file]').setInputFiles(PROOF); await m.getByRole('button', { name: 'Joindre' }).click(); await page.waitForTimeout(1000);
+  must((await text()).includes('Copie de facture') && (await text()).includes('proof.png'), 'pièce jointe de la facture absente');
+  const [dl] = await Promise.all([page.waitForEvent('download', { timeout: 15000 }), m.getByRole('button', { name: 'Télécharger' }).click()]);
+  must(dl.suggestedFilename() === 'proof.png', 'téléchargement inattendu', dl.suggestedFilename());
   await page.keyboard.press('Escape');
 });
 await step('enregistrer et clôturer une réclamation', async () => {

@@ -4,6 +4,7 @@ import { useAuth } from '../auth';
 import { PRIORITY, TASK_CATEGORY, TASK_STATUS, date, dateTime } from '../format';
 import { Badge, Card, ErrorBox, Field, Loading, Modal, PageHeader, Stat, StatusBadge, Table, Tabs, useAction, useAsync } from '../ui';
 import { Confirm } from './Declarations';
+import DocumentsPanel from './DocumentsPanel';
 
 export default function Missions() {
   const { can } = useAuth();
@@ -164,6 +165,7 @@ function Detail({ id, onClose, onChange }: { id: string; onClose: () => void; on
           </div>
         </div>
       )}
+      <DocumentsPanel subjectType="task" subjectId={t.id} kinds={['task_report', 'photo', 'other']} locked={['validated', 'closed', 'cancelled'].includes(t.status)} />
       <h2>Historique</h2>
       <ul className="plain">{t.history.map((h: any) => <li key={h.id}>{dateTime(h.created_at)} — {TASK_STATUS[h.to_status]?.[0] ?? h.to_status} par {h.actor_name ?? '—'}{h.note ? ` : ${h.note}` : ''}</li>)}</ul>
       {err && <ErrorBox message={err} />}

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { get, idem, post } from '../api';
 import { kg } from '../format';
+import DocumentsPanel from './DocumentsPanel';
 import { Card, ErrorBox, Field, Loading, Modal, Table, useAction, useAsync } from '../ui';
 
 /** Création d'une expédition à partir des réservations d'une commande. */
@@ -100,6 +101,7 @@ export function CreateContract({ onClose, onDone }: { onClose: () => void; onDon
 export function Claims() {
   const [adding, setAdding] = useState(false);
   const [resolving, setResolving] = useState<any | null>(null);
+  const [pieces, setPieces] = useState<any | null>(null);
   const { data, loading, error, reload } = useAsync(async () => ({ claims: await get<any[]>('/sales-claims'), buyers: await get<any[]>('/buyers') }), []);
   const names = new Map((data?.buyers ?? []).map((b) => [b.id, b.name]));
   return (
@@ -111,10 +113,11 @@ export function Claims() {
           { header: 'Date', render: (c) => new Date(c.created_at).toLocaleDateString('fr-FR') }, { header: 'Acheteur', render: (c) => names.get(c.buyer_id) ?? '—' },
           { header: 'Description', render: (c) => c.description }, { header: 'Montant', align: 'right', render: (c) => c.amount_claimed ?? '—' },
           { header: 'Statut', render: (c) => c.status === 'open' ? 'Ouverte' : c.status === 'resolved' ? 'Résolue' : 'Rejetée' },
-          { header: '', render: (c) => c.status === 'open' && <button className="btn btn-small btn-secondary" onClick={() => setResolving(c)}>Traiter</button> },
+          { header: '', render: (c) => <div className="row-actions"><button className="btn btn-small btn-ghost" onClick={() => setPieces(c)}>Pièces</button>{c.status === 'open' && <button className="btn btn-small btn-secondary" onClick={() => setResolving(c)}>Traiter</button>}</div> },
         ]} />
       )}
       {adding && <NewClaim buyers={(data?.buyers ?? [])} onClose={() => setAdding(false)} onDone={() => { setAdding(false); reload(); }} />}
+      {pieces && <Modal title="Pièces de la réclamation" onClose={() => setPieces(null)}><p>{pieces.description}</p><DocumentsPanel subjectType="claim" subjectId={pieces.id} kinds={['claim_evidence', 'photo', 'other']} /></Modal>}
       {resolving && <ResolveClaim c={resolving} onClose={() => setResolving(null)} onDone={() => { setResolving(null); reload(); }} />}
     </Card>
   );
