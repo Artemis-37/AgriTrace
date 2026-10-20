@@ -1,12 +1,14 @@
 import { FormEvent, useState } from 'react';
 import { get, post } from '../api';
 import { useAuth } from '../auth';
+import { PRODUCER_STATUS } from '../format';
 import { Card, Empty, ErrorBox, Field, Loading, Modal, PageHeader, StatusBadge, Table, useAction, useAsync } from '../ui';
 
 export default function Producers() {
   const { can } = useAuth();
   const [q, setQ] = useState('');
   const [creating, setCreating] = useState(false);
+  const [chg, setChg] = useState<any | null>(null);
   const { data, loading, error, reload } = useAsync(() => get<any[]>('/producers'), []);
 
   const rows = (data ?? []).filter((p) => `${p.internal_code} ${p.last_name} ${p.first_names} ${p.village ?? ''} ${p.phone ?? ''}`.toLowerCase().includes(q.toLowerCase()));
@@ -24,10 +26,12 @@ export default function Producers() {
             { header: 'Village', render: (p) => p.village ?? '—' },
             { header: 'Section', render: (p) => p.section ?? '—' },
             { header: 'Téléphone', render: (p) => p.phone ?? '—' },
-            { header: 'Statut', render: (p) => <StatusBadge map={{ active: ['Actif', 'ok'], inactive: ['Inactif', 'neutral'] }} value={p.status} /> },
+            { header: 'Statut', render: (p) => <StatusBadge map={PRODUCER_STATUS} value={p.status} /> },
+            { header: '', render: (p) => can('producers:status') && p.status !== 'archived' && <button className="btn btn-small btn-secondary" onClick={() => setChg(p)}>Statut</button> },
           ]} />
         )}
       </Card>
+      {chg && <ChangeStatus p={chg} onClose={() => setChg(null)} onDone={() => { setChg(null); reload(); }} />}
       {creating && <NewProducer onClose={() => setCreating(false)} onDone={() => { setCreating(false); reload(); }} />}
     </>
   );
@@ -65,6 +69,24 @@ function NewProducer({ onClose, onDone }: { onClose: () => void; onDone: () => v
         {error && <ErrorBox message={error} />}
         <div className="modal-foot"><button type="button" className="btn btn-secondary" onClick={onClose}>Annuler</button><button className="btn" disabled={busy}>{busy ? 'Enregistrement…' : 'Enregistrer'}</button></div>
       </form>
+    </Modal>
+  );
+}
+
+function ChangeStatus({ p, onClose, onDone }: { p: any; onClose: () => void; onDone: () => void }) {
+  const [status, setStatus] = useState('');
+  const [reason, setReason] = useState('');
+  const hist = useAsync(() => get<any[]>(`/producers/${p.id}/status-history`).catch(() => []), [p.id]);
+  const { busy, error, run } = useAction();
+  return (
+    <Modal title={`Statut de ${p.last_name} ${p.first_names}`} onClose={onClose}>
+      <p>Statut actuel : <StatusBadge map={PRODUCER_STATUS} value={p.status} /></p>
+      <Field label="Nouveau statut"><select value={status} onChange={(e) => setStatus(e.target.value)}><option value="">—</option>{Object.entries(PRODUCER_STATUS).filter(([k]) => k !== p.status && k !== 'creating').map(([k, [l]]) => <option key={k} value={k}>{l}</option>)}</select></Field>
+      <Field label="Motif"><textarea rows={2} value={reason} onChange={(e) => setReason(e.target.value)} /></Field>
+      {error && <ErrorBox message={error} />}
+      {(hist.data ?? []).length > 0 && <><h3>Historique</h3><ul>{hist.data!.map((h: any) => <li key={h.id}>{new Date(h.created_at).toLocaleDateString('fr-FR')} : {h.from_status ?? '—'} → {h.to_status} ({h.reason})</li>)}</ul></>}
+      <div className="modal-foot"><button className="btn btn-secondary" onClick={onClose}>Annuler</button>
+        <button className="btn" disabled={busy || !status || reason.trim().length < 3} onClick={() => run(async () => { await post(`/producers/${p.id}/status`, { status, reason }); onDone(); })}>Changer le statut</button></div>
     </Modal>
   );
 }

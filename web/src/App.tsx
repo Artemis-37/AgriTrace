@@ -1,7 +1,12 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { get } from './api';
 import { Navigate, NavLink, Route, Routes } from 'react-router-dom';
 import { useAuth } from './auth';
 import Dashboard from './pages/Dashboard';
+import Inventaire from './pages/Inventaire';
+import Prefinancement from './pages/Prefinancement';
+import Notifications from './pages/Notifications';
+import Equipe from './pages/Equipe';
 import Commerce from './pages/Commerce';
 import Cartographie from './pages/Cartographie';
 import Declarations from './pages/Declarations';
@@ -20,6 +25,9 @@ const NAV: { to: string; label: string; icon: string; perm: string[]; any?: bool
   { to: '/parcelles', label: 'Parcelles', icon: '◩', perm: ['parcels:read'] },
   { to: '/cartographie', label: 'Cartographie', icon: '⌖', perm: ['geo:anomalies'] },
   { to: '/commerce', label: 'Commerce', icon: '⇄', perm: ['buyers:read', 'logistics:read', 'invoices:read'], any: true },
+  { to: '/inventaire', label: 'Inventaire', icon: '☰', perm: ['stock:count'] },
+  { to: '/prefinancement', label: 'Préfinancement', icon: '◈', perm: ['prefinancing:read'] },
+  { to: '/equipe', label: 'Équipe', icon: '⚙', perm: ['users:read'] },
   { to: '/declarations', label: 'Déclarations d\'achat', icon: '✎', perm: ['declarations:read'] },
   { to: '/missions', label: 'Missions', icon: '⚑', perm: ['tasks:read'] },
   { to: '/stocks', label: 'Stocks et lots', icon: '▤', perm: ['warehouses:read'] },
@@ -30,6 +38,9 @@ const NAV: { to: string; label: string; icon: string; perm: string[]; any?: bool
 export default function App() {
   const { status, org, me, can, signOut } = useAuth();
   const [open, setOpen] = useState(false);
+  const [unread, setUnread] = useState(0);
+  const refreshUnread = useCallback(() => { get<{ unread: number }>('/notifications/unread-count').then((r) => setUnread(r.unread)).catch(() => undefined); }, []);
+  useEffect(() => { if (status !== 'ready') return; refreshUnread(); const t = setInterval(refreshUnread, 60000); return () => clearInterval(t); }, [status, org?.id, refreshUnread]);
   if (status === 'loading') return <div style={{ padding: '3rem' }}><Loading /></div>;
   if (status !== 'ready') return <Login />;
 
@@ -45,6 +56,7 @@ export default function App() {
           {NAV.filter((n) => (n.any ? n.perm.some((p) => can(p)) : can(...n.perm))).map((n) => (
             <NavLink key={n.to} to={n.to} end={n.to === '/'}><span aria-hidden="true">{n.icon}</span>{n.label}</NavLink>
           ))}
+          <NavLink to="/notifications"><span aria-hidden="true">🔔</span>Notifications{unread > 0 && <span className="badge badge-bad" style={{ marginLeft: 'auto' }} aria-label={`${unread} non lue(s)`}>{unread}</span>}</NavLink>
         </nav>
         <div className="who">
           <strong>{org?.name}</strong><br />{me?.user.full_name}
@@ -58,6 +70,10 @@ export default function App() {
           <Route path="/parcelles" element={<Parcels />} />
           <Route path="/cartographie" element={<Cartographie />} />
           <Route path="/commerce" element={<Commerce />} />
+          <Route path="/inventaire" element={<Inventaire />} />
+          <Route path="/prefinancement" element={<Prefinancement />} />
+          <Route path="/equipe" element={<Equipe />} />
+          <Route path="/notifications" element={<Notifications onChange={refreshUnread} />} />
           <Route path="/declarations" element={<Declarations />} />
           <Route path="/missions" element={<Missions />} />
           <Route path="/stocks" element={<Stocks />} />
