@@ -4,6 +4,7 @@ import '../main.dart';
 import '../sync/sync_engine.dart';
 import '../sync/sync_state.dart';
 import 'login_screen.dart';
+import 'my_stock_screen.dart';
 import 'new_convoy_screen.dart';
 import 'new_declaration_screen.dart';
 
@@ -70,6 +71,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Déclarations d\'achat'), actions: [
+        if (_canConvoy)
+          IconButton(tooltip: 'Mon stock', icon: const Icon(Icons.inventory_2_outlined), onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MyStockScreen()))),
         if (_canConvoy)
           IconButton(tooltip: 'Déclarer un convoi', icon: const Icon(Icons.local_shipping_outlined), onPressed: () async {
             await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const NewConvoyScreen()));
