@@ -71,7 +71,7 @@ const num = (x) => Number(x);
   const tb1 = (await call('GET', '/accounting/trial-balance', J(t1, A))).body;
   check('balance : total débit = total crédit', num(tb1.totals.debit) === num(tb1.totals.credit) && num(tb1.totals.debit) > 0, tb1.totals);
   const lg = (await call('GET', '/accounting/ledger/571', J(t1, A))).body;
-  check('grand livre 571 : cumul à zéro après annulation', lg.rows.length === 2 && num(lg.rows[1].running_balance) === 0, lg.rows);
+  check('grand livre 571 : fonds de caisse 100 000 + apport annulé = 100 000', lg.rows.length === 3 && num(lg.rows[2].running_balance) === 100000, lg.rows);
   check('compte inconnu au grand livre → 404', (await call('GET', '/accounting/ledger/999', J(t1, A))).status === 404);
   const xl = await call('GET', '/accounting/export/journal', { ...J(t1, A), raw: true });
   const xb = Buffer.from(await xl.arrayBuffer());
@@ -175,7 +175,7 @@ const num = (x) => Number(x);
   check('historique des rapprochements', (await call('GET', `/reconciliations?account_id=${reg.account_id}`, J(t1, A))).body.length === 2);
   const cons = (await call('GET', '/accounting/consistency', J(t1, A))).body;
   const c571 = cons.rows.find((r) => r.accounting_code === '571');
-  check('contrôle de cohérence finance ↔ compta : écart de 100 000 = fonds de caisse non comptabilisé', num(c571.financial_balance) === 64000 && num(c571.accounting_balance) === -36000 && num(c571.difference) === 100000, cons);
+  check('contrôle de cohérence finance ↔ compta : solde de caisse = solde du compte 571 (64 000), écart nul', cons.consistent === true && num(c571.financial_balance) === 64000 && num(c571.accounting_balance) === 64000 && num(c571.difference) === 0, cons);
 
   console.log('Achat et clôture de période');
   const role = (await call('POST', '/roles', { ...J(t1, A), body: { code: 'collecteur', name: 'Collecteur', permissions: ['declarations:create', 'declarations:read', 'producers:read'] } })).body;

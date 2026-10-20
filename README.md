@@ -67,6 +67,10 @@ Hypothèses à valider avec la coopérative : conversion sac → kg configurée 
 - **Alertes** (`GET /alerts`) : certificats expirants ou expirés, inspections en retard ou à renouveler, actions correctives en retard, échéances de prêts impayées, pesées à valider. Ce sont des alertes à consulter ; l'envoi de notifications (push, e-mail) n'est pas encore fait.
 - Parcelles non développées : le module parcelles du cahier des charges reste à faire (les inspections ciblent pour l'instant producteurs, lots, pesées, magasins).
 
+## Portail web (livré)
+
+`web/` : React + TypeScript. Tableau de bord, producteurs, parcelles (contrôle / vérification), déclarations (mise en vérification, acceptation, rejet), stocks et lots (traçabilité, PDF, validation d'écart de pesée), finances (comptes, paiements avec confirmation manuelle, prêts, balance et contrôle de cohérence), qualité et conformité. Testé dans un vrai navigateur (connexion, reprise de session, actions, refus serveur affichés, menu mobile). Voir `web/README.md`. L'API expose `GET /me` (permissions de l'utilisateur dans la coopérative) et accepte `CORS_ORIGINS` si le portail est sur un autre domaine.
+
 ## Parcelles (livré)
 
 - Parcelle rattachée à un producteur et une filière : code `PC-NNNNN`, superficie déclarée, point GPS et/ou polygone GeoJSON (la surface mesurée est **calculée par le serveur**).
@@ -84,4 +88,4 @@ npm run test:e2e                # e2e P1 (34) + P2/P3 (42) + P4a (83) + P4b (55)
 
 ## Limites connues
 
-Fonds de caisse d'ouverture et opérations libres non comptabilisés automatiquement (signalé par le contrôle de cohérence) ; déclarations brouillon non modifiables (annuler et recréer) ; expéditions non développées ; soldes producteur/collecteur pouvant être négatifs (seules les caisses sont bloquées) ; révocation d'appareil non implémentée ; e2e non branchés en CI.
+Opérations financières libres (hors prêts, paiements, écarts de caisse, fonds d'ouverture) non comptabilisées automatiquement (signalé par le contrôle de cohérence) ; déclarations brouillon non modifiables (annuler et recréer) ; expéditions non développées ; soldes producteur/collecteur pouvant être négatifs (seules les caisses sont bloquées) ; révocation d'appareil non implémentée ; e2e non branchés en CI.

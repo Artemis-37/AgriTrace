@@ -6,6 +6,7 @@ import { ApiBearerAuth, ApiHeader, ApiTags } from '@nestjs/swagger';
 import { IsIn, IsOptional, IsString, IsUUID, Length, Matches } from 'class-validator';
 import { RequirePermissions } from '../access/decorators';
 import { AuditService } from '../audit/audit.service';
+import { accountingCodeOf, postEntry, today } from '../accounting/accounting.helpers';
 import { Dec } from '../common/dto';
 import { DbService } from '../db/db.service';
 
@@ -108,7 +109,7 @@ export class FinanceController {
   @RequirePermissions('cash:operate')
   async openSession(@Param('id', ParseUUIDPipe) id: string, @Body() b: OpenSessionDto, @Req() req: any) {
     const row = await this.db.tx(req.org.id, async (c) => {
-      const r = await c.query(`SELECT id, account_id, status FROM cash_registers WHERE id = $1 FOR UPDATE`, [id]);
+      const r = await c.query(`SELECT id, name, account_id, status FROM cash_registers WHERE id = $1 FOR UPDATE`, [id]);
       if (!r.rowCount) throw new NotFoundException();
       if (r.rows[0].status !== 'active') throw new BadRequestException('Caisse fermée');
       if ((await c.query(`SELECT 1 FROM cash_sessions WHERE register_id = $1 AND status = 'open'`, [id])).rowCount)
@@ -122,6 +123,15 @@ export class FinanceController {
           `INSERT INTO financial_transactions(organization_id, idempotency_key, account_id, cash_session_id, direction, amount, currency, reason, created_by)
            SELECT $1::uuid, $2::text, a.id, $3::uuid, 'in', $4::numeric, a.currency, 'Fonds de caisse à l''ouverture', $5::uuid FROM financial_accounts a WHERE a.id = $6::uuid`,
           [req.org.id, `opening:${s.id}`, s.id, b.opening_amount, req.user.id, r.rows[0].account_id]);
+      // Écriture comptable correspondante : débit caisse, crédit 585 « Virements de fonds » (compte de passage, à affecter par le comptable)
+      if (Number(b.opening_amount) > 0) {
+        const acc = (await c.query(`SELECT owner_type, accounting_code FROM financial_accounts WHERE id = $1`, [r.rows[0].account_id])).rows[0];
+        await postEntry(c, {
+          orgId: req.org.id, userId: req.user.id, journal: 'CAI', date: today(), label: `Fonds de caisse à l'ouverture (${r.rows[0].name ?? 'caisse'})`,
+          lines: [{ code: accountingCodeOf(acc), debit: b.opening_amount }, { code: '585', credit: b.opening_amount }],
+          idempotencyKey: `opening-entry:${s.id}`, referenceType: 'cash_session', referenceId: s.id,
+        });
+      }
       return s;
     });
     await this.log(req, 'cash_session.open', 'cash_session', row.id, { opening_amount: b.opening_amount });
