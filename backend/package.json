@@ -9,7 +9,7 @@
     "start:dev": "nest start --watch",
     "migrate": "node scripts/migrate.js",
     "test": "jest",
-    "test:e2e": "node scripts/e2e-p1.js && node scripts/e2e-p2-p3.js && node scripts/e2e-p4.js"
+    "test:e2e": "node scripts/e2e-p1.js && node scripts/e2e-p2-p3.js && node scripts/e2e-p4.js && node scripts/e2e-p4b.js"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.0",

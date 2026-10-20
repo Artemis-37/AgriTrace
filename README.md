@@ -57,13 +57,21 @@ Hypothèses à valider avec la coopérative : conversion sac → kg configurée 
 - **Paiements** : statuts prévu → initié → en attente → confirmé / échoué / annulé → remboursé. **Aucun connecteur bancaire ou Mobile Money** : la confirmation est toujours « manuelle » et libellée « non confirmée par la banque ou l'opérateur ».
 - **Rapprochements** : relevé (ou comptage) comparé au solde du livre ; explication obligatoire en cas d'écart ; historique conservé.
 - Hypothèses à valider : numéros de comptes SYSCOHADA utilisés (571, 521, 401, 409, 271, 602, 658, 758…), comptabilisation à la date du jour, compte 401 collectif (pas de comptabilité auxiliaire par producteur).
-- **Pas encore fait (P4b)** : inspections, contrôles qualité, certificats, documents justificatifs.
+
+## P4b — qualité, inspections, documents, certificats, alertes (livré)
+
+- **Règles qualité** configurables par filière et marché (seuils numériques ou oui/non, bloquantes ou non).
+- **Inspections** (producteur, collecteur, lot, pesée, magasin) : planifiée → en cours → clôturée. Le serveur évalue chaque résultat contre la règle et conserve les seuils appliqués ; l'issue est calculée (conforme / à examiner / non conforme). Anomalies et **actions correctives** avec échéance et clôture justifiée.
+- **Documents** : PDF, JPEG, PNG de 10 Mo maximum, type vérifié sur le contenu (pas sur l'extension), empreinte SHA-256 contrôlée à chaque téléchargement, clé de stockage aléatoire (aucune URL publique), versions successives, documents sensibles réservés à `documents:sensitive`, journal des téléchargements. Stockage sur disque (`DOCUMENTS_DIR`, hors dépôt) : à remplacer par un stockage objet chiffré en production.
+- **Certificats** avec validité calculée (valide / expirant sous 60 jours / expiré / révoqué). AgriTrace enregistre des preuves ; il ne remplace pas un organisme officiel de certification.
+- **Alertes** (`GET /alerts`) : certificats expirants ou expirés, inspections en retard ou à renouveler, actions correctives en retard, échéances de prêts impayées, pesées à valider. Ce sont des alertes à consulter ; l'envoi de notifications (push, e-mail) n'est pas encore fait.
+- Parcelles non développées : le module parcelles du cahier des charges reste à faire (les inspections ciblent pour l'instant producteurs, lots, pesées, magasins).
 
 ## Tests
 
 ```bash
 cd backend && npm test          # 13 tests unitaires
-npm run test:e2e                # e2e P1 (34) + P2/P3 (42) + P4a (83 contrôles), base PostgreSQL requise
+npm run test:e2e                # e2e P1 (34) + P2/P3 (42) + P4a (83) + P4b (55 contrôles), base PostgreSQL requise
 ```
 
 ## Limites connues
