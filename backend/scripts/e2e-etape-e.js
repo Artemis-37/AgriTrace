@@ -1,0 +1,206 @@
+// Test de bout en bout : inventaire, mouvements de stock complémentaires, notifications, suspension/révocation d'accès, statuts producteur, préfinancement.
+const crypto = require('crypto');
+const API = process.env.API || 'http://localhost:3000/v1';
+const run = crypto.randomBytes(3).toString('hex').toUpperCase();
+let ok = 0, ko = 0;
+async function call(method, path, { token, org, body } = {}) {
+  const headers = {};
+  if (token) headers.authorization = `Bearer ${token}`;
+  if (org) headers['x-organization-id'] = org;
+  let payload;
+  if (body) { headers['content-type'] = 'application/json'; payload = JSON.stringify(body); }
+  const res = await fetch(API + path, { method, headers, body: payload });
+  const text = await res.text(); let json; try { json = JSON.parse(text); } catch { json = text; }
+  return { status: res.status, body: json };
+}
+const check = (name, cond, extra) => { if (cond) { ok++; console.log('  ✓', name); } else { ko++; console.log('  ✗', name, extra !== undefined ? JSON.stringify(extra).slice(0, 600) : ''); } };
+const login = async (email, password) => { const r = await call('POST', '/auth/login', { body: { email, password } }); return r.body.access_token; };
+const key = (p) => `${p}-${run}-${crypto.randomBytes(4).toString('hex')}`;
+const pw = 'MotDePasseSolide2026!';
+const num = (x) => Number(x);
+const today = new Date().toISOString().slice(0, 10);
+
+(async () => {
+  const adm = await login(process.env.ADMIN_EMAIL, process.env.ADMIN_PASSWORD);
+  const org = (await call('POST', '/organizations', { token: adm, body: { code: 'EX' + run, name: 'EX' + run } })).body;
+  await call('POST', `/organizations/${org.id}/admins`, { token: adm, body: { email: `ea.${run}@t.test`, full_name: 'Admin', password: pw } });
+  const T = await login(`ea.${run}@t.test`, pw);
+  const J = (tok) => ({ token: tok ?? T, org: org.id });
+  await call('PUT', '/purchase-declarations/settings/receipts', { ...J(), body: { mode: 'physical', series: 'A', required: false } });
+  const vc = (await call('POST', '/value-chains', { ...J(), body: { code: 'CACAO', name: 'Cacao' } })).body;
+  await call('POST', '/unit-conversions', { ...J(), body: { value_chain_id: vc.id, from_unit: 'sac', to_unit: 'kg', factor: '65' } });
+  const camp = (await call('POST', '/campaigns', { ...J(), body: { value_chain_id: vc.id, code: 'C26', name: 'Campagne', starts_on: '2025-10-01', ends_on: '2026-12-31' } })).body;
+  const sched = (await call('POST', '/price-schedules', { ...J(), body: { value_chain_id: vc.id, campaign_id: camp.id, unit: 'kg' } })).body;
+  await call('POST', `/price-schedules/${sched.id}/versions`, { ...J(), body: { unit_price: '1000', valid_from: '2025-10-01' } });
+  const prod = (await call('POST', '/producers', { ...J(), body: { last_name: 'KONE', first_names: 'Awa', village: 'Hiré', value_chain_ids: [vc.id] } })).body.producer;
+  const wh = (await call('POST', '/warehouses', { ...J(), body: { code: 'MAG1', name: 'Magasin 1' } })).body;
+  const rcol = (await call('POST', '/roles', { ...J(), body: { code: 'collecteur', name: 'Collecteur', permissions: ['declarations:create', 'declarations:read', 'producers:read', 'sync:use'] } })).body;
+  const cu = (await call('POST', '/users', { ...J(), body: { email: `col.${run}@t.test`, full_name: 'col', password: pw, role_id: rcol.id } })).body;
+  const col = (await call('POST', '/collectors', { ...J(), body: { user_id: cu.id } })).body;
+  await call('POST', `/collectors/${col.id}/assignments`, { ...J(), body: { value_chain_id: vc.id } });
+  const tcol = await login(`col.${run}@t.test`, pw);
+  const mkStock = async (bags, grossKg, tare) => {
+    const d = { id: crypto.randomUUID(), idempotency_key: key('d'), producer_id: prod.id, value_chain_id: vc.id, campaign_id: camp.id, operation_date: '2026-02-10', bags, quantity: String(bags), unit: 'sac' };
+    await call('POST', '/sync/batch', { ...J(tcol), body: { operations: [{ idempotency_key: d.idempotency_key, type: 'purchase_declaration.create', payload: d }, { idempotency_key: key('s'), type: 'purchase_declaration.submit', payload: { id: d.id } }] } });
+    await call('POST', `/purchase-declarations/${d.id}/transition`, { ...J(), body: { to: 'in_review' } });
+    await call('POST', `/purchase-declarations/${d.id}/transition`, { ...J(), body: { to: 'accepted' } });
+    const w = (await call('POST', '/weighings', { ...J(), body: { idempotency_key: key('w'), declaration_id: d.id, warehouse_id: wh.id, gross_kg: grossKg, tare_kg: tare } })).body;
+    const rc = (await call('POST', '/receipts', { ...J(), body: { weighing_id: w.id } })).body;
+    return { decl: d, lot: rc.receipt?.lot_id ?? rc.lot_id };
+  };
+  const s1 = await mkStock(10, '655', '5');
+  const lot = s1.lot;
+  const bal = async () => num(((await call('GET', `/stocks?lot_id=${lot}`, J())).body[0] ?? {}).balance_kg ?? 0);
+  check('mise en place : 650 kg en stock', (await bal()) === 650, lot);
+
+  const role = async (code, permissions) => (await call('POST', '/roles', { ...J(), body: { code, name: code, permissions } })).body;
+  const user = async (tag, r) => { const email = `${tag}.${run}@t.test`; const u = (await call('POST', '/users', { ...J(), body: { email, full_name: tag, password: pw, role_id: r.id } })).body; return { id: u.id, email, t: await login(email, pw) }; };
+  const rMag = await role('magasinier', ['stock:count', 'stock:move', 'warehouses:read', 'lots:read']);
+  const rApp = await role('responsable_stock', ['stock:count', 'stock:count_approve', 'stock:adjust', 'warehouses:read', 'weighings:approve']);
+  const rLec = await role('lecteur', ['lots:read']);
+  const mag = await user('mag', rMag), app = await user('app', rApp), lec = await user('lec2', rLec);
+
+  console.log('Mouvements de stock complémentaires');
+  const mv = (type, q, tok = T) => call('POST', '/warehouse-movements', { ...J(tok), body: { idempotency_key: key('m'), warehouse_id: wh.id, lot_id: lot, type, quantity_kg: q, reason: 'Test mouvement' } });
+  check('détérioration exige stock:adjust', (await mv('deterioration', '5', mag.t)).status === 403 && (await mv('deterioration', '5')).status === 201 && (await bal()) === 645);
+  check('déclassement (sortie du lot)', (await mv('downgrade', '5')).status === 201 && (await bal()) === 640);
+  check('mise en quarantaine : sort du stock disponible', (await mv('quarantine_out', '40', mag.t)).status === 201 && (await bal()) === 600);
+  check('libération limitée à la quantité en quarantaine', (await mv('quarantine_in', '50', mag.t)).status === 400 && (await mv('quarantine_in', '40', mag.t)).status === 201 && (await bal()) === 640);
+  check('retour en stock', (await mv('return', '10', mag.t)).status === 201 && (await bal()) === 650);
+
+  console.log('Inventaire');
+  const key1 = key('inv');
+  check('lecteur ne peut pas ouvrir un inventaire', (await call('POST', '/stock-counts', { ...J(lec.t), body: { idempotency_key: key1, warehouse_id: wh.id } })).status === 403);
+  const sc = (await call('POST', '/stock-counts', { ...J(mag.t), body: { idempotency_key: key1, warehouse_id: wh.id } })).body;
+  check('inventaire ouvert : théorique figé à 650 kg', /^INV-\d{4}-\d{4}$/.test(sc.number) && sc.status === 'counting', sc);
+  check('renvoi de la même clé : même inventaire', (await call('POST', '/stock-counts', { ...J(mag.t), body: { idempotency_key: key1, warehouse_id: wh.id } })).body.id === sc.id);
+  check('un seul inventaire à la fois par magasin', (await call('POST', '/stock-counts', { ...J(mag.t), body: { idempotency_key: key('inv'), warehouse_id: wh.id } })).status === 409);
+  const d0 = (await call('GET', `/stock-counts/${sc.id}`, J(mag.t))).body;
+  check('ligne de lot avec théorique', d0.lines.length === 1 && num(d0.lines[0].theoretical_kg) === 650);
+  check('soumission avec lots non comptés refusée', (await call('POST', `/stock-counts/${sc.id}/submit`, J(mag.t))).status === 400);
+  await call('POST', `/stock-counts/${sc.id}/counts`, { ...J(mag.t), body: { lines: [{ lot_id: lot, counted_kg: '640' }] } });
+  check('écart sans motif refusé', (await call('POST', `/stock-counts/${sc.id}/submit`, J(mag.t))).status === 400);
+  await call('POST', `/stock-counts/${sc.id}/counts`, { ...J(mag.t), body: { lines: [{ lot_id: lot, counted_kg: '640', reason: 'Sacs manquants constatés' }] } });
+  const sub = await call('POST', `/stock-counts/${sc.id}/submit`, J(mag.t));
+  check('inventaire soumis avec 1 écart', sub.status === 201 && sub.body.gaps === 1, sub.body);
+  check('comptage impossible après soumission', (await call('POST', `/stock-counts/${sc.id}/counts`, { ...J(mag.t), body: { lines: [{ lot_id: lot, counted_kg: '1', reason: 'x y z' }] } })).status === 409);
+  check('le stock n\'est pas modifié avant approbation', (await bal()) === 650);
+  check('le compteur ne peut pas approuver (séparation)', (await call('POST', `/stock-counts/${sc.id}/approve`, { ...J(mag.t), body: { note: 'ok ok' } })).status === 403);
+  // Un mouvement survient entre le comptage et l'approbation : l'ajustement tient compte du solde réel
+  await mv('exit', '10', mag.t);
+  const ap = await call('POST', `/stock-counts/${sc.id}/approve`, { ...J(app.t), body: { note: 'Écart accepté' } });
+  check('approbation : ajustement audité, jamais de suppression', ap.status === 201 && ap.body.status === 'approved' && ap.body.adjustments.length === 1, ap.body);
+  check('stock = compté (640) moins la sortie survenue depuis (10)', (await bal()) === 630);
+  const mvList = (await call('GET', `/warehouse-movements?lot_id=${lot}`, J())).body;
+  check('mouvements antérieurs conservés + mouvement d\'ajustement', mvList.some((m) => m.movement_type === 'adjustment_out' && /Inventaire/.test(m.reason)) && mvList.filter((m) => m.movement_type === 'exit').length >= 1);
+  const d1 = (await call('GET', `/stock-counts/${sc.id}`, J())).body;
+  check('théorique à l\'approbation conservé (640), compteur identifié', num(d1.lines[0].theoretical_at_approval_kg) === 640 && d1.lines[0].counted_by_name && d1.decided_by === app.id, d1.lines[0]);
+  check('approbation unique', (await call('POST', `/stock-counts/${sc.id}/approve`, { ...J(app.t), body: { note: 'encore' } })).status === 409);
+  const sc2 = (await call('POST', '/stock-counts', { ...J(mag.t), body: { idempotency_key: key('inv'), warehouse_id: wh.id } })).body;
+  await call('POST', `/stock-counts/${sc2.id}/counts`, { ...J(mag.t), body: { lines: [{ lot_id: lot, counted_kg: '600', reason: 'Recompte' }] } });
+  await call('POST', `/stock-counts/${sc2.id}/submit`, J(mag.t));
+  const rj = await call('POST', `/stock-counts/${sc2.id}/reject`, { ...J(app.t), body: { note: 'Recompter le lot' } });
+  check('rejet : retour au comptage, rien n\'est ajusté', rj.body.status === 'counting' && (await bal()) === 630);
+  check('annulation d\'un inventaire', (await call('POST', `/stock-counts/${sc2.id}/cancel`, { ...J(mag.t), body: { note: 'Abandon' } })).body.status === 'cancelled');
+  const nm = (await call('GET', '/notifications', J(app.t))).body;
+  check('l\'approbateur a été notifié de l\'écart', nm.some((n) => n.kind === 'stock_count_gap'), nm.map((n) => n.kind));
+
+  console.log('Notifications');
+  const rChef = await role('chef', ['tasks:read', 'tasks:read_all', 'tasks:create', 'tasks:assign', 'tasks:review', 'tasks:decide_requests', 'geo:anomalies', 'receipts:override', 'notifications:scan', 'invoices:read', 'warehouses:read']);
+  const rCoach = await role('coach', ['tasks:read', 'tasks:execute', 'tasks:request', 'sync:use']);
+  const chef = await user('chef', rChef), coach = await user('coach', rCoach);
+  const due = new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10);
+  const t = (await call('POST', '/tasks', { ...J(chef.t), body: { idempotency_key: key('t'), title: 'Visite en retard', category: 'visit', priority: 'urgent', due_date: due, producer_id: prod.id, assignee_id: coach.id, publish: true } })).body;
+  const nc = (await call('GET', '/notifications?unread=true', J(coach.t))).body;
+  check('nouvelle mission : le responsable est notifié', nc.some((n) => n.kind === 'task_assigned' && n.entity_id === t.id), nc);
+  check('l\'auteur de l\'action n\'est pas notifié de sa propre action', !(await call('GET', '/notifications', J(chef.t))).body.some((n) => n.kind === 'task_assigned'));
+  await call('POST', `/tasks/${t.id}/transition`, { ...J(coach.t), body: { to: 'in_progress' } });
+  await call('POST', `/tasks/${t.id}/entries`, { ...J(coach.t), body: { idempotency_key: key('e'), kind: 'result', content: 'Visite faite' } });
+  await call('POST', `/tasks/${t.id}/transition`, { ...J(coach.t), body: { to: 'submitted' } });
+  check('mission soumise : les vérificateurs sont notifiés', (await call('GET', '/notifications', J(chef.t))).body.some((n) => n.kind === 'task_submitted'));
+  await call('POST', `/tasks/${t.id}/transition`, { ...J(chef.t), body: { to: 'to_correct', note: 'Photo manquante' } });
+  check('correction demandée : le responsable est notifié', (await call('GET', '/notifications', J(coach.t))).body.some((n) => n.kind === 'task_to_correct' && n.body === 'Photo manquante'));
+  const cnt = (await call('GET', '/notifications/unread-count', J(coach.t))).body.unread;
+  check('compteur de non lues', cnt >= 2, cnt);
+  const first = (await call('GET', '/notifications?unread=true', J(coach.t))).body[0];
+  check('marquer comme lue', (await call('POST', `/notifications/${first.id}/read`, J(coach.t))).status === 201 && (await call('GET', '/notifications/unread-count', J(coach.t))).body.unread === cnt - 1);
+  check('on ne lit pas les notifications d\'autrui (404)', (await call('POST', `/notifications/${first.id}/read`, J(chef.t))).status === 404);
+  check('tout marquer comme lu ; historique conservé', (await call('POST', '/notifications/read-all', J(coach.t))).status === 201 && (await call('GET', '/notifications/unread-count', J(coach.t))).body.unread === 0 && (await call('GET', '/notifications', J(coach.t))).body.length >= 2);
+  // Alertes calculées
+  await call('POST', `/tasks/${t.id}/transition`, { ...J(coach.t), body: { to: 'in_progress' } });
+  const scan1 = await call('POST', '/notifications/scan', J(chef.t));
+  check('recherche d\'alertes : mission en retard', scan1.status === 201 && scan1.body.created.task_overdue >= 1, scan1.body);
+  const scan2 = await call('POST', '/notifications/scan', J(chef.t));
+  check('relance le même jour : aucune répétition', (await call('GET', '/notifications?kind=task_overdue', J(coach.t))).body.length === 1 && scan2.status === 201);
+  check('scan réservé à notifications:scan', (await call('POST', '/notifications/scan', J(coach.t))).status === 403);
+  // Doublon de reçu → notification
+  const dr = (n) => ({ id: crypto.randomUUID(), idempotency_key: key('d'), producer_id: prod.id, value_chain_id: vc.id, campaign_id: camp.id, operation_date: '2026-02-11', bags: 1, quantity: '1', unit: 'sac', purchase_receipt_no: n });
+  await call('PUT', '/purchase-declarations/settings/receipts', { ...J(), body: { mode: 'physical', series: 'B', required: false } });
+  const da = dr('777'), db = dr('777');
+  await call('POST', '/sync/batch', { ...J(tcol), body: { operations: [{ idempotency_key: da.idempotency_key, type: 'purchase_declaration.create', payload: da }, { idempotency_key: db.idempotency_key, type: 'purchase_declaration.create', payload: db }] } });
+  check('numéro de reçu en doublon : notification aux responsables', (await call('GET', '/notifications?kind=receipt_duplicate', J(chef.t))).body.length === 1);
+  const feed = (await call('GET', '/sync/changes', J(coach.t))).body;
+  check('notifications dans le flux de synchronisation (les siennes seulement)', feed.changes.notifications.length >= 2 && feed.changes.notifications.every((n) => n.kind));
+
+  console.log('Suspension et révocation d\'accès');
+  check('lecteur ne peut pas suspendre', (await call('POST', `/users/${coach.id}/suspend`, { ...J(lec.t), body: { reason: 'Test' } })).status === 403);
+  check('impossible de se suspendre soi-même', (await call('POST', `/users/${coach.id}/suspend`, { ...J(coach.t), body: { reason: 'Test' } })).status === 403);
+  check('coach actif : synchronisation possible', (await call('GET', '/sync/changes', J(coach.t))).status === 200);
+  const sp = await call('POST', `/users/${coach.id}/suspend`, { ...J(), body: { reason: 'Départ de la coopérative' } });
+  check('suspension : sessions révoquées', sp.status === 201 && sp.body.status === 'suspended' && sp.body.sessions_revoked >= 1, sp.body);
+  const after = await call('GET', '/sync/changes', J(coach.t));
+  check('jeton révoqué : la synchronisation est refusée immédiatement (401)', after.status === 401, after);
+  check('reconnexion possible mais organisation inaccessible (403)', (await call('GET', '/sync/changes', { token: await login(coach.email, pw), org: org.id })).status === 403);
+  check('la liste montre le statut suspendu', (await call('GET', '/users', J())).body.find((u) => u.id === coach.id)?.membership_status === 'suspended');
+  const rv = await call('POST', `/users/${coach.id}/reactivate`, { ...J(), body: { reason: 'Retour' } });
+  check('réactivation : accès rétabli', rv.status === 201 && (await call('GET', '/sync/changes', { token: await login(coach.email, pw), org: org.id })).status === 200);
+  const rc = await call('POST', `/users/${coach.id}/role`, { ...J(), body: { role_id: rLec.id, reason: 'Changement de poste' } });
+  check('changement de rôle : droits modifiés aussitôt', rc.status === 201 && (await call('GET', '/sync/changes', { token: await login(coach.email, pw), org: org.id })).status === 403);
+  check('rôle d\'une autre coopérative refusé', (await call('POST', `/users/${coach.id}/role`, { ...J(), body: { role_id: crypto.randomUUID(), reason: 'Test erreur' } })).status === 400);
+  const rs = await call('POST', `/users/${mag.id}/revoke-sessions`, { ...J(), body: { reason: 'Appareil perdu' } });
+  check('révocation des sessions (appareil perdu)', rs.status === 201 && rs.body.sessions_revoked >= 1 && (await call('GET', '/me', J(mag.t))).status === 401, rs.body);
+  const hist = (await call('GET', `/users/${coach.id}/access-history`, J())).body;
+  check('historique d\'accès complet et audité', hist.map((h) => h.action).join() === 'suspend,reactivate,role_change' && hist.every((h) => h.actor_name && h.reason), hist);
+  const adminId = (await call('GET', '/users', J())).body.find((u) => u.email === `ea.${run}@t.test`.toLowerCase()).id;
+  check('au moins un administrateur doit rester', (await call('POST', `/users/${adminId}/role`, { ...J(app.t), body: { role_id: rLec.id, reason: 'Test' } })).status === 403);
+
+  console.log('Statuts du producteur');
+  const ps = (st, reason = 'Contrôle annuel') => call('POST', `/producers/${prod.id}/status`, { ...J(), body: { status: st, reason } });
+  check('lecteur ne change pas le statut', (await call('POST', `/producers/${prod.id}/status`, { ...J(lec.t), body: { status: 'suspended', reason: 'Test' } })).status === 403);
+  check('à vérifier', (await ps('to_verify')).body.status === 'to_verify');
+  check('suspendu : plus de déclaration possible', (await ps('suspended', 'Litige')).body.status === 'suspended');
+  const dsus = { id: crypto.randomUUID(), idempotency_key: key('d'), producer_id: prod.id, value_chain_id: vc.id, campaign_id: camp.id, operation_date: '2026-02-12', bags: 1, quantity: '1', unit: 'sac' };
+  const rsus = await call('POST', '/sync/batch', { ...J(tcol), body: { operations: [{ idempotency_key: dsus.idempotency_key, type: 'purchase_declaration.create', payload: dsus }] } });
+  check('déclaration pour un producteur suspendu refusée', rsus.body.results[0].status !== 'accepted', rsus.body.results[0]);
+  check('retour à actif, puis archivage direct refusé', (await ps('active', 'Levée')).body.status === 'active' && (await ps('archived', 'Test')).status === 400);
+  check('sortie puis archivage', (await ps('left', 'Démission')).status === 201 && (await ps('archived', 'Clôture du dossier')).status === 201);
+  check('archivé : plus de changement', (await ps('active', 'Retour')).status === 409);
+  const ph = (await call('GET', `/producers/${prod.id}/status-history`, J())).body;
+  check('historique des statuts', ph.map((h) => `${h.from_status}>${h.to_status}`).join() === 'active>to_verify,to_verify>suspended,suspended>active,active>left,left>archived', ph);
+
+  console.log('Préfinancement reçu');
+  const pf = await call('POST', '/prefinancings', { ...J(), body: { idempotency_key: key('pf'), funder: 'Cemoi Négoce', amount: '5000000', currency: 'XOF', received_on: '2026-01-10', conditions: 'Remboursement en cacao avant juin', due_date: '2026-06-30', campaign_id: camp.id } });
+  check('préfinancement enregistré', pf.status === 201 && /^PF-\d{4}-\d{4}$/.test(pf.body.number), pf.body);
+  const pid = pf.body.id;
+  const use = (o) => call('POST', `/prefinancings/${pid}/uses`, { ...J(), body: { idempotency_key: key('u'), kind: 'expense', amount: '100000', used_on: '2026-01-20', purpose: 'Transport de sacs', document_ref: 'FAC-123', ...o } });
+  check('justificatif obligatoire', (await use({ document_ref: undefined })).status === 400);
+  check('achat financé : déclaration requise', (await use({ kind: 'purchase' })).status === 400);
+  check('achat financé relié à une déclaration', (await use({ kind: 'purchase', amount: '650000', declaration_id: s1.decl.id, purpose: 'Achat cacao' })).status === 201);
+  check('dépense enregistrée', (await use({})).status === 201);
+  check('utilisation supérieure aux fonds refusée', (await use({ amount: '4500000' })).status === 400);
+  const g = (await call('GET', `/prefinancings/${pid}`, J())).body;
+  check('soldes exacts : utilisé 750 000, disponible 4 250 000, achats financés 650 000', g.used === '750000.00' && g.available === '4250000.00' && g.purchases_financed === '650000.00' && g.uses.length === 2, g);
+  check('remboursement partiel', (await call('POST', `/prefinancings/${pid}/repayments`, { ...J(), body: { idempotency_key: key('r'), amount: '2000000', paid_on: '2026-03-01', reference: 'VIR-9' } })).body.outstanding === '3000000.00');
+  check('remboursement supérieur au reste refusé', (await call('POST', `/prefinancings/${pid}/repayments`, { ...J(), body: { idempotency_key: key('r'), amount: '3000000.01', paid_on: '2026-03-02' } })).status === 400);
+  const rp = { idempotency_key: key('r'), amount: '3000000', paid_on: '2026-03-03' };
+  await call('POST', `/prefinancings/${pid}/repayments`, { ...J(), body: rp });
+  await call('POST', `/prefinancings/${pid}/repayments`, { ...J(), body: rp });
+  const g2 = (await call('GET', `/prefinancings/${pid}`, J())).body;
+  check('remboursement renvoyé : pas de doublon ; préfinancement soldé', g2.repayments.length === 2 && g2.outstanding === '0.00' && g2.status === 'repaid', g2);
+  const rep = (await call('GET', '/prefinancings/report', J())).body;
+  check('rapport de suivi par devise', rep.by_currency[0].currency === 'XOF' && rep.by_currency[0].received === '5000000.00' && rep.by_currency[0].repaid === '5000000.00', rep);
+  check('lecteur n\'accède pas aux préfinancements', (await call('GET', '/prefinancings', J(lec.t))).status === 403);
+
+  console.log(`\n${ok} contrôles réussis, ${ko} en échec`);
+  process.exit(ko ? 1 : 0);
+})().catch((e) => { console.error(e); process.exit(1); });

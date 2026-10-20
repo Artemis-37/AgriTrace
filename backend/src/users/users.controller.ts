@@ -34,14 +34,14 @@ export class UsersController {
   @Get('users')
   @RequirePermissions('users:read')
   list(@Req() req: any) {
-    return this.db.query(
+    // La table des rôles est protégée par RLS : la lecture doit se faire dans le contexte de l'organisation
+    return this.db.tx(req.org.id, async (c) => (await c.query(
       `SELECT u.id, u.email, u.full_name, u.phone, u.status, r.code AS role_code, uo.status AS membership_status
          FROM user_organizations uo
          JOIN users u ON u.id = uo.user_id
          JOIN roles r ON r.id = uo.role_id
         WHERE uo.organization_id = $1 ORDER BY u.full_name`,
-      [req.org.id],
-    );
+      [req.org.id])).rows);
   }
 
   @Get('roles')

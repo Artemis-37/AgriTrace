@@ -15,7 +15,7 @@ class MovementDto {
   @IsString() @Length(8, 100) idempotency_key: string;
   @IsUUID() warehouse_id: string;
   @IsUUID() lot_id: string;
-  @IsIn(['entry', 'exit', 'loss', 'adjustment_in', 'adjustment_out']) type: string;
+  @IsIn(['entry', 'exit', 'loss', 'adjustment_in', 'adjustment_out', 'return', 'deterioration', 'downgrade', 'quarantine_out', 'quarantine_in']) type: string;
   @Dec(3) quantity_kg: string;
   @IsString() @Length(3, 300) reason: string;
 }
@@ -30,6 +30,7 @@ class TransferDto {
 
 const DIRECTION: Record<string, 'in' | 'out'> = {
   entry: 'in', adjustment_in: 'in', exit: 'out', loss: 'out', adjustment_out: 'out',
+  return: 'in', deterioration: 'out', downgrade: 'out', quarantine_out: 'out', quarantine_in: 'in',
 };
 
 @ApiTags('stocks')
@@ -90,7 +91,7 @@ export class StockController {
   @Post('warehouse-movements')
   @RequirePermissions('stock:move')
   async createMovement(@Body() b: MovementDto, @Req() req: any) {
-    if (['loss', 'adjustment_in', 'adjustment_out'].includes(b.type) && !req.org.permissions.has('stock:adjust'))
+    if (['loss', 'adjustment_in', 'adjustment_out', 'deterioration', 'downgrade'].includes(b.type) && !req.org.permissions.has('stock:adjust'))
       throw new ForbiddenException('Les pertes et ajustements exigent la permission stock:adjust');
     const { row, replay } = await this.db.tx(req.org.id, async (c) => {
       const prev = await c.query(`SELECT * FROM warehouse_movements WHERE idempotency_key = $1`, [b.idempotency_key]);
@@ -99,6 +100,12 @@ export class StockController {
       if (!wh || wh.status !== 'active') throw new BadRequestException('Magasin inconnu ou fermé');
       const lot = (await c.query(`SELECT status FROM lots WHERE id = $1`, [b.lot_id])).rows[0];
       if (!lot) throw new BadRequestException('Lot inconnu');
+      if (b.type === 'quarantine_in') {
+        // Libération : limitée à ce qui est réellement en quarantaine dans ce magasin
+        const q = (await c.query(`SELECT coalesce(sum(CASE movement_type WHEN 'quarantine_out' THEN quantity_kg ELSE -quantity_kg END),0) AS q FROM warehouse_movements
+                                   WHERE lot_id = $1 AND warehouse_id = $2 AND movement_type IN ('quarantine_out','quarantine_in')`, [b.lot_id, b.warehouse_id])).rows[0].q;
+        if (Number(b.quantity_kg) > Number(q)) throw new BadRequestException(`Quantité supérieure à celle en quarantaine (${q} kg)`);
+      }
       const mv = await addMovement(c, { orgId: req.org.id, userId: req.user.id, warehouseId: b.warehouse_id, lotId: b.lot_id,
         type: b.type, direction: DIRECTION[b.type], quantityKg: b.quantity_kg, idempotencyKey: b.idempotency_key, reason: b.reason });
       await addLotEvent(c, req.org.id, req.user.id, b.lot_id, b.type, b.quantity_kg, { type: 'movement', id: mv.id }, { reference: mv.reference, reason: b.reason });

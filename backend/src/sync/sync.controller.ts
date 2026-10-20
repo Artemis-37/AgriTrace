@@ -182,6 +182,7 @@ export class SyncController {
         { key: 'tasks', sql: `SELECT id, code, title, description, category, priority, due_date, section, producer_id, parcel_id, campaign_id, assignee_id, team_ids, expected_result,
                                        validation_criteria, instructions, status, review_note, updated_at AS ts FROM tasks
                                       WHERE status <> 'draft' AND ($3::boolean OR assignee_id = $4 OR $4 = ANY(team_ids))`, params: [req.org.permissions.has('tasks:read_all'), req.user.id] },
+        { key: 'notifications', sql: `SELECT id, kind, severity, title, body, entity_type, entity_id, read_at, created_at AS ts FROM notifications WHERE user_id = $3`, params: [req.user.id] },
         { key: 'operation_results', sql: `SELECT idempotency_key, op_type, status, result, error, processed_at AS ts FROM sync_operations
                                            WHERE user_id = $3 AND processed_at IS NOT NULL`, params: [req.user.id] },
       ];

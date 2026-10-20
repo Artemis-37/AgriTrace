@@ -19,6 +19,12 @@ import { AccountingController } from './accounting/accounting.controller';
 import { LoansController } from './loans/loans.controller';
 import { PaymentsController } from './payments/payments.controller';
 import { ComplianceController } from './compliance/compliance.controller';
+import { NotificationsController } from './notifications/notifications.controller';
+import { NotificationsService } from './notifications/notifications.service';
+import { AccessAdminController } from './users/access-admin.controller';
+import { ProducerStatusController } from './producers/producer-status.controller';
+import { PrefinancingController } from './finance/prefinancing.controller';
+import { StockCountController } from './stock/stock-count.controller';
 import { LogisticsController } from './logistics/logistics.controller';
 import { SalesController } from './sales/sales.controller';
 import { TasksController } from './tasks/tasks.controller';
@@ -42,9 +48,9 @@ import { UsersController } from './users/users.controller';
     OrganizationsController, UsersController, ReferentialsController, ProducersController,
     CollectorsController, DeclarationsController, FinanceController,
     ReceptionController, StockController, LotsController, SyncController,
-    AccountingController, LoansController, PaymentsController, QualityController, ComplianceController, ParcelsController, GeoController, TasksController, LogisticsController, SalesController, MeController, OpsController,
+    AccountingController, LoansController, PaymentsController, QualityController, ComplianceController, ParcelsController, GeoController, TasksController, LogisticsController, SalesController, NotificationsController, AccessAdminController, ProducerStatusController, PrefinancingController, StockCountController, MeController, OpsController,
   ],
-  providers: [
+  providers: [NotificationsService, 
     GeoService, GeoImportService,
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: AccessGuard },

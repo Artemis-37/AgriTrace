@@ -9,6 +9,7 @@ import { RequirePermissions } from '../access/decorators';
 import { AuditService } from '../audit/audit.service';
 import { Dec, isUniqueViolation } from '../common/dto';
 import { DbService } from '../db/db.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { addLotEvent, addMovement, nextNumber, pad } from '../stock/stock.helpers';
 
 class CarrierDto {
@@ -76,7 +77,7 @@ class ResolveDto { @IsString() @Length(3, 1000) resolution: string; }
 @ApiHeader({ name: 'X-Organization-Id', required: true })
 @Controller()
 export class LogisticsController {
-  constructor(private readonly db: DbService, private readonly audit: AuditService) {}
+  constructor(private readonly db: DbService, private readonly audit: AuditService, private readonly notif: NotificationsService) {}
   private log(req: any, action: string, type: string, id: string, details?: any) {
     return this.audit.log({ organizationId: req.org.id, actorUserId: req.user.id, action, entityType: type, entityId: id, details });
   }
@@ -275,6 +276,11 @@ export class LogisticsController {
       }
       const r = (await c.query(`UPDATE shipments SET status = 'delivered', arrived_at = coalesce($2::timestamptz, now()), received_by_name = $3, updated_at = now(), version = version + 1 WHERE id = $1 RETURNING *`,
         [id, b.arrived_at ?? null, b.received_by_name])).rows[0];
+      for (const d of b.items.filter((x) => x.handler_id))
+        await this.notif.notifyUsers(c, req.org.id, [d.handler_id], { kind: 'shipment_discrepancy', severity: 'warning', title: `Écart de livraison à traiter : ${s.reference}`, body: d.reason,
+          entityType: 'shipment', entityId: id, dedupe: `shipment_discrepancy:${d.item_id}` });
+      await this.notif.notifyPermission(c, req.org.id, 'shipments:validate', { kind: 'shipment_to_validate', title: `Livraison à valider : ${s.reference}`, entityType: 'shipment', entityId: id,
+        dedupe: `shipment_to_validate:${id}` }, req.user.id);
       await this.log(req, 'shipment.deliver', 'shipment', id, { discrepancies });
       return { ...r, discrepancies };
     });
@@ -314,6 +320,8 @@ export class LogisticsController {
       if (['planned', 'cancelled'].includes(s.status)) throw new ConflictException('Incident possible seulement après le chargement');
       const r = (await c.query(`INSERT INTO shipment_incidents(organization_id, shipment_id, kind, description, quantity_kg, handler_id, created_by) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
         [req.org.id, id, b.kind, b.description, b.quantity_kg ?? null, b.handler_id ?? null, req.user.id])).rows[0];
+      await this.notif.notifyUsers(c, req.org.id, [b.handler_id], { kind: 'shipment_incident', severity: 'warning', title: `Incident de transport : ${s.reference}`, body: b.description,
+        entityType: 'shipment', entityId: id, dedupe: `shipment_incident:${r.id}` });
       await this.log(req, 'shipment.incident', 'shipment', id, { kind: b.kind }); return r;
     });
   }

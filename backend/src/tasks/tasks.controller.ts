@@ -9,6 +9,7 @@ import { PoolClient } from 'pg';
 import { RequirePermissions } from '../access/decorators';
 import { AuditService } from '../audit/audit.service';
 import { DbService } from '../db/db.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const CATEGORIES = ['mapping', 'visit', 'survey', 'collection', 'training', 'control', 'other'];
@@ -95,7 +96,7 @@ class DecideDto {
 @ApiHeader({ name: 'X-Organization-Id', required: true })
 @Controller()
 export class TasksController {
-  constructor(private readonly db: DbService, private readonly audit: AuditService) {}
+  constructor(private readonly db: DbService, private readonly audit: AuditService, private readonly notif: NotificationsService) {}
 
   private log(req: any, action: string, id: string, details?: any) {
     return this.audit.log({ organizationId: req.org.id, actorUserId: req.user.id, action, entityType: 'task', entityId: id, details });
@@ -133,6 +134,11 @@ export class TasksController {
     await c.query(`INSERT INTO task_history(organization_id, task_id, from_status, to_status, note, actor_id) VALUES ($1,$2,$3,$4,$5,$6)`, [orgId, taskId, from, to, note ?? null, actor]);
   }
 
+  private notifyAssigned(c: PoolClient, req: any, t: any) {
+    return this.notif.notifyUsers(c, req.org.id, [t.assignee_id, ...(t.team_ids ?? [])].filter((u) => u !== req.user.id), { kind: 'task_assigned', title: `Nouvelle mission : ${t.code}`,
+      body: t.title, entityType: 'task', entityId: t.id, dedupe: `task_assigned:${t.id}:${t.assignee_id}:${(t.team_ids ?? []).join(',')}` });
+  }
+
   // ---- Création et consultation ----
   @Post('tasks')
   @RequirePermissions('tasks:create')
@@ -153,6 +159,7 @@ export class TasksController {
          b.producer_id ?? null, b.parcel_id ?? null, b.campaign_id ?? null, b.assignee_id ?? null, b.team_ids ?? [], b.expected_result ?? null,
          b.validation_criteria ?? null, b.instructions ?? null, status, req.user.id])).rows[0];
       await this.history(c, req.org.id, t.id, null, status, req.user.id, 'Création');
+      if (status === 'open') await this.notifyAssigned(c, req, t);
       await this.log(req, 'task.create', t.id, { code, status });
       return t;
     });
@@ -274,6 +281,7 @@ export class TasksController {
       const r = (await c.query(`UPDATE tasks SET assignee_id = $2, team_ids = $3, updated_at = now(), updated_by = $4, version = version + 1 WHERE id = $1 RETURNING *`,
         [id, b.assignee_id, b.team_ids ?? [], req.user.id])).rows[0];
       await this.history(c, req.org.id, id, t.status, t.status, req.user.id, 'Attribution modifiée');
+      if (!['draft'].includes(t.status)) await this.notifyAssigned(c, req, r);
       await this.log(req, 'task.assign', id, { from: t.assignee_id, to: b.assignee_id });
       return r;
     });
@@ -311,6 +319,13 @@ export class TasksController {
               closed_at = CASE WHEN $2 IN ('closed','cancelled') THEN now() ELSE closed_at END
         WHERE id = $1 RETURNING *`, [t.id, to, uid, note ?? null])).rows[0];
     await this.history(c, req.org.id, t.id, t.status, to, uid, note);
+    if (to === 'open') await this.notifyAssigned(c, req, r);
+    if (to === 'submitted')
+      await this.notif.notifyPermission(c, req.org.id, 'tasks:review', { kind: 'task_submitted', title: `Mission soumise pour vérification : ${t.code}`, body: t.title,
+        entityType: 'task', entityId: t.id, dedupe: `task_submitted:${t.id}:${r.version}` }, uid);
+    if (to === 'to_correct')
+      await this.notif.notifyUsers(c, req.org.id, [t.assignee_id, ...(t.team_ids ?? [])], { kind: 'task_to_correct', severity: 'warning', title: `Correction demandée : ${t.code}`, body: note,
+        entityType: 'task', entityId: t.id, dedupe: `task_to_correct:${t.id}:${r.version}` });
     await this.log(req, 'task.status', t.id, { from: t.status, to, note });
     return r;
   }
@@ -382,6 +397,8 @@ export class TasksController {
       const r = (await c.query(
         `INSERT INTO task_requests(organization_id, idempotency_key, title, description, category, producer_id, parcel_id, created_by) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
         [req.org.id, b.idempotency_key, b.title, b.description ?? null, b.category ?? 'other', b.producer_id ?? null, b.parcel_id ?? null, req.user.id])).rows[0];
+      await this.notif.notifyPermission(c, req.org.id, 'tasks:decide_requests', { kind: 'task_request', title: 'Nouvelle demande de mission', body: b.title,
+        entityType: 'task_request', entityId: r.id, dedupe: `task_request:${r.id}` }, req.user.id);
       await this.log(req, 'task_request.create', r.id, { title: b.title });
       return r;
     });
@@ -421,6 +438,9 @@ export class TasksController {
       const upd = (await c.query(
         `UPDATE task_requests SET status = $2, task_id = $3, decided_by = $4, decided_at = now(), decision_note = $5 WHERE id = $1 RETURNING *`,
         [id, b.decision === 'accept' ? 'accepted' : 'rejected', task?.id ?? null, req.user.id, b.note])).rows[0];
+      await this.notif.notifyUsers(c, req.org.id, [r.created_by], { kind: 'task_request_decided', title: b.decision === 'accept' ? 'Demande de mission acceptée' : 'Demande de mission refusée',
+        body: b.note, entityType: 'task_request', entityId: id, dedupe: `task_request_decided:${id}` });
+      if (task?.status === 'open') await this.notifyAssigned(c, req, task);
       await this.log(req, 'task_request.decide', id, { decision: b.decision, task_id: task?.id });
       return { request: upd, task };
     });

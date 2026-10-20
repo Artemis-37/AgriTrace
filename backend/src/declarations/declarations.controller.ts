@@ -8,6 +8,7 @@ import { PoolClient } from 'pg';
 import { RequirePermissions } from '../access/decorators';
 import { AuditService } from '../audit/audit.service';
 import { Dec, isUniqueViolation } from '../common/dto';
+import { NotificationsService } from '../notifications/notifications.service';
 import { DbService } from '../db/db.service';
 import { canSubmit, canTransition, REASON_REQUIRED } from './declaration-states';
 import { assignReceipt, matchesMask, normalizeReceipt, receiptConfig } from './receipt.helpers';
@@ -49,7 +50,7 @@ class TransitionDto {
 @ApiHeader({ name: 'X-Organization-Id', required: true })
 @Controller('purchase-declarations')
 export class DeclarationsController {
-  constructor(private readonly db: DbService, private readonly audit: AuditService) {}
+  constructor(private readonly db: DbService, private readonly audit: AuditService, private readonly notif: NotificationsService) {}
 
   private async history(c: PoolClient, orgId: string, id: string, from: string | null, to: string, reason: string | undefined, actor: string) {
     await c.query(
@@ -112,6 +113,9 @@ export class DeclarationsController {
           ins = await c.query(insertSql, args(other.id));
         }
         await this.history(c, req.org.id, b.id, null, 'draft', undefined, req.user.id);
+        if (ins.rows[0].receipt_conflict_with)
+          await this.notif.notifyPermission(c, req.org.id, 'receipts:override', { kind: 'receipt_duplicate', severity: 'warning', title: `Numéro de reçu en doublon : ${ins.rows[0].purchase_receipt_no}`,
+            body: 'La déclaration reste en conflit jusqu\'à résolution', entityType: 'purchase_declaration', entityId: b.id, dedupe: `receipt_duplicate:${b.id}` });
         return { row: ins.rows[0], replay: false };
       });
       if (!replay)

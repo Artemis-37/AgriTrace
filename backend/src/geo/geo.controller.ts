@@ -130,6 +130,11 @@ export class GeoController {
           await this.imp.apply(c, orgId, userId, importId, items, s, mode !== 'simulate' && status === 'completed');
           await c.query(`UPDATE geo_imports SET status = $2, progress = total, report = $3, error = $4, finished_at = now() WHERE id = $1`,
             [importId, status, JSON.stringify(this.imp.report(items)), error]);
+          const rep: any = this.imp.report(items);
+          if (mode !== 'simulate' && (rep.unknown_producers || rep.rejected || rep.overlaps || rep.duplicates_confirmed))
+            await this.svc.notif.notifyUsers(c, orgId, [userId], { kind: 'geo_import_issues', severity: 'warning', title: 'Import cartographique : lignes à corriger',
+              body: `${rep.rejected} rejetée(s), ${rep.unknown_producers} producteur(s) inconnu(s), ${rep.overlaps} chevauchement(s), ${rep.duplicates_confirmed} doublon(s)`,
+              entityType: 'geo_import', entityId: importId, dedupe: `geo_import_issues:${importId}` });
         });
       } catch (e: any) {
         await this.db.tx(orgId, (c) => c.query(`UPDATE geo_imports SET status = 'failed', error = $2, finished_at = now() WHERE id = $1`, [importId, String(e.message).slice(0, 500)])).catch(() => undefined);

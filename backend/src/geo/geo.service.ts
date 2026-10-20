@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PoolClient } from 'pg';
 import { AuditService } from '../audit/audit.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { DbService } from '../db/db.service';
 import { Polygon } from '../parcels/geo';
 import { analysePair, AnomalyKind, DEFAULT_GEO_SETTINGS, GeoSettings, isBlocking, RECOMMENDED } from './geo-core';
@@ -9,7 +10,7 @@ export interface DetectedAnomaly { id: string; kind: AnomalyKind; other_id: stri
 
 @Injectable()
 export class GeoService {
-  constructor(readonly db: DbService, readonly audit: AuditService) {}
+  constructor(readonly db: DbService, readonly audit: AuditService, readonly notif: NotificationsService) {}
 
   async settings(c: PoolClient): Promise<GeoSettings> {
     const r = (await c.query(
@@ -36,6 +37,9 @@ export class GeoService {
     for (const p of [pa, pb])
       await c.query(`INSERT INTO parcel_history(organization_id, parcel_id, event, details, actor_id) VALUES ($1,$2,'anomaly',$3,$4)`,
         [orgId, p.id, JSON.stringify({ anomaly_id: ins.rows[0].id, kind: r.kind, with: p.id === pa.id ? pb.code : pa.code }), userId ?? '00000000-0000-0000-0000-000000000000']);
+    await this.notif.notifyPermission(c, orgId, 'geo:anomalies', { kind: 'geo_anomaly', severity: isBlocking(r.kind, s) ? 'critical' : 'warning',
+      title: `${r.kind.startsWith('duplicate') ? 'Doublon' : 'Chevauchement'} cartographique : ${pa.code} / ${pb.code}`, body: `${Math.round(Number(r.intersection_m2))} m² en commun`,
+      entityType: 'parcel_anomaly', entityId: ins.rows[0].id, dedupe: `geo_anomaly:${ins.rows[0].id}` }, userId ?? undefined);
     return { id: ins.rows[0].id, kind: r.kind, other_id: b.id, other_code: b.code, intersection_m2: r.intersection_m2, blocking: isBlocking(r.kind, s) };
   }
 

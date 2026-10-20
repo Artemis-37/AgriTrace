@@ -81,19 +81,22 @@ Hypothèses à valider avec la coopérative : conversion sac → kg configurée 
 
 ## Parcelles (livré)
 
-- Parcelle rattachée à un producteur et une filière : code `PC-NNNNN`, superficie déclarée, point GPS et/ou polygone GeoJSON (la surface mesurée est **calculée par le serveur**).
+- Parcelle rattachée à un producteur et une filière : code `CODE_PRODUCTEUR-Pn` (ex. `P00001-P2`, jamais réattribué), superficie déclarée, point GPS et/ou polygone GeoJSON (la surface mesurée est **calculée par le serveur**).
 - Trois niveaux de données distincts : **déclarée → contrôlée → vérifiée**. Le contrôle exige des coordonnées et une surface cohérente (écart ≤ 20 %) ; la vérification exige une **inspection de terrain conforme postérieure à la dernière modification**. Toute modification des données repasse la parcelle à « déclarée ». Historique complet non modifiable.
 - Contrôles (`GET /parcels/checks`) : coordonnées manquantes, doublons potentiels (moins de 50 m), superficies incohérentes, inspections à renouveler. Création refusée en cas de doublon probable sauf confirmation explicite.
 - Photos et documents via le module documents (`subject_type=parcel`). Rapport de traçabilité d'un lot : parcelles du producteur pour la filière du lot et inspections qualité du lot ; le lien exact déclaration → parcelle n'est pas encore saisi (signalé comme tel). Calculs géométriques sans PostGIS (projection locale) : à remplacer par PostGIS pour les chevauchements.
-- Pas encore fait : saisie des parcelles sur le mobile, détection de chevauchement de polygones, import KML/KMZ.
+- Cartographie avancée (chevauchements, doublons, import/export GeoJSON/KML/KMZ/Shapefile/GeoPackage) : voir `docs/CARTOGRAPHIE.md`. Pas encore fait : saisie des parcelles sur le mobile.
 
 ## Tests
 
 ```bash
-cd backend && npm test          # 20 tests unitaires
-npm run test:e2e                # e2e P1 (34) + P2/P3 (42) + P4a (83) + P4b (55) + parcelles (39 contrôles), base PostgreSQL requise
+cd backend && npm test          # 42 tests unitaires
+npm run test:e2e                # e2e : P1, P2/P3, P4a, P4b, parcelles, reçus (41), cartographie (89), missions (69), ventes/transport (71), inventaire/notifications/accès/préfinancement (71) ; base PostgreSQL requise
 ```
 
 ## Limites connues
 
-Opérations financières libres (hors prêts, paiements, écarts de caisse, fonds d'ouverture) non comptabilisées automatiquement (signalé par le contrôle de cohérence) ; déclarations brouillon non modifiables (annuler et recréer) ; expéditions non développées ; soldes producteur/collecteur pouvant être négatifs (seules les caisses sont bloquées) ; révocation d'appareil non implémentée ; e2e non branchés en CI.
+Opérations financières libres (hors prêts, paiements, écarts de caisse, fonds d'ouverture) non comptabilisées automatiquement (signalé par le contrôle de cohérence) ; déclarations brouillon non modifiables (annuler et recréer) ; soldes producteur/collecteur pouvant être négatifs (seules les caisses sont bloquées) ; révocation d'appareil non implémentée .
+
+## Évolutions du cahier des charges v1.0
+Reçu d'achat et code de parcelle (007), cartographie avancée (008, `docs/CARTOGRAPHIE.md`), missions (009, `docs/MISSIONS.md`), transport et ventes (010, `docs/VENTES_TRANSPORT.md`), inventaire, notifications, suspension d'accès, statuts producteur, préfinancement reçu (011). Écarts restants : `docs/ECARTS_CDC.md`.
