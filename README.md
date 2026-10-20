@@ -67,13 +67,21 @@ Hypothèses à valider avec la coopérative : conversion sac → kg configurée 
 - **Alertes** (`GET /alerts`) : certificats expirants ou expirés, inspections en retard ou à renouveler, actions correctives en retard, échéances de prêts impayées, pesées à valider. Ce sont des alertes à consulter ; l'envoi de notifications (push, e-mail) n'est pas encore fait.
 - Parcelles non développées : le module parcelles du cahier des charges reste à faire (les inspections ciblent pour l'instant producteurs, lots, pesées, magasins).
 
+## Parcelles (livré)
+
+- Parcelle rattachée à un producteur et une filière : code `PC-NNNNN`, superficie déclarée, point GPS et/ou polygone GeoJSON (la surface mesurée est **calculée par le serveur**).
+- Trois niveaux de données distincts : **déclarée → contrôlée → vérifiée**. Le contrôle exige des coordonnées et une surface cohérente (écart ≤ 20 %) ; la vérification exige une **inspection de terrain conforme postérieure à la dernière modification**. Toute modification des données repasse la parcelle à « déclarée ». Historique complet non modifiable.
+- Contrôles (`GET /parcels/checks`) : coordonnées manquantes, doublons potentiels (moins de 50 m), superficies incohérentes, inspections à renouveler. Création refusée en cas de doublon probable sauf confirmation explicite.
+- Photos et documents via le module documents (`subject_type=parcel`). Rapport de traçabilité d'un lot : parcelles du producteur pour la filière du lot et inspections qualité du lot ; le lien exact déclaration → parcelle n'est pas encore saisi (signalé comme tel). Calculs géométriques sans PostGIS (projection locale) : à remplacer par PostGIS pour les chevauchements.
+- Pas encore fait : saisie des parcelles sur le mobile, détection de chevauchement de polygones, import KML/KMZ.
+
 ## Tests
 
 ```bash
-cd backend && npm test          # 13 tests unitaires
-npm run test:e2e                # e2e P1 (34) + P2/P3 (42) + P4a (83) + P4b (55 contrôles), base PostgreSQL requise
+cd backend && npm test          # 18 tests unitaires
+npm run test:e2e                # e2e P1 (34) + P2/P3 (42) + P4a (83) + P4b (55) + parcelles (39 contrôles), base PostgreSQL requise
 ```
 
 ## Limites connues
 
-Fonds de caisse d'ouverture et opérations libres non comptabilisés automatiquement (signalé par le contrôle de cohérence) ; déclarations brouillon non modifiables (annuler et recréer) ; expéditions, parcelles et qualité non développées ; soldes producteur/collecteur pouvant être négatifs (seules les caisses sont bloquées) ; révocation d'appareil non implémentée ; e2e non branchés en CI.
+Fonds de caisse d'ouverture et opérations libres non comptabilisés automatiquement (signalé par le contrôle de cohérence) ; déclarations brouillon non modifiables (annuler et recréer) ; expéditions non développées ; soldes producteur/collecteur pouvant être négatifs (seules les caisses sont bloquées) ; révocation d'appareil non implémentée ; e2e non branchés en CI.

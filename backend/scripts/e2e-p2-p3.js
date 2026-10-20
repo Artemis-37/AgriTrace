@@ -148,7 +148,7 @@ const key = (p) => `${p}-${run}-${crypto.randomBytes(4).toString('hex')}`;
   const tr1 = (await call('GET', `/lots/${mg.body.lot.id}/traceability`, J(t1, A))).body;
   check('traçabilité : origines des 2 producteurs à travers division et fusion', tr1.origins.length === 2 && new Set(tr1.origins.map((o) => o.producer_code)).size === 2, tr1.origins);
   check('traçabilité : ancêtres, événements, anomalies de pesée', tr1.ancestors.length >= 4 && tr1.events.length >= 5 && tr1.anomalies.some((a) => a.includes('Sacs humides')), { anc: tr1.ancestors.length, ev: tr1.events.length, an: tr1.anomalies });
-  check('traçabilité : informations manquantes signalées', tr1.missing.some((m) => m.includes('Parcelles')) && tr1.missing.some((m) => m.includes('Expéditions')));
+  check('traçabilité : informations manquantes signalées', tr1.missing.some((m) => m.includes('aucune parcelle enregistrée')) && tr1.missing.some((m) => m.includes('Expéditions')));
   const tp = await call('GET', `/lots/${mg.body.lot.id}/traceability.pdf`, { ...J(t1, A), raw: true });
   check('rapport de traçabilité PDF', tp.status === 200 && Buffer.from(await tp.arrayBuffer()).subarray(0, 4).toString() === '%PDF', tp.status);
   check('lot inaccessible depuis une autre coopérative → 404', (await call('GET', `/lots/${mg.body.lot.id}/traceability`, J(tb, B))).status === 404);

@@ -11,7 +11,7 @@ import { AuditService } from '../audit/audit.service';
 import { DbService } from '../db/db.service';
 
 const SUBJECT_TABLE: Record<string, string> = {
-  producer: 'producers', collector: 'collectors', lot: 'lots', weighing: 'weighings', warehouse: 'warehouses',
+  producer: 'producers', collector: 'collectors', lot: 'lots', weighing: 'weighings', warehouse: 'warehouses', parcel: 'parcels',
 };
 const DEC = /^-?\d{1,14}(\.\d{1,4})?$/;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;

@@ -67,6 +67,14 @@ export function traceabilityPdf(t: any): Promise<Buffer> {
     }
     if (!t.origins.length) doc.font('Helvetica').fontSize(10).text('Aucune origine trouvée');
 
+    doc.moveDown().font('Helvetica-Bold').fontSize(12).text('Parcelles des producteurs (filière du lot)');
+    for (const x of t.parcels) doc.font('Helvetica').fontSize(9).text(`${x.producer_code} ${x.code} — ${x.declared_area_ha} ha déclarés — GPS ${x.latitude ?? 'manquant'}${x.longitude != null ? ', ' + x.longitude : ''} — ${x.verification_status}`);
+    if (!t.parcels.length) doc.font('Helvetica').fontSize(10).text('Aucune parcelle enregistrée');
+
+    doc.moveDown().font('Helvetica-Bold').fontSize(12).text('Contrôles qualité du lot');
+    for (const q of t.quality) doc.font('Helvetica').fontSize(9).text(`${fmtDate(q.completed_at)}  ${q.kind}  ${q.outcome}  — ${q.summary ?? ''}`);
+    if (!t.quality.length) doc.font('Helvetica').fontSize(10).text('Aucun contrôle enregistré');
+
     if (t.ancestors.length) {
       doc.moveDown().font('Helvetica-Bold').fontSize(12).text('Lots d\'origine (divisions et fusions)');
       for (const a of t.ancestors) doc.font('Helvetica').fontSize(9).text(`${a.parent_code} -> ${a.child_code} (${a.relation}, ${a.quantity_kg} kg)`);

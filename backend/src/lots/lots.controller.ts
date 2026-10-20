@@ -137,7 +137,7 @@ export class LotsController {
   private async traceability(orgId: string, id: string) {
     return this.db.tx(orgId, async (c) => {
       const lot = (await c.query(
-        `SELECT l.id, l.code, l.kind, l.status, l.created_at, v.code AS value_chain_code, ca.code AS campaign_code
+        `SELECT l.id, l.code, l.kind, l.status, l.created_at, l.value_chain_id, v.code AS value_chain_code, ca.code AS campaign_code
            FROM lots l JOIN value_chains v ON v.id = l.value_chain_id JOIN campaigns ca ON ca.id = l.campaign_id WHERE l.id = $1`, [id])).rows[0];
       if (!lot) throw new NotFoundException();
 
@@ -159,11 +159,21 @@ export class LotsController {
 
       const origins = (await c.query(
         `SELECT r.lot_id, r.number AS receipt_number, r.created_at AS received_at, d.id AS declaration_id, w.net_kg, w.declared_kg, w.variance_pct, w.justification,
-                p.internal_code AS producer_code, p.last_name || ' ' || p.first_names AS producer_name, p.village, p.section,
+                p.id AS producer_id, p.internal_code AS producer_code, p.last_name || ' ' || p.first_names AS producer_name, p.village, p.section,
                 cu.full_name AS collector_name, d.operation_date
            FROM receipts r JOIN weighings w ON w.id = r.weighing_id JOIN purchase_declarations d ON d.id = r.declaration_id
            JOIN producers p ON p.id = d.producer_id JOIN collectors co ON co.id = d.collector_id JOIN users cu ON cu.id = co.user_id
           WHERE r.lot_id = ANY($1) ORDER BY r.created_at LIMIT 500`, [lotIds])).rows;
+
+      const producerIds = [...new Set(origins.map((o: any) => o.producer_id))];
+      const parcels = producerIds.length ? (await c.query(
+        `SELECT pc.code, pc.producer_id, pr.internal_code AS producer_code, pc.declared_area_ha, pc.geometry_area_ha, pc.latitude, pc.longitude, pc.verification_status
+           FROM parcels pc JOIN producers pr ON pr.id = pc.producer_id
+          WHERE pc.producer_id = ANY($1) AND pc.status = 'active' AND pc.value_chain_id = $2 ORDER BY pr.internal_code, pc.code LIMIT 500`, [producerIds, lot.value_chain_id])).rows : [];
+      const quality = (await c.query(
+        `SELECT i.id, i.kind, i.outcome, i.completed_at, i.summary, i.subject_id,
+                (SELECT count(*) FROM inspection_results r WHERE r.inspection_id = i.id AND NOT r.passed)::int AS failed_checks
+           FROM inspections i WHERE i.subject_type = 'lot' AND i.subject_id = ANY($1) AND i.status = 'completed' ORDER BY i.completed_at LIMIT 200`, [lotIds])).rows;
 
       const events = (await c.query(
         `SELECT e.id, e.created_at, e.event_type, e.quantity_kg, e.details, l.code AS lot_code
@@ -183,11 +193,21 @@ export class LotsController {
       }
       const missing: string[] = [];
       if (!origins.length) missing.push('Aucune réception rattachée à ce lot : origine producteur inconnue');
-      if (origins.length) missing.push('Parcelles d\'origine : non renseignées (module parcelles non encore disponible)');
-      missing.push('Contrôles qualité : aucun enregistré (module non encore disponible)');
+      for (const pid of producerIds) {
+        const code = origins.find((o: any) => o.producer_id === pid).producer_code;
+        const mine = parcels.filter((x: any) => x.producer_id === pid);
+        if (!mine.length) missing.push(`Producteur ${code} : aucune parcelle enregistrée pour cette filière`);
+        else {
+          if (mine.some((x: any) => x.latitude === null)) missing.push(`Producteur ${code} : parcelle(s) sans coordonnées GPS`);
+          if (mine.some((x: any) => x.verification_status !== 'verified')) anomalies.push(`Producteur ${code} : parcelle(s) non vérifiée(s) (données seulement déclarées ou contrôlées)`);
+        }
+      }
+      if (parcels.length) missing.push("Lien exact déclaration → parcelle : non saisi (les parcelles listées sont celles du producteur pour la filière du lot)");
+      if (!quality.length) missing.push('Contrôles qualité : aucune inspection terminée enregistrée pour ce lot');
+      for (const q of quality) if (q.outcome !== 'compliant') anomalies.push(`Inspection du ${String(q.completed_at).slice(0, 10)} : ${q.outcome === 'non_compliant' ? 'non conforme' : 'à examiner'} (${q.failed_checks} anomalie(s))`);
       missing.push('Expéditions : aucune enregistrée (module non encore disponible)');
 
-      return { generated_at: new Date().toISOString(), lot, stock, origins, ancestors: anc, descendants: desc, events, movements, anomalies, missing };
+      return { generated_at: new Date().toISOString(), lot, stock, origins, parcels, quality, ancestors: anc, descendants: desc, events, movements, anomalies, missing };
     });
   }
 

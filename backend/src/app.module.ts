@@ -20,6 +20,7 @@ import { LoansController } from './loans/loans.controller';
 import { PaymentsController } from './payments/payments.controller';
 import { ComplianceController } from './compliance/compliance.controller';
 import { QualityController } from './quality/quality.controller';
+import { ParcelsController } from './parcels/parcels.controller';
 import { UsersController } from './users/users.controller';
 
 @Module({
@@ -33,7 +34,7 @@ import { UsersController } from './users/users.controller';
     OrganizationsController, UsersController, ReferentialsController, ProducersController,
     CollectorsController, DeclarationsController, FinanceController,
     ReceptionController, StockController, LotsController, SyncController,
-    AccountingController, LoansController, PaymentsController, QualityController, ComplianceController,
+    AccountingController, LoansController, PaymentsController, QualityController, ComplianceController, ParcelsController,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
