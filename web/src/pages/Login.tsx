@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import { get, post } from '../api';
 import { useAuth } from '../auth';
 import { useAction } from '../ui';
+import PairWorkstation from '../PairWorkstation';
 
 export default function Login() {
   const { status, orgs, signIn, chooseOrg, signOut } = useAuth();
@@ -23,8 +24,10 @@ export default function Login() {
     });
   };
 
+  const [pairing, setPairing] = useState(false);
   const submit = (e: FormEvent) => { e.preventDefault(); run(() => signIn(email.trim(), password)); };
 
+  if (pairing) return <PairWorkstation onDone={() => window.location.reload()} onCancel={() => setPairing(false)} />;
   return (
     <div className="login">
       <div className="login-art">
@@ -66,6 +69,7 @@ export default function Login() {
             <label className="field"><span>Adresse e-mail</span><input type="email" autoComplete="username" required value={email} onChange={(e) => setEmail(e.target.value)} /></label>
             <label className="field"><span>Mot de passe</span><input type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} /></label>
             <button className="btn" disabled={busy} type="submit" style={{ width: '100%' }}>{busy ? 'Connexion…' : 'Se connecter'}</button>
+            <p style={{ marginTop: '.75rem', textAlign: 'center' }}><button type="button" className="btn btn-ghost btn-small" onClick={() => setPairing(true)}>Associer ce poste à la coopérative (code)</button></p>
           </form>
         )}
         {error && <p role="alert" className="error-box" style={{ marginTop: '1rem' }}>{error}</p>}

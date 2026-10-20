@@ -9,6 +9,10 @@ class SessionStore {
   Future<String?> get refreshToken => _s.read(key: 'refresh');
   Future<String?> get orgId => _s.read(key: 'org');
 
+  /// Jeton propre à ce téléphone, remis lors de l'association (code à 8 caractères de l'administrateur).
+  Future<String?> get deviceToken => _s.read(key: 'device');
+  Future<void> setDeviceToken(String t) => _s.write(key: 'device', value: t);
+
   Future<void> saveTokens(String access, String refresh) async {
     await _s.write(key: 'access', value: access);
     await _s.write(key: 'refresh', value: refresh);

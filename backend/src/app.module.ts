@@ -37,6 +37,7 @@ import { GeoImportService } from './geo/geo-import.service';
 import { GeoService } from './geo/geo.service';
 import { UsersController } from './users/users.controller';
 import { ConvoysController } from './convoys/convoys.controller';
+import { WorkstationsController } from './workstations/workstations.controller';
 import { MessagesController } from './messages/messages.controller';
 import { ReplicationController } from './replication/replication.controller';
 import { ReplicationService } from './replication/replication.service';
@@ -52,7 +53,7 @@ import { ReplicationService } from './replication/replication.service';
     OrganizationsController, UsersController, ReferentialsController, ProducersController,
     CollectorsController, DeclarationsController, FinanceController,
     ReceptionController, StockController, LotsController, SyncController,
-    AccountingController, LoansController, PaymentsController, QualityController, ComplianceController, ParcelsController, GeoController, TasksController, LogisticsController, SalesController, NotificationsController, AccessAdminController, ProducerStatusController, PrefinancingController, StockCountController, MeController, OpsController, ReplicationController, MessagesController, ConvoysController,
+    AccountingController, LoansController, PaymentsController, QualityController, ComplianceController, ParcelsController, GeoController, TasksController, LogisticsController, SalesController, NotificationsController, AccessAdminController, ProducerStatusController, PrefinancingController, StockCountController, MeController, OpsController, ReplicationController, MessagesController, ConvoysController, WorkstationsController,
   ],
   providers: [NotificationsService, ReplicationService, 
     GeoService, GeoImportService,

@@ -16,6 +16,7 @@ import { Historique, MesAchats, MonStock } from './pages/EspaceCollecteur';
 import Convois from './pages/Convois';
 import Bell from './Bell';
 import ConnectionStatus from './ConnectionStatus';
+import PairWorkstation from './PairWorkstation';
 import Messages from './pages/Messages';
 import OfflineBar from './OfflineBar';
 import Synchronisation from './pages/Synchronisation';
@@ -58,6 +59,8 @@ export default function App() {
   const [theme, setTheme] = useState(readTheme() || (window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'night' : 'doux'));
   useEffect(() => { document.documentElement.dataset.theme = theme; try { localStorage.setItem('agritrace.theme', theme); } catch { /* ignoré */ } }, [theme]);
   const [unread, setUnread] = useState(0);
+  const [needPair, setNeedPair] = useState(false);
+  useEffect(() => { const f = () => setNeedPair(true); window.addEventListener('agritrace:workstation-required', f); return () => window.removeEventListener('agritrace:workstation-required', f); }, []);
   const [managed, setManaged] = useState<string | null>(null);
   useEffect(() => {
     if (status !== 'ready') return;
@@ -69,6 +72,7 @@ export default function App() {
     if (can('messages:use')) get<{ unread: number }>('/messages/unread-count').then((r) => setMsgUnread(r.unread)).catch(() => undefined);
   }, [can]);
   useEffect(() => { if (status !== 'ready') return; refreshUnread(); const t = setInterval(refreshUnread, 15000); return () => clearInterval(t); }, [status, org?.id, refreshUnread]);
+  if (needPair) return <PairWorkstation blocking onDone={() => window.location.reload()} />;
   if (status === 'loading') return <div style={{ padding: '3rem' }}><Loading /></div>;
   if (status === 'platform') return <CentralConsole />;
   if (status !== 'ready') return <Login />;

@@ -59,4 +59,9 @@ Rôles d'un ordinateur de bureau, choisis à l'installation et visibles dans Fic
 
 Barre du haut : quatre icônes carrées comme CentriGest, vert = bon, rouge = coupé, orange = en attente, gris = sans objet. **Réseau**, **Serveur de la coopérative**, **Serveur central** (sur un serveur local), **Synchronisation** (pastille = opérations en attente ou refusées). Un clic ouvre le panneau « Synchronisation » (voyants, postes connectés, « Synchroniser maintenant »).
 
-Pas encore repris de CentriGest : association d'un poste par code à 8 caractères (révocable), HTTPS auto-signé, installateur Inno Setup/PWA.
+## Association des postes de travail
+
+Équipe → « Postes de travail » : **Associer un poste** donne un code à 8 caractères (valable 15 minutes, à usage unique, seule l'empreinte est conservée). Sur le poste (portail, poste de bureau ou téléphone), écran de connexion → « Associer ce poste à la coopérative » : le code est échangé contre un **jeton propre au poste**, envoyé à chaque requête (`X-Device-Token`).
+- **Association obligatoire** (case à cocher) : un appareil inconnu ou révoqué est refusé, même avec un bon mot de passe ; elle ne peut être activée que depuis un poste déjà associé (pas d'auto-verrouillage).
+- **Révoquer** : effet immédiat ; le poste doit être réassocié. Dernière activité visible par poste.
+- Ces tables restent sur le serveur qui les crée (jamais répliquées vers le central). Testé par `e2e-postes.js` (15 contrôles) et `parcours-postes.mjs` ; l'écran mobile n'est compilé que par la CI.

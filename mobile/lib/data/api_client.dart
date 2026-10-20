@@ -38,6 +38,13 @@ class ApiClient {
     return true;
   }
 
+  /// Associe ce téléphone à la coopérative avec le code remis par l'administrateur (avant toute connexion).
+  Future<String> pairWorkstation(String code) async {
+    final res = await _send('POST', '/workstations/pair', body: {'code': code}, auth: false, org: false);
+    await store.setDeviceToken(res['device_token'] as String);
+    return res['name'] as String;
+  }
+
   Future<List<dynamic>> myOrganizations() async => (await _send('GET', '/organizations', org: false)) as List<dynamic>;
 
   Future<dynamic> get(String path, {Map<String, String>? query}) => _send('GET', path, query: query);
@@ -51,6 +58,8 @@ class ApiClient {
         final t = await store.accessToken;
         if (t != null) headers['authorization'] = 'Bearer $t';
       }
+      final dev = await store.deviceToken;
+      if (dev != null) headers['x-device-token'] = dev;
       if (org) {
         final o = await store.orgId;
         if (o != null) headers['x-organization-id'] = o;

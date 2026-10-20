@@ -10,6 +10,7 @@ import { JwtService } from '@nestjs/jwt';
 import { DbService } from '../db/db.service';
 import { IS_PUBLIC, NO_ORG, PERMISSIONS, PLATFORM_ADMIN } from './decorators';
 import { hasAllPermissions } from './permission-evaluator';
+import { findWorkstation, workstationsRequired } from './workstation-policy';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -86,6 +87,12 @@ export class AccessGuard implements CanActivate {
       const owned = await this.db.query(`SELECT 1 FROM replication_sites WHERE organization_id = $1`, [orgId]);
       if (owned.length) throw new ForbiddenException('Cette coopérative est gérée par son serveur local : le serveur central est en lecture seule pour elle.');
     }
+
+    // Poste associé (jeton propre au poste). Si la coopérative l'exige, un appareil inconnu ou révoqué est refusé, même avec un bon mot de passe.
+    const dt = req.headers['x-device-token'];
+    req.workstation = await findWorkstation(this.db, orgId, typeof dt === 'string' ? dt : undefined);
+    if (!req.workstation && (await workstationsRequired(this.db, orgId)))
+      throw new ForbiddenException({ statusCode: 403, message: 'Ce poste n\'est pas associé à la coopérative. Demandez un code d\'association à votre administrateur.', code: 'workstation_required' });
 
     req.org = { id: orgId, permissions: granted };
     return true;

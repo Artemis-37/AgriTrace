@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { get, post } from '../api';
+import { get, post, put } from '../api';
 import { useAuth } from '../auth';
 import { Badge, Card, ErrorBox, Field, Loading, Modal, PageHeader, Table, useAction, useAsync } from '../ui';
 import { dateTime } from '../format';
@@ -30,6 +30,7 @@ export default function Equipe() {
           {mk.error && <ErrorBox message={mk.error} />}
         </Card>
       )}
+      {can('workstations:manage') && <Postes />}
       <Card>
         {error && <ErrorBox message={error} onRetry={reload} />}
         {loading ? <Loading /> : (
@@ -55,6 +56,61 @@ export default function Equipe() {
       {adding && <AddUser roles={data?.roles ?? []} onClose={() => setAdding(false)} onDone={() => { setAdding(false); reload(); }} />}
       {hist && <History u={hist} onClose={() => setHist(null)} />}
     </>
+  );
+}
+
+function Postes() {
+  const { data, loading, error, reload } = useAsync(() => get<any>('/workstations'), []);
+  const [creating, setCreating] = useState(false);
+  const [revoke, setRevoke] = useState<any | null>(null);
+  const act = useAction();
+  return (
+    <Card title="Postes de travail">
+      <p className="muted">Chaque ordinateur ou tablette est associé à la coopérative par un code à 8 caractères (valable 15 minutes, à usage unique) et reçoit un jeton propre, révocable. Poste volé ou perdu : « Révoquer », l'effet est immédiat.</p>
+      {loading ? <Loading /> : error ? <ErrorBox message={error} onRetry={reload} /> : data && (
+        <>
+          <div className="toolbar">
+            <button className="btn" onClick={() => setCreating(true)}>Associer un poste</button>
+            <label className="check"><input type="checkbox" checked={data.required} disabled={act.busy} onChange={(e) => act.run(async () => { await put('/workstations/policy', { required: e.target.checked }); reload(); })} /> Rendre l'association obligatoire (un appareil inconnu ou révoqué ne peut plus se connecter, même avec un bon mot de passe)</label>
+          </div>
+          {act.error && <ErrorBox message={act.error} />}
+          <Table rows={data.workstations} empty="Aucun poste associé." columns={[
+            { header: 'Poste', render: (w: any) => <strong>{w.name}</strong> }, { header: 'Fonction', render: (w: any) => w.function_label ?? '—' },
+            { header: 'Dernière activité', render: (w: any) => (w.last_seen_at ? dateTime(w.last_seen_at) : '—') },
+            { header: 'État', render: (w: any) => <Badge tone={w.status === 'active' ? 'ok' : 'bad'}>{w.status === 'active' ? 'Actif' : 'Révoqué'}</Badge> },
+            { header: '', render: (w: any) => w.status === 'active' ? <button className="btn btn-small btn-secondary" onClick={() => setRevoke(w)}>Révoquer</button> : <span className="muted">{w.revoked_reason ?? ''}</span> },
+          ]} />
+        </>
+      )}
+      {creating && <NewCode onClose={() => { setCreating(false); reload(); }} />}
+      {revoke && <Confirm title={`Révoquer le poste « ${revoke.name} »`} reason label="Motif" onClose={() => setRevoke(null)} intro="Ce poste ne pourra plus se connecter tant qu'il n'est pas réassocié." onSubmit={async (reason) => { await post(`/workstations/${revoke.id}/revoke`, { reason }); setRevoke(null); reload(); }} />}
+    </Card>
+  );
+}
+
+function NewCode({ onClose }: { onClose: () => void }) {
+  const [f, setF] = useState({ name: '', function_label: '' });
+  const [code, setCode] = useState<{ code: string; expires_at: string } | null>(null);
+  const { busy, error, run } = useAction();
+  return (
+    <Modal title="Associer un poste" onClose={onClose}>
+      {!code ? (
+        <>
+          <Field label="Nom du poste" hint="Par exemple Caisse 01, Magasin central, Bureau du directeur."><input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></Field>
+          <Field label="Fonction (facultatif)"><input value={f.function_label} onChange={(e) => setF({ ...f, function_label: e.target.value })} /></Field>
+          {error && <ErrorBox message={error} />}
+          <div className="modal-foot"><button className="btn btn-secondary" onClick={onClose}>Annuler</button>
+            <button className="btn" disabled={busy || f.name.trim().length < 2} onClick={() => run(async () => setCode(await post('/workstations/pairing-codes', f)))}>Générer le code</button></div>
+        </>
+      ) : (
+        <>
+          <p>Sur le poste « {f.name} », écran de connexion → <em>Associer ce poste à la coopérative</em>, puis saisissez :</p>
+          <p style={{ fontSize: '2rem', letterSpacing: '.2em', fontWeight: 700, textAlign: 'center' }} aria-live="polite">{code.code}</p>
+          <p className="muted">Valable 15 minutes (jusqu'à {dateTime(code.expires_at)}), utilisable une seule fois.</p>
+          <div className="modal-foot"><button className="btn" onClick={onClose}>Terminé</button></div>
+        </>
+      )}
+    </Modal>
   );
 }
 

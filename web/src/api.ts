@@ -33,6 +33,18 @@ async function back(): Promise<boolean> {
   return false;
 }
 
+const DEV_KEY = 'agritrace.device';
+/** Jeton propre à ce poste (obtenu avec le code d'association) ; envoyé à chaque requête. */
+export const deviceToken = (): string | null => { try { return localStorage.getItem(DEV_KEY); } catch { return null; } };
+export const setDeviceToken = (t: string | null) => { try { t ? localStorage.setItem(DEV_KEY, t) : localStorage.removeItem(DEV_KEY); } catch { /* ignoré */ } };
+/** Échange le code d'association contre le jeton du poste (avant toute connexion). */
+export async function pairWorkstation(code: string): Promise<string> {
+  const res = await fetch('/v1/workstations/pair', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code }) });
+  const body = await res.json().catch(() => null);
+  if (!res.ok) throw new ApiError(res.status, errorMessage(body, 'Association impossible.'), body);
+  setDeviceToken(body.device_token); return body.name as string;
+}
+
 export const isOfflineSession = () => offlineSession;
 export const setOrg = (id: string | null) => { orgId = id; try { id ? sessionStorage.setItem(ORG_KEY, id) : sessionStorage.removeItem(ORG_KEY); } catch { /* ignoré */ } };
 export const getOrg = () => orgId;
@@ -51,11 +63,13 @@ async function raw(path: string, init: RequestInit & { json?: unknown } = {}, re
   const headers = new Headers(init.headers);
   if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`);
   if (org) headers.set('X-Organization-Id', org);
+  const dev = deviceToken(); if (dev) headers.set('X-Device-Token', dev);
   let body = init.body;
   if (init.json !== undefined) { headers.set('Content-Type', 'application/json'); body = JSON.stringify(init.json); }
   let res: Response;
   try { res = await fetch(`/v1${path}`, { ...init, headers, body }); } catch { markOffline(); throw new OfflineError(); }
   if (res.status === 503 && res.headers.get('x-agritrace-offline')) { markOffline(); throw new OfflineError(); }
+  if (res.status === 403 && (await res.clone().json().catch(() => null))?.code === 'workstation_required') window.dispatchEvent(new Event('agritrace:workstation-required'));
   if (res.status === 401 && retry && (await refresh()) === 'ok') return raw(path, init, false, org);
   if (res.status === 401) { clearSession(); onSessionLost(); }
   return res;
