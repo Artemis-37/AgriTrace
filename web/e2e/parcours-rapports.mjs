@@ -23,6 +23,14 @@ await step('export Excel téléchargé', async () => {
   const [d] = await Promise.all([page.waitForEvent('download', { timeout: 15000 }), page.getByRole('button', { name: 'Exporter vers Excel' }).click()]);
   must(/\.xlsx$/.test(d.suggestedFilename()), 'fichier : ' + d.suggestedFilename());
 });
+await step('rapports finance, stock et qualité : onglets, indicateurs et export', async () => {
+  for (const [tab, marker, file] of [['Finance', 'Créances à encaisser', /financier\.xlsx$/], ['Stock', 'Stock total', /stock\.xlsx$/], ['Qualité', 'Taux de conformité', /qualite\.xlsx$/]]) {
+    await page.getByRole('tab', { name: tab }).click(); await page.waitForTimeout(900);
+    must((await page.innerText('body')).includes(marker), `onglet ${tab} : « ${marker} » absent`);
+    const [d] = await Promise.all([page.waitForEvent('download', { timeout: 15000 }), page.getByRole('button', { name: 'Exporter vers Excel' }).click()]);
+    must(file.test(d.suggestedFilename()), 'fichier : ' + d.suggestedFilename());
+  }
+});
 await step('le collecteur ne voit pas Rapports', async () => {
   await login(colEmail); must(!(await page.locator('nav').first().innerText()).includes('Rapports'), 'menu Rapports visible');
 });

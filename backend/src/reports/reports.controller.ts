@@ -72,4 +72,127 @@ export class ReportsController {
     ws.getColumn('kg').numFmt = '#,##0.000" Kg"'; ws.getColumn('amount').numFmt = '#,##0" F CFA"';
     return new StreamableFile(Buffer.from(await wb.xlsx.writeBuffer()), { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', disposition: 'attachment; filename="Rapport_des_achats.xlsx"' });
   }
+
+  // ---------- Rapports unifiés : finance, stock, qualité (CDC §26) ----------
+  private period(q: Record<string, string | undefined>) {
+    for (const k of ['from', 'to']) if (q[k] && !DATE.test(q[k]!)) throw new BadRequestException('Dates attendues au format AAAA-MM-JJ');
+    return [q.from || null, q.to || null] as const;
+  }
+
+  /** Finance : mouvements par compte sur la période, créances clients, dettes envers les collecteurs, préfinancements à rembourser. */
+  private async finance(orgId: string, q: Record<string, string | undefined>) {
+    const [f, t] = this.period(q);
+    return this.db.tx(orgId, async (c) => {
+      const accounts = (await c.query(
+        `SELECT a.name, a.owner_type, a.currency,
+                coalesce(sum(CASE WHEN x.direction = 'in' AND ($1::date IS NULL OR x.created_at >= $1) AND ($2::date IS NULL OR x.created_at < $2::date + 1) THEN x.amount END), 0)::numeric(18,2) AS inflow,
+                coalesce(sum(CASE WHEN x.direction = 'out' AND ($1::date IS NULL OR x.created_at >= $1) AND ($2::date IS NULL OR x.created_at < $2::date + 1) THEN x.amount END), 0)::numeric(18,2) AS outflow,
+                coalesce(sum(CASE x.direction WHEN 'in' THEN x.amount ELSE -x.amount END), 0)::numeric(18,2) AS balance
+           FROM financial_accounts a LEFT JOIN financial_transactions x ON x.account_id = a.id
+          WHERE a.owner_type IN ('cash_register','other') AND a.status = 'active' GROUP BY a.id ORDER BY a.name`, [f, t])).rows;
+      const sales = (await c.query(
+        `SELECT coalesce(sum(i.total) FILTER (WHERE i.status <> 'cancelled' AND ($1::date IS NULL OR i.issue_date >= $1) AND ($2::date IS NULL OR i.issue_date <= $2)), 0)::numeric(18,2) AS invoiced,
+                coalesce(sum(i.total - coalesce(p.paid,0) - coalesce(n.credited,0)) FILTER (WHERE i.status IN ('issued','partially_paid')), 0)::numeric(18,2) AS receivable,
+                coalesce(sum(i.total - coalesce(p.paid,0) - coalesce(n.credited,0)) FILTER (WHERE i.status IN ('issued','partially_paid') AND i.due_date < current_date), 0)::numeric(18,2) AS overdue
+           FROM invoices i
+           LEFT JOIN (SELECT invoice_id, sum(amount) AS paid FROM invoice_payments GROUP BY 1) p ON p.invoice_id = i.id
+           LEFT JOIN (SELECT invoice_id, sum(amount) AS credited FROM credit_notes GROUP BY 1) n ON n.invoice_id = i.id`, [f, t])).rows[0];
+      const credited = (await c.query(`SELECT coalesce(sum(amount),0)::numeric(18,2) AS v FROM credit_notes WHERE ($1::date IS NULL OR issued_on >= $1) AND ($2::date IS NULL OR issued_on <= $2)`, [f, t])).rows[0].v;
+      const collectors = (await c.query(
+        `SELECT cu.full_name AS name,
+                coalesce(sum(CASE x.direction WHEN 'in' THEN x.amount ELSE -x.amount END), 0)::numeric(18,2) AS owed_to_collector
+           FROM collectors k JOIN users cu ON cu.id = k.user_id
+           JOIN financial_accounts a ON a.owner_type = 'collector' AND a.owner_id = k.id
+           LEFT JOIN financial_transactions x ON x.account_id = a.id GROUP BY cu.full_name ORDER BY cu.full_name`)).rows;
+      const pref = (await c.query(
+        `SELECT p.currency, coalesce(sum(p.amount - coalesce(r.v,0)),0)::numeric(18,2) AS outstanding
+           FROM prefinancings p LEFT JOIN (SELECT prefinancing_id, sum(amount) AS v FROM prefinancing_repayments GROUP BY 1) r ON r.prefinancing_id = p.id
+          WHERE p.status = 'active' GROUP BY p.currency`)).rows;
+      return { period: { from: f, to: t }, accounts, sales: { ...sales, credited }, collectors, prefinancing: pref,
+        totals: { treasury: accounts.reduce((a: number, r: any) => a + Number(r.balance), 0).toFixed(2), owed_to_collectors: collectors.reduce((a: number, r: any) => a + Math.max(0, Number(r.owed_to_collector)), 0).toFixed(2) } };
+    });
+  }
+
+  /** Stock : solde par entrepôt et filière, flux de la période par type de mouvement. */
+  private async stock(orgId: string, q: Record<string, string | undefined>) {
+    const [f, t] = this.period(q);
+    return this.db.tx(orgId, async (c) => {
+      const balances = (await c.query(
+        `SELECT w.name AS warehouse, vc.name AS chain, count(DISTINCT m.lot_id)::int AS lots,
+                coalesce(sum(CASE m.direction WHEN 'in' THEN m.quantity_kg ELSE -m.quantity_kg END), 0)::numeric(18,3) AS kg
+           FROM warehouse_movements m JOIN warehouses w ON w.id = m.warehouse_id JOIN lots l ON l.id = m.lot_id JOIN value_chains vc ON vc.id = l.value_chain_id
+          GROUP BY w.name, vc.name HAVING sum(CASE m.direction WHEN 'in' THEN m.quantity_kg ELSE -m.quantity_kg END) <> 0 ORDER BY 1, 2`)).rows;
+      const flows = (await c.query(
+        `SELECT m.movement_type AS type, m.direction, count(*)::int AS movements, sum(m.quantity_kg)::numeric(18,3) AS kg
+           FROM warehouse_movements m WHERE ($1::date IS NULL OR m.occurred_at >= $1) AND ($2::date IS NULL OR m.occurred_at < $2::date + 1)
+          GROUP BY 1, 2 ORDER BY 2 DESC, 1`, [f, t])).rows;
+      const losses = (await c.query(
+        `SELECT coalesce(sum(quantity_kg) FILTER (WHERE movement_type = 'loss'), 0)::numeric(18,3) AS loss_kg FROM warehouse_movements
+          WHERE ($1::date IS NULL OR occurred_at >= $1) AND ($2::date IS NULL OR occurred_at < $2::date + 1)`, [f, t])).rows[0];
+      return { period: { from: f, to: t }, balances, flows, totals: { kg: balances.reduce((a: number, r: any) => a + Number(r.kg), 0), loss_kg: Number(losses.loss_kg) } };
+    });
+  }
+
+  /** Qualité : inspections de la période par nature et résultat, règles les plus souvent en échec. */
+  private async quality(orgId: string, q: Record<string, string | undefined>) {
+    const [f, t] = this.period(q);
+    return this.db.tx(orgId, async (c) => {
+      const inspections = (await c.query(
+        `SELECT i.kind, coalesce(i.outcome, 'pending') AS outcome, count(*)::int AS n
+           FROM inspections i WHERE i.status <> 'cancelled' AND ($1::date IS NULL OR coalesce(i.completed_at, i.created_at) >= $1) AND ($2::date IS NULL OR coalesce(i.completed_at, i.created_at) < $2::date + 1)
+          GROUP BY 1, 2 ORDER BY 1, 2`, [f, t])).rows;
+      const failing = (await c.query(
+        `SELECT r.rule_code AS code, r.rule_label AS label, bool_or(r.blocking) AS blocking, count(*)::int AS failures
+           FROM inspection_results r JOIN inspections i ON i.id = r.inspection_id
+          WHERE r.passed = false AND ($1::date IS NULL OR r.recorded_at >= $1) AND ($2::date IS NULL OR r.recorded_at < $2::date + 1)
+          GROUP BY 1, 2 ORDER BY failures DESC, 1 LIMIT 20`, [f, t])).rows;
+      const total = inspections.reduce((a: number, r: any) => a + r.n, 0);
+      const ok = inspections.filter((r: any) => r.outcome === 'compliant').reduce((a: number, r: any) => a + r.n, 0);
+      return { period: { from: f, to: t }, inspections, failing_rules: failing, totals: { inspections: total, compliant: ok, rate: total ? Math.round((ok / total) * 1000) / 10 : null } };
+    });
+  }
+
+  @Get('finance') @RequirePermissions('reports:read', 'finance:read')
+  financeReport(@Req() req: any, @Query() q: Record<string, string>) { return this.finance(req.org.id, q); }
+  @Get('stock') @RequirePermissions('reports:read', 'warehouses:read')
+  stockReport(@Req() req: any, @Query() q: Record<string, string>) { return this.stock(req.org.id, q); }
+  @Get('quality') @RequirePermissions('reports:read', 'quality:read')
+  qualityReport(@Req() req: any, @Query() q: Record<string, string>) { return this.quality(req.org.id, q); }
+
+  private async sheet(parts: { title: string; cols: [string, string, number?][]; rows: any[] }[], name: string) {
+    const wb = new ExcelJS.Workbook();
+    for (const p of parts) {
+      const ws = wb.addWorksheet(p.title);
+      ws.columns = p.cols.map(([header, key, width]) => ({ header, key, width: width ?? 18 }));
+      ws.getRow(1).font = { bold: true }; ws.views = [{ state: 'frozen', ySplit: 1 }];
+      for (const r of p.rows) ws.addRow(r);
+    }
+    return new StreamableFile(Buffer.from(await wb.xlsx.writeBuffer()), { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', disposition: `attachment; filename="${name}"` });
+  }
+  @Get('finance/xlsx') @RequirePermissions('reports:read', 'finance:read')
+  async financeXlsx(@Req() req: any, @Query() q: Record<string, string>) {
+    const r = await this.finance(req.org.id, q);
+    return this.sheet([
+      { title: 'Comptes', cols: [['Compte', 'name', 32], ['Type', 'owner_type'], ['Entrées', 'inflow'], ['Sorties', 'outflow'], ['Solde', 'balance']], rows: r.accounts },
+      { title: 'Ventes', cols: [['Facturé (période)', 'invoiced'], ['Créances à encaisser', 'receivable'], ['Dont échues', 'overdue'], ['Avoirs (période)', 'credited']], rows: [r.sales] },
+      { title: 'Collecteurs', cols: [['Collecteur', 'name', 32], ['Dû au collecteur (net des avances)', 'owed_to_collector', 34]], rows: r.collectors },
+      { title: 'Préfinancement', cols: [['Devise', 'currency'], ['Reste à rembourser', 'outstanding']], rows: r.prefinancing },
+    ], 'Rapport_financier.xlsx');
+  }
+  @Get('stock/xlsx') @RequirePermissions('reports:read', 'warehouses:read')
+  async stockXlsx(@Req() req: any, @Query() q: Record<string, string>) {
+    const r = await this.stock(req.org.id, q);
+    return this.sheet([
+      { title: 'Soldes', cols: [['Entrepôt', 'warehouse', 28], ['Filière', 'chain', 22], ['Lots', 'lots', 10], ['Stock (kg)', 'kg']], rows: r.balances },
+      { title: 'Flux', cols: [['Type', 'type', 22], ['Sens', 'direction', 10], ['Mouvements', 'movements'], ['Quantité (kg)', 'kg']], rows: r.flows },
+    ], 'Rapport_stock.xlsx');
+  }
+  @Get('quality/xlsx') @RequirePermissions('reports:read', 'quality:read')
+  async qualityXlsx(@Req() req: any, @Query() q: Record<string, string>) {
+    const r = await this.quality(req.org.id, q);
+    return this.sheet([
+      { title: 'Inspections', cols: [['Nature', 'kind'], ['Résultat', 'outcome'], ['Nombre', 'n']], rows: r.inspections },
+      { title: 'Règles en échec', cols: [['Code', 'code'], ['Règle', 'label', 36], ['Bloquante', 'blocking'], ['Échecs', 'failures']], rows: r.failing_rules },
+    ], 'Rapport_qualite.xlsx');
+  }
 }

@@ -160,6 +160,14 @@ const sq = (lon, lat, s = 0.0009) => ({ type: 'Polygon', coordinates: [[[lon, la
   const rx = await rawGet('/reports/purchases/xlsx?group=section', t1);
   check('rapport : export Excel', rx.status === 200 && rx.buf.slice(0, 2).toString() === 'PK', rx.status);
   check('rapport refusé au collecteur', (await rawGet('/reports/purchases', tc)).status === 403);
+  for (const [k, shape] of [['finance', (b) => Array.isArray(b.accounts) && b.sales && b.totals.treasury !== undefined], ['stock', (b) => Array.isArray(b.balances) && Array.isArray(b.flows) && b.totals.kg !== undefined], ['quality', (b) => Array.isArray(b.inspections) && Array.isArray(b.failing_rules) && 'rate' in b.totals]]) {
+    const r = await call('GET', `/reports/${k}?from=2000-01-01&to=2100-01-01`, J(t1, A));
+    check(`rapport ${k} : structure`, r.status === 200 && shape(r.body), r);
+    const x = await rawGet(`/reports/${k}/xlsx`, t1);
+    check(`rapport ${k} : export Excel`, x.status === 200 && x.buf.slice(0, 2).toString() === 'PK', x.status);
+    check(`rapport ${k} refusé au collecteur`, (await rawGet(`/reports/${k}`, tc)).status === 403);
+    check(`rapport ${k} : date invalide refusée`, (await call('GET', `/reports/${k}?from=hier`, J(t1, A))).status === 400);
+  }
   console.log(`\n${ok} contrôles réussis, ${ko} en échec`);
   process.exit(ko ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(1); });
