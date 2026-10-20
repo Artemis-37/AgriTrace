@@ -5,3 +5,4 @@ dist/
 *.log
 backend/storage/
 storage/
+web/e2e-echec.png

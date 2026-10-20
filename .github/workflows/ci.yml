@@ -45,6 +45,19 @@ jobs:
           for i in $(seq 1 30); do curl -fs http://localhost:3000/v1/ready && break; sleep 1; done
           curl -fs http://localhost:3000/v1/ready
       - run: npm run test:e2e
+      - name: Portail web (build, aperçu relié à l'API) et navigateur
+        working-directory: web
+        run: |
+          npm ci
+          npm run build
+          npx playwright-core install --with-deps chromium
+          VITE_API_PROXY=http://localhost:3000 npx vite preview --port 4173 > /tmp/web.log 2>&1 &
+          for i in $(seq 1 30); do curl -fs http://localhost:4173/ > /dev/null && break; sleep 1; done
+          WEB=http://localhost:4173 npm run test:ui
+      - name: Capture en cas d'échec du parcours navigateur
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with: { name: e2e-echec, path: web/e2e-echec.png, if-no-files-found: ignore }
       - name: Journal de l'API en cas d'échec
         if: failure()
         run: tail -n 100 /tmp/api.log

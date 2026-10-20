@@ -95,3 +95,65 @@ export function CreateContract({ onClose, onDone }: { onClose: () => void; onDon
     </Modal>
   );
 }
+
+/** Réclamations clients : liste, création, clôture motivée. */
+export function Claims() {
+  const [adding, setAdding] = useState(false);
+  const [resolving, setResolving] = useState<any | null>(null);
+  const { data, loading, error, reload } = useAsync(async () => ({ claims: await get<any[]>('/sales-claims'), buyers: await get<any[]>('/buyers') }), []);
+  const names = new Map((data?.buyers ?? []).map((b) => [b.id, b.name]));
+  return (
+    <Card>
+      <div className="toolbar"><button className="btn" onClick={() => setAdding(true)}>Nouvelle réclamation</button></div>
+      {error && <ErrorBox message={error} onRetry={reload} />}
+      {loading ? <Loading /> : (
+        <Table rows={data?.claims ?? []} empty="Aucune réclamation." columns={[
+          { header: 'Date', render: (c) => new Date(c.created_at).toLocaleDateString('fr-FR') }, { header: 'Acheteur', render: (c) => names.get(c.buyer_id) ?? '—' },
+          { header: 'Description', render: (c) => c.description }, { header: 'Montant', align: 'right', render: (c) => c.amount_claimed ?? '—' },
+          { header: 'Statut', render: (c) => c.status === 'open' ? 'Ouverte' : c.status === 'resolved' ? 'Résolue' : 'Rejetée' },
+          { header: '', render: (c) => c.status === 'open' && <button className="btn btn-small btn-secondary" onClick={() => setResolving(c)}>Traiter</button> },
+        ]} />
+      )}
+      {adding && <NewClaim buyers={(data?.buyers ?? [])} onClose={() => setAdding(false)} onDone={() => { setAdding(false); reload(); }} />}
+      {resolving && <ResolveClaim c={resolving} onClose={() => setResolving(null)} onDone={() => { setResolving(null); reload(); }} />}
+    </Card>
+  );
+}
+
+function NewClaim({ buyers, onClose, onDone }: { buyers: any[]; onClose: () => void; onDone: () => void }) {
+  const [f, setF] = useState({ buyer_id: '', order_id: '', invoice_id: '', description: '', amount_claimed: '' });
+  const orders = useAsync(() => (f.buyer_id ? get<any[]>(`/sales-orders?buyer_id=${f.buyer_id}`) : Promise.resolve([])), [f.buyer_id]);
+  const invoices = useAsync(() => (f.buyer_id ? get<any[]>(`/invoices?buyer_id=${f.buyer_id}`).catch(() => []) : Promise.resolve([])), [f.buyer_id]);
+  const { busy, error, run } = useAction();
+  const set = (k: string) => (e: { target: { value: string } }) => setF({ ...f, [k]: e.target.value });
+  return (
+    <Modal title="Nouvelle réclamation" onClose={onClose}>
+      <Field label="Acheteur"><select value={f.buyer_id} onChange={(e) => setF({ ...f, buyer_id: e.target.value, order_id: '', invoice_id: '' })}><option value="">—</option>{buyers.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}</select></Field>
+      <Field label="Commande concernée"><select value={f.order_id} onChange={set('order_id')}><option value="">—</option>{(orders.data ?? []).map((o) => <option key={o.id} value={o.id}>{o.number}</option>)}</select></Field>
+      <Field label="Facture concernée"><select value={f.invoice_id} onChange={set('invoice_id')}><option value="">—</option>{(invoices.data ?? []).map((i) => <option key={i.id} value={i.id}>{i.number}</option>)}</select></Field>
+      <Field label="Description"><textarea rows={3} value={f.description} onChange={set('description')} /></Field>
+      <Field label="Montant réclamé"><input inputMode="decimal" value={f.amount_claimed} onChange={set('amount_claimed')} /></Field>
+      {error && <ErrorBox message={error} />}
+      <div className="modal-foot"><button className="btn btn-secondary" onClick={onClose}>Annuler</button>
+        <button className="btn" disabled={busy || !f.buyer_id || f.description.trim().length < 5} onClick={() => run(async () => {
+          await post('/sales-claims', { buyer_id: f.buyer_id, description: f.description, ...(f.order_id && { order_id: f.order_id }), ...(f.invoice_id && { invoice_id: f.invoice_id }), ...(f.amount_claimed && { amount_claimed: f.amount_claimed }) }); onDone();
+        })}>Enregistrer</button></div>
+    </Modal>
+  );
+}
+
+function ResolveClaim({ c, onClose, onDone }: { c: any; onClose: () => void; onDone: () => void }) {
+  const [outcome, setOutcome] = useState('resolved');
+  const [resolution, setResolution] = useState('');
+  const { busy, error, run } = useAction();
+  return (
+    <Modal title="Traiter la réclamation" onClose={onClose}>
+      <p>{c.description}</p>
+      <Field label="Issue"><select value={outcome} onChange={(e) => setOutcome(e.target.value)}><option value="resolved">Résolue</option><option value="rejected">Rejetée</option></select></Field>
+      <Field label="Décision motivée"><textarea rows={3} value={resolution} onChange={(e) => setResolution(e.target.value)} /></Field>
+      {error && <ErrorBox message={error} />}
+      <div className="modal-foot"><button className="btn btn-secondary" onClick={onClose}>Annuler</button>
+        <button className="btn" disabled={busy || resolution.trim().length < 3} onClick={() => run(async () => { await post(`/sales-claims/${c.id}/resolve`, { outcome, resolution }); onDone(); })}>Clôturer</button></div>
+    </Modal>
+  );
+}

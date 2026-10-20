@@ -5,15 +5,15 @@ import { useAuth } from '../auth';
 import { INVOICE_STATUS, ORDER_STATUS, SHIPMENT_STATUS, date, kg, money } from '../format';
 import { Badge, Card, ErrorBox, Field, Loading, Modal, PageHeader, Stat, StatusBadge, Table, Tabs, useAction, useAsync } from '../ui';
 import { Confirm } from './Declarations';
-import { CreateContract, CreateShipment, Logistics } from './CommerceCreate';
+import { Claims, CreateContract, CreateShipment, Logistics } from './CommerceCreate';
 
-type Tab = 'orders' | 'shipments' | 'invoices' | 'buyers';
+type Tab = 'orders' | 'shipments' | 'invoices' | 'buyers' | 'claims';
 
 export default function Commerce() {
   const { can } = useAuth();
   const all: [Tab, string, boolean][] = [
     ['orders', 'Commandes', can('buyers:read')], ['shipments', 'Expéditions', can('logistics:read')],
-    ['invoices', 'Factures', can('invoices:read')], ['buyers', 'Acheteurs', can('buyers:read')],
+    ['invoices', 'Factures', can('invoices:read')], ['buyers', 'Acheteurs', can('buyers:read')], ['claims', 'Réclamations', can('claims:manage')],
   ];
   const tabs = all.filter((t) => t[2]);
   const [tab, setTab] = useState<Tab>(tabs[0]?.[0] ?? 'orders');
@@ -25,6 +25,7 @@ export default function Commerce() {
       {tab === 'shipments' && <Shipments />}
       {tab === 'invoices' && <Invoices />}
       {tab === 'buyers' && <Buyers />}
+      {tab === 'claims' && <Claims />}
     </>
   );
 }
