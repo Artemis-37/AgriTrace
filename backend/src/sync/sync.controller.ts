@@ -6,6 +6,7 @@ import { ArrayMaxSize, ArrayMinSize, IsArray, IsObject, IsString, Length, valida
 import { RequirePermissions } from '../access/decorators';
 import { DbService } from '../db/db.service';
 import { CreateDeclarationDto, DeclarationsController } from '../declarations/declarations.controller';
+import { CreateParcelDto, ParcelsController } from '../parcels/parcels.controller';
 import { FinanceController, TransactionDto } from '../finance/finance.controller';
 import { TaskEntryDto, TasksController } from '../tasks/tasks.controller';
 import { MessagesController, SendMessageDto } from '../messages/messages.controller';
@@ -49,6 +50,7 @@ export class SyncController {
           if (typeof p?.id !== 'string' || !/^[0-9a-f-]{36}$/i.test(p.id)) throw new BadRequestException('payload.id (uuid) requis');
           return ctl.submit(p.id, req);
         } },
+      'parcel.create': { controller: ParcelsController, permission: 'parcels:create', dto: CreateParcelDto, run: (ctl, p, req) => ctl.create(p, req) },
       'message.send': { controller: MessagesController, permission: 'messages:use', dto: SendMessageDto, run: (ctl, p, req) => ctl.send(p, req) },
       'weighing.create': { controller: ReceptionController, permission: 'weighings:create', dto: CreateWeighingDto,
         run: (ctl, p, req) => ctl.createWeighing(p, req) },

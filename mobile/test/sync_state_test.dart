@@ -46,4 +46,9 @@ void main() {
     expect(canSeeMissions(['tasks:read']), isTrue);
     expect(canSeeMissions(['declarations:create']), isFalse);
   });
+
+  test('le relevé de parcelle demande le droit de créer des parcelles', () {
+    expect(canSurveyParcel(['parcels:create']), isTrue);
+    expect(canSurveyParcel(['declarations:create']), isFalse);
+  });
 }

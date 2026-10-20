@@ -110,6 +110,15 @@ const square = (lon, lat, size = d) => ({ type: 'Polygon', coordinates: [[[lon, 
   check('modification d\'une parcelle archivée → 400', (await call('POST', `/parcels/${far.body.id}/update`, { ...J(t1, A), body: { declared_area_ha: '9' } })).status === 400);
   check('journal d\'audit alimenté', JSON.stringify((await call('GET', '/audit-logs?limit=500', J(t1, A))).body).includes('parcel.verify'));
 
+  // Relevé GPS fait sur le mobile hors connexion : la parcelle arrive par la synchronisation (idempotente).
+  const sk = key('sync-parcel');
+  const op = { idempotency_key: sk, type: 'parcel.create', payload: { idempotency_key: key('parcel'), producer_id: p2.id, value_chain_id: vc.id, declared_area_ha: '1', geometry: square(-4.2, 5.5, 0.0009), confirm_not_duplicate: true } };
+  const sy = await call('POST', '/sync/batch', { ...J(t1, A), body: { operations: [op] } });
+  const r1 = sy.body.results?.[0];
+  check('synchronisation : parcelle relevée au GPS acceptée, surface mesurée ≈ 1 ha', r1?.status === 'accepted' && Number(r1.result?.geometry_area_ha) > 0.9 && Number(r1.result?.geometry_area_ha) < 1.1, sy.body);
+  const sy2 = await call('POST', '/sync/batch', { ...J(t1, A), body: { operations: [op] } });
+  const n = (await call('GET', `/parcels?producer_id=${p2.id}`, J(t1, A))).body.filter((x) => Number(x.geometry_area_ha) > 0.9 && Number(x.geometry_area_ha) < 1.1).length;
+  check('synchronisation rejouée : même résultat, une seule parcelle créée', sy2.body.results?.[0]?.status === 'accepted' && sy2.body.results[0].result?.id === r1.result?.id && n === 1, { n, r: sy2.body });
   console.log(`\n${ok} contrôles réussis, ${ko} en échec`);
   process.exit(ko ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(1); });

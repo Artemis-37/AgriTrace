@@ -9,6 +9,7 @@ import 'history_screen.dart';
 import 'missions_screen.dart';
 import 'my_stock_screen.dart';
 import 'notifications_screen.dart';
+import 'parcel_survey_screen.dart';
 import 'new_convoy_screen.dart';
 import 'new_declaration_screen.dart';
 
@@ -24,7 +25,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _problems = 0;
   bool _canCreate = false;
   bool _canConvoy = false;
-  bool _canHistory = false, _canFiche = false, _canMissions = false;
+  bool _canHistory = false, _canFiche = false, _canMissions = false, _canSurvey = false;
   int _unreadNotes = 0;
 
   @override
@@ -48,7 +49,7 @@ class _HomeScreenState extends State<HomeScreen> {
     int unread = _unreadNotes;
     try { final r = await services.api.get('/notifications/unread-count'); unread = (r['unread'] as num?)?.toInt() ?? 0; } catch (_) { /* hors connexion : compteur conservé */ }
     if (!mounted) return;
-    setState(() { _items = items; _pending = pending; _problems = problems; _canCreate = canCreateDeclaration(perms); _canConvoy = canCreateConvoy(perms); _canHistory = canReadHistory(perms); _canFiche = canSeeFiche(perms); _canMissions = canSeeMissions(perms); _unreadNotes = unread; });
+    setState(() { _items = items; _pending = pending; _problems = problems; _canCreate = canCreateDeclaration(perms); _canConvoy = canCreateConvoy(perms); _canHistory = canReadHistory(perms); _canFiche = canSeeFiche(perms); _canMissions = canSeeMissions(perms); _canSurvey = canSurveyParcel(perms); _unreadNotes = unread; });
   }
 
   Color _color(String localState, String? status) {
@@ -83,6 +84,11 @@ class _HomeScreenState extends State<HomeScreen> {
           IconButton(tooltip: 'Historique', icon: const Icon(Icons.history), onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const HistoryScreen()))),
         if (_canFiche)
           IconButton(tooltip: 'Ma fiche de compte', icon: const Icon(Icons.receipt_long_outlined), onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const FicheScreen()))),
+        if (_canSurvey)
+          IconButton(tooltip: 'Relever une parcelle', icon: const Icon(Icons.map_outlined), onPressed: () async {
+            final saved = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => const ParcelSurveyScreen()));
+            if (saved == true) services.sync.run();
+          }),
         if (_canMissions)
           IconButton(tooltip: 'Mes missions', icon: const Icon(Icons.assignment_outlined), onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MissionsScreen()))),
         if (_canConvoy)

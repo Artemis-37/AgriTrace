@@ -20,7 +20,7 @@ const AREA_GAP_PCT = 20;
 const HAV = (a: string, b: string, c: string, d: string) =>
   `(2 * 6371008.8 * asin(sqrt(power(sin(radians((${c}) - (${a})) / 2), 2) + cos(radians(${a})) * cos(radians(${c})) * power(sin(radians((${d}) - (${b})) / 2), 2))))`;
 
-class CreateParcelDto {
+export class CreateParcelDto {
   @IsString() @Length(8, 100) idempotency_key: string;
   @IsUUID() producer_id: string;
   @IsUUID() value_chain_id: string;

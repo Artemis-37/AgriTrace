@@ -114,6 +114,17 @@ class Repository {
     await db.raw.insert('outbox', {'idempotency_key': key, 'op_type': 'convoy.create', 'payload': jsonEncode(payload), 'entity_id': key, 'created_at': DateTime.now().toIso8601String()});
   }
 
+  /// Parcelle relevée au GPS : mise en file d'envoi (idempotente), créée côté serveur dès que le réseau revient.
+  /// Le serveur recalcule la surface, détecte les doublons et les chevauchements.
+  Future<void> queueParcel({required String producerId, required String valueChainId, required String declaredAreaHa, required Map<String, Object> geometry}) async {
+    final key = 'parcel-${_uuid.v4()}';
+    final payload = {
+      'idempotency_key': key, 'producer_id': producerId, 'value_chain_id': valueChainId,
+      'declared_area_ha': declaredAreaHa, 'geometry': geometry,
+    };
+    await db.raw.insert('outbox', {'idempotency_key': key, 'op_type': 'parcel.create', 'payload': jsonEncode(payload), 'entity_id': key, 'created_at': DateTime.now().toIso8601String()});
+  }
+
   Future<List<Map<String, Object?>>> declarations() => db.raw.rawQuery('''
     SELECT d.*, p.last_name || ' ' || p.first_names AS producer_name, p.internal_code AS producer_code
       FROM declarations d LEFT JOIN producers p ON p.id = d.producer_id
