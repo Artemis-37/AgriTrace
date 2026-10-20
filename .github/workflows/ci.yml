@@ -62,8 +62,6 @@ jobs:
 
   mobile:
     runs-on: ubuntu-latest
-    # Le code mobile n'a jamais été compilé : ce job peut échouer au début. C'est son rôle de le révéler.
-    continue-on-error: true
     defaults: { run: { working-directory: mobile } }
     steps:
       - uses: actions/checkout@v4
@@ -71,8 +69,10 @@ jobs:
         with: { channel: stable }
       - run: flutter create --platforms=android --org ci.agritrace .
       - run: flutter pub get
-      - run: flutter analyze
+      - run: flutter analyze --no-fatal-infos
       - run: flutter test
+      - name: Compilation de l'APK (debug)
+        run: flutter build apk --debug
 
   docker:
     runs-on: ubuntu-latest

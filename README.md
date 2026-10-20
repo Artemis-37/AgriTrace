@@ -31,7 +31,7 @@ npm run build && npm start     # docs : http://localhost:3000/v1/docs
 
 - **Santé et supervision** : `GET /v1/health`, `GET /v1/ready`, `GET /v1/metrics` (jeton `METRICS_TOKEN`), identifiant de requête `X-Request-Id`, journal d'accès JSON optionnel, arrêt propre.
 - **Conteneurs** : `backend/Dockerfile`, `web/Dockerfile` (nginx, relais `/v1`), `docker-compose.prod.yml`, `deploy/db/10-roles.sh`, `.env.example` — **non construits localement** (pas de démon Docker), construits par la CI.
-- **CI** (`.github/workflows/ci.yml`) : build + tests unitaires + migrations + tous les tests e2e sur PostgreSQL ; portail ; mobile (`continue-on-error` tant qu'il n'a pas compilé) ; construction des images.
+- **CI** (`.github/workflows/ci.yml`) : build + tests unitaires + migrations + tous les tests e2e sur PostgreSQL ; portail ; mobile (analyse, tests, APK debug) ; construction des images.
 - **Sauvegarde / restauration / charge** : `scripts/backup.sh`, `scripts/restore-test.sh` (testés en local), `scripts/load-test.js`.
 - Documentation : `docs/DEPLOIEMENT.md`, `docs/EXPLOITATION.md`, `docs/SECURITE.md`, `docs/SYNCHRONISATION.md`.
 
@@ -48,10 +48,10 @@ Test de bout en bout (34 vérifications) : démarrer l'API puis
 
 Hypothèses à valider avec la coopérative : conversion sac → kg configurée par filière (table `unit_conversions`), arrondi du montant à 4 décimales, un collecteur doit avoir une affectation pour déclarer.
 
-## P2 — mobile hors connexion et synchronisation (livré, mobile non compilé)
+## P2 — mobile hors connexion et synchronisation (livré, mobile analysé et testé, APK non compilé)
 
 - **Serveur (testé)** : `POST /v1/sync/batch` (≤ 100 opérations, résultat explicite par opération : `accepted`, `rejected`, `to_correct`, `conflict`, `pending_validation` ; même clé d'idempotence avec contenu différent = conflit) et `GET /v1/sync/changes` (curseur, `has_more`, permissions courantes).
-- **Mobile Flutter (`mobile/`)** : base SQLite chiffrée, file d'attente persistante, synchronisation, saisie de déclarations hors ligne. **Code écrit mais non compilé ni testé** (pas de SDK Flutter dans l'environnement) : voir `mobile/README.md`.
+- **Mobile Flutter (`mobile/`)** : base SQLite chiffrée, file d'attente persistante, synchronisation, saisie de déclarations hors ligne. **Analyse statique sans erreur et 8 tests unitaires passés (Flutter 3.47)** ; APK non compilé et aucun essai sur appareil : voir `mobile/README.md`.
 
 ## P3 — réception, pesée, stocks et lots (livré)
 

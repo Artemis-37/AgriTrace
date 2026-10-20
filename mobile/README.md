@@ -2,7 +2,7 @@
 
 Application Flutter pour les collecteurs : saisie des déclarations d'achat sans Internet, file d'attente persistante, synchronisation bidirectionnelle avec l'API (`/v1/sync/batch` et `/v1/sync/changes`).
 
-> **État** : code écrit mais **non compilé ni exécuté** (Flutter n'était pas disponible dans l'environnement de développement). Le serveur de synchronisation, lui, est testé de bout en bout. Prévoir un premier passage de compilation et de test sur émulateur.
+> **État** : le code passe `flutter analyze` (0 erreur ; 4 avertissements de dépréciation liés aux versions récentes de Flutter) et les 8 tests unitaires de la logique de synchronisation (Flutter 3.47 / Dart 3.13). **Non vérifié** : la compilation de l'APK (le build Gradle n'a pu télécharger ses dépendances dans l'environnement de développement ; le job `mobile` de la CI la fait) et tout essai sur émulateur ou téléphone. Le serveur de synchronisation est testé de bout en bout.
 
 ## Premier lancement
 

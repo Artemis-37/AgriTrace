@@ -1,4 +1,4 @@
-/// Logique pure de présentation et de décision de la synchronisation (testable sans Flutter).
+// Logique pure de présentation et de décision de la synchronisation (testable sans Flutter).
 
 /// Libellé affiché pour une déclaration. Une déclaration reste « locale » tant que le serveur ne l'a pas confirmée :
 /// elle ne vaut ni réception physique ni paiement.
