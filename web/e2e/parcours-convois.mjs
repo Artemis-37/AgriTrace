@@ -86,6 +86,10 @@ await step('cloche : le collecteur voit les alertes qui le concernent, le pannea
   const panel = (await page.locator('.bell-panel').innerText());
   must(panel.includes('Votre convoi CV-UI-001 a été reçu') && panel.includes('Net à payer porté à votre compte'), 'alertes du collecteur absentes : ' + panel.slice(0, 300));
   must(!panel.includes('Réception à traiter en caisse') && !panel.includes('Convoi en route'), 'alerte de gestion visible pour le collecteur');
+  await page.getByRole('button', { name: /Net à payer porté à votre compte/ }).click(); await page.waitForTimeout(1000);
+  must(page.url().includes('/convois'), 'le clic ne mène pas à la page de traitement : ' + page.url());
+  await page.getByRole('button', { name: /Notifications/ }).first().click(); await page.waitForTimeout(800);
+  must(!(await page.locator('.bell-panel').innerText()).includes('Net à payer porté à votre compte'), 'alerte ouverte toujours dans le fil');
   await page.getByRole('button', { name: 'Tout marquer comme lu' }).click(); await page.waitForTimeout(800);
   must(!/non lue/.test((await page.getByRole('button', { name: /Notifications/ }).first().getAttribute('aria-label')) ?? ''), 'compteur non remis à zéro');
   await page.keyboard.press('Escape');
@@ -96,6 +100,10 @@ await step('cloche : l\'administrateur voit les alertes de gestion', async () =>
   await page.getByRole('button', { name: /Notifications/ }).first().click(); await page.waitForTimeout(800);
   const panel = await page.locator('.bell-panel').innerText();
   must(panel.includes('Réception à traiter en caisse') || panel.includes('Convoi en route'), 'alertes de gestion absentes : ' + panel.slice(0, 300));
+  must(!panel.includes('Réception à traiter en caisse'), 'alerte de caisse non soldée après traitement');
+  await page.locator('.bell-panel li button').first().click(); await page.waitForTimeout(1200);
+  must(page.url().includes('/convois?tab=receive'), 'adresse inattendue : ' + page.url());
+  must(await page.getByRole('tab', { name: 'Réception au magasin', selected: true }).count() === 1, 'onglet « Réception au magasin » non ouvert');
 });
 await step('espace du collecteur : Mes achats, Mon stock, Historique, sans menus de gestion', async () => {
   await login(colEmail);

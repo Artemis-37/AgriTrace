@@ -1,4 +1,5 @@
 import { FormEvent, useState } from 'react';
+import { useDeepLink } from '../notifTarget';
 import { get, idem, post } from '../api';
 import { useAuth } from '../auth';
 import { PRIORITY, TASK_CATEGORY, TASK_STATUS, date, dateTime } from '../format';
@@ -8,7 +9,8 @@ import DocumentsPanel from './DocumentsPanel';
 
 export default function Missions() {
   const { can } = useAuth();
-  const [tab, setTab] = useState<'tasks' | 'requests'>('tasks');
+  const dl = useDeepLink();
+  const [tab, setTab] = useState<'tasks' | 'requests'>(dl.tab === 'requests' ? 'requests' : 'tasks');
   const [status, setStatus] = useState('');
   const [detail, setDetail] = useState<string | null>(null);
   const [creating, setCreating] = useState<'task' | 'request' | null>(null);

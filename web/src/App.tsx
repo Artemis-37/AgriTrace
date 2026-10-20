@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { get } from './api';
-import { Navigate, NavLink, Route, Routes } from 'react-router-dom';
+import { Navigate, NavLink, Route, Routes, useLocation } from 'react-router-dom';
 import { useAuth } from './auth';
 import Dashboard from './pages/Dashboard';
 import Inventaire from './pages/Inventaire';
@@ -57,6 +57,7 @@ const NAV: { to: string; label: string; icon: string; perm: string[]; any?: bool
 
 export default function App() {
   const { status, org, me, can, signOut } = useAuth();
+  const loc = useLocation();
   const [open, setOpen] = useState(false);
   const [theme, setTheme] = useState(readTheme() || (window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'night' : 'doux'));
   useEffect(() => { document.documentElement.dataset.theme = theme; try { localStorage.setItem('agritrace.theme', theme); } catch { /* ignoré */ } }, [theme]);
@@ -103,7 +104,7 @@ export default function App() {
         <OfflineBar />
         {managed && <p className="notice" role="status">Lecture seule : cette coopérative est gérée par son serveur local (« {managed} »). Les modifications se font là-bas ; elles arrivent ici par synchronisation.</p>}
         {me?.mobile_first && <p className="notice" role="status">Votre compte ({me.account_kind === 'collector' ? 'collecteur' : 'coach'}) est conçu pour l'application mobile, qui fonctionne aussi dans les villages sans réseau. Ce portail affiche uniquement ce qui vous concerne.</p>}
-        <Routes>
+        <Routes key={loc.key}>
           <Route path="/" element={<Dashboard />} />
           <Route path="/producteurs" element={<Producers />} />
           <Route path="/parcelles" element={<Parcels />} />

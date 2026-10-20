@@ -169,3 +169,5 @@ dl.kv dd { margin: 0; }
 .conn-panel .conn-st li { font-size: .85rem; }
 .filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: .75rem; }
 .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: .75rem; margin: .75rem 0; }
+.notif-open { display: block; width: 100%; text-align: left; text-decoration: none; color: inherit; font: inherit; padding: 0; }
+.notif-open:hover strong, .notif-open:focus-visible strong { text-decoration: underline; }

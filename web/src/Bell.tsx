@@ -2,12 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { get, post } from './api';
 import { SEVERITY, dateTime } from './format';
-
-/** Page ouverte par type de notification (le serveur ne renvoie que celles qui concernent l'utilisateur selon ses droits). */
-const TARGET: Record<string, string> = {
-  convoy: '/convois', collector: '/convois', task: '/missions', invoice: '/commerce', shipment: '/commerce', lot: '/stocks',
-  weighing: '/stocks', loan: '/finances', parcel: '/parcelles', producer: '/producteurs', message: '/messages',
-};
+import { targetOf } from './notifTarget';
 
 /** Cloche de notifications : compteur, aperçu des dernières, marquage comme lu. */
 export default function Bell({ unread, onChange }: { unread: number; onChange: () => void }) {
@@ -16,7 +11,7 @@ export default function Bell({ unread, onChange }: { unread: number; onChange: (
   const [err, setErr] = useState('');
   const box = useRef<HTMLDivElement>(null);
   const nav = useNavigate();
-  const load = () => get<any[]>('/notifications?limit=8').then((r) => { setItems(r); setErr(''); }).catch((e) => setErr(e?.message ?? 'Chargement impossible'));
+  const load = () => get<any[]>('/notifications?unread=true&limit=8').then((r) => { setItems(r); setErr(''); }).catch((e) => setErr(e?.message ?? 'Chargement impossible'));
   useEffect(() => { if (open) void load(); }, [open, unread]);
   useEffect(() => {
     if (!open) return;
@@ -27,10 +22,10 @@ export default function Bell({ unread, onChange }: { unread: number; onChange: (
   }, [open]);
   const readAll = async () => { await post('/notifications/read-all').catch(() => undefined); onChange(); void load(); };
   const openOne = async (n: any) => {
-    if (!n.read_at) await post(`/notifications/${n.id}/read`).catch(() => undefined);
+    await post(`/notifications/${n.id}/read`).catch(() => undefined);
+    setItems((cur) => (cur ? cur.filter((x) => x.id !== n.id) : cur));
     onChange(); setOpen(false);
-    const to = TARGET[n.entity_type ?? ''];
-    nav(to ?? '/notifications');
+    nav(targetOf(n));
   };
   return (
     <div className="bell" ref={box}>
@@ -42,7 +37,7 @@ export default function Bell({ unread, onChange }: { unread: number; onChange: (
           <div className="bell-head"><strong>Notifications</strong>
             <button className="btn btn-small btn-secondary" disabled={!unread} onClick={readAll}>Tout marquer comme lu</button></div>
           {err && <p className="notice">{err}</p>}
-          {!items ? <p className="muted">Chargement…</p> : !items.length ? <p className="muted">Rien de nouveau.</p> : (
+          {!items ? <p className="muted">Chargement…</p> : !items.length ? <p className="muted">Rien à traiter.</p> : (
             <ul>{items.map((n) => (
               <li key={n.id} className={n.read_at ? 'is-read' : ''}>
                 <button onClick={() => openOne(n)}>
@@ -51,7 +46,7 @@ export default function Bell({ unread, onChange }: { unread: number; onChange: (
                 </button>
               </li>))}</ul>
           )}
-          <button className="bell-all" onClick={() => { setOpen(false); nav('/notifications'); }}>Voir toutes les notifications</button>
+          <button className="bell-all" onClick={() => { setOpen(false); nav('/notifications'); }}>Voir l'historique</button>
         </div>
       )}
     </div>

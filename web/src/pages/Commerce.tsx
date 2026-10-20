@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useDeepLink } from '../notifTarget';
 import { get, idem, post } from '../api';
 import { useAuth } from '../auth';
 import { INVOICE_STATUS, ORDER_STATUS, SHIPMENT_STATUS, date, kg, money } from '../format';
@@ -16,7 +17,8 @@ export default function Commerce() {
     ['invoices', 'Factures', can('invoices:read')], ['buyers', 'Acheteurs', can('buyers:read')], ['claims', 'Réclamations', can('claims:manage')],
   ];
   const tabs = all.filter((t) => t[2]);
-  const [tab, setTab] = useState<Tab>(tabs[0]?.[0] ?? 'orders');
+  const dl = useDeepLink(tabs.map((t) => t[0]));
+  const [tab, setTab] = useState<Tab>((dl.tab as Tab) ?? tabs[0]?.[0] ?? 'orders');
   return (
     <>
       <PageHeader title="Commerce" subtitle="Commandes, expéditions, factures et encaissements" />
@@ -34,7 +36,7 @@ export default function Commerce() {
 function Orders() {
   const { can } = useAuth();
   const [status, setStatus] = useState('');
-  const [detail, setDetail] = useState<string | null>(null);
+  const [detail, setDetail] = useState<string | null>(useDeepLink().open);
   const [creating, setCreating] = useState(false);
   const { data, loading, error, reload } = useAsync(() => get<any[]>(`/sales-orders${status ? `?status=${status}` : ''}`), [status]);
   const buyers = useAsync(() => get<any[]>('/buyers'), []);
@@ -140,7 +142,7 @@ function Shipments() {
   const [creating, setCreating] = useState(false);
   const [logi, setLogi] = useState(false);
   const [status, setStatus] = useState('');
-  const [detail, setDetail] = useState<string | null>(null);
+  const [detail, setDetail] = useState<string | null>(useDeepLink().open);
   const { data, loading, error, reload } = useAsync(() => get<any[]>(`/shipments${status ? `?status=${status}` : ''}`), [status]);
   return (
     <Card>
@@ -236,7 +238,7 @@ function ShipmentDetail({ id, onClose }: { id: string; onClose: () => void }) {
 function Invoices() {
   const { can } = useAuth();
   const [overdue, setOverdue] = useState(false);
-  const [detail, setDetail] = useState<string | null>(null);
+  const [detail, setDetail] = useState<string | null>(useDeepLink().open);
   const [issuing, setIssuing] = useState(false);
   const { data, loading, error, reload } = useAsync(() => get<any[]>(`/invoices${overdue ? '?overdue=true' : ''}`), [overdue]);
   const rows = data ?? [];

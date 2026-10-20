@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useDeepLink } from '../notifTarget';
 import { get, post } from '../api';
 import { useAuth } from '../auth';
 import { LOAN_KIND, LOAN_STATUS, PAYMENT_STATUS, date, dateTime, money } from '../format';
@@ -12,7 +13,8 @@ export default function Finance() {
   const tabs: [Tab, string, boolean][] = [
     ['accounts', 'Comptes et caisses', true], ['payments', 'Paiements', can('payments:read')], ['loans', 'Prêts et préfinancements', can('loans:read')], ['accounting', 'Comptabilité', can('accounting:read')],
   ];
-  const [tab, setTab] = useState<Tab>('accounts');
+  const dl = useDeepLink(tabs.filter((t) => t[2]).map((t) => t[0]));
+  const [tab, setTab] = useState<Tab>((dl.tab as Tab) ?? 'accounts');
   return (
     <>
       <PageHeader title="Finances" subtitle="Opérations traçables, justifiées, non modifiables : une erreur se corrige par une écriture inverse" />

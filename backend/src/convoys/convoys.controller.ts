@@ -244,6 +244,8 @@ export class ConvoysController {
                 advance_netted = $11, netting_entry_number = $12 WHERE id = $1 RETURNING *`,
         [id, b.unit_price, amt, tx.id, req.user.id, m.gross, tu, m.transport, rt, m.retention, netted, nettingNo])).rows[0];
       await c.query(`UPDATE convoys SET status = 'settled' WHERE id = $1`, [v.id]);
+      // Le traitement en caisse est fait : l'alerte « réception à traiter » n'a plus lieu d'être pour personne.
+      await c.query(`UPDATE notifications SET read_at = coalesce(read_at, now()) WHERE kind = 'convoy_received' AND entity_type = 'convoy' AND entity_id = $1`, [v.id]);
       await this.notif.notifyUsers(c, req.org.id, [(await c.query(`SELECT user_id FROM collectors WHERE id = $1`, [v.collector_id])).rows[0]?.user_id], { kind: 'convoy_settled',
         title: `Net à payer porté à votre compte : ${amt}`, body: `Convoi ${v.convoy_no} · ${r.total_kg} kg` + (netted > 0 ? ` · dont ${netted} imputés sur vos avances` : ''), entityType: 'convoy', entityId: v.id, dedupe: `convoy_settled:${v.id}` });
       return { row: upd, replay: false };

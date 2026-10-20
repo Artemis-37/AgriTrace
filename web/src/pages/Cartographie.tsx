@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { useDeepLink } from '../notifTarget';
 import { ApiError, download, get, post, postForm, put } from '../api';
 import { useAuth } from '../auth';
 import { ANOMALY_KIND, ANOMALY_STATUS, dateTime } from '../format';
@@ -12,7 +13,8 @@ export default function Cartographie() {
     ['map', 'Carte', can('parcels:read')], ['anomalies', 'Anomalies', can('geo:anomalies')], ['import', 'Importer', can('geo:import')], ['export', 'Exporter', can('geo:export')], ['settings', 'Tolérances', can('geo:settings')],
   ];
   const tabs = all.filter((t) => t[2]);
-  const [tab, setTab] = useState(tabs[0]?.[0] ?? 'anomalies');
+  const dl = useDeepLink(tabs.map((t) => t[0]));
+  const [tab, setTab] = useState(dl.tab ?? tabs[0]?.[0] ?? 'anomalies');
   return (
     <>
       <PageHeader title="Cartographie" subtitle="Chevauchements, doublons, imports et exports de parcelles" />

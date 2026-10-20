@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useDeepLink } from '../notifTarget';
 import { get, idem, post } from '../api';
 import { useAuth } from '../auth';
 import { enqueue, onFlushed, useOffline } from '../offline';
@@ -16,7 +17,8 @@ export default function Convois() {
   if (can('convoys:receive')) tabs.push(['receive', 'Réception au magasin']);
   if (can('convoys:settle')) tabs.push(['cash', 'Caisse'], ['accounts', 'Comptes collecteurs']);
   else if (can('collector:stock')) tabs.push(['mine', 'Ma fiche']);
-  const [tab, setTab] = useState(tabs[0]?.[0] ?? 'list');
+  const dl = useDeepLink(tabs.map((t) => t[0]));
+  const [tab, setTab] = useState(dl.tab ?? tabs[0]?.[0] ?? 'list');
   return (
     <>
       <PageHeader title="Convois des collecteurs" subtitle="Achats chez les producteurs convoyés vers le magasin central, pesés à la réception puis réglés en caisse." />
