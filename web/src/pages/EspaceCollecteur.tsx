@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { download, get } from '../api';
+import { get } from '../api';
 import { DECLARATION_STATUS, date, kg, money } from '../format';
 import { onFlushed } from '../offline';
 import NewPurchase from './NewPurchase';
@@ -30,11 +30,11 @@ export function MesAchats() {
   const rows = (data ?? []).filter((d) => String(d.operation_date).slice(0, 10) === today || d.status === 'draft' || d.status === 'to_correct');
   return (
     <>
-      <PageHeader title="Mes achats" subtitle="Déclarez vos achats auprès des producteurs. Ceux du jour et ceux à corriger apparaissent ici." actions={<><button className="btn btn-secondary" onClick={() => download('/purchase-declarations/export/xlsx', 'mes-achats.xlsx').catch(() => undefined)}>Exporter vers Excel</button><button className="btn" onClick={() => setCreating(true)}>Déclarer un achat</button></>} />
+      <PageHeader title="Mes achats" subtitle="Enregistrez vos achats auprès des producteurs. Ceux du jour et ceux à corriger apparaissent ici." actions={<><button className="btn" onClick={() => setCreating(true)}>Achat</button></>} />
       {creating && <NewPurchase onClose={() => setCreating(false)} onDone={() => setTimeout(reload, 800)} />}
       <Card>
         {error && <ErrorBox message={error} onRetry={reload} />}
-        {loading ? <Loading /> : <Table rows={rows} empty="Aucun achat du jour. Utilisez « Déclarer un achat »." columns={cols()} />}
+        {loading ? <Loading /> : <Table rows={rows} empty="Aucun achat du jour. Utilisez « Achat »." columns={cols()} />}
       </Card>
     </>
   );
@@ -48,7 +48,7 @@ export function Historique() {
     <>
       <PageHeader title="Historique de mes achats" subtitle="Tous vos achats déclarés, du plus récent au plus ancien." />
       <Card>
-        <div className="toolbar"><button className="btn btn-secondary" onClick={() => download('/purchase-declarations/export/xlsx', 'mes-achats.xlsx').catch(() => undefined)}>Exporter vers Excel</button><select aria-label="Filtrer par état" value={status} onChange={(e) => setStatus(e.target.value)}>
+        <div className="toolbar"><select aria-label="Filtrer par état" value={status} onChange={(e) => setStatus(e.target.value)}>
           <option value="">Tous les états</option>{Object.entries(DECLARATION_STATUS).map(([k, [l]]) => <option key={k} value={k}>{l}</option>)}</select></div>
         {error && <ErrorBox message={error} onRetry={reload} />}
         {loading ? <Loading /> : <Table rows={rows} empty="Aucun achat." columns={cols()} />}

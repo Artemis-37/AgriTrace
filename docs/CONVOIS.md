@@ -32,7 +32,7 @@ La fiche papier devient le compte du collecteur. Colonnes reprises : A poids, B 
 ## Déclaration d'achat par le collecteur et export Excel
 
 - Saisie (web et mobile) : recherche du producteur par code ou nom, puis **Poids (kg)**, **Nombre de sacs**, **N° du reçu** (tous obligatoires) et date.
-- Export : `GET /purchase-declarations/export/xlsx?from=&to=&status=` (bouton « Exporter vers Excel » dans Déclarations, Mes achats et Historique). Il reproduit le modèle de la coopérative « Tableau de l'État des achats » (feuille `Feuil1`) : Date | Code Producteur | Nom & Prénoms | Village | N° Reçu | Nbre sacs | Poids Net (format « Kg ») | Prix Unitaire | Montant (format « F CFA »), plus une ligne TOTAL (formules). « Village » = section dans la base de la coopérative. Un collecteur n'exporte que ses propres achats.
+- Export : `GET /purchase-declarations/export/xlsx?from=&to=&status=` (bouton « Exporter vers Excel » dans Déclarations (personnel)). Il reproduit le modèle de la coopérative « Tableau de l'État des achats » (feuille `Feuil1`) : Date | Code Producteur | Nom & Prénoms | Village | N° Reçu | Nbre sacs | Poids Net (format « Kg ») | Prix Unitaire | Montant (format « F CFA »), plus une ligne TOTAL (formules). « Village » = section dans la base de la coopérative. L'export est réservé au personnel de la coopérative : les collecteurs consultent leurs achats (Mes achats, Historique) sans pouvoir exporter.
 - Le **prix unitaire est fixé par l'administration** (barème de la filière, applicable à la date de l'opération) : le collecteur ne le saisit jamais ; le montant = poids net × prix unitaire est calculé par le serveur à la soumission.
 
 ## Connexion automatique (aucune adresse à saisir)
@@ -49,3 +49,10 @@ La fiche papier devient le compte du collecteur. Colonnes reprises : A poids, B 
 - **Caissier** : convois à traiter, caisse, comptes financiers et comptabilité en lecture ; pas de stocks, d'équipe ni de missions.
 - **Collecteur** : ses achats, convois, stock et fiche uniquement.
 - « Ajouter un utilisateur » (Équipe) crée le compte avec le rôle choisi.
+
+## Icônes de connexion
+
+Barre du haut du portail (et des postes de bureau) : trois icônes d'état, cliquables pour le détail.
+- **Wi-Fi** : ce poste ↔ serveur de la coopérative (vert connecté, bleu envoi en cours, orange hors connexion ou travail en attente, rouge opérations à traiter).
+- **Nuage** : serveur de la coopérative ↔ serveur central (synchronisé / en attente / échec / non relié) ; visible sur un serveur local.
+- **Écran + nombre** : postes actuellement connectés (battement toutes les 30 s ; oubliés après 90 s). Aucune donnée métier n'est exposée.

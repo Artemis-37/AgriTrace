@@ -22,8 +22,8 @@ export default function NewPurchase({ onClose, onDone }: { onClose: () => void; 
   const [f, setF] = useState({ producer_id: '', value_chain_id: '', campaign_id: '', operation_date: new Date().toISOString().slice(0, 10), kg: '', bags: '', receipt: '' });
   const [q, setQ] = useState('');
   const set = (k: keyof typeof f) => (e: any) => setF({ ...f, [k]: e.target.value });
-  if (loading) return <Modal title="Déclarer un achat" onClose={onClose}><Loading /></Modal>;
-  if (error || !data) return <Modal title="Déclarer un achat" onClose={onClose}><ErrorBox message={error ?? 'Chargement impossible'} /></Modal>;
+  if (loading) return <Modal title="Achat" onClose={onClose}><Loading /></Modal>;
+  if (error || !data) return <Modal title="Achat" onClose={onClose}><ErrorBox message={error ?? 'Chargement impossible'} /></Modal>;
   const norm = (v: string) => v.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
   const producer = data.producers.find((p) => p.id === f.producer_id);
   // Recherche par code ou par nom (nom, prénoms, dans les deux ordres), sans accents ni casse ; fonctionne hors connexion.
@@ -36,7 +36,7 @@ export default function NewPurchase({ onClose, onDone }: { onClose: () => void; 
   const campId = f.campaign_id || (camps.length === 1 ? camps[0].id : '');
   const valid = !!producer && !!chainId && !!campId && /^\d+(\.\d{1,3})?$/.test(f.kg) && Number(f.kg) > 0 && /^\d+$/.test(f.bags) && f.receipt.trim().length > 0;
   return (
-    <Modal title="Déclarer un achat" onClose={onClose}>
+    <Modal title="Achat" onClose={onClose}>
       {off.offline && <p className="notice" role="status">Hors connexion : l'achat sera enregistré sur ce poste et envoyé dès que le serveur sera joignable.</p>}
       {!producer ? (
         <Field label="Producteur" hint="Tapez le code ou le nom du producteur.">

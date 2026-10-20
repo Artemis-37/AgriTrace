@@ -191,15 +191,17 @@ export class DeclarationsController {
 
   /**
    * Export Excel des achats déclarés (une ligne par achat). Mêmes règles de visibilité que la liste :
-   * un collecteur n'exporte que ses achats. La disposition des colonnes est définie par COLUMNS (à ajuster au modèle de la coopérative).
+   * l'export est réservé au personnel (pas aux collecteurs). La disposition des colonnes est définie par COLUMNS (à ajuster au modèle de la coopérative).
    */
   @Get('export/xlsx')
   @RequirePermissions('declarations:read')
   async exportXlsx(@Req() req: any, @Query('from') from?: string, @Query('to') to?: string, @Query('status') status?: string) {
     if ((from && !/^\d{4}-\d{2}-\d{2}$/.test(from)) || (to && !/^\d{4}-\d{2}-\d{2}$/.test(to))) throw new BadRequestException('Dates attendues au format AAAA-MM-JJ');
-    const all = req.org.permissions.has('declarations:validate');
+    // L'export Excel est réservé au personnel de la coopérative : les collecteurs consultent leurs achats à l'écran, sans exporter.
+    if (!req.org.permissions.has('declarations:validate')) throw new ForbiddenException('L\'export Excel est réservé au personnel de la coopérative.');
+    const all = true;
     const rows = await this.db.tx(req.org.id, async (c) => {
-      const mine = all ? null : await this.myCollector(c, req.user.id);
+      const mine = null;
       if (!all && !mine) return [];
       return (await c.query(
         `SELECT d.operation_date, p.internal_code, p.last_name, p.first_names, p.village, p.section, cu.full_name AS collector, d.bags, d.quantity, d.unit,

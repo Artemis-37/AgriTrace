@@ -46,6 +46,33 @@ export class ReplicationController {
     return { mode: mode(), initialized: u.n > 0, schema_version: await this.svc.schemaVersion(), version: process.env.APP_VERSION ?? '0.1.0' };
   }
 
+  // ---------- Indicateur de connexion (tous les utilisateurs de la coopérative) ----------
+  /** Postes vus récemment (mémoire du serveur : un battement toutes les 30 s, oubliés après 90 s). Aucune donnée métier. */
+  private readonly stations = new Map<string, Map<string, { name: string; user: string; seen: number }>>();
+
+  @Post('connection/heartbeat')
+  heartbeat(@Req() req: any, @Body() b: { station?: string; name?: string }) {
+    const id = String(b?.station ?? '').slice(0, 64);
+    if (!id) throw new BadRequestException('Poste inconnu');
+    let m = this.stations.get(req.org.id);
+    if (!m) this.stations.set(req.org.id, (m = new Map()));
+    m.set(id, { name: String(b?.name ?? 'Poste').slice(0, 40), user: req.user.full_name ?? '', seen: Date.now() });
+    return { ok: true };
+  }
+
+  /** État de la chaîne poste → serveur de la coopérative → serveur central, et postes connectés. */
+  @Get('connection')
+  async connection(@Req() req: any) {
+    const m = this.stations.get(req.org.id) ?? new Map();
+    for (const [k, v] of m) if (Date.now() - v.seen > 90000) m.delete(k);
+    const stations = [...m.values()].map((v) => ({ name: v.name, user: v.user })).sort((a, b) => a.name.localeCompare(b.name));
+    if (isLocal()) {
+      const st = await this.svc.status();
+      return { mode: 'local', stations, central: { linked: st.linked, last_ok_at: st.last_ok_at, pending_rows: st.pending_rows, error: st.last_error } };
+    }
+    return { mode: mode(), stations, central: null };
+  }
+
   // ---------- Premier démarrage d'un serveur local ----------
   /** Crée la coopérative et son administrateur sur un serveur local vierge (avec ou sans jumelage au central). */
   @Public()

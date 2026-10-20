@@ -85,7 +85,7 @@ class _NewDeclarationScreenState extends State<NewDeclarationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Nouvelle déclaration')),
+      appBar: AppBar(title: const Text('Achat')),
       body: ListView(padding: const EdgeInsets.all(16), children: [
         if (_producer == null) ...[
           TextField(controller: _search, decoration: const InputDecoration(labelText: 'Rechercher un producteur (code ou nom)', prefixIcon: Icon(Icons.search), border: OutlineInputBorder()), onChanged: _findProducers),

@@ -174,6 +174,7 @@ ipcMain.handle('setup:discover', async () => {
   return best ? { ok: true, mode: best.mode, origin: best.origin, count: found.length } : { ok: false };
 });
 ipcMain.handle('app:retry', async (_e, url) => { await refindServer(); win?.loadURL(url); });
+ipcMain.on('app:station', (e) => { e.returnValue = cfg?.stationName ?? 'Poste'; });
 ipcMain.handle('app:change', () => resetRole());
 
 app.whenReady().then(main);

@@ -110,7 +110,7 @@ await step('espace du collecteur : Mes achats, Mon stock, Historique, sans menus
   await page.getByRole('link', { name: /Historique/ }).click(); await page.waitForTimeout(1000);
   must((await page.innerText('main')).includes('Historique de mes achats'), 'page Historique absente');
   await page.getByRole('link', { name: /Mes achats/ }).click(); await page.waitForTimeout(800);
-  must(await page.getByRole('button', { name: 'Déclarer un achat' }).count(), 'bouton Déclarer un achat absent');
+  must(await page.getByRole('button', { name: 'Achat', exact: true }).count(), 'bouton Achat absent');
 });
 await step('le magasinier ne voit ni conformité, ni cartographie, ni caisse/comptabilité, ni équipe, ni missions', async () => {
   const r = await call('POST', '/roles/standard', { ...J, body: { code: 'magasinier' } });

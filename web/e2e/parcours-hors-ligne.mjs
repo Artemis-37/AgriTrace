@@ -23,22 +23,24 @@ await step('connexion', async () => {
   must(await page.getByText('Bonjour').count(), 'tableau de bord absent');
 });
 await step('en ligne : les écrans utiles sont chargés une fois (mise en mémoire du poste)', async () => {
-  await nav('Mes achats'); await page.getByRole('button', { name: 'Déclarer un achat' }).click(); await page.waitForTimeout(1200);
+  await nav('Mes achats'); await page.getByRole('button', { name: 'Achat', exact: true }).click(); await page.waitForTimeout(1200);
   must((await page.locator('[role=dialog]').innerText()).includes('Producteur'), 'formulaire absent');
   await page.locator('[role=dialog]').getByRole('button', { name: 'Annuler' }).click();
   await nav('Messages'); await page.waitForTimeout(500);
 });
 await step('le serveur devient injoignable : bandeau « Hors connexion »', async () => {
+  must((await page.locator('.conn-btn').getAttribute('aria-label')).includes('Connecté au serveur'), 'icône de connexion : pas « Connecté » au départ');
   await ctx.setOffline(true);
   await page.getByRole('link', { name: /Mes achats/ }).first().click(); await page.waitForTimeout(1500);
   must((await page.locator('.offline-bar').innerText()).includes('Hors connexion'), 'bandeau absent');
+  must((await page.locator('.conn-btn').getAttribute('aria-label')).includes('Hors connexion'), 'icône de connexion : pas « Hors connexion »');
 });
 await step('hors connexion : la liste des déclarations reste lisible (copie du poste)', async () => {
   must(!(await page.locator('main').innerText()).includes('Hors connexion : ces données'), 'copie absente');
-  must(await page.getByRole('button', { name: 'Déclarer un achat' }).count(), 'bouton absent');
+  must(await page.getByRole('button', { name: 'Achat', exact: true }).count(), 'bouton absent');
 });
 await step('hors connexion : saisie d\'un achat enregistrée sur le poste', async () => {
-  await page.getByRole('button', { name: 'Déclarer un achat' }).click(); await page.waitForTimeout(1200);
+  await page.getByRole('button', { name: 'Achat', exact: true }).click(); await page.waitForTimeout(1200);
   const m = page.locator('[role=dialog]');
   const search = m.getByLabel('Rechercher un producteur');
   await search.fill('zzzz'); await page.waitForTimeout(200);
@@ -65,6 +67,7 @@ await step('le serveur ne contient encore rien', async () => {
 await step('retour du serveur : envoi automatique, bandeau disparu', async () => {
   await ctx.setOffline(false);
   for (let i = 0; i < 30; i++) { await page.waitForTimeout(1000); if (!(await page.locator('.offline-bar').count())) break; }
+  must((await page.locator('.conn-btn').getAttribute('aria-label')).includes('Connecté au serveur'), 'icône de connexion : pas revenue à « Connecté »');
   if (await page.locator('.offline-bar').count()) { await page.getByRole('button', { name: 'Détails' }).click(); await page.waitForTimeout(300); must(false, 'bandeau toujours là', await page.locator('[role=dialog]').innerText()); }
 });
 await step('l\'achat est au serveur, soumis', async () => {

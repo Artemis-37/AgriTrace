@@ -15,6 +15,7 @@ import Login from './pages/Login';
 import { Historique, MesAchats, MonStock } from './pages/EspaceCollecteur';
 import Convois from './pages/Convois';
 import Bell from './Bell';
+import ConnectionStatus from './ConnectionStatus';
 import Messages from './pages/Messages';
 import OfflineBar from './OfflineBar';
 import Synchronisation from './pages/Synchronisation';
@@ -92,7 +93,7 @@ export default function App() {
         </div>
       </aside>
       <main className="main">
-        <div className="topbar"><Bell unread={unread} onChange={refreshUnread} /></div>
+        <div className="topbar"><ConnectionStatus /><Bell unread={unread} onChange={refreshUnread} /></div>
         <OfflineBar />
         {managed && <p className="notice" role="status">Lecture seule : cette coopérative est gérée par son serveur local (« {managed} »). Les modifications se font là-bas ; elles arrivent ici par synchronisation.</p>}
         {me?.mobile_first && <p className="notice" role="status">Votre compte ({me.account_kind === 'collector' ? 'collecteur' : 'coach'}) est conçu pour l'application mobile, qui fonctionne aussi dans les villages sans réseau. Ce portail affiche uniquement ce qui vous concerne.</p>}

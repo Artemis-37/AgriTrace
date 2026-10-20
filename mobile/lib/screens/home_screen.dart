@@ -95,7 +95,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ]),
       floatingActionButton: _canCreate
           ? FloatingActionButton.extended(
-              icon: const Icon(Icons.add), label: const Text('Nouvelle déclaration'),
+              icon: const Icon(Icons.add), label: const Text('Achat'),
               onPressed: () async {
                 await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const NewDeclarationScreen()));
                 await _reload();

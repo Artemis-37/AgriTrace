@@ -145,7 +145,7 @@ const sq = (lon, lat, s = 0.0009) => ({ type: 'Polygon', coordinates: [[[lon, la
   check('export Excel : feuille « Feuil1 » du modèle, ligne TOTAL avec formules sur sacs, poids, montant', ws.name === 'Feuil1' && last.getCell(3).value === 'TOTAL' && !!last.getCell(6).value.formula && !!last.getCell(7).value.formula && !!last.getCell(9).value.formula, ws.name);
   check('export Excel : poids au format « Kg », montants au format « F CFA »', /K/.test(ws.getColumn(7).numFmt) && /CFA/.test(ws.getColumn(9).numFmt));
   const exc = await rawGet('/purchase-declarations/export/xlsx', tc);
-  check('export Excel du collecteur : accessible', exc.status === 200);
+  check('export Excel : refusé au collecteur (consultation seulement)', exc.status === 403, exc.status);
   check('export Excel : dates invalides refusées', (await rawGet('/purchase-declarations/export/xlsx?from=hier', t1)).status === 400);
 
   console.log(`\n${ok} contrôles réussis, ${ko} en échec`);
