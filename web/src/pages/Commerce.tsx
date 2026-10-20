@@ -4,6 +4,7 @@ import { useAuth } from '../auth';
 import { INVOICE_STATUS, ORDER_STATUS, SHIPMENT_STATUS, date, kg, money } from '../format';
 import { Badge, Card, ErrorBox, Field, Loading, Modal, PageHeader, Stat, StatusBadge, Table, Tabs, useAction, useAsync } from '../ui';
 import { Confirm } from './Declarations';
+import { CreateContract, CreateShipment, Logistics } from './CommerceCreate';
 
 type Tab = 'orders' | 'shipments' | 'invoices' | 'buyers';
 
@@ -131,12 +132,17 @@ function OrderDetail({ id, onClose }: { id: string; onClose: () => void }) {
 
 /* ---------------- Expéditions ---------------- */
 function Shipments() {
+  const { can } = useAuth();
+  const [creating, setCreating] = useState(false);
+  const [logi, setLogi] = useState(false);
   const [status, setStatus] = useState('');
   const [detail, setDetail] = useState<string | null>(null);
   const { data, loading, error, reload } = useAsync(() => get<any[]>(`/shipments${status ? `?status=${status}` : ''}`), [status]);
   return (
     <Card>
-      <div className="toolbar"><select aria-label="Statut" value={status} onChange={(e) => setStatus(e.target.value)}><option value="">Tous les statuts</option>{Object.entries(SHIPMENT_STATUS).map(([k, [l]]) => <option key={k} value={k}>{l}</option>)}</select></div>
+      <div className="toolbar"><select aria-label="Statut" value={status} onChange={(e) => setStatus(e.target.value)}><option value="">Tous les statuts</option>{Object.entries(SHIPMENT_STATUS).map(([k, [l]]) => <option key={k} value={k}>{l}</option>)}</select>
+        {can('logistics:manage') && <button className="btn btn-secondary" onClick={() => setLogi(true)}>Transporteurs, véhicules, chauffeurs</button>}
+        {can('shipments:manage') && <button className="btn" onClick={() => setCreating(true)}>Nouvelle expédition</button>}</div>
       {error && <ErrorBox message={error} onRetry={reload} />}
       {loading ? <Loading /> : (
         <Table rows={data ?? []} empty="Aucune expédition." columns={[
@@ -145,6 +151,8 @@ function Shipments() {
           { header: 'Statut', render: (s) => <StatusBadge map={SHIPMENT_STATUS} value={s.status} /> },
         ]} />
       )}
+      {creating && <CreateShipment onClose={() => setCreating(false)} onDone={() => { setCreating(false); reload(); }} />}
+      {logi && <Logistics onClose={() => setLogi(false)} />}
       {detail && <ShipmentDetail id={detail} onClose={() => { setDetail(null); reload(); }} />}
     </Card>
   );
@@ -290,10 +298,12 @@ function Buyers() {
   const { can } = useAuth();
   const [creating, setCreating] = useState(false);
   const [stmt, setStmt] = useState<string | null>(null);
+  const [contract, setContract] = useState(false);
   const { data, loading, error, reload } = useAsync(() => get<any[]>('/buyers'), []);
   return (
     <Card>
-      <div className="toolbar">{can('buyers:manage') && <button className="btn" onClick={() => setCreating(true)}>Nouvel acheteur</button>}</div>
+      <div className="toolbar">{can('buyers:manage') && <button className="btn btn-secondary" onClick={() => setContract(true)}>Nouveau contrat de vente</button>}
+        {can('buyers:manage') && <button className="btn" onClick={() => setCreating(true)}>Nouvel acheteur</button>}</div>
       {error && <ErrorBox message={error} onRetry={reload} />}
       {loading ? <Loading /> : (
         <Table rows={data ?? []} empty="Aucun acheteur." columns={[
@@ -304,6 +314,7 @@ function Buyers() {
         ]} />
       )}
       {creating && <CreateBuyer onClose={() => setCreating(false)} onDone={() => { setCreating(false); reload(); }} />}
+      {contract && <CreateContract onClose={() => setContract(false)} onDone={() => setContract(false)} />}
       {stmt && <Statement id={stmt} onClose={() => setStmt(null)} />}
     </Card>
   );
