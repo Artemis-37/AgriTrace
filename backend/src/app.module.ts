@@ -22,11 +22,12 @@ import { ComplianceController } from './compliance/compliance.controller';
 import { QualityController } from './quality/quality.controller';
 import { ParcelsController } from './parcels/parcels.controller';
 import { MeController } from './users/me.controller';
+import { OpsController } from './ops/ops.controller';
 import { UsersController } from './users/users.controller';
 
 @Module({
   imports: [
-    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: Number(process.env.THROTTLE_LIMIT) || 120 }]),
     DbModule,
     AuditModule,
     AuthModule,
@@ -35,7 +36,7 @@ import { UsersController } from './users/users.controller';
     OrganizationsController, UsersController, ReferentialsController, ProducersController,
     CollectorsController, DeclarationsController, FinanceController,
     ReceptionController, StockController, LotsController, SyncController,
-    AccountingController, LoansController, PaymentsController, QualityController, ComplianceController, ParcelsController, MeController,
+    AccountingController, LoansController, PaymentsController, QualityController, ComplianceController, ParcelsController, MeController, OpsController,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

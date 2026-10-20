@@ -4,6 +4,7 @@ import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
+import { requestMiddleware } from './ops/metrics';
 
 async function bootstrap() {
   if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 24)
@@ -11,7 +12,11 @@ async function bootstrap() {
   if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL manquant');
 
   const app = await NestFactory.create(AppModule);
+  // Derrière un reverse proxy (nginx, équilibreur) : TRUST_PROXY=1 pour que l'adresse IP réelle serve au limiteur de débit et à l'audit.
+  if (process.env.TRUST_PROXY) (app.getHttpAdapter().getInstance() as any).set('trust proxy', Number(process.env.TRUST_PROXY) || process.env.TRUST_PROXY);
   app.use(helmet());
+  app.use(requestMiddleware(process.env.LOG_REQUESTS === 'true'));
+  app.enableShutdownHooks(); // arrêt propre : les requêtes en cours se terminent, le pool PostgreSQL se ferme
   app.setGlobalPrefix('v1');
   // CORS : uniquement les origines listées (CORS_ORIGINS, séparées par des virgules). Rien par défaut : le portail passe par le même domaine.
   const origins = (process.env.CORS_ORIGINS ?? '').split(',').map((o) => o.trim()).filter(Boolean);

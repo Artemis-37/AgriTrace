@@ -1,0 +1,55 @@
+# Déploiement type. HTTPS à terminer devant (Caddy, Traefik, équilibreur du cloud) : ce fichier n'expose que le portail en HTTP.
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: agritrace_owner
+      POSTGRES_DB: agritrace
+      POSTGRES_PASSWORD: ${DB_OWNER_PASSWORD:?}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:?}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./deploy/db/10-roles.sh:/docker-entrypoint-initdb.d/10-roles.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agritrace_owner -d agritrace"]
+      interval: 10s
+      retries: 6
+
+  migrate:
+    build: ./backend
+    command: ["node", "scripts/migrate.js"]
+    environment:
+      DATABASE_URL: postgres://agritrace_owner:${DB_OWNER_PASSWORD}@db:5432/agritrace
+    depends_on:
+      db: { condition: service_healthy }
+    restart: "no"
+
+  api:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://agritrace_app:${APP_DB_PASSWORD}@db:5432/agritrace
+      JWT_SECRET: ${JWT_SECRET:?}
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      METRICS_TOKEN: ${METRICS_TOKEN:-}
+      TRUST_PROXY: "2"
+      LOG_REQUESTS: "true"
+    volumes:
+      - documents:/data/documents
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: ["no-new-privileges:true"]
+
+  web:
+    build: ./web
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-8080}:8080"
+    depends_on: [api]
+
+volumes:
+  pgdata:
+  documents:

@@ -27,6 +27,14 @@ npm run build && npm start     # docs : http://localhost:3000/v1/docs
 - Les routes métier exigent l'en-tête `X-Organization-Id`, l'appartenance de l'utilisateur à cette organisation et les permissions du rôle.
 - En production, l'API doit se connecter avec un rôle PostgreSQL **non propriétaire et non superutilisateur**, sinon les politiques RLS sont contournées.
 
+## Industrialisation (P5)
+
+- **Santé et supervision** : `GET /v1/health`, `GET /v1/ready`, `GET /v1/metrics` (jeton `METRICS_TOKEN`), identifiant de requête `X-Request-Id`, journal d'accès JSON optionnel, arrêt propre.
+- **Conteneurs** : `backend/Dockerfile`, `web/Dockerfile` (nginx, relais `/v1`), `docker-compose.prod.yml`, `deploy/db/10-roles.sh`, `.env.example` — **non construits localement** (pas de démon Docker), construits par la CI.
+- **CI** (`.github/workflows/ci.yml`) : build + tests unitaires + migrations + tous les tests e2e sur PostgreSQL ; portail ; mobile (`continue-on-error` tant qu'il n'a pas compilé) ; construction des images.
+- **Sauvegarde / restauration / charge** : `scripts/backup.sh`, `scripts/restore-test.sh` (testés en local), `scripts/load-test.js`.
+- Documentation : `docs/DEPLOIEMENT.md`, `docs/EXPLOITATION.md`, `docs/SECURITE.md`, `docs/SYNCHRONISATION.md`.
+
 ## Tests
 
 `npm test` (unitaires). Un test d'intégration (isolation entre organisations, rotation des sessions, audit immuable) a été exécuté manuellement ; à automatiser en P1.
@@ -82,7 +90,7 @@ Hypothèses à valider avec la coopérative : conversion sac → kg configurée 
 ## Tests
 
 ```bash
-cd backend && npm test          # 18 tests unitaires
+cd backend && npm test          # 20 tests unitaires
 npm run test:e2e                # e2e P1 (34) + P2/P3 (42) + P4a (83) + P4b (55) + parcelles (39 contrôles), base PostgreSQL requise
 ```
 

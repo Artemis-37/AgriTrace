@@ -1,0 +1,83 @@
+name: CI
+on:
+  push: { branches: [main] }
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_USER: owner, POSTGRES_PASSWORD: owner, POSTGRES_DB: agritrace }
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U owner -d agritrace" --health-interval 5s --health-retries 10
+    env:
+      OWNER_URL: postgres://owner:owner@localhost:5432/agritrace
+      DATABASE_URL: postgres://agritrace_app:app@localhost:5432/agritrace
+      JWT_SECRET: ci-secret-ci-secret-ci-secret-ci-secret
+      DOCUMENTS_DIR: /tmp/agritrace-docs
+      PORT: 3000
+      API: http://localhost:3000/v1
+      ADMIN_EMAIL: admin@agritrace.test
+      ADMIN_PASSWORD: MotDePasseAdmin2026!
+    defaults: { run: { working-directory: backend } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: backend/package-lock.json }
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+      - name: Rôle applicatif (non propriétaire) puis migrations
+        run: |
+          PGPASSWORD=owner psql -h localhost -U owner -d agritrace -v ON_ERROR_STOP=1 -c "CREATE ROLE agritrace_app LOGIN PASSWORD 'app' NOSUPERUSER NOBYPASSRLS" \
+            -c "GRANT USAGE ON SCHEMA public TO agritrace_app" \
+            -c "ALTER DEFAULT PRIVILEGES FOR ROLE owner IN SCHEMA public GRANT SELECT,INSERT,UPDATE,DELETE ON TABLES TO agritrace_app" \
+            -c "ALTER DEFAULT PRIVILEGES FOR ROLE owner IN SCHEMA public GRANT USAGE,SELECT ON SEQUENCES TO agritrace_app" \
+            -c "ALTER DEFAULT PRIVILEGES FOR ROLE owner IN SCHEMA public GRANT EXECUTE ON FUNCTIONS TO agritrace_app"
+          DATABASE_URL=$OWNER_URL node scripts/migrate.js
+          DATABASE_URL=$OWNER_URL ADMIN_PASSWORD=$ADMIN_PASSWORD node scripts/create-platform-admin.js $ADMIN_EMAIL "Admin CI"
+      - name: Démarrer l'API
+        run: |
+          node dist/main > /tmp/api.log 2>&1 &
+          for i in $(seq 1 30); do curl -fs http://localhost:3000/v1/ready && break; sleep 1; done
+          curl -fs http://localhost:3000/v1/ready
+      - run: npm run test:e2e
+      - name: Journal de l'API en cas d'échec
+        if: failure()
+        run: tail -n 100 /tmp/api.log
+
+  web:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: web } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: web/package-lock.json }
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+
+  mobile:
+    runs-on: ubuntu-latest
+    # Le code mobile n'a jamais été compilé : ce job peut échouer au début. C'est son rôle de le révéler.
+    continue-on-error: true
+    defaults: { run: { working-directory: mobile } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with: { channel: stable }
+      - run: flutter create --platforms=android --org ci.agritrace .
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: [backend, web]
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t agritrace-api ./backend
+      - run: docker build -t agritrace-web ./web

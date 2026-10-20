@@ -1,0 +1,13 @@
+#!/bin/sh
+# Exécuté une seule fois à la création du volume PostgreSQL.
+# Crée le rôle applicatif NON propriétaire et NON superutilisateur : indispensable, sinon la sécurité par ligne (RLS) serait contournée.
+set -e
+psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" <<SQL
+CREATE ROLE agritrace_app LOGIN PASSWORD '${APP_DB_PASSWORD}' NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS;
+GRANT CONNECT ON DATABASE ${POSTGRES_DB} TO agritrace_app;
+GRANT USAGE ON SCHEMA public TO agritrace_app;
+-- Les migrations (exécutées par le propriétaire) donnent automatiquement les droits aux futures tables.
+ALTER DEFAULT PRIVILEGES FOR ROLE ${POSTGRES_USER} IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO agritrace_app;
+ALTER DEFAULT PRIVILEGES FOR ROLE ${POSTGRES_USER} IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO agritrace_app;
+ALTER DEFAULT PRIVILEGES FOR ROLE ${POSTGRES_USER} IN SCHEMA public GRANT EXECUTE ON FUNCTIONS TO agritrace_app;
+SQL
