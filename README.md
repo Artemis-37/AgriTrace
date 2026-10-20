@@ -96,7 +96,7 @@ npm run test:e2e                # e2e : P1, P2/P3, P4a, P4b, parcelles, reçus (
 
 ## Limites connues
 
-Opérations financières libres (hors prêts, paiements, écarts de caisse, fonds d'ouverture) non comptabilisées automatiquement (signalé par le contrôle de cohérence) ; déclarations brouillon non modifiables (annuler et recréer) ; soldes producteur/collecteur pouvant être négatifs (seules les caisses sont bloquées) ; révocation d'appareil non implémentée .
+Opérations financières libres (hors prêts, paiements, écarts de caisse, fonds d'ouverture) non comptabilisées automatiquement (signalé par le contrôle de cohérence) ; déclarations brouillon non modifiables (annuler et recréer) ; soldes producteur/collecteur pouvant être négatifs (seules les caisses sont bloquées) ; révocation d'appareil : API seulement (voir docs/SECURITE.md).
 
 ## Évolutions du cahier des charges v1.0
 Reçu d'achat et code de parcelle (007), cartographie avancée (008, `docs/CARTOGRAPHIE.md`), missions (009, `docs/MISSIONS.md`), transport et ventes (010, `docs/VENTES_TRANSPORT.md`), inventaire, notifications, suspension d'accès, statuts producteur, préfinancement reçu (011). Écarts restants : `docs/ECARTS_CDC.md`.
