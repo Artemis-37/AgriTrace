@@ -12,4 +12,12 @@ export function Dec(maxDecimals = 4) {
   );
 }
 
+/** Comme Dec, mais pour un tableau de décimaux. */
+export function DecEach(maxDecimals = 4) {
+  return applyDecorators(
+    Transform(({ value }) => (Array.isArray(value) ? value.map((v) => (typeof v === 'number' ? String(v) : v)) : value)),
+    Matches(new RegExp(`^\\d{1,14}(\\.\\d{1,${maxDecimals}})?$`), { each: true, message: 'chaque quantité doit être un décimal positif' }),
+  );
+}
+
 export const isUniqueViolation = (e: any) => e?.code === '23505';

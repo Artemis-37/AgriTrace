@@ -21,7 +21,7 @@ class AccountDto {
 }
 class OpenSessionDto { @Dec(4) opening_amount: string; }
 class CloseSessionDto { @Dec(4) counted_amount: string; }
-class TransactionDto {
+export class TransactionDto {
   @IsString() @Length(8, 100) idempotency_key: string;
   @IsUUID() account_id: string;
   @IsOptional() @IsUUID() cash_session_id?: string;

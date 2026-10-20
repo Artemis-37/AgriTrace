@@ -9,7 +9,7 @@
     "start:dev": "nest start --watch",
     "migrate": "node scripts/migrate.js",
     "test": "jest",
-    "test:e2e": "node scripts/e2e-p1.js"
+    "test:e2e": "node scripts/e2e-p1.js && node scripts/e2e-p2-p3.js"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.0",
@@ -24,6 +24,7 @@
     "class-validator": "^0.14.1",
     "exceljs": "^4.4.0",
     "helmet": "^7.1.0",
+    "pdfkit": "^0.15.2",
     "pg": "^8.12.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"
@@ -35,6 +36,7 @@
     "@types/jest": "^29.5.12",
     "@types/multer": "^2.3.0",
     "@types/node": "^20.14.0",
+    "@types/pdfkit": "^0.17.6",
     "@types/pg": "^8.11.6",
     "jest": "^29.7.0",
     "ts-jest": "^29.2.0",

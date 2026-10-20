@@ -11,7 +11,7 @@ import { Dec, isUniqueViolation } from '../common/dto';
 import { DbService } from '../db/db.service';
 import { canSubmit, canTransition, REASON_REQUIRED } from './declaration-states';
 
-class CreateDeclarationDto {
+export class CreateDeclarationDto {
   @IsUUID() id: string;                       // identifiant local stable (généré sur l'appareil)
   @IsString() @Length(8, 100) idempotency_key: string;
   @IsOptional() @IsUUID() collector_id?: string;

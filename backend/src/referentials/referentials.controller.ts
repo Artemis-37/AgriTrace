@@ -89,7 +89,7 @@ export class ReferentialsController {
       return (await c.query(
         `INSERT INTO unit_conversions(organization_id, value_chain_id, from_unit, to_unit, factor, created_by)
          VALUES ($1,$2,$3,$4,$5,$6)
-         ON CONFLICT (organization_id, value_chain_id, from_unit, to_unit) DO UPDATE SET factor = EXCLUDED.factor
+         ON CONFLICT (organization_id, value_chain_id, from_unit, to_unit) DO UPDATE SET factor = EXCLUDED.factor, updated_at = now()
          RETURNING id, value_chain_id, from_unit, to_unit, factor`,
         [req.org.id, b.value_chain_id, b.from_unit, b.to_unit, b.factor, req.user.id])).rows[0];
     });

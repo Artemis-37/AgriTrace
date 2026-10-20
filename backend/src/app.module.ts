@@ -8,6 +8,10 @@ import { DbModule } from './db/db.module';
 import { CollectorsController } from './collectors/collectors.controller';
 import { DeclarationsController } from './declarations/declarations.controller';
 import { FinanceController } from './finance/finance.controller';
+import { LotsController } from './lots/lots.controller';
+import { ReceptionController } from './reception/reception.controller';
+import { StockController } from './stock/stock.controller';
+import { SyncController } from './sync/sync.controller';
 import { OrganizationsController } from './organizations/organizations.controller';
 import { ProducersController } from './producers/producers.controller';
 import { ReferentialsController } from './referentials/referentials.controller';
@@ -23,6 +27,7 @@ import { UsersController } from './users/users.controller';
   controllers: [
     OrganizationsController, UsersController, ReferentialsController, ProducersController,
     CollectorsController, DeclarationsController, FinanceController,
+    ReceptionController, StockController, LotsController, SyncController,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
