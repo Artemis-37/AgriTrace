@@ -1,0 +1,37 @@
+name: Application Windows
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['desktop/**', '.github/workflows/desktop-windows.yml']
+    tags: ['desktop-v*']
+
+permissions:
+  contents: write
+
+jobs:
+  installateur:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: API et portail
+        shell: bash
+        run: |
+          (cd backend && npm ci && npm run build)
+          (cd web && npm ci && npm run build)
+      - name: Application de bureau (dépendances, contenu embarqué, installateur)
+        shell: bash
+        working-directory: desktop
+        run: |
+          npm ci
+          node scripts/prepare-payload.js
+          npx electron-builder --win nsis --x64 --publish never
+      - uses: actions/upload-artifact@v4
+        with: { name: AgriTrace-Windows, path: desktop/dist/AgriTrace-Setup-*.exe, retention-days: 30 }
+      - name: Publier l'installateur (étiquette desktop-v*)
+        if: startsWith(github.ref, 'refs/tags/desktop-v')
+        shell: bash
+        env: { GH_TOKEN: '${{ github.token }}' }
+        run: gh release create "${{ github.ref_name }}" desktop/dist/AgriTrace-Setup-*.exe --title "AgriTrace ${{ github.ref_name }}" --generate-notes

@@ -62,6 +62,32 @@ jobs:
         if: failure()
         run: tail -n 100 /tmp/api.log
 
+  desktop-serveur:
+    # Serveur local de coopérative : PostgreSQL embarqué + API + portail, démarrage à froid, premier démarrage dans le navigateur, sauvegarde, redémarrage.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm ci && npm run build
+        working-directory: backend
+      - run: npm ci && npm run build && npx playwright-core install --with-deps chromium
+        working-directory: web
+      - run: npm ci --omit=dev
+        working-directory: desktop
+      - name: Orchestration (démarrage, migrations, données, sauvegarde, redémarrage)
+        run: node test/orchestration.js ..
+        working-directory: desktop
+      - name: Premier démarrage dans le navigateur
+        working-directory: desktop
+        run: |
+          ONLY_START=1 TEST_PORT=3150 node test/orchestration.js .. > /tmp/srv.log 2>&1 &
+          for i in $(seq 1 60); do curl -fs http://127.0.0.1:3150/v1/mode > /dev/null && break; sleep 1; done
+          cd ../web && WEB=http://127.0.0.1:3150 node e2e/parcours-premier-demarrage.mjs
+      - name: Journal en cas d'échec
+        if: failure()
+        run: tail -n 60 /tmp/srv.log || true
+
   web:
     runs-on: ubuntu-latest
     defaults: { run: { working-directory: web } }

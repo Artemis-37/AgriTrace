@@ -41,7 +41,13 @@
 - Persistées et consultables, mais aucune poussée distante (FCM) ni courriel. Alertes « documents manquants » et « opérations financières à approuver » non générées automatiquement (visibles via les alertes P4b / listes existantes).
 
 **Tableaux de bord et rapports (§26)**
-- Le tableau de bord web présente maintenant commandes, créances (dont échues), missions en retard, anomalies de cartographie et préfinancement à rembourser ; l'état des synchronisations n'y figure toujours pas. Pas de rapports filtrables par période/section/agent unifiés.
+- Le tableau de bord web présente maintenant commandes, créances (dont échues), missions en retard, anomalies de cartographie et préfinancement à rembourser ; l'état de la synchronisation avec le serveur central y figure désormais (serveur local). Pas de rapports filtrables par période/section/agent unifiés.
 
 **Exigences non techniques**
 - Validation juridique des données personnelles, sauvegardes et tests de restauration en production, audit de sécurité indépendant, tests de charge (§32) : non réalisés. Les avis `npm audit` sur des dépendances transitives de NestJS restent à suivre.
+
+## Serveur local / central et application de bureau
+- Livré : modes local et central, réplication à sens unique avec jumelage, reprise après panne, central en lecture seule pour les coopératives gérées en local, vue consolidée (producteurs, parcelles, quantités, facturé), console du central dans le portail, écran de premier démarrage, page Synchronisation et indicateur au tableau de bord. Application Electron pour Windows hébergeant le serveur (PostgreSQL embarqué) ou en poste client, sauvegarde, pare-feu à l'installation.
+- Vérifié : e2e à trois serveurs (78 contrôles), orchestration du serveur local sous Node, application lancée sous Linux, parcours Chromium (premier démarrage, console centrale).
+- **Non vérifié** : l'installateur `.exe` et le comportement sous Windows (construit seulement par le workflow GitHub, jamais exécuté ici) ; signature de code absente.
+- Non couvert : sens central → local, plusieurs serveurs locaux pour une même coopérative, rattachement d'une coopérative déjà peuplée au central, TLS sur le réseau local, mise à jour automatique de l'application.

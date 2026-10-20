@@ -35,6 +35,9 @@ npm run build && npm start     # docs : http://localhost:3000/v1/docs
 - **Sauvegarde / restauration / charge** : `scripts/backup.sh`, `scripts/restore-test.sh` (testés en local), `scripts/load-test.js`.
 - Documentation : `docs/DEPLOIEMENT.md`, `docs/EXPLOITATION.md`, `docs/SECURITE.md`, `docs/SYNCHRONISATION.md`.
 
+## Application de bureau, serveur local et central (livré, installateur Windows non essayé)
+Voir `docs/LOCAL_CENTRAL_BUREAU.md` : modes `AGRITRACE_MODE=local|central`, réplication à sens unique local → central avec jumelage, console du central et vue consolidée, application Windows (Electron) hébergeant le serveur de la coopérative (PostgreSQL embarqué), sauvegarde. Tests : `node scripts/e2e-replication.js` (backend), `node test/orchestration.js ..` (desktop).
+
 ## Tests
 
 `npm test` (unitaires). Un test d'intégration (isolation entre organisations, rotation des sessions, audit immuable) a été exécuté manuellement ; à automatiser en P1.

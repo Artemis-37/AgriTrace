@@ -1,0 +1,25 @@
+appId: org.agritrace.desktop
+productName: AgriTrace
+copyright: AgriTrace
+# Pas d'archive asar : PostgreSQL embarqué et l'API sont lancés comme programmes séparés depuis des fichiers réels.
+asar: false
+directories: { output: dist }
+files:
+  - src/**
+  - build/icon.png
+  - package.json
+  - node_modules/**
+  - "!node_modules/.cache"
+  - "!**/*.md"
+extraResources:
+  - { from: payload, to: app-payload }
+win:
+  target: [{ target: nsis, arch: [x64] }]
+  artifactName: AgriTrace-Setup-${version}.${ext}
+nsis:
+  oneClick: false
+  perMachine: true
+  allowToChangeInstallationDirectory: true
+  language: "1036"
+  createDesktopShortcut: true
+  include: build/installer.nsh

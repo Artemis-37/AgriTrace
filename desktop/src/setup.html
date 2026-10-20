@@ -1,0 +1,35 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>AgriTrace — installation</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'">
+<style>
+ body{font:15px/1.5 "Segoe UI",system-ui,sans-serif;margin:0;padding:28px 34px;background:#f4f1ea;color:#1f2a1f}
+ h1{margin:0 0 4px;font-size:26px}h1 span{color:#2f7d3a}p.sub{margin:0 0 22px;color:#566}
+ label.opt{display:block;background:#fff;border:2px solid #d9d4c7;border-radius:10px;padding:14px 16px;margin-bottom:12px;cursor:pointer}
+ label.opt:has(input:checked){border-color:#2f7d3a;background:#f3faf3}
+ label.opt b{display:block}label.opt small{color:#566}
+ input[type=text]{width:100%;box-sizing:border-box;padding:9px 10px;border:1px solid #bbb;border-radius:6px;font:inherit;margin-top:8px}
+ button{background:#2f7d3a;color:#fff;border:0;border-radius:8px;padding:11px 22px;font:inherit;font-weight:600;cursor:pointer;margin-top:10px}
+ button:disabled{opacity:.5;cursor:default}.msg{margin-top:10px;font-size:14px}.bad{color:#b3261e}.good{color:#1e7a2f}
+</style></head><body>
+<h1>Agri<span>Trace</span></h1><p class="sub">Comment ce poste doit-il fonctionner ?</p>
+<label class="opt"><input type="radio" name="role" value="server" checked> <b>Ce poste est le serveur de la coopérative</b>
+ <small>Les données sont stockées ici. Les autres ordinateurs du bureau s'y connectent. Ce poste doit rester allumé aux heures de travail. Aucun accès Internet n'est nécessaire pour travailler.</small></label>
+<label class="opt"><input type="radio" name="role" value="client"> <b>Ce poste se connecte à un serveur existant</b>
+ <small>Pour les autres ordinateurs : saisissez l'adresse du poste serveur, par exemple <i>http://192.168.1.20:3000</i>.</small>
+ <div id="urlbox" hidden><input type="text" id="url" placeholder="http://192.168.1.20:3000" spellcheck="false"><div class="msg" id="msg"></div></div></label>
+<button id="go">Continuer</button>
+<script>
+ const $=(i)=>document.getElementById(i);
+ const sync=()=>{const c=document.querySelector('input[name=role]:checked').value==='client';$('urlbox').hidden=!c};
+ document.querySelectorAll('input[name=role]').forEach(r=>r.addEventListener('change',sync));
+ $('go').onclick=async()=>{
+  const role=document.querySelector('input[name=role]:checked').value;
+  if(role==='server'){await window.agritrace.choose({role:'server'});return}
+  let u=$('url').value.trim(); if(!u){$('msg').className='msg bad';$('msg').textContent='Saisissez l\'adresse du serveur.';return}
+  if(!/^https?:\/\//.test(u))u='http://'+u;
+  $('go').disabled=true;$('msg').className='msg';$('msg').textContent='Vérification…';
+  const r=await window.agritrace.check(u);$('go').disabled=false;
+  if(!r.ok){$('msg').className='msg bad';$('msg').textContent='Ce serveur ne répond pas ('+(r.error||'réponse inattendue')+'). Vérifiez l\'adresse et que le poste serveur est allumé.';return}
+  $('msg').className='msg good';$('msg').textContent='Serveur trouvé ('+(r.mode==='local'?'serveur de coopérative':'serveur central')+').';
+  await window.agritrace.choose({role:'client',serverUrl:r.origin});
+ };
+</script></body></html>

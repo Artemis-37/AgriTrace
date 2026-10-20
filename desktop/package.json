@@ -1,0 +1,23 @@
+{
+  "name": "agritrace-desktop",
+  "version": "0.1.0",
+  "description": "AgriTrace — application de bureau Windows (serveur local de coopérative ou poste client)",
+  "main": "src/main.js",
+  "author": "AgriTrace",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "test": "node test/orchestration.js",
+    "dist": "electron-builder --win nsis --x64 --publish never",
+    "prepare-payload": "node scripts/prepare-payload.js"
+  },
+  "dependencies": {
+    "embedded-postgres": "16.14.0-beta.17",
+    "pg": "^8.13.0"
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  }
+}
