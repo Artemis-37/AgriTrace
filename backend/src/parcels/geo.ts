@@ -12,6 +12,8 @@ export function validatePolygon(g: any): string | null {
   }
   const a = ring[0], z = ring[ring.length - 1];
   if (a[0] !== z[0] || a[1] !== z[1]) return "Géométrie : l'anneau doit être fermé (premier point = dernier point)";
+  if (g.coordinates.length > 1) return 'Géométrie : les polygones à trous ne sont pas pris en charge (un seul anneau extérieur)';
+  if (selfIntersects(ring)) return "Géométrie invalide : l'anneau se croise lui-même";
   if (polygonAreaHa(g) <= 0) return 'Géométrie : surface nulle';
   return null;
 }
@@ -34,3 +36,19 @@ export function centroid(g: Polygon): { lat: number; lon: number } {
 
 /** Écart relatif entre surface déclarée et surface mesurée, en %. */
 export const areaGapPct = (declared: number, measured: number) => (Math.abs(declared - measured) / declared) * 100;
+
+/** Vrai si deux segments non adjacents de l'anneau se croisent (polygone « papillon »). O(n²), n ≤ 1000. */
+export function selfIntersects(ring: number[][]): boolean {
+  const n = ring.length - 1; // segments i : ring[i] -> ring[i+1]
+  const ccw = (a: number[], b: number[], c: number[]) => (c[1] - a[1]) * (b[0] - a[0]) - (b[1] - a[1]) * (c[0] - a[0]);
+  const cross = (a: number[], b: number[], c: number[], d: number[]) => {
+    const d1 = ccw(a, b, c), d2 = ccw(a, b, d), d3 = ccw(c, d, a), d4 = ccw(c, d, b);
+    return ((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0));
+  };
+  for (let i = 0; i < n; i++)
+    for (let j = i + 2; j < n; j++) {
+      if (i === 0 && j === n - 1) continue; // segments adjacents par la fermeture
+      if (cross(ring[i], ring[i + 1], ring[j], ring[j + 1])) return true;
+    }
+  return false;
+}

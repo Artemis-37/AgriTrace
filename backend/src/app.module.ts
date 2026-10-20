@@ -23,6 +23,9 @@ import { QualityController } from './quality/quality.controller';
 import { ParcelsController } from './parcels/parcels.controller';
 import { MeController } from './users/me.controller';
 import { OpsController } from './ops/ops.controller';
+import { GeoController } from './geo/geo.controller';
+import { GeoImportService } from './geo/geo-import.service';
+import { GeoService } from './geo/geo.service';
 import { UsersController } from './users/users.controller';
 
 @Module({
@@ -36,9 +39,10 @@ import { UsersController } from './users/users.controller';
     OrganizationsController, UsersController, ReferentialsController, ProducersController,
     CollectorsController, DeclarationsController, FinanceController,
     ReceptionController, StockController, LotsController, SyncController,
-    AccountingController, LoansController, PaymentsController, QualityController, ComplianceController, ParcelsController, MeController, OpsController,
+    AccountingController, LoansController, PaymentsController, QualityController, ComplianceController, ParcelsController, GeoController, MeController, OpsController,
   ],
   providers: [
+    GeoService, GeoImportService,
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: AccessGuard },
   ],

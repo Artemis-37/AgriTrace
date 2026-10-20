@@ -9,7 +9,9 @@ import { RequirePermissions } from '../access/decorators';
 import { AuditService } from '../audit/audit.service';
 import { Dec } from '../common/dto';
 import { DbService } from '../db/db.service';
-import { nextNumber, pad } from '../stock/stock.helpers';
+import { GeoService } from '../geo/geo.service';
+import { geometryHash } from '../geo/geo-core';
+import { isUniqueViolation } from '../common/dto';
 import { areaGapPct, centroid, polygonAreaHa, validatePolygon } from './geo';
 
 const DUP_RADIUS_M = 50;
@@ -33,6 +35,7 @@ class UpdateParcelDto {
   @IsOptional() @IsNumber() @Min(-90) @Max(90) latitude?: number;
   @IsOptional() @IsNumber() @Min(-180) @Max(180) longitude?: number;
   @IsOptional() @IsObject() geometry?: any;
+  @IsOptional() @IsString() @Length(3, 500) reason?: string;
 }
 class NoteDto { @IsOptional() @IsString() @Length(1, 500) note?: string; }
 
@@ -41,7 +44,7 @@ class NoteDto { @IsOptional() @IsString() @Length(1, 500) note?: string; }
 @ApiHeader({ name: 'X-Organization-Id', required: true })
 @Controller()
 export class ParcelsController {
-  constructor(private readonly db: DbService, private readonly audit: AuditService) {}
+  constructor(private readonly db: DbService, private readonly audit: AuditService, private readonly geoSvc: GeoService) {}
 
   private log(req: any, action: string, id: string, details?: any) {
     return this.audit.log({ organizationId: req.org.id, actorUserId: req.user.id, action, entityType: 'parcel', entityId: id, details });
@@ -78,7 +81,7 @@ export class ParcelsController {
       if (prev.rowCount) {
         const p = prev.rows[0];
         if (p.producer_id !== b.producer_id || p.value_chain_id !== b.value_chain_id) throw new ConflictException("Cette clé d'idempotence a déjà servi pour une autre parcelle");
-        return { row: p, replay: true };
+        return { row: p, replay: true, anomalies: [] as any[] };
       }
       const ok = await c.query(`SELECT (SELECT status FROM producers WHERE id = $1) AS p, EXISTS (SELECT 1 FROM value_chains WHERE id = $2) AS v`, [b.producer_id, b.value_chain_id]);
       if (ok.rows[0].p !== 'active') throw new BadRequestException('Producteur inconnu ou inactif');
@@ -94,14 +97,20 @@ export class ParcelsController {
       const seq = (await c.query(`UPDATE producers SET parcel_seq = parcel_seq + 1 WHERE id = $1 RETURNING parcel_seq, internal_code`, [b.producer_id])).rows[0];
       const code = `${seq.internal_code}-P${seq.parcel_seq}`;
       const row = (await c.query(
-        `INSERT INTO parcels(organization_id, code, idempotency_key, producer_id, value_chain_id, declared_area_ha, latitude, longitude, geometry, geometry_area_ha, created_by)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
-        [req.org.id, code, b.idempotency_key, b.producer_id, b.value_chain_id, b.declared_area_ha, g.lat, g.lon, g.geom ? JSON.stringify(g.geom) : null, g.area, req.user.id])).rows[0];
+        `INSERT INTO parcels(organization_id, code, idempotency_key, producer_id, value_chain_id, declared_area_ha, latitude, longitude, geometry, geometry_area_ha, geometry_hash, created_by)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *`,
+        [req.org.id, code, b.idempotency_key, b.producer_id, b.value_chain_id, b.declared_area_ha, g.lat, g.lon, g.geom ? JSON.stringify(g.geom) : null, g.area, g.geom ? geometryHash(g.geom) : null, req.user.id])).rows[0];
       await this.hist(c, req.org.id, row.id, 'created', req.user.id, undefined, 'declared');
-      return { row, replay: false };
+      // doublons et chevauchements : enregistrés comme anomalies (bloquantes selon la politique de la coopérative)
+      const anomalies = g.geom ? await this.geoSvc.detectForParcel(c, req.org.id, row.id, req.user.id, 'edit') : [];
+      return { row, replay: false, anomalies };
+    }).catch((e) => {
+      if (isUniqueViolation(e) && String(e.constraint).includes('uq_parcels_geom_producer'))
+        throw new ConflictException('Un tracé identique existe déjà pour ce producteur : parcelle déjà enregistrée (utiliser la mise à jour ou le remplacement de doublon)');
+      throw e;
     });
     if (!out.replay) await this.log(req, 'parcel.create', out.row.id, { code: out.row.code });
-    return { ...out.row, replayed: out.replay };
+    return { ...out.row, replayed: out.replay, anomalies: out.anomalies };
   }
 
   /** Toute modification des données repasse la parcelle à « déclarée » : un contrôle ou une vérification ne couvre pas des données changées. */
@@ -116,16 +125,38 @@ export class ParcelsController {
       const g = (b.latitude !== undefined || b.geometry !== undefined) ? this.geo(b) : { lat: p.latitude, lon: p.longitude, geom: p.geometry, area: p.geometry_area_ha };
       const reset = p.verification_status !== 'declared';
       const r = (await c.query(
-        `UPDATE parcels SET declared_area_ha = coalesce($2, declared_area_ha), latitude = $3, longitude = $4, geometry = $5, geometry_area_ha = $6,
+        `UPDATE parcels SET declared_area_ha = coalesce($2, declared_area_ha), latitude = $3, longitude = $4, geometry = $5, geometry_area_ha = $6, geometry_hash = $7,
                 verification_status = 'declared', controlled_at = NULL, controlled_by = NULL, verified_at = NULL, verified_by = NULL, verified_inspection_id = NULL, updated_at = now()
           WHERE id = $1 RETURNING *`,
-        [id, b.declared_area_ha ?? null, g.lat, g.lon, g.geom ? (typeof g.geom === 'string' ? g.geom : JSON.stringify(g.geom)) : null, g.area])).rows[0];
-      await this.hist(c, req.org.id, id, 'updated', req.user.id, p.verification_status, 'declared', { fields: Object.keys(b) });
+        [id, b.declared_area_ha ?? null, g.lat, g.lon, g.geom ? (typeof g.geom === 'string' ? g.geom : JSON.stringify(g.geom)) : null, g.area, g.geom ? geometryHash(typeof g.geom === 'string' ? JSON.parse(g.geom) : g.geom) : null])).rows[0];
+      // historique complet (CDC §8.6) : anciennes et nouvelles valeurs, motif, auteur, date
+      await this.hist(c, req.org.id, id, 'updated', req.user.id, p.verification_status, 'declared', {
+        fields: Object.keys(b).filter((k) => k !== 'reason'), reason: b.reason ?? null,
+        old: { geometry: p.geometry, geometry_area_ha: p.geometry_area_ha, declared_area_ha: p.declared_area_ha, latitude: p.latitude, longitude: p.longitude },
+        new: { geometry: r.geometry, geometry_area_ha: r.geometry_area_ha, declared_area_ha: r.declared_area_ha, latitude: r.latitude, longitude: r.longitude },
+      });
+      if (b.geometry !== undefined) {
+        const found = await this.geoSvc.detectForParcel(c, req.org.id, id, req.user.id, 'edit');
+        if (found.length) await this.hist(c, req.org.id, id, 'updated', req.user.id, undefined, undefined, { spatial_check: found.map((f) => ({ kind: f.kind, with: f.other_code, intersection_m2: f.intersection_m2 })) });
+      }
       if (reset) await this.hist(c, req.org.id, id, 'reset', req.user.id, p.verification_status, 'declared', { reason: 'données modifiées' });
       return r;
+    }).catch((e) => {
+      if (isUniqueViolation(e) && String(e.constraint).includes('uq_parcels_geom_producer'))
+        throw new ConflictException('Un tracé identique existe déjà pour ce producteur');
+      throw e;
     });
     await this.log(req, 'parcel.update', id, { fields: Object.keys(b) });
     return row;
+  }
+
+  /** Une anomalie bloquante (doublon, chevauchement interdit) empêche toute validation tant qu'elle n'est pas résolue ou qu'une exception motivée n'est pas enregistrée. */
+  private async assertNoBlockingAnomaly(c: PoolClient, id: string) {
+    const b = await this.geoSvc.blockingFor(c, id);
+    if (b.length) throw new UnprocessableEntityException({
+      message: `Validation bloquée : ${b.length} anomalie(s) cartographique(s) à résoudre (${b.map((x: any) => `${x.kind} avec ${x.other_code}`).join(' ; ')})`,
+      anomalies: b,
+    });
   }
 
   /** Contrôle : les données sont complètes et cohérentes (position présente, surface mesurée proche de la déclarée). */
@@ -135,6 +166,7 @@ export class ParcelsController {
     const row = await this.db.tx(req.org.id, async (c) => {
       const p = await this.lock(c, id);
       if (p.verification_status !== 'declared') throw new BadRequestException(`Statut ${p.verification_status} : contrôle impossible`);
+      await this.assertNoBlockingAnomaly(c, id);
       if (p.latitude === null) throw new UnprocessableEntityException('Coordonnées GPS manquantes : contrôle impossible');
       if (p.geometry_area_ha !== null && areaGapPct(Number(p.declared_area_ha), Number(p.geometry_area_ha)) > AREA_GAP_PCT)
         throw new UnprocessableEntityException(`Superficie incohérente : déclarée ${p.declared_area_ha} ha, mesurée ${p.geometry_area_ha} ha (écart > ${AREA_GAP_PCT} %)`);
@@ -153,6 +185,7 @@ export class ParcelsController {
     const row = await this.db.tx(req.org.id, async (c) => {
       const p = await this.lock(c, id);
       if (p.verification_status !== 'controlled') throw new BadRequestException(`Statut ${p.verification_status} : la parcelle doit d'abord être contrôlée`);
+      await this.assertNoBlockingAnomaly(c, id);
       const ins = (await c.query(
         `SELECT id FROM inspections WHERE subject_type = 'parcel' AND subject_id = $1 AND kind = 'field' AND status = 'completed' AND outcome = 'compliant'
             AND completed_at > (SELECT max(at) FROM parcel_history WHERE parcel_id = $1 AND event IN ('created','updated'))
