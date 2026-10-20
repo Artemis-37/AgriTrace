@@ -15,6 +15,9 @@ import { SyncController } from './sync/sync.controller';
 import { OrganizationsController } from './organizations/organizations.controller';
 import { ProducersController } from './producers/producers.controller';
 import { ReferentialsController } from './referentials/referentials.controller';
+import { AccountingController } from './accounting/accounting.controller';
+import { LoansController } from './loans/loans.controller';
+import { PaymentsController } from './payments/payments.controller';
 import { UsersController } from './users/users.controller';
 
 @Module({
@@ -28,6 +31,7 @@ import { UsersController } from './users/users.controller';
     OrganizationsController, UsersController, ReferentialsController, ProducersController,
     CollectorsController, DeclarationsController, FinanceController,
     ReceptionController, StockController, LotsController, SyncController,
+    AccountingController, LoansController, PaymentsController,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

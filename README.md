@@ -50,13 +50,22 @@ Hypothèses à valider avec la coopérative : conversion sac → kg configurée 
 - Pesée avec conversion d'unités, seuil d'écart configurable (`org_settings.weighing_variance_pct`, 2 % par défaut), justification obligatoire au-delà, approbation par un utilisateur différent de l'opérateur.
 - Reçu numéroté `RC-AAAA-NNNNN` (PDF), lots, entrepôts, mouvements de stock immuables (corrections par écriture inverse), fractionnement/fusion de lots, traçabilité JSON et PDF avec signalement des informations manquantes.
 
+## P4a — comptabilité SYSCOHADA, prêts, paiements, rapprochements (livré)
+
+- **Comptabilité** : plan comptable de base SYSCOHADA révisé (à faire valider par un comptable), journaux ACH/CAI/BQ/OD, écritures numérotées `EC-AAAA-NNNNN`, **équilibrées (contrainte en base) et non modifiables** ; correction par écriture inverse ; clôture de période ; grand livre, balance, exports Excel ; comptabilisation d'un achat (602/401) et régularisation des écarts de caisse (658/758) ; contrôle de cohérence finance ↔ comptabilité (`GET /accounting/consistency`).
+- **Prêts, avances, préfinancements** : demande → analyse → approbation (par un utilisateur distinct du demandeur) → décaissement → remboursements ; échéancier exact, historique des décisions, correction d'un remboursement. Écritures : créance 409 (avances/préfinancements) ou 271 (prêts) contre caisse/banque. **Intérêts et pénalités non calculés** (spécification complémentaire requise).
+- **Paiements** : statuts prévu → initié → en attente → confirmé / échoué / annulé → remboursé. **Aucun connecteur bancaire ou Mobile Money** : la confirmation est toujours « manuelle » et libellée « non confirmée par la banque ou l'opérateur ».
+- **Rapprochements** : relevé (ou comptage) comparé au solde du livre ; explication obligatoire en cas d'écart ; historique conservé.
+- Hypothèses à valider : numéros de comptes SYSCOHADA utilisés (571, 521, 401, 409, 271, 602, 658, 758…), comptabilisation à la date du jour, compte 401 collectif (pas de comptabilité auxiliaire par producteur).
+- **Pas encore fait (P4b)** : inspections, contrôles qualité, certificats, documents justificatifs.
+
 ## Tests
 
 ```bash
 cd backend && npm test          # 13 tests unitaires
-npm run test:e2e                # e2e P1 (34 contrôles) + e2e P2/P3 (42 contrôles), base PostgreSQL requise
+npm run test:e2e                # e2e P1 (34) + P2/P3 (42) + P4a (83 contrôles), base PostgreSQL requise
 ```
 
 ## Limites connues
 
-Déclarations brouillon non modifiables (annuler et recréer) ; expéditions, parcelles et qualité non développées ; soldes producteur/collecteur pouvant être négatifs (seules les caisses sont bloquées) ; révocation d'appareil non implémentée ; e2e non branchés en CI.
+Fonds de caisse d'ouverture et opérations libres non comptabilisés automatiquement (signalé par le contrôle de cohérence) ; déclarations brouillon non modifiables (annuler et recréer) ; expéditions, parcelles et qualité non développées ; soldes producteur/collecteur pouvant être négatifs (seules les caisses sont bloquées) ; révocation d'appareil non implémentée ; e2e non branchés en CI.
