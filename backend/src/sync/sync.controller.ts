@@ -7,6 +7,7 @@ import { RequirePermissions } from '../access/decorators';
 import { DbService } from '../db/db.service';
 import { CreateDeclarationDto, DeclarationsController } from '../declarations/declarations.controller';
 import { FinanceController, TransactionDto } from '../finance/finance.controller';
+import { TaskEntryDto, TasksController } from '../tasks/tasks.controller';
 import { CreateWeighingDto, ReceptionController } from '../reception/reception.controller';
 
 class SyncOperationDto {
@@ -48,9 +49,21 @@ export class SyncController {
         } },
       'weighing.create': { controller: ReceptionController, permission: 'weighings:create', dto: CreateWeighingDto,
         run: (ctl, p, req) => ctl.createWeighing(p, req) },
+      'task.start': { controller: TasksController, permission: 'tasks:execute', run: (ctl, p, req) => ctl.start(this.uuid(p), req) },
+      'task.submit': { controller: TasksController, permission: 'tasks:execute', run: (ctl, p, req) => ctl.submit(this.uuid(p), req) },
+      'task.entry': { controller: TasksController, permission: 'tasks:execute', run: (ctl, p, req) => {
+        const { task_id, ...rest } = p ?? {};
+        if (typeof task_id !== 'string' || !/^[0-9a-f-]{36}$/i.test(task_id)) throw new BadRequestException('payload.task_id (uuid) requis');
+        return ctl.createEntry(task_id, plainToInstance(TaskEntryDto, rest), req);
+      } },
       'financial_transaction.create': { controller: FinanceController, permission: 'cash:operate', dto: TransactionDto,
         run: (ctl, p, req) => ctl.createTx(p, req) },
     };
+  }
+
+  private uuid(p: any): string {
+    if (typeof p?.id !== 'string' || !/^[0-9a-f-]{36}$/i.test(p.id)) throw new BadRequestException('payload.id (uuid) requis');
+    return p.id;
   }
 
   /**
@@ -166,6 +179,9 @@ export class SyncController {
         { key: 'my_assignments', sql: `SELECT id, collector_id, value_chain_id, zone, created_at AS ts FROM collector_assignments WHERE collector_id = $3`, params: [mine] },
         { key: 'declarations', sql: `SELECT id, collector_id, producer_id, value_chain_id, campaign_id, operation_date, bags, quantity, unit, unit_price, currency, amount,
                                              purchase_receipt_series, purchase_receipt_no, receipt_conflict_with, receipt_override_by, status, status_reason, updated_at AS ts FROM purchase_declarations WHERE ($3::boolean OR collector_id = $4)`, params: [canSeeAll, mine] },
+        { key: 'tasks', sql: `SELECT id, code, title, description, category, priority, due_date, section, producer_id, parcel_id, campaign_id, assignee_id, team_ids, expected_result,
+                                       validation_criteria, instructions, status, review_note, updated_at AS ts FROM tasks
+                                      WHERE status <> 'draft' AND ($3::boolean OR assignee_id = $4 OR $4 = ANY(team_ids))`, params: [req.org.permissions.has('tasks:read_all'), req.user.id] },
         { key: 'operation_results', sql: `SELECT idempotency_key, op_type, status, result, error, processed_at AS ts FROM sync_operations
                                            WHERE user_id = $3 AND processed_at IS NOT NULL`, params: [req.user.id] },
       ];

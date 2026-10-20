@@ -19,6 +19,7 @@ import { AccountingController } from './accounting/accounting.controller';
 import { LoansController } from './loans/loans.controller';
 import { PaymentsController } from './payments/payments.controller';
 import { ComplianceController } from './compliance/compliance.controller';
+import { TasksController } from './tasks/tasks.controller';
 import { QualityController } from './quality/quality.controller';
 import { ParcelsController } from './parcels/parcels.controller';
 import { MeController } from './users/me.controller';
@@ -39,7 +40,7 @@ import { UsersController } from './users/users.controller';
     OrganizationsController, UsersController, ReferentialsController, ProducersController,
     CollectorsController, DeclarationsController, FinanceController,
     ReceptionController, StockController, LotsController, SyncController,
-    AccountingController, LoansController, PaymentsController, QualityController, ComplianceController, ParcelsController, GeoController, MeController, OpsController,
+    AccountingController, LoansController, PaymentsController, QualityController, ComplianceController, ParcelsController, GeoController, TasksController, MeController, OpsController,
   ],
   providers: [
     GeoService, GeoImportService,

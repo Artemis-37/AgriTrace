@@ -16,7 +16,7 @@ const MAX_DOC_BYTES = 10 * 1024 * 1024;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const DOC_SUBJECT_TABLE: Record<string, string> = {
   producer: 'producers', collector: 'collectors', declaration: 'purchase_declarations', lot: 'lots', receipt: 'receipts',
-  payment: 'payments', inspection: 'inspections', certificate: 'certificates', loan: 'loans', parcel: 'parcels',
+  payment: 'payments', inspection: 'inspections', certificate: 'certificates', loan: 'loans', parcel: 'parcels', task: 'tasks',
 };
 const CERT_HOLDER_TABLE: Record<string, string> = { producer: 'producers', warehouse: 'warehouses', lot: 'lots' };
 const docsDir = () => process.env.DOCUMENTS_DIR ?? path.join(process.cwd(), 'storage', 'documents');
