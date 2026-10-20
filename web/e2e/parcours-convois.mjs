@@ -76,6 +76,27 @@ await step('fiche de suivi : report de solde puis ligne de livraison avec solde'
   must(/CV-UI-001/.test(t), 'ligne de livraison absente');
   must(/334\s?150|2\s?587\s?500/.test(t), 'net ou solde absent');
 });
+await step('cloche : le collecteur voit les alertes qui le concernent, le panneau marque comme lu', async () => {
+  await login(colEmail);
+  await page.waitForTimeout(800);
+  const bell = page.getByRole('button', { name: /Notifications/ }).first();
+  const label = await bell.getAttribute('aria-label');
+  must(/non lue/.test(label ?? ''), 'compteur de la cloche absent : ' + label);
+  await bell.click(); await page.waitForTimeout(800);
+  const panel = (await page.locator('.bell-panel').innerText());
+  must(panel.includes('Votre convoi CV-UI-001 a été reçu') && panel.includes('Net à payer porté à votre compte'), 'alertes du collecteur absentes : ' + panel.slice(0, 300));
+  must(!panel.includes('Réception à traiter en caisse') && !panel.includes('Convoi en route'), 'alerte de gestion visible pour le collecteur');
+  await page.getByRole('button', { name: 'Tout marquer comme lu' }).click(); await page.waitForTimeout(800);
+  must(!/non lue/.test((await page.getByRole('button', { name: /Notifications/ }).first().getAttribute('aria-label')) ?? ''), 'compteur non remis à zéro');
+  await page.keyboard.press('Escape');
+});
+await step('cloche : l\'administrateur voit les alertes de gestion', async () => {
+  await login(email);
+  await page.waitForTimeout(800);
+  await page.getByRole('button', { name: /Notifications/ }).first().click(); await page.waitForTimeout(800);
+  const panel = await page.locator('.bell-panel').innerText();
+  must(panel.includes('Réception à traiter en caisse') || panel.includes('Convoi en route'), 'alertes de gestion absentes : ' + panel.slice(0, 300));
+});
 await step('espace du collecteur : Mes achats, Mon stock, Historique, sans menus de gestion', async () => {
   await login(colEmail);
   const nav = await page.locator('aside').innerText();

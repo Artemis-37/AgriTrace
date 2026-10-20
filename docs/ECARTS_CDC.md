@@ -39,7 +39,7 @@
 - Le préfinancement reçu n'est pas relié à un compte financier ni à des écritures.
 
 **Notifications**
-- Persistées et consultables, mais aucune poussée distante (FCM) ni courriel. Alertes « documents manquants » et « opérations financières à approuver » non générées automatiquement (visibles via les alertes P4b / listes existantes).
+- Persistées, consultables et filtrées selon les droits ; cloche sur le portail et le mobile ; aucune poussée distante (FCM) ni courriel (le mobile ne les reçoit qu'avec du réseau). Alertes « documents manquants » et « opérations financières à approuver » non générées automatiquement (visibles via les alertes P4b / listes existantes).
 
 **Tableaux de bord et rapports (§26)**
 - Le tableau de bord web présente maintenant commandes, créances (dont échues), missions en retard, anomalies de cartographie et préfinancement à rembourser ; l'état de la synchronisation avec le serveur central y figure désormais (serveur local). Pas de rapports filtrables par période/section/agent unifiés.

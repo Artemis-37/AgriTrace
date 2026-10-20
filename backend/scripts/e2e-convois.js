@@ -125,6 +125,30 @@ const key = (p) => `${p}-${run}-${crypto.randomBytes(4).toString('hex')}`;
     return (await call('POST', `/convoy-receptions/${r2.id}/settle`, { ...J(cai.t), body: { idempotency_key: key('st'), unit_price: '10', retention_per_kg: '5000' } })).status === 400; })());
   await call('POST', '/convoys/settings', { ...J(cai.t), body: { transport_unit: '0', retention_per_kg: '0' } });
 
+  console.log('Notifications selon les droits');
+  const nk = async (u, kind) => (await call('GET', `/notifications?kind=${kind}`, J(u.t))).body;
+  check('magasinier : averti du convoi en route', (await nk(mag, 'convoy_created')).some((n) => n.title.includes('CV-2026-001')));
+  check('caissier : non averti du convoi en route (droit absent)', (await nk(cai, 'convoy_created')).length === 0);
+  check('caissier : averti de la réception à traiter', (await nk(cai, 'convoy_received')).some((n) => n.title.includes('CV-2026-001')));
+  check('magasinier : non averti de la file de caisse', (await nk(mag, 'convoy_received')).length === 0);
+  check('collecteur : averti de la réception de son convoi', (await nk(c1, 'convoy_received_mine')).some((n) => n.title.includes('CV-2026-001')));
+  check('collecteur : averti du net porté à son compte', (await nk(c1, 'convoy_settled')).length === 1);
+  check('un autre collecteur ne voit pas ces notifications', (await nk(c2, 'convoy_settled')).length === 0 && (await nk(c2, 'convoy_received_mine')).length === 0);
+  const fin = (await nk(c3, 'collector_advance'));
+  check('collecteur : averti du financement remis', fin.length === 1 && fin[0].body === 'Pièce 947719', fin);
+  const rLec = await role('lecteur', ['convoys:read']);
+  const chg = await call('POST', `/users/${cai.id}/role`, { ...J(t0), body: { role_id: rLec.id, reason: 'Changement de poste' } });
+  check('le caissier change de poste (rôle lecteur)', chg.status === 201 || chg.status === 200, chg.body);
+  const cai2 = { t: await login(`caissier.${run}@t.test`, pw) };
+  check('droit retiré : les alertes de caisse disparaissent', (await nk(cai2, 'convoy_received')).length === 0 && (await call('GET', '/notifications?unread=true', J(cai2.t))).body.every((n) => n.kind === 'role_changed'));
+  await call('POST', `/users/${cai.id}/role`, { ...J(t0), body: { role_id: rCai.id, reason: 'Retour en caisse' } });
+  const cai3 = { t: await login(`caissier.${run}@t.test`, pw) };
+  check('droit rendu : les alertes réapparaissent', (await nk(cai3, 'convoy_received')).some((n) => n.title.includes('CV-2026-001')));
+  const cnt = (await call('GET', '/notifications/unread-count', J(c1.t))).body.unread;
+  check('compteur de la cloche = notifications non lues', cnt === (await call('GET', '/notifications?unread=true', J(c1.t))).body.length && cnt >= 2, cnt);
+  await call('POST', '/notifications/read-all', J(c1.t));
+  check('tout marquer comme lu', (await call('GET', '/notifications/unread-count', J(c1.t))).body.unread === 0);
+
   console.log('Hors connexion (file de synchronisation)');
   const sync = await call('POST', '/sync/batch', { ...J(c2.t), body: { operations: [{ idempotency_key: key('o'), type: 'convoy.create',
     payload: { idempotency_key: key('cv'), convoy_no: 'CV-2026-002', driver_name: 'Koffi', truck_no: 'XY 99' } }] } });

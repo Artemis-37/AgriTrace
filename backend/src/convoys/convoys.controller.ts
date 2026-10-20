@@ -4,6 +4,7 @@ import { IsIn, IsInt, IsOptional, Matches, IsString, IsUUID, Length, Min } from 
 import { RequirePermissions } from '../access/decorators';
 import { AuditService } from '../audit/audit.service';
 import { accountingCodeOf, postEntry, today } from '../accounting/accounting.helpers';
+import { NotificationsService } from '../notifications/notifications.service';
 import { Dec } from '../common/dto';
 import { DbService } from '../db/db.service';
 
@@ -65,7 +66,7 @@ export class PayoutDto {
 @ApiHeader({ name: 'X-Organization-Id', required: true })
 @Controller()
 export class ConvoysController {
-  constructor(private readonly db: DbService, private readonly audit: AuditService) {}
+  constructor(private readonly db: DbService, private readonly audit: AuditService, private readonly notif: NotificationsService) {}
 
   private log(req: any, action: string, id: string, details?: any) {
     return this.audit.log({ organizationId: req.org.id, actorUserId: req.user.id, action, entityType: 'convoy', entityId: id, details });
@@ -89,6 +90,9 @@ export class ConvoysController {
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
         [req.org.id, b.idempotency_key, b.convoy_no.trim(), collectorId, b.driver_name.trim(), b.truck_no.trim().toUpperCase(),
          b.declared_bags ?? null, b.declared_kg ?? null, b.notes ?? null, req.user.id]);
+      const who = (await c.query(`SELECT u.full_name FROM collectors k JOIN users u ON u.id = k.user_id WHERE k.id = $1`, [collectorId])).rows[0];
+      await this.notif.notifyPermission(c, req.org.id, 'convoys:receive', { kind: 'convoy_created', title: `Convoi en route : ${ins.rows[0].convoy_no}`,
+        body: `${who?.full_name ?? 'Collecteur'} · camion ${ins.rows[0].truck_no} · chauffeur ${ins.rows[0].driver_name}`, entityType: 'convoy', entityId: ins.rows[0].id, dedupe: `convoy_created:${ins.rows[0].id}` }, req.user.id);
       return { row: ins.rows[0], replay: false };
     });
     if (!replay) await this.log(req, 'convoy.create', row.id, { convoy_no: row.convoy_no, truck_no: row.truck_no });
@@ -164,6 +168,10 @@ export class ConvoysController {
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
         [req.org.id, b.idempotency_key, v.id, b.warehouse_id, b.total_kg, b.bags, variance, req.user.id, b.notes ?? null])).rows[0];
       await c.query(`UPDATE convoys SET status = 'received' WHERE id = $1`, [v.id]);
+      await this.notif.notifyPermission(c, req.org.id, 'convoys:settle', { kind: 'convoy_received', severity: 'warning', title: `Réception à traiter en caisse : ${v.convoy_no}`,
+        body: `${b.total_kg} kg · ${b.bags} sacs`, entityType: 'convoy', entityId: v.id, dedupe: `convoy_received:${v.id}` });
+      await this.notif.notifyUsers(c, req.org.id, [(await c.query(`SELECT user_id FROM collectors WHERE id = $1`, [v.collector_id])).rows[0]?.user_id], { kind: 'convoy_received_mine',
+        title: `Votre convoi ${v.convoy_no} a été reçu au magasin`, body: `${b.total_kg} kg · ${b.bags} sacs pesés`, entityType: 'convoy', entityId: v.id, dedupe: `convoy_received_mine:${v.id}` });
       return { row: ins, replay: false };
     });
     if (!replay) await this.log(req, 'convoy.receive', row.convoy_id, { total_kg: row.total_kg, bags: row.bags, variance_kg: row.variance_kg });
@@ -221,6 +229,8 @@ export class ConvoysController {
                 gross_amount = $6, transport_unit = $7, transport_total = $8, retention_per_kg = $9, retention_amount = $10 WHERE id = $1 RETURNING *`,
         [id, b.unit_price, amt, tx.id, req.user.id, m.gross, tu, m.transport, rt, m.retention])).rows[0];
       await c.query(`UPDATE convoys SET status = 'settled' WHERE id = $1`, [v.id]);
+      await this.notif.notifyUsers(c, req.org.id, [(await c.query(`SELECT user_id FROM collectors WHERE id = $1`, [v.collector_id])).rows[0]?.user_id], { kind: 'convoy_settled',
+        title: `Net à payer porté à votre compte : ${amt}`, body: `Convoi ${v.convoy_no} · ${r.total_kg} kg`, entityType: 'convoy', entityId: v.id, dedupe: `convoy_settled:${v.id}` });
       return { row: upd, replay: false };
     });
     if (!replay) await this.log(req, 'convoy.settle', row.convoy_id, { amount: row.amount, tx_id: row.tx_id });
@@ -304,6 +314,9 @@ export class ConvoysController {
         `INSERT INTO collector_advances(organization_id, idempotency_key, collector_id, kind, piece_no, label, amount, tx_id, created_by, created_at)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
         [req.org.id, b.idempotency_key, k.id, b.kind, b.piece_no ?? null, label, b.amount, t1.id, req.user.id, when])).rows[0];
+      if (b.kind === 'advance')
+        await this.notif.notifyUsers(c, req.org.id, [(await c.query(`SELECT user_id FROM collectors WHERE id = $1`, [k.id])).rows[0]?.user_id], { kind: 'collector_advance',
+          title: `Financement de ${b.amount} enregistré sur votre fiche`, body: b.piece_no ? `Pièce ${b.piece_no}` : undefined, entityType: 'collector', entityId: k.id, dedupe: `collector_advance:${ins.id}` });
       return { row: ins, replay: false };
     });
     if (!replay) await this.log(req, 'convoy.advance', row.id, { kind: b.kind, amount: b.amount, collector_id: b.collector_id });

@@ -23,3 +23,8 @@ La fiche papier devient le compte du collecteur. Colonnes reprises : A poids, B 
 - **Finance cacao** : `POST /convoys/advances` (`kind: advance`) remet un financement en espèces (session de caisse ouverte, pièce, date réelle possible pour reprendre une fiche papier) ; écriture débit 409 / crédit caisse. `kind: carry_forward` reporte le solde de la campagne précédente sans mouvement de caisse.
 - **Lecture** : `GET /convoys/statement?collector_id&from&to` renvoie le solde d'ouverture, les lignes avec solde progressif et les totaux ; une période (campagne) reporte automatiquement le solde d'ouverture. Un collecteur ne lit que sa fiche.
 - **Limite** : le compte comptable 409 (avances) et 401 (dettes) ne sont pas encore compensés entre eux à chaque livraison.
+
+## Notifications et cloche
+- Chaque utilisateur ne reçoit et ne voit que ce qui le concerne : une alerte adressée « par droit » porte ce droit (`permission_code`) et n'est visible, comptée et marquée comme lue que tant que le rôle l'accorde ; une alerte personnelle n'est visible que de son destinataire.
+- Événements : convoi en route (→ réception au magasin), réception à traiter (→ caisse) et réception de son convoi (→ collecteur), net à payer porté au compte (→ collecteur), financement remis (→ collecteur) ; s'ajoutent les alertes existantes (missions en retard, factures échues, écarts de pesée, stocks négatifs, échéances de prêt…).
+- Portail : cloche en haut de page (compteur, dernières alertes, « tout marquer comme lu », accès à la liste complète, clic = ouverture de la page concernée). Mobile : cloche dans la barre de l'écran d'accueil (nécessite le réseau ; pas de notification poussée).

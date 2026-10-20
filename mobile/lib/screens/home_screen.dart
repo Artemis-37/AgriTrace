@@ -5,6 +5,7 @@ import '../sync/sync_engine.dart';
 import '../sync/sync_state.dart';
 import 'login_screen.dart';
 import 'my_stock_screen.dart';
+import 'notifications_screen.dart';
 import 'new_convoy_screen.dart';
 import 'new_declaration_screen.dart';
 
@@ -20,6 +21,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _problems = 0;
   bool _canCreate = false;
   bool _canConvoy = false;
+  int _unreadNotes = 0;
 
   @override
   void initState() {
@@ -39,8 +41,10 @@ class _HomeScreenState extends State<HomeScreen> {
     final pending = await services.db.pendingCount();
     final problems = await services.db.problemCount();
     final perms = await services.repo.permissions();
+    int unread = _unreadNotes;
+    try { final r = await services.api.get('/notifications/unread-count'); unread = (r['unread'] as num?)?.toInt() ?? 0; } catch (_) { /* hors connexion : compteur conservé */ }
     if (!mounted) return;
-    setState(() { _items = items; _pending = pending; _problems = problems; _canCreate = canCreateDeclaration(perms); _canConvoy = canCreateConvoy(perms); });
+    setState(() { _items = items; _pending = pending; _problems = problems; _canCreate = canCreateDeclaration(perms); _canConvoy = canCreateConvoy(perms); _unreadNotes = unread; });
   }
 
   Color _color(String localState, String? status) {
@@ -78,6 +82,13 @@ class _HomeScreenState extends State<HomeScreen> {
             await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const NewConvoyScreen()));
             await _reload();
             services.sync.run();
+          }),
+        IconButton(
+          tooltip: _unreadNotes > 0 ? 'Notifications ($_unreadNotes non lues)' : 'Notifications',
+          icon: Badge(isLabelVisible: _unreadNotes > 0, label: Text('$_unreadNotes'), child: const Icon(Icons.notifications_outlined)),
+          onPressed: () async {
+            await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const NotificationsScreen()));
+            await _reload();
           }),
         IconButton(tooltip: 'Synchroniser', icon: const Icon(Icons.sync), onPressed: () => services.sync.run()),
         IconButton(tooltip: 'Se déconnecter', icon: const Icon(Icons.logout), onPressed: _signOut),

@@ -5,7 +5,7 @@ import { DbService } from '../db/db.service';
 
 export interface Notice {
   kind: string; title: string; body?: string; severity?: 'info' | 'warning' | 'critical';
-  entityType?: string; entityId?: string; dedupe?: string;
+  entityType?: string; entityId?: string; dedupe?: string; permission?: string;
 }
 
 /**
@@ -22,9 +22,9 @@ export class NotificationsService implements OnApplicationBootstrap, OnApplicati
     const ids = [...new Set(userIds.filter((x): x is string => !!x))];
     for (const uid of ids)
       await c.query(
-        `INSERT INTO notifications(organization_id, user_id, kind, severity, title, body, entity_type, entity_id, dedupe_key)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) ON CONFLICT (user_id, dedupe_key) DO NOTHING`,
-        [orgId, uid, n.kind, n.severity ?? 'info', n.title, n.body ?? null, n.entityType ?? null, n.entityId ?? null, n.dedupe ?? randomUUID()]);
+        `INSERT INTO notifications(organization_id, user_id, kind, severity, title, body, entity_type, entity_id, dedupe_key, permission_code)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) ON CONFLICT (user_id, dedupe_key) DO NOTHING`,
+        [orgId, uid, n.kind, n.severity ?? 'info', n.title, n.body ?? null, n.entityType ?? null, n.entityId ?? null, n.dedupe ?? randomUUID(), n.permission ?? null]);
     return ids.length;
   }
 
@@ -33,7 +33,7 @@ export class NotificationsService implements OnApplicationBootstrap, OnApplicati
     const rows = (await c.query(
       `SELECT DISTINCT uo.user_id FROM user_organizations uo JOIN role_permissions rp ON rp.role_id = uo.role_id
         WHERE uo.organization_id = $1 AND uo.status = 'active' AND rp.permission_code = $2`, [orgId, permission])).rows;
-    return this.notifyUsers(c, orgId, rows.map((r) => r.user_id).filter((u) => u !== exclude), n);
+    return this.notifyUsers(c, orgId, rows.map((r) => r.user_id).filter((u) => u !== exclude), { ...n, permission });
   }
 
   /** Recherche des alertes calculables (retards, échéances, incohérences). Idempotente grâce au dédoublonnage quotidien. */

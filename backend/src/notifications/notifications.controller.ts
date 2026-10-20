@@ -17,17 +17,18 @@ export class NotificationsController {
     return this.db.tx(req.org.id, async (c) => (await c.query(
       `SELECT id, kind, severity, title, body, entity_type, entity_id, created_at, read_at FROM notifications
         WHERE user_id = $1 AND ($2::boolean IS NOT TRUE OR read_at IS NULL) AND ($3::text IS NULL OR kind = $3)
-        ORDER BY created_at DESC LIMIT $4`, [req.user.id, unread === 'true' ? true : null, kind ?? null, Math.min(Number(limit) || 100, 500)])).rows);
+          AND (permission_code IS NULL OR permission_code = ANY($5::text[]))
+        ORDER BY created_at DESC LIMIT $4`, [req.user.id, unread === 'true' ? true : null, kind ?? null, Math.min(Number(limit) || 100, 500), [...req.org.permissions]])).rows);
   }
 
   @Get('unread-count')
   async count(@Req() req: any) {
-    return this.db.tx(req.org.id, async (c) => ({ unread: (await c.query(`SELECT count(*)::int AS n FROM notifications WHERE user_id = $1 AND read_at IS NULL`, [req.user.id])).rows[0].n }));
+    return this.db.tx(req.org.id, async (c) => ({ unread: (await c.query(`SELECT count(*)::int AS n FROM notifications WHERE user_id = $1 AND read_at IS NULL AND (permission_code IS NULL OR permission_code = ANY($2::text[]))`, [req.user.id, [...req.org.permissions]])).rows[0].n }));
   }
 
   @Post('read-all')
   async readAll(@Req() req: any) {
-    return this.db.tx(req.org.id, async (c) => ({ updated: (await c.query(`UPDATE notifications SET read_at = now() WHERE user_id = $1 AND read_at IS NULL`, [req.user.id])).rowCount }));
+    return this.db.tx(req.org.id, async (c) => ({ updated: (await c.query(`UPDATE notifications SET read_at = now() WHERE user_id = $1 AND read_at IS NULL AND (permission_code IS NULL OR permission_code = ANY($2::text[]))`, [req.user.id, [...req.org.permissions]])).rowCount }));
   }
 
   @Post('scan')
