@@ -32,11 +32,13 @@ await step('le site apparaît, « Jamais » reçu', async () => {
   must(t.includes('Coopérative ' + run) && t.includes('Jamais'), 'site absent');
 });
 await step('suspendre puis réactiver le site', async () => {
-  const row = page.locator('tr', { hasText: 'Coopérative ' + run });
-  await row.getByRole('button', { name: 'Suspendre' }).click(); await page.waitForTimeout(800);
-  must((await page.locator('tr', { hasText: 'Coopérative ' + run }).innerText()).includes('Suspendu'), 'suspension absente');
-  await page.locator('tr', { hasText: 'Coopérative ' + run }).getByRole('button', { name: 'Réactiver' }).click(); await page.waitForTimeout(800);
-  must(!(await page.locator('tr', { hasText: 'Coopérative ' + run }).innerText()).includes('Suspendu'), 'réactivation absente');
+  const row = () => page.locator('tr', { hasText: 'Coopérative ' + run });
+  // Attente active (jusqu'à 6 s) : sur un poste lent, l'état change après la réponse du serveur.
+  const until = async (cond, msg) => { for (let i = 0; i < 30; i++) { if (await cond()) return; await page.waitForTimeout(200); } throw new Error(msg); };
+  await row().getByRole('button', { name: 'Suspendre' }).click();
+  await until(async () => (await row().innerText()).includes('Suspendu'), 'suspension absente');
+  await row().getByRole('button', { name: 'Réactiver' }).click();
+  await until(async () => !(await row().innerText()).includes('Suspendu'), 'réactivation absente');
 });
 await step('la vue consolidée liste la coopérative', async () => {
   await page.getByRole('tab', { name: 'Vue consolidée' }).click(); await page.waitForTimeout(1200);
