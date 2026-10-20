@@ -9,7 +9,7 @@ const ok = async <T,>(p: Promise<T>): Promise<T | null> => { try { return await 
 export default function Dashboard() {
   const { can, me } = useAuth();
   const { data, loading, error, reload } = useAsync(async () => {
-    const [producers, parcels, decls, stocks, accounts, loans, alerts] = await Promise.all([
+    const [producers, parcels, decls, stocks, accounts, loans, alerts, invoices, orders, tasks, anomalies, prefin] = await Promise.all([
       can('producers:read') ? ok(get<any[]>('/producers')) : null,
       can('parcels:read') ? ok(get<any[]>('/parcels')) : null,
       can('declarations:read') ? ok(get<any[]>('/purchase-declarations')) : null,
@@ -17,13 +17,25 @@ export default function Dashboard() {
       can('finance:read') ? ok(get<any[]>('/financial-accounts')) : null,
       can('loans:read') ? ok(get<any[]>('/loans')) : null,
       can('alerts:read') ? ok(get<any>('/alerts')) : null,
+      can('invoices:read') ? ok(get<any[]>('/invoices')) : null,
+      can('buyers:read') ? ok(get<any[]>('/sales-orders')) : null,
+      can('tasks:read') ? ok(get<any>(`/tasks/dashboard${can('tasks:read_all') ? '?scope=all' : ''}`)) : null,
+      can('geo:anomalies') ? ok(get<any[]>('/geo/anomalies?status=open')) : null,
+      can('prefinancing:read') ? ok(get<any>('/prefinancings/report')) : null,
     ]);
-    return { producers, parcels, decls, stocks, accounts, loans, alerts };
+    return { producers, parcels, decls, stocks, accounts, loans, alerts, invoices, orders, tasks, anomalies, prefin };
   }, []);
 
   if (loading) return <Loading />;
   if (error || !data) return <ErrorBox message={error ?? 'Chargement impossible'} onRetry={reload} />;
-  const { producers, parcels, decls, stocks, accounts, loans, alerts } = data;
+  const { producers, parcels, decls, stocks, accounts, loans, alerts, invoices, orders, tasks, anomalies, prefin } = data;
+  const live = invoices?.filter((i) => i.status !== 'cancelled');
+  const receivable = live?.reduce((s, i) => s + Number(i.balance), 0);
+  const overdue = live?.reduce((s, i) => s + (i.overdue ? Number(i.balance) : 0), 0);
+  const openOrders = orders?.filter((o) => ['confirmed', 'partially_shipped', 'shipped'].includes(o.status)).length;
+  const t = tasks?.counts;
+  const blocking = anomalies?.filter((a) => a.blocking).length;
+  const outstanding = prefin?.by_currency?.reduce((s: number, r: any) => s + Number(r.outstanding), 0);
   const pending = decls?.filter((d) => ['received', 'in_review', 'to_correct'].includes(d.status)).length;
   const cash = accounts?.filter((a) => a.owner_type === 'cash_register').reduce((s, a) => s + Number(a.balance), 0);
   const owed = loans?.filter((l) => l.status === 'disbursed').reduce((s, l) => s + Number(l.remaining ?? 0), 0);
@@ -40,6 +52,12 @@ export default function Dashboard() {
         {decls && <Stat label="Déclarations à traiter" value={pending} tone={pending ? 'warn' : 'ok'} />}
         {stocks && <Stat label="Stock total" value={kg(stockKg)} />}
         {accounts && <Stat label="Solde des caisses" value={money(cash)} />}
+        {orders && <Stat label="Commandes en cours" value={openOrders} />}
+        {invoices && <Stat label="Créances clients" value={money(receivable)} tone={receivable ? 'info' : 'neutral'} />}
+        {invoices && <Stat label="Créances échues" value={money(overdue)} tone={overdue ? 'bad' : 'ok'} />}
+        {t && <Stat label="Missions en retard" value={t.overdue} tone={t.overdue ? 'warn' : 'ok'} hint={`${t.to_review} à vérifier`} />}
+        {anomalies && <Stat label="Anomalies de cartographie" value={anomalies.length} tone={anomalies.length ? 'warn' : 'ok'} hint={blocking ? `${blocking} bloquante(s)` : undefined} />}
+        {prefin && <Stat label="Préfinancement à rembourser" value={money(outstanding)} tone={outstanding ? 'warn' : 'neutral'} />}
         {loans && <Stat label="Prêts à recouvrer" value={money(owed)} tone={owed ? 'warn' : 'neutral'} />}
       </div>
       {alerts && (
@@ -57,7 +75,7 @@ export default function Dashboard() {
           )}
         </Card>
       )}
-      {!producers && !decls && !accounts && <Card><p className="muted">Votre rôle ne donne accès à aucun indicateur. Contactez l'administrateur de votre coopérative.</p></Card>}
+      {!producers && !decls && !accounts && !invoices && !orders && !tasks && <Card><p className="muted">Votre rôle ne donne accès à aucun indicateur. Contactez l'administrateur de votre coopérative.</p></Card>}
     </>
   );
 }

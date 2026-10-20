@@ -23,7 +23,7 @@
 
 ## Écarts connus
 **Écrans (le plus gros reste à faire)**
-- Web : pas d'écran pour la cartographie avancée (anomalies, imports, exports, remplacement), les missions, le transport et les ventes, l'inventaire, les notifications, le préfinancement reçu, la suspension d'utilisateurs, ni pour les statuts producteur. Existent : connexion, tableau de bord, producteurs, parcelles, déclarations, finance, qualité, stocks.
+- Web : écrans livrés pour Missions, Cartographie (anomalies, remplacement de doublon, import simulé puis confirmé, export, tolérances), Commerce (commandes, expéditions, factures et paiements, acheteurs), Inventaire, Préfinancement, Notifications (avec badge de non-lus), Équipe (suspension, rôle, révocation, historique) et statut producteur. Vérifiés par compilation, build, tests unitaires et un parcours Chromium sans erreur (pas de test de bout en bout automatisé de l'interface). Non couverts : création de contrat de vente, de transporteur/véhicule/chauffeur et d'expédition depuis l'interface (API seulement), téléversement de documents, réclamations clients, carte interactive des parcelles.
 - Mobile : pas de missions, de carte ni de relevé de polygone ; seulement connexion, déclarations d'achat (avec numéro de reçu) et synchronisation. Le flux `/sync/changes` et les opérations `task.*` sont prêts côté serveur. À la suspension d'un compte l'appareil est bloqué (401/403) mais **les données locales ne sont pas encore purgées**. L'APK n'a pas été compilé ici (la compilation Gradle est bloquée dans l'environnement) : elle est vérifiée par la CI.
 
 **Géographie**
@@ -41,7 +41,7 @@
 - Persistées et consultables, mais aucune poussée distante (FCM) ni courriel. Alertes « documents manquants » et « opérations financières à approuver » non générées automatiquement (visibles via les alertes P4b / listes existantes).
 
 **Tableaux de bord et rapports (§26)**
-- Le tableau de bord web ne présente pas encore ventes, créances, missions, anomalies cartographiques ni état des synchronisations (les données existent côté API). Pas de rapports filtrables par période/section/agent unifiés.
+- Le tableau de bord web présente maintenant commandes, créances (dont échues), missions en retard, anomalies de cartographie et préfinancement à rembourser ; l'état des synchronisations n'y figure toujours pas. Pas de rapports filtrables par période/section/agent unifiés.
 
 **Exigences non techniques**
 - Validation juridique des données personnelles, sauvegardes et tests de restauration en production, audit de sécurité indépendant, tests de charge (§32) : non réalisés. Les avis `npm audit` sur des dépendances transitives de NestJS restent à suivre.
