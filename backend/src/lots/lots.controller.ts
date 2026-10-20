@@ -205,9 +205,17 @@ export class LotsController {
       if (parcels.length) missing.push("Lien exact déclaration → parcelle : non saisi (les parcelles listées sont celles du producteur pour la filière du lot)");
       if (!quality.length) missing.push('Contrôles qualité : aucune inspection terminée enregistrée pour ce lot');
       for (const q of quality) if (q.outcome !== 'compliant') anomalies.push(`Inspection du ${String(q.completed_at).slice(0, 10)} : ${q.outcome === 'non_compliant' ? 'non conforme' : 'à examiner'} (${q.failed_checks} anomalie(s))`);
-      missing.push('Expéditions : aucune enregistrée (module non encore disponible)');
+      const downIds = [id, ...new Set(desc.map((d: any) => d.child_lot_id))];
+      const shipments = (await c.query(
+        `SELECT s.reference, s.status, s.destination, s.departed_at, s.arrived_at, i.loaded_kg, i.delivered_kg, l.code AS lot_code, o.number AS order_number, b.name AS buyer_name
+           FROM shipment_items i JOIN shipments s ON s.id = i.shipment_id JOIN lots l ON l.id = i.lot_id
+           LEFT JOIN sales_orders o ON o.id = s.order_id LEFT JOIN buyers b ON b.id = o.buyer_id
+          WHERE i.lot_id = ANY($1) AND s.status <> 'cancelled' ORDER BY s.created_at`, [downIds])).rows;
+      const invoices = (await c.query(
+        `SELECT DISTINCT i.number, i.status, i.total, i.currency FROM invoices i JOIN invoice_lines il ON il.invoice_id = i.id WHERE il.lot_id = ANY($1) AND i.status <> 'cancelled'`, [downIds])).rows;
+      if (!shipments.length) missing.push('Expéditions : aucune enregistrée pour ce lot ni ses lots issus');
 
-      return { generated_at: new Date().toISOString(), lot, stock, origins, parcels, quality, ancestors: anc, descendants: desc, events, movements, anomalies, missing };
+      return { generated_at: new Date().toISOString(), lot, stock, origins, parcels, quality, ancestors: anc, descendants: desc, shipments, invoices, events, movements, anomalies, missing };
     });
   }
 
