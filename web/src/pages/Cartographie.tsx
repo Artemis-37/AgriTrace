@@ -4,11 +4,12 @@ import { useAuth } from '../auth';
 import { ANOMALY_KIND, ANOMALY_STATUS, dateTime } from '../format';
 import { Badge, Card, ErrorBox, Field, Loading, Modal, PageHeader, Stat, StatusBadge, Table, Tabs, useAction, useAsync } from '../ui';
 import { Confirm } from './Declarations';
+import ParcelMap from './ParcelMap';
 
 export default function Cartographie() {
   const { can } = useAuth();
-  const all: ['anomalies' | 'import' | 'export' | 'settings', string, boolean][] = [
-    ['anomalies', 'Anomalies', can('geo:anomalies')], ['import', 'Importer', can('geo:import')], ['export', 'Exporter', can('geo:export')], ['settings', 'Tolérances', can('geo:settings')],
+  const all: ['map' | 'anomalies' | 'import' | 'export' | 'settings', string, boolean][] = [
+    ['map', 'Carte', can('parcels:read')], ['anomalies', 'Anomalies', can('geo:anomalies')], ['import', 'Importer', can('geo:import')], ['export', 'Exporter', can('geo:export')], ['settings', 'Tolérances', can('geo:settings')],
   ];
   const tabs = all.filter((t) => t[2]);
   const [tab, setTab] = useState(tabs[0]?.[0] ?? 'anomalies');
@@ -16,6 +17,7 @@ export default function Cartographie() {
     <>
       <PageHeader title="Cartographie" subtitle="Chevauchements, doublons, imports et exports de parcelles" />
       <Tabs value={tab} onChange={setTab} tabs={tabs.map(([k, l]) => [k, l] as [typeof tab, string])} />
+      {tab === 'map' && <ParcelMap />}
       {tab === 'anomalies' && <Anomalies />}
       {tab === 'import' && <Imports />}
       {tab === 'export' && <Export />}

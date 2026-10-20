@@ -74,8 +74,15 @@ await step('export GeoJSON téléchargé', async () => {
   const fc = JSON.parse(buf.toString());
   must(fc.features.length === 1 && !JSON.stringify(fc).includes('phone'), 'contenu de l\'export inattendu');
 });
-await step('anomalies : contrôle périodique sans anomalie', async () => {
+await step('carte : la parcelle importée est dessinée et sélectionnable', async () => {
   await go('/cartographie');
+  must((await page.locator('main').innerText()).includes('Parcelles sur la carte'), 'onglet Carte absent');
+  must(await page.locator('svg[aria-label="Carte des parcelles"] path').count() === 1, 'une parcelle attendue sur la carte');
+  await page.locator('svg[aria-label="Carte des parcelles"] path').first().click(); await page.waitForTimeout(300);
+  must(/producteur P\d+/.test(await page.locator('[role=status]').first().innerText()), 'fiche de la parcelle absente');
+});
+await step('anomalies : contrôle périodique sans anomalie', async () => {
+  await go('/cartographie', 'Anomalies');
   await page.getByRole('button', { name: 'Lancer le contrôle périodique' }).click(); await page.waitForTimeout(1500);
   must(/1 parcelle\(s\) examinée\(s\), 0 nouvelle\(s\) anomalie\(s\)/.test(await page.locator('main').innerText()), 'rapport du contrôle inattendu');
 });

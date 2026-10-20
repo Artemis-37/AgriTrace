@@ -91,7 +91,7 @@ Hypothèses à valider avec la coopérative : conversion sac → kg configurée 
 
 ```bash
 cd backend && npm test          # 42 tests unitaires
-npm run test:e2e                # e2e : P1, P2/P3, P4a, P4b, parcelles, reçus (41), cartographie (89), missions (69), ventes/transport (76), inventaire/notifications/accès/préfinancement (71) ; base PostgreSQL requise
+npm run test:e2e                # e2e : P1, P2/P3, P4a, P4b, parcelles, reçus (41), cartographie (94), missions (69), ventes/transport (76), inventaire/notifications/accès/préfinancement (71) ; base PostgreSQL requise
 cd ../web && npm run test:ui       # parcours de vente dans le navigateur (API et portail lancés ; variables API, WEB, ADMIN_EMAIL, ADMIN_PASSWORD)
 ```
 

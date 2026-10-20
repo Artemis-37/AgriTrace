@@ -205,6 +205,14 @@ const feat = (props, geometry) => ({ type: 'Feature', properties: props, geometr
   check('coordonnées projetées détectées comme invalides', u.body.report?.invalid_geometries === 1, u.body.report);
   check('import sans permission → 403', (await upload(tcart, A.org, 'x.geojson', file, 'simulate')).status === 403);
 
+  console.log('Carte du portail');
+  const mp = await call('GET', '/geo/map', J(B.t, B.org));
+  check('carte : collection de polygones sans donnée personnelle', mp.status === 200 && mp.body.type === 'FeatureCollection' && mp.body.features.length >= 3 && !JSON.stringify(mp.body).includes('phone') && !('producer_name' in mp.body.features[0].properties), mp.body);
+  check('carte : propriétés minimales (code, statut, anomalie)', ['id', 'code', 'producer_code', 'validation_status', 'anomaly'].every((k) => k in mp.body.features[0].properties));
+  check('carte : filtre bbox vide hors zone', (await call('GET', '/geo/map?bbox=100,50,101,51', J(B.t, B.org))).body.features.length === 0);
+  check('carte : bbox invalide → 400', (await call('GET', '/geo/map?bbox=a,b', J(B.t, B.org))).status === 400);
+  check('carte : autre coopérative isolée', (await call('GET', '/geo/map', J(A.t, A.org))).body.features.every((f) => !mp.body.features.some((g) => g.properties.id === f.properties.id)));
+
   console.log('Exportation et réimportation des cinq formats');
   const fmts = [['geojson', 'geojson'], ['kml', 'kml'], ['kmz', 'kmz'], ['shapefile', 'zip'], ['gpkg', 'gpkg']];
   const src = (await call('GET', '/geo/export?format=geojson', J(B.t, B.org)));

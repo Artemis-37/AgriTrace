@@ -193,6 +193,25 @@ export class GeoController {
     return { id: row.id, status: 'running', total: row.total };
   }
 
+  /** Données légères pour la carte du portail (aucune donnée personnelle, non audité comme un export). */
+  @Get('map') @RequirePermissions('parcels:read')
+  async map(@Req() req: any, @Query() q: Record<string, string>) {
+    let bbox: number[] | null = null;
+    if (q.bbox) { bbox = q.bbox.split(',').map(Number); if (bbox.length !== 4 || bbox.some((n) => !Number.isFinite(n))) throw new BadRequestException('bbox : minLon,minLat,maxLon,maxLat'); }
+    const rows = await this.db.tx(req.org.id, async (c) => (await c.query(
+      `SELECT p.id, p.code, p.geometry, p.declared_area_ha, p.geometry_area_ha, p.verification_status, pr.internal_code, vc.code AS vc_code,
+              EXISTS (SELECT 1 FROM parcel_anomalies a WHERE a.status = 'open' AND (a.parcel_a = p.id OR a.parcel_b = p.id)) AS has_anomaly
+         FROM parcels p JOIN producers pr ON pr.id = p.producer_id JOIN value_chains vc ON vc.id = p.value_chain_id
+        WHERE p.geometry IS NOT NULL AND p.status = 'active' AND ($1::float8 IS NULL OR p.bbox && box(point($3, $4), point($1, $2)))
+        ORDER BY p.code LIMIT 5001`, [bbox ? bbox[2] : null, bbox ? bbox[3] : null, bbox ? bbox[0] : null, bbox ? bbox[1] : null])).rows);
+    return {
+      type: 'FeatureCollection', truncated: rows.length > 5000,
+      features: rows.slice(0, 5000).map((r: any) => ({ type: 'Feature', geometry: r.geometry, properties: {
+        id: r.id, code: r.code, producer_code: r.internal_code, filiere: r.vc_code, declared_area_ha: Number(r.declared_area_ha),
+        measured_area_ha: r.geometry_area_ha === null ? null : Number(r.geometry_area_ha), validation_status: r.verification_status, anomaly: r.has_anomaly } })),
+    };
+  }
+
   // ---- Exportation ----
   @Get('export')
   @RequirePermissions('geo:export')

@@ -21,3 +21,7 @@
 - `node:sqlite` (GeoPackage) est encore marqué expérimental par Node 22.
 - Pas d'écran web ni mobile dédié à la cartographie avancée pour l'instant (API seulement).
 - `npm audit` signale des avis sur des dépendances transitives de NestJS, à suivre.
+
+
+## Carte du portail
+`GET /geo/map` (permission `parcels:read`) renvoie une collection GeoJSON légère (code, producteur, filière, superficies, niveau de vérification, indicateur d'anomalie ouverte), filtrable par `bbox`, limitée à 5 000 parcelles (`truncated` l'indique). Aucune donnée personnelle, et pas d'entrée d'audit d'export : l'export complet reste sur `GET /geo/export`.
