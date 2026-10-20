@@ -142,7 +142,7 @@ class _NewDeclarationScreenState extends State<NewDeclarationScreen> {
             TextField(controller: _notes, decoration: const InputDecoration(labelText: 'Observations (facultatif)', border: OutlineInputBorder())),
             const SizedBox(height: 12),
             Row(children: [
-              OutlinedButton.icon(onPressed: _saving ? null : _takePhoto, icon: const Icon(Icons.photo_camera_outlined), label: Text(_photoPath == null ? 'Photo du reçu' : 'Reprendre la photo')),
+              OutlinedButton.icon(onPressed: _saving ? null : _takePhoto, icon: const Icon(Icons.photo_camera_outlined), label: Text(_photoPath == null ? 'Photo du reçu (facultatif)' : 'Reprendre la photo')),
               const SizedBox(width: 12),
               if (_photoPath != null) ClipRRect(borderRadius: BorderRadius.circular(6), child: Image.file(File(_photoPath!), width: 56, height: 56, fit: BoxFit.cover)),
             ]),
