@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Navigate, NavLink, Route, Routes } from 'react-router-dom';
 import { useAuth } from './auth';
 import Dashboard from './pages/Dashboard';
+import Commerce from './pages/Commerce';
 import Cartographie from './pages/Cartographie';
 import Declarations from './pages/Declarations';
 import Finance from './pages/Finance';
@@ -13,11 +14,12 @@ import Quality from './pages/Quality';
 import Stocks from './pages/Stocks';
 import { Loading } from './ui';
 
-const NAV: { to: string; label: string; icon: string; perm: string[] }[] = [
+const NAV: { to: string; label: string; icon: string; perm: string[]; any?: boolean }[] = [
   { to: '/', label: 'Tableau de bord', icon: '▦', perm: [] },
   { to: '/producteurs', label: 'Producteurs', icon: '☺', perm: ['producers:read'] },
   { to: '/parcelles', label: 'Parcelles', icon: '◩', perm: ['parcels:read'] },
   { to: '/cartographie', label: 'Cartographie', icon: '⌖', perm: ['geo:anomalies'] },
+  { to: '/commerce', label: 'Commerce', icon: '⇄', perm: ['buyers:read', 'logistics:read', 'invoices:read'], any: true },
   { to: '/declarations', label: 'Déclarations d\'achat', icon: '✎', perm: ['declarations:read'] },
   { to: '/missions', label: 'Missions', icon: '⚑', perm: ['tasks:read'] },
   { to: '/stocks', label: 'Stocks et lots', icon: '▤', perm: ['warehouses:read'] },
@@ -40,7 +42,7 @@ export default function App() {
       <aside className={`sidebar ${open ? 'open' : ''}`}>
         <div className="brand"><strong>Agri<span>Trace</span></strong><small>La traçabilité agricole, de la parcelle au marché.</small></div>
         <nav className="nav" aria-label="Navigation principale" onClick={() => setOpen(false)}>
-          {NAV.filter((n) => can(...n.perm)).map((n) => (
+          {NAV.filter((n) => (n.any ? n.perm.some((p) => can(p)) : can(...n.perm))).map((n) => (
             <NavLink key={n.to} to={n.to} end={n.to === '/'}><span aria-hidden="true">{n.icon}</span>{n.label}</NavLink>
           ))}
         </nav>
@@ -55,6 +57,7 @@ export default function App() {
           <Route path="/producteurs" element={<Producers />} />
           <Route path="/parcelles" element={<Parcels />} />
           <Route path="/cartographie" element={<Cartographie />} />
+          <Route path="/commerce" element={<Commerce />} />
           <Route path="/declarations" element={<Declarations />} />
           <Route path="/missions" element={<Missions />} />
           <Route path="/stocks" element={<Stocks />} />
