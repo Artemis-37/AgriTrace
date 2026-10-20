@@ -95,6 +95,36 @@ const key = (p) => `${p}-${run}-${crypto.randomBytes(4).toString('hex')}`;
   const tb = await call('GET', '/accounting/trial-balance', J(t0));
   check('comptabilité : écritures d\'achat et de paiement équilibrées', tb.status === 200 && JSON.stringify(tb.body).includes('401') && JSON.stringify(tb.body).includes('601'), tb.body);
 
+  console.log('Fiche de suivi du compte (modèle de la fiche fournisseur papier)');
+  const c3 = await user('fiche', rCol), col3 = (await call('POST', '/collectors', { ...J(t0), body: { user_id: c3.id } })).body;
+  check('réglages : transport 60 F/kg, retenue 30 F/kg', (await call('POST', '/convoys/settings', { ...J(cai.t), body: { transport_unit: '60', retention_per_kg: '30' } })).status === 201);
+  const rep = await call('POST', '/convoys/advances', { ...J(cai.t), body: { idempotency_key: key('ad'), collector_id: col3.id, kind: 'carry_forward', amount: '2253350', label: 'Solde de la campagne 23/24', operation_date: '2024-04-01' } });
+  check('report du solde de la campagne précédente (sans caisse)', rep.status === 201 && rep.body.kind === 'carry_forward', rep.body);
+  const adBody = { idempotency_key: key('ad'), collector_id: col3.id, kind: 'advance', amount: '2000000', piece_no: '947719', cash_session_id: sess.id, operation_date: '2024-10-01' };
+  check('financement : droit de caisse exigé', (await call('POST', '/convoys/advances', { ...J(mag.t), body: adBody })).status === 403);
+  const ad = await call('POST', '/convoys/advances', { ...J(cai.t), body: adBody });
+  check('financement « Finance cacao » remis en espèces', ad.status === 201 && ad.body.piece_no === '947719', ad.body);
+  check('renvoi du financement : idempotent', (await call('POST', '/convoys/advances', { ...J(cai.t), body: adBody })).body.replayed === true);
+  await call('POST', '/convoys', { ...J(c3.t), body: { idempotency_key: key('cv'), convoy_no: 'LIV-2024-0001', driver_name: 'Koffi', truck_no: 'ZZ 1' } });
+  const rc3 = (await call('POST', '/convoys/receive', { ...J(mag.t), body: { idempotency_key: key('rc'), collector_id: col3.id, convoy_no: 'LIV-2024-0001', warehouse_id: wh.id, total_kg: '2071', bags: 32 } })).body;
+  const s3 = await call('POST', `/convoy-receptions/${rc3.id}/settle`, { ...J(cai.t), body: { idempotency_key: key('st'), unit_price: '1800' } });
+  check('livraison : brut 3 727 800, transport 124 260, retenue 62 130, net 3 789 930',
+    s3.status === 201 && Number(s3.body.gross_amount) === 3727800 && Number(s3.body.transport_total) === 124260 && Number(s3.body.retention_amount) === 62130 && Number(s3.body.amount) === 3789930, s3.body);
+  const fi = await call('GET', `/convoys/statement?collector_id=${col3.id}`, J(cai.t));
+  const last = fi.body.rows[fi.body.rows.length - 1];
+  check('fiche : 3 lignes, solde = 2 253 350 + 2 000 000 − 3 789 930 = 463 420', fi.status === 200 && fi.body.rows.length === 3 && Number(fi.body.solde) === 463420 && Number(last.solde) === 463420, fi.body);
+  check('fiche : report puis financement dans l\'ordre, soldes progressifs', Number(fi.body.rows[0].solde) === 2253350 && Number(fi.body.rows[1].solde) === 4253350 && fi.body.rows[1].piece === '947719', fi.body.rows);
+  check('fiche : la ligne livraison porte poids, P.U., transport et retenue', Number(last.weight) === 2071 && Number(last.unit_price) === 1800 && Number(last.product_total) === 3852060 && Number(last.net_payable) === 3789930, last);
+  const fi2 = await call('GET', `/convoys/statement?collector_id=${col3.id}&from=2024-10-01&to=2024-12-31`, J(cai.t));
+  check('fiche d\'une campagne : solde d\'ouverture reporté', Number(fi2.body.opening) === 2253350 && fi2.body.rows[0].piece === '947719', fi2.body);
+  check('le collecteur consulte sa propre fiche', Number((await call('GET', '/convoys/statement', J(c3.t))).body.solde) === 463420);
+  check('un collecteur ne voit pas la fiche d\'un autre', (await call('GET', `/convoys/statement?collector_id=${col1.id}`, J(c3.t))).status === 403);
+  check('retenue supérieure au produit refusée', await (async () => { const cx = await user('fiche2', rCol); const k2 = (await call('POST', '/collectors', { ...J(t0), body: { user_id: cx.id } })).body;
+    await call('POST', '/convoys', { ...J(cx.t), body: { idempotency_key: key('cv'), convoy_no: 'LIV-X', driver_name: 'Ko', truck_no: 'Z2' } });
+    const r2 = (await call('POST', '/convoys/receive', { ...J(mag.t), body: { idempotency_key: key('rc'), collector_id: k2.id, convoy_no: 'LIV-X', warehouse_id: wh.id, total_kg: '100', bags: 2 } })).body;
+    return (await call('POST', `/convoy-receptions/${r2.id}/settle`, { ...J(cai.t), body: { idempotency_key: key('st'), unit_price: '10', retention_per_kg: '5000' } })).status === 400; })());
+  await call('POST', '/convoys/settings', { ...J(cai.t), body: { transport_unit: '0', retention_per_kg: '0' } });
+
   console.log('Hors connexion (file de synchronisation)');
   const sync = await call('POST', '/sync/batch', { ...J(c2.t), body: { operations: [{ idempotency_key: key('o'), type: 'convoy.create',
     payload: { idempotency_key: key('cv'), convoy_no: 'CV-2026-002', driver_name: 'Koffi', truck_no: 'XY 99' } }] } });

@@ -54,13 +54,27 @@ await step('la caisse traite : montant calculé, compte du collecteur crédité'
   must((await page.locator('tbody').innerText()).includes('CV-UI-001'), 'réception absente de la file');
   await page.getByRole('button', { name: 'Traiter' }).click(); await page.waitForTimeout(400);
   const m = modal();
-  await m.getByLabel(/Prix au kg/).fill('1000');
+  await m.getByLabel(/P\.U\./).fill('1000');
   must((await m.innerText()).replace(/\s/g, ' ').match(/2\s?587\s?500/), 'montant 2 587 500 absent: ' + (await m.innerText()));
-  await m.getByRole('button', { name: 'Créditer le compte du collecteur' }).click(); await page.waitForTimeout(2000);
+  await m.getByRole('button', { name: 'Enregistrer le net à payer' }).click(); await page.waitForTimeout(2000);
   must((await page.innerText('main')).includes('Aucune réception en attente'), 'réception toujours dans la file');
   await page.getByRole('link', { name: /Convois/ }).click(); await page.waitForTimeout(500);
   await page.getByRole('tab', { name: 'Convois' }).click(); await page.waitForTimeout(800);
   must((await page.locator('tbody').innerText()).includes('Réglé'), 'état Réglé absent');
+});
+await step('fiche de suivi : report de solde puis ligne de livraison avec solde', async () => {
+  await login(email);
+  await page.getByRole('link', { name: /Convois/ }).click(); await page.waitForTimeout(800);
+  await page.getByRole('tab', { name: 'Comptes collecteurs' }).click(); await page.waitForTimeout(800);
+  await page.getByLabel('Collecteur').selectOption({ index: 1 }); await page.waitForTimeout(800);
+  await page.getByRole('button', { name: 'Reporter un solde de campagne' }).click(); await page.waitForTimeout(300);
+  const m = modal();
+  await m.getByLabel(/Montant/).fill('2253350'); await m.getByLabel(/pièce/).fill('REP-24');
+  await m.getByRole('button', { name: 'Enregistrer' }).click(); await page.waitForTimeout(1500);
+  const t = (await page.innerText('main')).replace(/\s/g, ' ');
+  must(/2\s?253\s?350/.test(t), 'report absent de la fiche : ' + t.slice(0, 300));
+  must(/CV-UI-001/.test(t), 'ligne de livraison absente');
+  must(/334\s?150|2\s?587\s?500/.test(t), 'net ou solde absent');
 });
 await step('espace du collecteur : Mes achats, Mon stock, Historique, sans menus de gestion', async () => {
   await login(colEmail);
@@ -71,7 +85,7 @@ await step('espace du collecteur : Mes achats, Mon stock, Historique, sans menus
   await page.getByRole('link', { name: /Mon stock/ }).click(); await page.waitForTimeout(1200);
   const t = (await page.innerText('main')).replace(/\s/g, ' ');
   must(/2\s?588\s?kg|2\s?587\s?kg/.test(t) && t.includes('Livré au magasin'), 'stock livré absent : ' + t.slice(0, 300));
-  must(/2\s?587\s?500/.test(t), 'solde du compte absent : ' + t.slice(0, 400));
+  must(/334\s?150/.test(t), 'solde de la fiche absent : ' + t.slice(0, 400));
   await page.getByRole('link', { name: /Historique/ }).click(); await page.waitForTimeout(1000);
   must((await page.innerText('main')).includes('Historique de mes achats'), 'page Historique absente');
   await page.getByRole('link', { name: /Mes achats/ }).click(); await page.waitForTimeout(800);

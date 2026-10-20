@@ -71,7 +71,7 @@ export function MonStock() {
         <Stat label="En route (convois)" value={kg(s.in_transit_kg)} hint={`${s.in_transit_convoys} convoi(s)`} tone="warn" />
         <Stat label="Livré au magasin" value={kg(s.delivered_kg)} hint={`${s.delivered_bags} sacs`} tone="ok" />
         <Stat label="Encore chez moi (estimé)" value={kg(s.held_kg)} />
-        <Stat label="Solde de mon compte" value={money(s.balance)} hint={s.awaiting_cashier ? `${s.awaiting_cashier} réception(s) en attente de la caisse` : undefined} tone="ok" />
+        <Stat label="Solde de ma fiche" value={money(-Number(s.balance))} hint={Number(s.balance) > 0 ? 'Négatif : la coopérative vous doit cette somme' : 'Positif : vous devez cette somme à la coopérative'} tone="ok" />
       </div>
     </>
   );

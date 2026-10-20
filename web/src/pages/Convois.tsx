@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { get, idem, post } from '../api';
 import { useAuth } from '../auth';
 import { enqueue, onFlushed, useOffline } from '../offline';
+import { date } from '../format';
 import { Badge, Card, ErrorBox, Field, Loading, Modal, PageHeader, Table, Tabs, useAction, useAsync } from '../ui';
 
 const STATUS: Record<string, [string, import('../format').Tone]> = { in_transit: ['En route', 'warn'], received: ['Reçu — en caisse', 'neutral'], settled: ['Réglé', 'ok'] };
@@ -13,7 +14,8 @@ export default function Convois() {
   const tabs: [string, string][] = [];
   if (can('convoys:read')) tabs.push(['list', 'Convois']);
   if (can('convoys:receive')) tabs.push(['receive', 'Réception au magasin']);
-  if (can('convoys:settle')) tabs.push(['cash', 'Caisse']);
+  if (can('convoys:settle')) tabs.push(['cash', 'Caisse'], ['accounts', 'Comptes collecteurs']);
+  else if (can('collector:stock')) tabs.push(['mine', 'Ma fiche']);
   const [tab, setTab] = useState(tabs[0]?.[0] ?? 'list');
   return (
     <>
@@ -22,6 +24,8 @@ export default function Convois() {
       {tab === 'list' && <List />}
       {tab === 'receive' && <Receive />}
       {tab === 'cash' && <Cash />}
+      {tab === 'accounts' && <Accounts />}
+      {tab === 'mine' && <Card><Fiche collectorId={undefined} /></Card>}
     </>
   );
 }
@@ -145,19 +149,34 @@ function Cash() {
 
 function Settle({ r, onClose, onDone }: { r: any; onClose: () => void; onDone: () => void }) {
   const act = useAction();
+  const cfg = useAsync(() => get<any>('/convoys/settings'), []);
   const [price, setPrice] = useState('');
-  const ok = /^\d+(\.\d{1,4})?$/.test(price) && Number(price) > 0;
-  const amount = ok ? Math.round(Number(r.total_kg) * Number(price) * 100) / 100 : null;
+  const [tu, setTu] = useState<string | null>(null);
+  const [rt, setRt] = useState<string | null>(null);
+  const t = tu ?? String(Number(cfg.data?.transport_unit ?? 0)), q = rt ?? String(Number(cfg.data?.retention_per_kg ?? 0));
+  const num4 = (v: string) => /^\d+(\.\d{1,4})?$/.test(v);
+  const ok = num4(price) && Number(price) > 0 && num4(t) && num4(q);
+  const w = Number(r.total_kg);
+  const gross = ok ? Math.round(w * Number(price)) : 0, transport = ok ? Math.round(w * Number(t)) : 0, ret = ok ? Math.round(w * Number(q)) : 0;
+  const net = gross + transport - ret;
   const [key] = useState(idem());
+  const f = (n: number) => n.toLocaleString('fr-FR');
   return (
     <Modal title={`Traiter le convoi ${r.convoy_no}`} onClose={onClose}>
       <p>{r.collector_name} · {num(r.total_kg)} kg · {r.bags} sacs</p>
-      <Field label="Prix au kg (FCFA)"><input inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} /></Field>
-      {amount != null && <p className="notice">Montant à créditer au compte du collecteur : <strong>{amount.toLocaleString('fr-FR')} FCFA</strong></p>}
+      <Field label="P.U. — prix d'achat au kg (FCFA)"><input inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} /></Field>
+      <Field label="Coût de transport au kg (FCFA)"><input inputMode="decimal" value={t} onChange={(e) => setTu(e.target.value)} /></Field>
+      <Field label="Retenue au kg (FCFA)"><input inputMode="decimal" value={q} onChange={(e) => setRt(e.target.value)} /></Field>
+      {ok && <table><tbody>
+        <tr><td>Montant brut (poids × P.U.)</td><td className="r">{f(gross)}</td></tr>
+        <tr><td>Transport (poids × coût unitaire)</td><td className="r">{f(transport)}</td></tr>
+        <tr><td>Montant total produit</td><td className="r">{f(gross + transport)}</td></tr>
+        <tr><td>Retenue</td><td className="r">− {f(ret)}</td></tr>
+        <tr><td><strong>Net à payer (porté au compte du collecteur)</strong></td><td className="r"><strong>{f(net)}</strong></td></tr></tbody></table>}
       {act.error && <ErrorBox message={act.error} />}
       <div className="modal-actions">
         <button className="btn btn-secondary" onClick={onClose}>Annuler</button>
-        <button className="btn" disabled={act.busy || !ok} onClick={() => act.run(async () => { await post(`/convoy-receptions/${r.id}/settle`, { idempotency_key: key, unit_price: price }); onDone(); })}>Créditer le compte du collecteur</button>
+        <button className="btn" disabled={act.busy || !ok || net <= 0} onClick={() => act.run(async () => { await post(`/convoy-receptions/${r.id}/settle`, { idempotency_key: key, unit_price: price, transport_unit: t, retention_per_kg: q }); onDone(); })}>Enregistrer le net à payer</button>
       </div>
     </Modal>
   );
@@ -190,6 +209,81 @@ function Payout({ onClose }: { onClose: () => void }) {
             <button className="btn" disabled={act.busy || !ok || !!done} onClick={() => act.run(async () => { await post('/convoys/payout', { idempotency_key: key, collector_id: col, cash_session_id: session, amount }); setDone('Paiement enregistré : compte du collecteur et caisse mis à jour.'); })}>Payer</button></div>
         </>
       )}
+    </Modal>
+  );
+}
+
+const FR = (v: any) => (v === null || v === undefined || v === '' ? '' : Number(v).toLocaleString('fr-FR', { maximumFractionDigits: 3 }));
+
+/** Fiche de suivi du compte collecteur, dans la présentation de la fiche papier (solde = ce que le collecteur doit à la coopérative). */
+function Fiche({ collectorId }: { collectorId?: string }) {
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
+  const { data, loading, error, reload } = useAsync(() => get<any>(`/convoys/statement?${new URLSearchParams({ ...(collectorId && { collector_id: collectorId }), ...(from && { from }), ...(to && { to }) })}`), [collectorId, from, to]);
+  useEffect(() => onFlushed(reload), [reload]);
+  if (loading) return <Loading />;
+  if (error || !data) return <ErrorBox message={error ?? 'Chargement impossible'} onRetry={reload} />;
+  const s = Number(data.solde);
+  return (
+    <>
+      <div className="toolbar"><strong>Fiche de suivi du compte — {data.collector.full_name}</strong>
+        <label>Du <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></label><label>au <input type="date" value={to} onChange={(e) => setTo(e.target.value)} /></label>
+        <button className="btn btn-secondary" onClick={() => window.print()}>Imprimer</button></div>
+      <div className="tw"><table>
+        <thead><tr><th>Date</th><th>Libellé</th><th>Pièce</th><th className="r">Poids (A)</th><th className="r">P.U. (B)</th><th className="r">Montant brut (C)</th><th className="r">Coût transport (D)</th><th className="r">Transport total (E)</th><th className="r">Total produit (F)</th><th className="r">Retenue</th><th className="r">Net à payer (I)</th><th className="r">Finance (J)</th><th className="r">Solde (K)</th></tr></thead>
+        <tbody>
+          {Number(data.opening) !== 0 && <tr><td colSpan={12}>Report à l'ouverture</td><td className="r">{FR(data.opening)}</td></tr>}
+          {data.rows.map((r: any) => (
+            <tr key={r.id}><td>{date(r.date)}</td><td>{r.label}</td><td>{r.piece ?? ''}</td><td className="r">{FR(r.weight)}</td><td className="r">{FR(r.unit_price)}</td><td className="r">{FR(r.gross_amount)}</td>
+              <td className="r">{FR(r.transport_unit)}</td><td className="r">{FR(r.transport_total)}</td><td className="r">{FR(r.product_total)}</td><td className="r">{FR(r.retention_amount)}</td>
+              <td className="r">{FR(r.net_payable)}</td><td className="r">{FR(r.finance)}</td><td className="r"><strong>{FR(r.solde)}</strong></td></tr>
+          ))}
+          {!data.rows.length && <tr><td colSpan={13} className="muted">Aucune opération sur la période.</td></tr>}
+        </tbody></table></div>
+      <p className="notice">{s > 0 ? `Le collecteur doit ${FR(s)} FCFA à la coopérative (financements non encore couverts par ses livraisons).` : s < 0 ? `La coopérative doit ${FR(-s)} FCFA au collecteur.` : 'Compte soldé.'}</p>
+    </>
+  );
+}
+
+function Accounts() {
+  const { can } = useAuth();
+  const { data, loading, error, reload } = useAsync(() => get<any[]>('/convoys/collectors'), []);
+  const [col, setCol] = useState('');
+  const [adv, setAdv] = useState<'advance' | 'carry_forward' | null>(null);
+  const [n, setN] = useState(0);
+  return (
+    <Card>
+      {error && <ErrorBox message={error} onRetry={reload} />}
+      {loading ? <Loading /> : (
+        <div className="toolbar">
+          <select aria-label="Collecteur" value={col} onChange={(e) => setCol(e.target.value)}><option value="">Choisir un collecteur…</option>{(data ?? []).map((c) => <option key={c.id} value={c.id}>{c.name} — solde {FR(c.solde)}</option>)}</select>
+          {col && can('cash:operate') && <button className="btn" onClick={() => setAdv('advance')}>Remettre un financement</button>}
+          {col && <button className="btn btn-secondary" onClick={() => setAdv('carry_forward')}>Reporter un solde de campagne</button>}
+        </div>
+      )}
+      {col && <Fiche key={col + n} collectorId={col} />}
+      {adv && <Advance kind={adv} collectorId={col} onClose={() => setAdv(null)} onDone={() => { setAdv(null); setN(n + 1); reload(); }} />}
+    </Card>
+  );
+}
+
+function Advance({ kind, collectorId, onClose, onDone }: { kind: 'advance' | 'carry_forward'; collectorId: string; onClose: () => void; onDone: () => void }) {
+  const act = useAction();
+  const regs = useAsync(async () => (kind === 'advance' ? (await get<any[]>('/cash-registers')).filter((r) => r.open_session_id) : []), [kind]);
+  const [f, setF] = useState({ amount: '', piece: '', session: '', date: '', label: '' });
+  const [key] = useState(idem());
+  const ok = /^\d+(\.\d{1,4})?$/.test(f.amount) && Number(f.amount) > 0 && (kind === 'carry_forward' || f.session);
+  return (
+    <Modal title={kind === 'advance' ? 'Remettre un financement (Finance cacao)' : 'Reporter le solde de la campagne précédente'} onClose={onClose}>
+      <Field label="Montant (FCFA)"><input inputMode="decimal" value={f.amount} onChange={(e) => setF({ ...f, amount: e.target.value })} /></Field>
+      <Field label="N° de pièce"><input value={f.piece} onChange={(e) => setF({ ...f, piece: e.target.value })} maxLength={60} /></Field>
+      <Field label="Date de l'opération (laisser vide : aujourd'hui)"><input type="date" value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} /></Field>
+      {kind === 'advance' && <Field label="Caisse (session ouverte)"><select value={f.session} onChange={(e) => setF({ ...f, session: e.target.value })}><option value="">—</option>{(regs.data ?? []).map((r: any) => <option key={r.id} value={r.open_session_id}>{r.name}</option>)}</select></Field>}
+      {act.error && <ErrorBox message={act.error} />}
+      <div className="modal-actions"><button className="btn btn-secondary" onClick={onClose}>Annuler</button>
+        <button className="btn" disabled={act.busy || !ok} onClick={() => act.run(async () => {
+          await post('/convoys/advances', { idempotency_key: key, collector_id: collectorId, kind, amount: f.amount, ...(f.piece && { piece_no: f.piece }), ...(f.date && { operation_date: f.date }), ...(kind === 'advance' && { cash_session_id: f.session }) }); onDone();
+        })}>Enregistrer</button></div>
     </Modal>
   );
 }

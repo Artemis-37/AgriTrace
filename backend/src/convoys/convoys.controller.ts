@@ -1,6 +1,6 @@
-import { BadRequestException, Body, ConflictException, Controller, Get, NotFoundException, Param, ParseUUIDPipe, Post, Query, Req, UnprocessableEntityException } from '@nestjs/common';
+import { BadRequestException, Body, ConflictException, Controller, Get, NotFoundException, Param, ParseUUIDPipe, Post, Query, Req, UnprocessableEntityException, ForbiddenException } from '@nestjs/common';
 import { ApiBearerAuth, ApiHeader, ApiTags } from '@nestjs/swagger';
-import { IsInt, IsOptional, IsString, IsUUID, Length, Min } from 'class-validator';
+import { IsIn, IsInt, IsOptional, Matches, IsString, IsUUID, Length, Min } from 'class-validator';
 import { RequirePermissions } from '../access/decorators';
 import { AuditService } from '../audit/audit.service';
 import { accountingCodeOf, postEntry, today } from '../accounting/accounting.helpers';
@@ -29,7 +29,28 @@ export class ReceiveConvoyDto {
 }
 class SettleDto {
   @IsString() @Length(8, 100) idempotency_key: string;
+  /** P.U. : prix d'achat au kg. */
   @Dec(4) unit_price: string;
+  /** Coût unitaire de transport au kg (par défaut : réglage de la coopérative). Ajouté au produit. */
+  @IsOptional() @Dec(4) transport_unit?: string;
+  /** Retenue au kg (par défaut : réglage de la coopérative). Déduite du total. */
+  @IsOptional() @Dec(4) retention_per_kg?: string;
+}
+class SettingsDto {
+  @Dec(4) transport_unit: string;
+  @Dec(4) retention_per_kg: string;
+}
+export class AdvanceDto {
+  @IsString() @Length(8, 100) idempotency_key: string;
+  @IsUUID() collector_id: string;
+  /** advance = financement remis en espèces (caisse) ; carry_forward = report du solde de la campagne précédente (sans mouvement de caisse). */
+  @IsIn(['advance', 'carry_forward']) kind: string;
+  @Dec(4) amount: string;
+  @IsOptional() @IsString() @Length(1, 60) piece_no?: string;
+  @IsOptional() @IsString() @Length(1, 200) label?: string;
+  @IsOptional() @IsUUID() cash_session_id?: string;
+  /** Pour reprendre une fiche papier : date réelle de l'opération (jamais dans le futur). */
+  @IsOptional() @Matches(/^\d{4}-\d{2}-\d{2}$/) operation_date?: string;
 }
 
 export class PayoutDto {
@@ -175,24 +196,163 @@ export class ConvoysController {
       if (!acc) acc = (await c.query(
         `INSERT INTO financial_accounts(organization_id, owner_type, owner_id, name, created_by) VALUES ($1,'collector',$2,$3,$4) RETURNING id, currency, accounting_code`,
         [req.org.id, v.collector_id, `Compte collecteur — ${u.full_name}`, req.user.id])).rows[0];
-      const amt = (await c.query(`SELECT round($1::numeric * $2::numeric, 4) AS a`, [r.total_kg, b.unit_price])).rows[0].a;
+      const st = (await c.query(`SELECT convoy_transport_unit AS t, convoy_retention_per_kg AS r FROM org_settings`)).rows[0] ?? { t: '0', r: '0' };
+      const tu = b.transport_unit ?? st.t, rt = b.retention_per_kg ?? st.r;
+      const m = (await c.query(
+        `SELECT round($1::numeric * $2::numeric, 4) AS gross, round($1::numeric * $3::numeric, 4) AS transport, round($1::numeric * $4::numeric, 4) AS retention`,
+        [r.total_kg, b.unit_price, tu, rt])).rows[0];
+      const amt = (await c.query(`SELECT $1::numeric + $2::numeric - $3::numeric AS n`, [m.gross, m.transport, m.retention])).rows[0].n;
+      if (Number(amt) <= 0) throw new BadRequestException('La retenue dépasse le produit : net à payer nul ou négatif');
       const tx = (await c.query(
         `INSERT INTO financial_transactions(organization_id, idempotency_key, account_id, direction, amount, currency, reason, reference_type, reference_id, created_by)
          VALUES ($1,$2,$3,'in',$4,$5,$6,'convoy_reception',$7,$8) RETURNING id`,
         [req.org.id, 'convoy-' + b.idempotency_key, acc.id, amt, acc.currency, `Convoi ${v.convoy_no} : ${r.total_kg} kg × ${b.unit_price}`, r.id, req.user.id])).rows[0];
+      await c.query(`INSERT INTO accounting_accounts(organization_id, code, label) VALUES ($1,'4781','Retenues sur règlements des collecteurs') ON CONFLICT DO NOTHING`, [req.org.id]);
+      const lines: any[] = [{ code: '601', debit: m.gross }];
+      if (Number(m.transport) > 0) lines.push({ code: '605', debit: m.transport, label: 'Transport' });
+      lines.push({ code: acc.accounting_code ?? '401', credit: amt });
+      if (Number(m.retention) > 0) lines.push({ code: '4781', credit: m.retention, label: 'Retenue' });
       await postEntry(c, {
         orgId: req.org.id, userId: req.user.id, journal: 'ACH', date: today(), label: `Achat convoi ${v.convoy_no} — ${u.full_name}`,
-        lines: [{ code: '601', debit: amt }, { code: acc.accounting_code ?? '401', credit: amt }],
-        idempotencyKey: 'convoy-entry:' + r.id, referenceType: 'convoy_reception', referenceId: r.id,
+        lines, idempotencyKey: 'convoy-entry:' + r.id, referenceType: 'convoy_reception', referenceId: r.id,
       });
       const upd = (await c.query(
-        `UPDATE convoy_receptions SET status = 'settled', unit_price = $2, amount = $3, tx_id = $4, settled_by = $5, settled_at = now() WHERE id = $1 RETURNING *`,
-        [id, b.unit_price, amt, tx.id, req.user.id])).rows[0];
+        `UPDATE convoy_receptions SET status = 'settled', unit_price = $2, amount = $3, tx_id = $4, settled_by = $5, settled_at = now(),
+                gross_amount = $6, transport_unit = $7, transport_total = $8, retention_per_kg = $9, retention_amount = $10 WHERE id = $1 RETURNING *`,
+        [id, b.unit_price, amt, tx.id, req.user.id, m.gross, tu, m.transport, rt, m.retention])).rows[0];
       await c.query(`UPDATE convoys SET status = 'settled' WHERE id = $1`, [v.id]);
       return { row: upd, replay: false };
     });
     if (!replay) await this.log(req, 'convoy.settle', row.convoy_id, { amount: row.amount, tx_id: row.tx_id });
     return { ...row, replayed: replay };
+  }
+
+
+  /** Collecteurs actifs avec leur solde de fiche (financements − net à payer) : sélection pour la caisse. */
+  @Get('convoys/collectors')
+  @RequirePermissions('convoys:settle')
+  collectors(@Req() req: any) {
+    return this.db.tx(req.org.id, async (c) => (await c.query(
+      `SELECT k.id, u.full_name AS name,
+              coalesce((SELECT sum(CASE t.direction WHEN 'out' THEN t.amount ELSE -t.amount END) FROM financial_accounts a JOIN financial_transactions t ON t.account_id = a.id
+                         WHERE a.owner_type = 'collector' AND a.owner_id = k.id), 0) AS solde
+         FROM collectors k JOIN users u ON u.id = k.user_id WHERE k.status = 'active' ORDER BY u.full_name`)).rows);
+  }
+
+  @Get('convoys/settings')
+  @RequirePermissions('convoys:settle')
+  settings(@Req() req: any) {
+    return this.db.tx(req.org.id, async (c) => (await c.query(
+      `SELECT coalesce((SELECT convoy_transport_unit FROM org_settings), 0) AS transport_unit, coalesce((SELECT convoy_retention_per_kg FROM org_settings), 0) AS retention_per_kg`)).rows[0]);
+  }
+
+  @Post('convoys/settings')
+  @RequirePermissions('convoys:settle')
+  async putSettings(@Body() b: SettingsDto, @Req() req: any) {
+    await this.db.tx(req.org.id, (c) => c.query(
+      `INSERT INTO org_settings(organization_id, convoy_transport_unit, convoy_retention_per_kg, updated_by) VALUES ($1,$2,$3,$4)
+       ON CONFLICT (organization_id) DO UPDATE SET convoy_transport_unit = EXCLUDED.convoy_transport_unit, convoy_retention_per_kg = EXCLUDED.convoy_retention_per_kg, updated_at = now(), updated_by = EXCLUDED.updated_by`,
+      [req.org.id, b.transport_unit, b.retention_per_kg, req.user.id]));
+    await this.log(req, 'convoy.settings', req.org.id, b);
+    return b;
+  }
+
+  /** Financement remis au collecteur (« Finance cacao ») ou report du solde de campagne : augmente ce que le collecteur doit à la coopérative. */
+  @Post('convoys/advances')
+  @RequirePermissions('convoys:settle')
+  async advance(@Body() b: AdvanceDto, @Req() req: any) {
+    if (Number(b.amount) <= 0) throw new BadRequestException('Montant doit être supérieur à zéro');
+    if (b.operation_date && b.operation_date > today()) throw new BadRequestException("Date d'opération dans le futur");
+    if (b.kind === 'advance' && !req.org.permissions.has('cash:operate')) throw new ForbiddenException('Un financement en espèces exige le droit « cash:operate »');
+    const { row, replay } = await this.db.tx(req.org.id, async (c) => {
+      const prev = await c.query(`SELECT * FROM collector_advances WHERE idempotency_key = $1`, [b.idempotency_key]);
+      if (prev.rowCount) return { row: prev.rows[0], replay: true };
+      const k = (await c.query(`SELECT k.id, u.full_name FROM collectors k JOIN users u ON u.id = k.user_id WHERE k.id = $1 AND k.status = 'active'`, [b.collector_id])).rows[0];
+      if (!k) throw new BadRequestException('Collecteur inconnu ou désactivé');
+      let acc = (await c.query(`SELECT id, currency, accounting_code FROM financial_accounts WHERE owner_type = 'collector' AND owner_id = $1 AND status = 'active' FOR UPDATE`, [k.id])).rows[0];
+      if (!acc) acc = (await c.query(
+        `INSERT INTO financial_accounts(organization_id, owner_type, owner_id, name, created_by) VALUES ($1,'collector',$2,$3,$4) RETURNING id, currency, accounting_code`,
+        [req.org.id, k.id, `Compte collecteur — ${k.full_name}`, req.user.id])).rows[0];
+      const label = b.label ?? (b.kind === 'advance' ? 'Finance cacao' : 'Solde de la campagne précédente');
+      const when = b.operation_date ? `${b.operation_date}T12:00:00Z` : new Date().toISOString();
+      const t1 = (await c.query(
+        `INSERT INTO financial_transactions(organization_id, idempotency_key, account_id, direction, amount, currency, reason, reference_type, reference_id, created_by, created_at)
+         VALUES ($1,$2,$3,'out',$4,$5,$6,$7,$8,$9,$10) RETURNING id`,
+        [req.org.id, 'adv-c:' + b.idempotency_key, acc.id, b.amount, acc.currency, label + (b.piece_no ? ` — pièce ${b.piece_no}` : ''),
+         b.kind === 'advance' ? 'collector_advance' : 'collector_carry', k.id, req.user.id, when])).rows[0];
+      if (b.kind === 'advance') {
+        if (!b.cash_session_id) throw new BadRequestException('Un financement exige une session de caisse ouverte');
+        const sess = (await c.query(`SELECT s.id, r.account_id FROM cash_sessions s JOIN cash_registers r ON r.id = s.register_id WHERE s.id = $1 AND s.status = 'open'`, [b.cash_session_id])).rows[0];
+        if (!sess) throw new BadRequestException('Session de caisse inconnue ou clôturée');
+        const cash = (await c.query(`SELECT * FROM financial_accounts WHERE id = $1 FOR UPDATE`, [sess.account_id])).rows[0];
+        const ok = (await c.query(
+          `SELECT $2::numeric <= coalesce(sum(CASE direction WHEN 'in' THEN amount ELSE -amount END), 0) AS ok, coalesce(sum(CASE direction WHEN 'in' THEN amount ELSE -amount END), 0) AS balance
+             FROM financial_transactions WHERE account_id = $1`, [cash.id, b.amount])).rows[0];
+        if (!ok.ok) throw new UnprocessableEntityException(`Solde de caisse insuffisant (${ok.balance})`);
+        await c.query(
+          `INSERT INTO financial_transactions(organization_id, idempotency_key, account_id, cash_session_id, direction, amount, currency, reason, reference_type, reference_id, created_by, created_at)
+           VALUES ($1,$2,$3,$4,'out',$5,$6,$7,'collector_advance',$8,$9,$10)`,
+          [req.org.id, 'adv-k:' + b.idempotency_key, cash.id, b.cash_session_id, b.amount, cash.currency, label, k.id, req.user.id, when]);
+        await c.query(`SELECT accounting_seed($1::uuid)`, [req.org.id]);
+        await postEntry(c, {
+          orgId: req.org.id, userId: req.user.id, journal: 'CAI', date: b.operation_date ?? today(), label: `${label} — ${k.full_name}`,
+          lines: [{ code: '409', debit: b.amount }, { code: accountingCodeOf(cash), credit: b.amount }],
+          idempotencyKey: 'adv-entry:' + b.idempotency_key, referenceType: 'collector_advance', referenceId: t1.id,
+        });
+      }
+      const ins = (await c.query(
+        `INSERT INTO collector_advances(organization_id, idempotency_key, collector_id, kind, piece_no, label, amount, tx_id, created_by, created_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
+        [req.org.id, b.idempotency_key, k.id, b.kind, b.piece_no ?? null, label, b.amount, t1.id, req.user.id, when])).rows[0];
+      return { row: ins, replay: false };
+    });
+    if (!replay) await this.log(req, 'convoy.advance', row.id, { kind: b.kind, amount: b.amount, collector_id: b.collector_id });
+    return { ...row, replayed: replay };
+  }
+
+  /**
+   * Fiche de suivi du compte collecteur. Convention de la fiche papier : le solde est ce que le collecteur doit à la coopérative
+   * (financements − net à payer des livraisons) ; un solde négatif est une somme due au collecteur.
+   */
+  @Get('convoys/statement')
+  @RequirePermissions('convoys:read')
+  async statement(@Req() req: any, @Query('collector_id') collectorId?: string, @Query('from') from?: string, @Query('to') to?: string) {
+    return this.db.tx(req.org.id, async (c) => {
+      const staff = req.org.permissions.has('convoys:settle');
+      const mine = (await c.query(`SELECT id FROM collectors WHERE user_id = $1 AND status = 'active'`, [req.user.id])).rows[0];
+      const cid = staff ? (collectorId ?? mine?.id) : mine?.id;
+      if (!cid) throw new BadRequestException('Collecteur requis');
+      if (!staff && collectorId && collectorId !== mine?.id) throw new ForbiddenException('Vous ne pouvez consulter que votre propre fiche');
+      const who = (await c.query(`SELECT k.id, u.full_name FROM collectors k JOIN users u ON u.id = k.user_id WHERE k.id = $1`, [cid])).rows[0];
+      if (!who) throw new NotFoundException('Collecteur inconnu');
+      const acc = (await c.query(`SELECT id FROM financial_accounts WHERE owner_type = 'collector' AND owner_id = $1`, [cid])).rows[0];
+      if (!acc) return { collector: who, opening: '0', rows: [], totals: { finance: '0', net: '0' }, solde: '0' };
+      const f = from ?? '1900-01-01', t = to ?? '2999-12-31';
+      const opening = (await c.query(
+        `SELECT coalesce(sum(CASE direction WHEN 'out' THEN amount ELSE -amount END), 0) AS o FROM financial_transactions WHERE account_id = $1 AND created_at < $2::date`, [acc.id, f])).rows[0].o;
+      const rows = (await c.query(
+        `SELECT x.id, x.created_at AS date, x.direction, x.amount, x.reason AS label, x.reference_type,
+                coalesce(a.piece_no, v.convoy_no) AS piece, r.total_kg AS weight, r.unit_price, r.gross_amount, r.transport_unit, r.transport_total,
+                (r.gross_amount + r.transport_total) AS product_total, r.retention_per_kg, r.retention_amount,
+                CASE WHEN x.direction = 'in' THEN x.amount END AS net_payable, CASE WHEN x.direction = 'out' THEN x.amount END AS finance
+           FROM financial_transactions x
+           LEFT JOIN convoy_receptions r ON x.reference_type = 'convoy_reception' AND r.id = x.reference_id
+           LEFT JOIN convoys v ON v.id = r.convoy_id
+           LEFT JOIN collector_advances a ON a.tx_id = x.id
+          WHERE x.account_id = $1 AND x.created_at >= $2::date AND x.created_at < ($3::date + 1)
+          ORDER BY x.created_at, x.id`, [acc.id, f, t])).rows;
+      const exact = (await c.query(
+        `WITH o AS (SELECT $1::numeric AS o), r AS (SELECT x.id, CASE x.direction WHEN 'out' THEN x.amount ELSE -x.amount END AS d, x.created_at
+           FROM financial_transactions x WHERE x.account_id = $2 AND x.created_at >= $3::date AND x.created_at < ($4::date + 1))
+         SELECT r.id, (SELECT o FROM o) + sum(r.d) OVER (ORDER BY r.created_at, r.id) AS solde FROM r ORDER BY r.created_at, r.id`, [opening, acc.id, f, t])).rows;
+      const by = new Map(exact.map((e: any) => [e.id, e.solde]));
+      const withSolde = rows.map((r: any) => ({ ...r, solde: by.get(r.id) }));
+      const totals = (await c.query(
+        `SELECT coalesce(sum(amount) FILTER (WHERE direction = 'out'), 0) AS finance, coalesce(sum(amount) FILTER (WHERE direction = 'in'), 0) AS net
+           FROM financial_transactions WHERE account_id = $1 AND created_at >= $2::date AND created_at < ($3::date + 1)`, [acc.id, f, t])).rows[0];
+      const end = withSolde.length ? withSolde[withSolde.length - 1].solde : opening;
+      return { collector: who, opening, rows: withSolde, totals, solde: end };
+    });
   }
 
   /** Paiement en espèces au collecteur : débite son compte et sort la somme de la caisse (session ouverte), avec l'écriture comptable. */

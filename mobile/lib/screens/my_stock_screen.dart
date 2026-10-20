@@ -43,8 +43,8 @@ class _MyStockScreenState extends State<MyStockScreen> {
             ListTile(title: const Text('Livré au magasin central'), trailing: Text(_kg(d['delivered_kg'])), subtitle: Text('${d['delivered_bags']} sacs')),
             ListTile(title: const Text('Encore chez moi (estimé)'), trailing: Text(_kg(d['held_kg']))),
             ListTile(
-              title: const Text('Solde de mon compte'),
-              trailing: Text('${double.tryParse('${d['balance']}')?.toStringAsFixed(0) ?? '—'} FCFA', style: const TextStyle(fontWeight: FontWeight.bold)),
+              title: const Text('Solde de ma fiche (négatif : la coopérative me doit)'),
+              trailing: Text('${(-(double.tryParse('${d['balance']}') ?? 0)).toStringAsFixed(0)} FCFA', style: const TextStyle(fontWeight: FontWeight.bold)),
               subtitle: (d['awaiting_cashier'] as int? ?? 0) > 0 ? Text('${d['awaiting_cashier']} réception(s) en attente de la caisse') : null,
             ),
           ];
