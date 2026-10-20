@@ -81,6 +81,8 @@ jobs:
       - uses: subosito/flutter-action@v2
         with: { channel: stable }
       - run: flutter create --platforms=android --org ci.agritrace .
+      - name: Supprimer le test d'exemple généré (il référence une classe MyApp qui n'existe pas ici)
+        run: rm -f test/widget_test.dart
       - run: flutter pub get
       - run: flutter analyze --no-fatal-infos
       - run: flutter test
