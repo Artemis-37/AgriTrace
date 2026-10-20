@@ -32,5 +32,12 @@ La fiche papier devient le compte du collecteur. Colonnes reprises : A poids, B 
 ## Déclaration d'achat par le collecteur et export Excel
 
 - Saisie (web et mobile) : recherche du producteur par code ou nom, puis **Poids (kg)**, **Nombre de sacs**, **N° du reçu** (tous obligatoires) et date.
-- Export : `GET /purchase-declarations/export/xlsx?from=&to=&status=` (bouton « Exporter vers Excel » dans Déclarations, Mes achats et Historique). Colonnes : Date, Code producteur, Nom, Village/section, Collecteur, Poids (kg), Sacs, N° reçu, Prix unitaire, Montant, Statut, avec ligne TOTAL (formules). Un collecteur n'exporte que ses achats.
-- **En attente** : le modèle Excel de la coopérative n'a pas encore été fourni ; la disposition ci-dessus est une disposition par défaut à aligner sur ce modèle (`COLUMNS` dans `declarations.controller.ts`).
+- Export : `GET /purchase-declarations/export/xlsx?from=&to=&status=` (bouton « Exporter vers Excel » dans Déclarations, Mes achats et Historique). Il reproduit le modèle de la coopérative « Tableau de l'État des achats » (feuille `Feuil1`) : Date | Code Producteur | Nom & Prénoms | Village | N° Reçu | Nbre sacs | Poids Net (format « Kg ») | Prix Unitaire | Montant (format « F CFA »), plus une ligne TOTAL (formules). « Village » = section dans la base de la coopérative. Un collecteur n'exporte que ses propres achats.
+- Le **prix unitaire est fixé par l'administration** (barème de la filière, applicable à la date de l'opération) : le collecteur ne le saisit jamais ; le montant = poids net × prix unitaire est calculé par le serveur à la soumission.
+
+## Connexion automatique (aucune adresse à saisir)
+
+- Poste de bureau client : le serveur de la coopérative est recherché seul sur le réseau local (`desktop/src/discovery.js`). L'adresse trouvée est mémorisée ; si elle change, le poste retrouve le serveur sans intervention. Aucune adresse http/https n'est affichée aux utilisateurs (saisie manuelle possible seulement dans « Options techniques » pour un technicien).
+- Mobile : l'adresse du serveur est intégrée à l'application à la compilation, jamais saisie ni affichée.
+- Jumelage coopérative ↔ serveur central : le code de jumelage contient l'adresse du central ; l'écran Synchronisation n'affiche plus d'adresse.
+- Limite : la découverte sonde le sous-réseau (port du serveur) ; elle ne traverse pas plusieurs réseaux séparés (dans ce cas, l'option technique reste nécessaire). Testée par `desktop/test/discovery.js` ; non essayée sur un vrai poste Windows.

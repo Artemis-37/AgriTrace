@@ -7,6 +7,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { LocalServer } = require('./server-manager');
+const { discover } = require('./discovery');
 
 const PORT = 3000;
 let cfg = null, server = null, win = null, tray = null, quitting = false;
@@ -16,7 +17,6 @@ const saveCfg = (c) => { fs.mkdirSync(path.dirname(cfgFile()), { recursive: true
 const logFile = () => path.join(app.getPath('userData'), 'agritrace.log');
 const log = (m) => { try { fs.appendFileSync(logFile(), `${new Date().toISOString()} ${m}\n`); } catch { /* ignoré */ } };
 const appDir = () => process.env.AGRITRACE_PAYLOAD || (app.isPackaged ? path.join(process.resourcesPath, 'app-payload') : path.join(__dirname, '..', 'payload'));
-const lanAddresses = () => Object.values(os.networkInterfaces()).flat().filter((i) => i && i.family === 'IPv4' && !i.internal).map((i) => `http://${i.address}:${PORT}`);
 
 // Le poste client charge le portail depuis l'application elle-même (agritrace://app) : il s'ouvre même si le serveur est éteint.
 // Les appels /v1/* sont relayés vers le serveur ; s'il ne répond pas, le portail reçoit un 503 marqué et passe en mode hors connexion.
@@ -26,10 +26,15 @@ function registerClientProtocol() {
   protocol.handle('agritrace', async (req) => {
     const u = new URL(req.url);
     if (u.pathname.startsWith('/v1/') || u.pathname === '/v1') {
+      const headers = new Headers(req.headers); headers.delete('host'); headers.delete('origin');
+      const canRetryBody = ['GET', 'HEAD'].includes(req.method);
+      const body = canRetryBody ? undefined : await req.arrayBuffer();
+      const send = () => net.fetch(cfg.serverUrl + u.pathname + u.search, { method: req.method, headers, body, signal: AbortSignal.timeout(25000) });
       try {
-        const headers = new Headers(req.headers); headers.delete('host'); headers.delete('origin');
-        return await net.fetch(cfg.serverUrl + u.pathname + u.search, { method: req.method, headers, body: ['GET', 'HEAD'].includes(req.method) ? undefined : req.body, duplex: 'half', signal: AbortSignal.timeout(25000) });
+        return await send();
       } catch {
+        // Le serveur a peut-être changé d'adresse (box/DHCP) : on le cherche seul, sans rien demander à l'utilisateur.
+        if (await refindServer()) { try { return await send(); } catch { /* injoignable */ } }
         return new Response(JSON.stringify({ message: 'Serveur injoignable', offline: true }), { status: 503, headers: { 'content-type': 'application/json', 'x-agritrace-offline': '1' } });
       }
     }
@@ -39,6 +44,22 @@ function registerClientProtocol() {
     const r = await net.fetch(pathToFileURL(file).toString());
     return new Response(r.body, { status: r.status, headers: { 'content-type': MIME[path.extname(file)] ?? 'application/octet-stream' } });
   });
+}
+
+// Retrouve le serveur sur le réseau local et met à jour l'adresse mémorisée. Au plus une recherche à la fois, et une toutes les 20 s.
+let finding = null, lastFind = 0;
+async function refindServer() {
+  if (finding) return finding;
+  if (Date.now() - lastFind < 20000) return false;
+  lastFind = Date.now();
+  finding = (async () => {
+    const found = await discover({ port: PORT, known: cfg?.serverUrl });
+    const best = found.find((f) => f.mode === 'local') ?? found[0];
+    if (!best) return false;
+    if (best.origin !== cfg.serverUrl) { log(`serveur retrouvé à une nouvelle adresse (${best.origin})`); saveCfg({ ...cfg, serverUrl: best.origin }); }
+    return true;
+  })().finally(() => { finding = null; });
+  return finding;
 }
 
 if (!app.requestSingleInstanceLock()) app.quit();
@@ -67,7 +88,6 @@ function buildMenu() {
     { label: 'Fichier', submenu: [
       ...(isServer ? [
         { label: 'Sauvegarder maintenant…', click: backupNow },
-        { label: 'Adresses pour les autres postes', click: showAddresses },
         { label: 'Ouvrir le dossier des données', click: () => shell.openPath(app.getPath('userData')) },
         { label: 'Démarrer avec Windows', type: 'checkbox', checked: app.getLoginItemSettings().openAtLogin, click: (i) => app.setLoginItemSettings({ openAtLogin: i.checked }) },
         { type: 'separator' },
@@ -77,7 +97,7 @@ function buildMenu() {
       { type: 'separator' }, { label: isServer ? 'Quitter et arrêter le serveur' : 'Quitter', role: 'quit' },
     ] },
     { label: 'Affichage', submenu: [{ role: 'reload', label: 'Actualiser' }, { role: 'togglefullscreen', label: 'Plein écran' }, { type: 'separator' }, { role: 'zoomIn', label: 'Agrandir' }, { role: 'zoomOut', label: 'Réduire' }, { role: 'resetZoom', label: 'Taille normale' }] },
-    { label: 'Aide', submenu: [{ label: 'À propos', click: () => dialog.showMessageBox({ title: 'AgriTrace', message: `AgriTrace ${app.getVersion()}`, detail: isServer ? `Poste « ${cfg?.stationName ?? 'serveur'} » — serveur de la coopérative.\nAdresses pour les autres postes :\n${lanAddresses().join('\n') || '(aucune carte réseau active)'}` : `Poste « ${cfg?.stationName ?? 'client'} » relié à ${cfg?.serverUrl}.\nSi le serveur est éteint, ce poste continue de fonctionner et enverra son travail au retour du serveur.` }) }] },
+    { label: 'Aide', submenu: [{ label: 'À propos', click: () => dialog.showMessageBox({ title: 'AgriTrace', message: `AgriTrace ${app.getVersion()}`, detail: isServer ? `Poste « ${cfg?.stationName ?? 'serveur'} » — serveur de la coopérative.\nLes autres postes le trouvent automatiquement sur le réseau du bureau.` : `Poste « ${cfg?.stationName ?? 'client'} » relié au serveur de la coopérative (connexion automatique).\nSi le serveur est éteint, ce poste continue de fonctionner et enverra son travail au retour du serveur.` }) }] },
   ]));
 }
 
@@ -88,9 +108,6 @@ async function backupNow() {
     const t = await server.backup(r.filePaths[0]);
     dialog.showMessageBox({ message: 'Sauvegarde terminée', detail: t });
   } catch (e) { dialog.showErrorBox('Sauvegarde impossible', e.message); }
-}
-function showAddresses() {
-  dialog.showMessageBox({ title: 'Adresses du serveur', message: 'Sur les autres ordinateurs du bureau, installez AgriTrace en « poste client » et saisissez l\'une de ces adresses (ou ouvrez-la dans un navigateur) :', detail: lanAddresses().join('\n') || 'Aucune carte réseau active.' });
 }
 async function resetRole() {
   const r = await dialog.showMessageBox({ type: 'warning', buttons: ['Annuler', 'Changer de mode'], defaultId: 0, cancelId: 0, message: 'Changer de mode ?', detail: 'Les données du serveur sur ce poste ne sont PAS supprimées. Le serveur sera arrêté et le choix initial vous sera reproposé.' });
@@ -120,7 +137,6 @@ async function startServerRole() {
   tray.setToolTip('AgriTrace — serveur actif');
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: 'Ouvrir AgriTrace', click: () => { win?.show(); win?.focus(); } },
-    { label: 'Adresses pour les autres postes', click: showAddresses },
     { type: 'separator' }, { label: 'Quitter et arrêter le serveur', click: () => app.quit() },
   ]));
   tray.on('double-click', () => { win?.show(); win?.focus(); });
@@ -141,7 +157,7 @@ async function main() {
     buildMenu();
   }
   if (cfg.role === 'server') await startServerRole();
-  else { registerClientProtocol(); mainWindow('agritrace://app/'); }
+  else { registerClientProtocol(); mainWindow('agritrace://app/'); refindServer().catch(() => undefined); }
 }
 
 ipcMain.handle('setup:check', async (_e, url) => {
@@ -152,7 +168,12 @@ ipcMain.handle('setup:check', async (_e, url) => {
     return { ok: r.ok && !!j.mode, mode: j.mode, version: j.version, origin: u.origin };
   } catch (e) { return { ok: false, error: e.message }; }
 });
-ipcMain.handle('app:retry', (_e, url) => { win?.loadURL(url); });
+ipcMain.handle('setup:discover', async () => {
+  const found = await discover({ port: PORT });
+  const best = found.find((f) => f.mode === 'local') ?? found[0];
+  return best ? { ok: true, mode: best.mode, origin: best.origin, count: found.length } : { ok: false };
+});
+ipcMain.handle('app:retry', async (_e, url) => { await refindServer(); win?.loadURL(url); });
 ipcMain.handle('app:change', () => resetRole());
 
 app.whenReady().then(main);

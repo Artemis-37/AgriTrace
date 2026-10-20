@@ -75,7 +75,9 @@ function CreateSite({ onClose, onCreated }: { onClose: () => void; onCreated: (c
       <Field label="Code" hint="Majuscules, chiffres, - ou _"><input value={f.organization_code} onChange={set('organization_code')} /></Field>
       <Field label="Nom de la coopérative"><input value={f.organization_name} onChange={set('organization_name')} /></Field>
       <Field label="Identifiant de la coopérative (si déjà installée en local)" hint="Affiché dans Synchronisation sur le serveur local. Laisser vide pour une nouvelle installation."><input value={f.organization_id} onChange={set('organization_id')} /></Field>
-      <Field label="Adresse publique de ce serveur" hint="Celle que le serveur local doit joindre (par défaut : l'adresse actuelle)."><input value={f.public_url} onChange={set('public_url')} placeholder="https://central.exemple.org" /></Field>
+      <details><summary>Options techniques</summary>
+        <Field label="Adresse de ce serveur" hint="Remplie automatiquement ; à modifier seulement si le serveur est joint par une autre adresse."><input value={f.public_url} onChange={set('public_url')} /></Field>
+      </details>
       {act.error && <ErrorBox message={act.error} />}
       <div className="modal-actions"><button className="btn btn-secondary" onClick={onClose}>Annuler</button>
         <button className="btn" disabled={act.busy || !f.organization_code || f.organization_name.length < 2} onClick={() => act.run(async () => {

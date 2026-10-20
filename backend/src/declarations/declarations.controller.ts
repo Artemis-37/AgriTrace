@@ -213,25 +213,31 @@ export class DeclarationsController {
             AND ($4::text IS NULL OR d.status = $4)
           ORDER BY d.operation_date, d.created_at`, [mine ?? null, from ?? null, to ?? null, status ?? null])).rows;
     });
+    // Disposition du modèle « Tableau de l'État des achats » de la coopérative (Feuil1, A:I ; « Village » = section dans la base de la coopérative).
+    // Le prix unitaire est fixé par l'administration (barème) ; le montant = poids net × prix unitaire.
     const wb = new ExcelJS.Workbook();
-    const ws = wb.addWorksheet('Achats');
-    const COLUMNS: [string, string, number][] = [
-      ['Date', 'date', 12], ['Code producteur', 'code', 16], ['Nom du producteur', 'name', 28], ['Village / section', 'place', 22], ['Collecteur', 'collector', 22],
-      ['Poids (kg)', 'weight', 12], ['Nombre de sacs', 'bags', 14], ['N° reçu', 'receipt', 14], ['Prix unitaire', 'price', 12], ['Montant', 'amount', 14], ['Statut', 'status', 16],
+    const ws = wb.addWorksheet('Feuil1');
+    const KG = '#,###\\ \\K\\g\\ \\ ', FCFA = '#,###\\ \\F\\ \\C\\F\\A';
+    const COLUMNS: [string, string, number, string | undefined][] = [
+      ['Date', 'date', 10.7, 'mm-dd-yy'], ['Code Producteur', 'code', 16, undefined], ['Nom & Prénoms', 'name', 41.1, undefined], ['Village', 'village', 22, undefined], ['N° Reçu', 'receipt', 19.9, undefined],
+      ['Nbre sacs', 'bags', 14, '#,##0'], ['Poids Net', 'weight', 14.1, KG], ['Prix Unitaire', 'price', 12.9, FCFA], ['Montant', 'amount', 14.1, FCFA],
     ];
     ws.columns = COLUMNS.map(([header, key, width]) => ({ header, key, width }));
-    ws.getRow(1).font = { bold: true };
+    const thin = { style: 'thin' as const };
+    ws.getRow(1).eachCell((cell) => { cell.font = { bold: true, name: 'Calibri', size: 11 }; cell.alignment = { horizontal: 'center' }; cell.border = { left: thin, right: thin, top: thin, bottom: thin }; });
+    for (const [, key, , fmt] of COLUMNS) if (fmt) ws.getColumn(key).numFmt = fmt;
     ws.views = [{ state: 'frozen', ySplit: 1 }];
     for (const r of rows) ws.addRow({
-      date: r.operation_date, code: r.internal_code, name: `${r.last_name} ${r.first_names}`, place: [r.village, r.section].filter(Boolean).join(' / '), collector: r.collector,
-      weight: r.weight_kg === null ? null : Number(r.weight_kg), bags: r.bags, receipt: r.purchase_receipt_no, price: r.unit_price === null ? null : Number(r.unit_price),
-      amount: r.amount === null ? null : Number(r.amount), status: r.status,
+      date: r.operation_date instanceof Date ? r.operation_date : new Date(`${String(r.operation_date).slice(0, 10)}T00:00:00Z`),
+      code: r.internal_code, name: `${r.last_name} ${r.first_names}`, village: r.section ?? r.village, receipt: r.purchase_receipt_no, bags: r.bags,
+      weight: r.weight_kg === null ? null : Number(r.weight_kg), price: r.unit_price === null ? null : Number(r.unit_price), amount: r.amount === null ? null : Number(r.amount),
     });
-    ws.getColumn('weight').numFmt = '#,##0.000'; ws.getColumn('amount').numFmt = '#,##0';
-    const n = ws.rowCount + 1;
-    ws.addRow({ name: 'TOTAL', weight: { formula: `SUM(F2:F${n - 1})` }, bags: { formula: `SUM(G2:G${n - 1})` }, amount: { formula: `SUM(J2:J${n - 1})` } }).font = { bold: true };
+    const n = ws.rowCount;
+    ws.autoFilter = { from: 'A1', to: 'I1' };
+    const tot = ws.addRow({ name: 'TOTAL', bags: { formula: `SUM(F2:F${n})` }, weight: { formula: `SUM(G2:G${n})` }, amount: { formula: `SUM(I2:I${n})` } });
+    tot.font = { bold: true };
     return new StreamableFile(Buffer.from(await wb.xlsx.writeBuffer()), {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', disposition: 'attachment; filename="achats-declares.xlsx"',
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', disposition: 'attachment; filename="Tableau_de_lEtat_des_achats.xlsx"',
     });
   }
 

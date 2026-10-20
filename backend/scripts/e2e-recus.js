@@ -140,7 +140,10 @@ const sq = (lon, lat, s = 0.0009) => ({ type: 'Polygon', coordinates: [[[lon, la
   check('export Excel : fichier .xlsx', ex.status === 200 && /spreadsheetml/.test(ex.type ?? '') && ex.buf.slice(0, 2).toString() === 'PK', ex.status);
   const ExcelJS = require('exceljs'); const wb = new ExcelJS.Workbook(); await wb.xlsx.load(ex.buf); const ws = wb.worksheets[0];
   const head = ws.getRow(1).values.slice(1).join('|');
-  check('export Excel : colonnes Date, code, nom, poids, sacs, N° reçu', head.startsWith('Date|Code producteur|Nom du producteur') && head.includes('Poids (kg)') && head.includes('Nombre de sacs') && head.includes('N° reçu'), head);
+  check('export Excel : colonnes Date, code, nom, poids, sacs, N° reçu', head === 'Date|Code Producteur|Nom & Prénoms|Village|N° Reçu|Nbre sacs|Poids Net|Prix Unitaire|Montant', head);
+  const last = ws.getRow(ws.rowCount);
+  check('export Excel : feuille « Feuil1 » du modèle, ligne TOTAL avec formules sur sacs, poids, montant', ws.name === 'Feuil1' && last.getCell(3).value === 'TOTAL' && !!last.getCell(6).value.formula && !!last.getCell(7).value.formula && !!last.getCell(9).value.formula, ws.name);
+  check('export Excel : poids au format « Kg », montants au format « F CFA »', /K/.test(ws.getColumn(7).numFmt) && /CFA/.test(ws.getColumn(9).numFmt));
   const exc = await rawGet('/purchase-declarations/export/xlsx', tc);
   check('export Excel du collecteur : accessible', exc.status === 200);
   check('export Excel : dates invalides refusées', (await rawGet('/purchase-declarations/export/xlsx?from=hier', t1)).status === 400);

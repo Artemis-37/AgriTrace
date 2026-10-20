@@ -40,7 +40,7 @@ export default function Synchronisation() {
       {s.last_error && <Card title="Dernier incident"><p><Badge tone="bad">Erreur</Badge> {s.last_error}</p><p className="muted">Rien n'est perdu : les changements restent en file et repartent dès que le central répond.</p></Card>}
       {s.linked ? (
         <Card title="Serveur central">
-          <p>Relié à <strong>{s.central_url}</strong>.</p>
+          <p>Relié au <strong>serveur central</strong> (connexion automatique).</p>
           <button className="btn btn-secondary" onClick={() => setUnlink(true)}>Dissocier ce serveur du central</button>
           {unlink && <Confirm title="Dissocier du serveur central" intro="Les données déjà envoyées restent au central. Les prochains changements ne seront plus envoyés tant que le serveur n'est pas relié de nouveau." onClose={() => setUnlink(false)}
             onSubmit={async () => { await post('/replication/unlink'); setUnlink(false); reload(); }} />}
