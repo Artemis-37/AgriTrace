@@ -144,6 +144,9 @@ export class AccountingController {
     const [f, t] = range(from, to);
     return this.db.tx(req.org.id, async (c) => (await c.query(
       `SELECT e.id, e.number, j.code AS journal, e.entry_date, e.label, e.reversal_of, e.reference_type, e.reference_id,
+              (SELECT d.purchase_receipt_no FROM purchase_declarations d
+                 WHERE (e.reference_type = 'purchase_declaration' AND d.id = e.reference_id)
+                    OR (e.reference_type = 'payment' AND d.id = (SELECT p.reference_id FROM payments p WHERE p.id = e.reference_id AND p.reference_type = 'purchase_declaration')) LIMIT 1) AS purchase_receipt_no,
               (SELECT json_agg(json_build_object('account', a.code, 'debit', l.debit, 'credit', l.credit, 'label', l.label) ORDER BY l.line_no)
                  FROM accounting_lines l JOIN accounting_accounts a ON a.id = l.account_id WHERE l.entry_id = e.id) AS lines
          FROM accounting_entries e JOIN journals j ON j.id = e.journal_id
@@ -198,13 +201,16 @@ export class AccountingController {
       ws.columns = [
         { header: 'Date', key: 'd', width: 12 }, { header: 'N° écriture', key: 'n', width: 16 }, { header: 'Journal', key: 'j', width: 8 },
         { header: 'Compte', key: 'c', width: 10 }, { header: 'Libellé', key: 'l', width: 50 },
-        { header: 'Débit', key: 'db', width: 16 }, { header: 'Crédit', key: 'cr', width: 16 },
+        { header: 'Débit', key: 'db', width: 16 }, { header: 'Crédit', key: 'cr', width: 16 }, { header: 'Reçu d\'achat', key: 'rc', width: 18 },
       ];
       const rows = await this.db.tx(req.org.id, async (c) => (await c.query(
-        `SELECT e.entry_date, e.number, j.code AS journal, a.code, coalesce(l.label, e.label) AS label, l.debit, l.credit
+        `SELECT e.entry_date, e.number, j.code AS journal, a.code, coalesce(l.label, e.label) AS label, l.debit, l.credit,
+              (SELECT d.purchase_receipt_no FROM purchase_declarations d
+                 WHERE (e.reference_type = 'purchase_declaration' AND d.id = e.reference_id)
+                    OR (e.reference_type = 'payment' AND d.id = (SELECT p.reference_id FROM payments p WHERE p.id = e.reference_id AND p.reference_type = 'purchase_declaration')) LIMIT 1) AS purchase_receipt_no
            FROM accounting_lines l JOIN accounting_entries e ON e.id = l.entry_id JOIN journals j ON j.id = e.journal_id JOIN accounting_accounts a ON a.id = l.account_id
           WHERE e.entry_date BETWEEN $1 AND $2 ORDER BY e.entry_date, e.number, l.line_no`, [f, t])).rows);
-      for (const r of rows) ws.addRow({ d: r.entry_date, n: r.number, j: r.journal, c: r.code, l: r.label, db: Number(r.debit), cr: Number(r.credit) });
+      for (const r of rows) ws.addRow({ d: r.entry_date, n: r.number, j: r.journal, c: r.code, l: r.label, db: Number(r.debit), cr: Number(r.credit), rc: r.purchase_receipt_no ?? '' });
     } else {
       ws.columns = [
         { header: 'Compte', key: 'c', width: 10 }, { header: 'Libellé', key: 'l', width: 50 }, { header: 'Débit', key: 'd', width: 16 },

@@ -33,6 +33,7 @@ const num = (x) => Number(x);
     await call('POST', `/organizations/${org.id}/admins`, { token: adm, body: { email: mail, full_name: mail, password: pw } });
   const t1 = await login(`a1.${run}@t.test`, pw), t2 = await login(`a2.${run}@t.test`, pw), tb = await login(`b1.${run}@t.test`, pw);
   const J = (t, o) => ({ token: t, org: o.id });
+  await call('PUT', '/purchase-declarations/settings/receipts', { token: t1, org: A.id, body: { mode: 'physical', series: 'A', required: false } }); // ces scénarios ne testent pas le reçu d'achat (voir e2e-recus.js)
 
   const vc = (await call('POST', '/value-chains', { ...J(t1, A), body: { code: 'CACAO', name: 'Cacao' } })).body;
   const camp = (await call('POST', '/campaigns', { ...J(t1, A), body: { value_chain_id: vc.id, code: 'C2526', name: 'Campagne 2025-26', starts_on: '2025-10-01', ends_on: '2026-09-30' } })).body;

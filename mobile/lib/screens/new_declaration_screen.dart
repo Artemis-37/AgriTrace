@@ -13,6 +13,7 @@ class _NewDeclarationScreenState extends State<NewDeclarationScreen> {
   final _quantity = TextEditingController();
   final _bags = TextEditingController();
   final _notes = TextEditingController();
+  final _receiptNo = TextEditingController();
 
   List<Map<String, Object?>> _producers = [];
   Map<String, Object?>? _producer;
@@ -74,7 +75,7 @@ class _NewDeclarationScreenState extends State<NewDeclarationScreen> {
     setState(() { _saving = true; _error = null; });
     await services.repo.createDeclaration(
         producerId: _producer!['id'] as String, chainId: _chain!['id'] as String, campaignId: _campaign!['id'] as String,
-        date: _dateStr, quantity: q, unit: _unit, bags: bags, notes: _notes.text.trim());
+        date: _dateStr, quantity: q, unit: _unit, bags: bags, notes: _notes.text.trim(), receiptNo: _receiptNo.text.trim());
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Enregistrée sur l\'appareil. Elle sera envoyée dès que possible.')));
     Navigator.of(context).pop();
@@ -120,6 +121,9 @@ class _NewDeclarationScreenState extends State<NewDeclarationScreen> {
                   final d = await showDatePicker(context: context, initialDate: _date, firstDate: DateTime.now().subtract(const Duration(days: 60)), lastDate: DateTime.now());
                   if (d != null) { setState(() => _date = d); _updateEstimate(); }
                 }),
+            TextField(controller: _receiptNo, textCapitalization: TextCapitalization.characters,
+                decoration: const InputDecoration(labelText: 'Numéro du reçu d\'achat', helperText: 'Numéro du reçu remis au producteur. Laisser vide si la coopérative utilise des reçus générés par AgriTrace.', border: OutlineInputBorder())),
+            const SizedBox(height: 12),
             TextField(controller: _notes, decoration: const InputDecoration(labelText: 'Observations (facultatif)', border: OutlineInputBorder())),
             const SizedBox(height: 12),
             Card(child: Padding(padding: const EdgeInsets.all(12), child: Text(_estimate == null

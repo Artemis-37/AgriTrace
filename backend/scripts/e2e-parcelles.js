@@ -39,7 +39,7 @@ const square = (lon, lat, size = d) => ({ type: 'Polygon', coordinates: [[[lon, 
   console.log('Création');
   const k1 = key('parcel');
   const P1 = await call('POST', '/parcels', { ...J(t1, A), body: { idempotency_key: k1, producer_id: p1.id, value_chain_id: vc.id, declared_area_ha: '1', geometry: square(-6, 6.8) } });
-  check('parcelle créée avec polygone : code PC-, statut « declared »', P1.status === 201 && /^PC-\d{5}$/.test(P1.body.code) && P1.body.verification_status === 'declared', P1.body);
+  check('parcelle créée avec polygone : code CODE-P1, statut « declared »', P1.status === 201 && /-P1$/.test(P1.body.code) && P1.body.verification_status === 'declared', P1.body);
   check('surface mesurée calculée par le serveur (≈ 1 ha) et position déduite du polygone', Number(P1.body.geometry_area_ha) > 0.95 && Number(P1.body.geometry_area_ha) < 1.05 && Math.abs(Number(P1.body.latitude) - 6.80045) < 0.0001, P1.body);
   check('renvoi : même parcelle, pas de doublon', (await call('POST', '/parcels', { ...J(t1, A), body: { idempotency_key: k1, producer_id: p1.id, value_chain_id: vc.id, declared_area_ha: '1', geometry: square(-6, 6.8) } })).body.replayed === true);
   const dup = await call('POST', '/parcels', { ...J(t1, A), body: { idempotency_key: key('parcel'), producer_id: p2.id, value_chain_id: vc.id, declared_area_ha: '1', latitude: 6.8005, longitude: -5.9996 } });

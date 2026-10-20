@@ -109,6 +109,11 @@ export class SyncController {
           const ctl = this.moduleRef.get(h.controller, { strict: false });
           result = await h.run(ctl, payload, req);
           status = 'accepted';
+          // Numéro de reçu déjà utilisé : la déclaration est enregistrée mais reste en conflit jusqu'à résolution (CDC §27.5)
+          if (result?.receipt_conflict_with && !result.receipt_override_by) {
+            status = 'conflict';
+            error = `Numéro de reçu ${result.purchase_receipt_no} déjà utilisé par une autre déclaration : à résoudre par un utilisateur autorisé`;
+          }
         } catch (e: any) {
           if (e instanceof HttpException) {
             const code = e.getStatus();
@@ -160,7 +165,7 @@ export class SyncController {
         { key: 'warehouses', sql: `SELECT id, code, name, status, updated_at AS ts FROM warehouses` },
         { key: 'my_assignments', sql: `SELECT id, collector_id, value_chain_id, zone, created_at AS ts FROM collector_assignments WHERE collector_id = $3`, params: [mine] },
         { key: 'declarations', sql: `SELECT id, collector_id, producer_id, value_chain_id, campaign_id, operation_date, bags, quantity, unit, unit_price, currency, amount,
-                                             status, status_reason, updated_at AS ts FROM purchase_declarations WHERE ($3::boolean OR collector_id = $4)`, params: [canSeeAll, mine] },
+                                             purchase_receipt_series, purchase_receipt_no, receipt_conflict_with, receipt_override_by, status, status_reason, updated_at AS ts FROM purchase_declarations WHERE ($3::boolean OR collector_id = $4)`, params: [canSeeAll, mine] },
         { key: 'operation_results', sql: `SELECT idempotency_key, op_type, status, result, error, processed_at AS ts FROM sync_operations
                                            WHERE user_id = $3 AND processed_at IS NOT NULL`, params: [req.user.id] },
       ];

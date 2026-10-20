@@ -4,7 +4,7 @@ import 'package:sqflite_sqlcipher/sqflite.dart';
 /// Base locale chiffrée (SQLCipher). Le schéma est versionné : chaque version a sa migration,
 /// pour mettre à jour l'application sans perdre les opérations en attente.
 class AppDatabase {
-  static const schemaVersion = 1;
+  static const schemaVersion = 2;
   final Database raw;
   AppDatabase._(this.raw);
 
@@ -50,6 +50,11 @@ class AppDatabase {
         seq INTEGER PRIMARY KEY AUTOINCREMENT, idempotency_key TEXT NOT NULL UNIQUE, op_type TEXT NOT NULL,
         payload TEXT NOT NULL, entity_id TEXT, status TEXT NOT NULL DEFAULT 'pending',
         error TEXT, attempts INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL, updated_at TEXT)''');
+    },
+    // Version 2 : numéro du reçu d'achat saisi dès la déclaration (CDC §13.3) et indicateur de conflit de numéro.
+    2: (d) async {
+      await d.execute('ALTER TABLE declarations ADD COLUMN purchase_receipt_no TEXT');
+      await d.execute('ALTER TABLE declarations ADD COLUMN receipt_conflict INTEGER NOT NULL DEFAULT 0');
     },
   };
 

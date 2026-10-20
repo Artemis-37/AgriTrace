@@ -82,7 +82,7 @@ class Repository {
   /// Aucune connexion n'est nécessaire ; chaque opération porte sa clé d'idempotence stable.
   Future<String> createDeclaration({
     required String producerId, required String chainId, required String campaignId, required String date,
-    required String quantity, required String unit, int? bags, String? notes,
+    required String quantity, required String unit, int? bags, String? notes, String? receiptNo,
   }) async {
     final id = _uuid.v4();
     final createKey = 'decl-${_uuid.v4()}';
@@ -91,11 +91,12 @@ class Repository {
     final payload = {
       'id': id, 'idempotency_key': createKey, 'producer_id': producerId, 'value_chain_id': chainId, 'campaign_id': campaignId,
       'operation_date': date, if (bags != null) 'bags': bags, 'quantity': quantity, 'unit': unit, if (notes != null && notes.isNotEmpty) 'notes': notes,
+      if (receiptNo != null && receiptNo.isNotEmpty) 'purchase_receipt_no': receiptNo,
     };
     await db.raw.transaction((txn) async {
       await txn.insert('declarations', {
         'id': id, 'producer_id': producerId, 'value_chain_id': chainId, 'campaign_id': campaignId, 'operation_date': date,
-        'bags': bags, 'quantity': quantity, 'unit': unit, 'notes': notes, 'local_state': 'pending', 'created_at': now,
+        'bags': bags, 'quantity': quantity, 'unit': unit, 'notes': notes, 'purchase_receipt_no': (receiptNo == null || receiptNo.isEmpty) ? null : receiptNo.trim().toUpperCase(), 'local_state': 'pending', 'created_at': now,
       });
       await txn.insert('outbox', {'idempotency_key': createKey, 'op_type': 'purchase_declaration.create', 'payload': jsonEncode(payload), 'entity_id': id, 'created_at': now});
       await txn.insert('outbox', {'idempotency_key': submitKey, 'op_type': 'purchase_declaration.submit', 'payload': jsonEncode({'id': id}), 'entity_id': id, 'created_at': now});

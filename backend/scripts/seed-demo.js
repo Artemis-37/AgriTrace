@@ -47,7 +47,7 @@ const days = (n) => new Date(Date.now() + n * 86400000).toISOString().slice(0, 1
   const decls = [];
   for (let i = 0; i < 8; i++) {
     const id = crypto.randomUUID();
-    await call('POST', '/purchase-declarations', { token: tc, org: org.id, body: { id, idempotency_key: key('decl'), producer_id: producers[i].id, value_chain_id: vc.id, campaign_id: camp.id, operation_date: days(-10 + i), quantity: String(2 + (i % 3)), unit: 'sac', bags: 2 + (i % 3) } });
+    await call('POST', '/purchase-declarations', { token: tc, org: org.id, body: { id, idempotency_key: key('decl'), producer_id: producers[i].id, value_chain_id: vc.id, campaign_id: camp.id, operation_date: days(-10 + i), quantity: String(2 + (i % 3)), unit: 'sac', bags: 2 + (i % 3), purchase_receipt_no: 'DEMO-' + String(i + 1).padStart(4, '0') } });
     if (i < 7) await call('POST', `/purchase-declarations/${id}/submit`, { token: tc, org: org.id });
     decls.push(id);
   }

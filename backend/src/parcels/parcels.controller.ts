@@ -89,7 +89,10 @@ export class ParcelsController {
             WHERE status = 'active' AND latitude IS NOT NULL AND ${HAV('latitude', 'longitude', '$1::numeric', '$2::numeric')} < ${DUP_RADIUS_M} ORDER BY 4 LIMIT 5`, [g.lat, g.lon]);
         if (dup.rowCount) throw new ConflictException({ message: `Parcelle potentiellement en double (à moins de ${DUP_RADIUS_M} m d'une parcelle existante). Renvoyer avec confirm_not_duplicate=true si c'est voulu.`, candidates: dup.rows });
       }
-      const code = `PC-${pad(await nextNumber(c, req.org.id, 'parcel'))}`;
+      // Code « CODE_PRODUCTEUR-Pn » : compteur du producteur incrémenté sous verrou de ligne, donc sans doublon en cas de créations simultanées
+      // et sans réattribution après archivage (CDC §8.2).
+      const seq = (await c.query(`UPDATE producers SET parcel_seq = parcel_seq + 1 WHERE id = $1 RETURNING parcel_seq, internal_code`, [b.producer_id])).rows[0];
+      const code = `${seq.internal_code}-P${seq.parcel_seq}`;
       const row = (await c.query(
         `INSERT INTO parcels(organization_id, code, idempotency_key, producer_id, value_chain_id, declared_area_ha, latitude, longitude, geometry, geometry_area_ha, created_by)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,

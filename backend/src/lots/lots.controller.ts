@@ -158,7 +158,7 @@ export class LotsController {
       const lotIds = [id, ...new Set(anc.map((a: any) => a.parent_lot_id))];
 
       const origins = (await c.query(
-        `SELECT r.lot_id, r.number AS receipt_number, r.created_at AS received_at, d.id AS declaration_id, w.net_kg, w.declared_kg, w.variance_pct, w.justification,
+        `SELECT r.lot_id, r.number AS receipt_number, d.purchase_receipt_no, r.created_at AS received_at, d.id AS declaration_id, w.net_kg, w.declared_kg, w.variance_pct, w.justification,
                 p.id AS producer_id, p.internal_code AS producer_code, p.last_name || ' ' || p.first_names AS producer_name, p.village, p.section,
                 cu.full_name AS collector_name, d.operation_date
            FROM receipts r JOIN weighings w ON w.id = r.weighing_id JOIN purchase_declarations d ON d.id = r.declaration_id

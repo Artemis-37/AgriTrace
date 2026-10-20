@@ -218,7 +218,7 @@ export class ReceptionController {
               w.weighed_at, w.gross_kg, w.tare_kg, w.net_kg, w.declared_kg, w.variance_kg, w.variance_pct, w.bags,
               p.last_name || ' ' || p.first_names AS producer_name, p.internal_code AS producer_code,
               cu.full_name AS collector_name, ou.full_name AS operator_name, wh.name AS warehouse_name,
-              l.code AS lot_code, d.status AS declaration_status
+              l.code AS lot_code, d.status AS declaration_status, d.purchase_receipt_no
          FROM receipts r
          JOIN organizations o ON o.id = r.organization_id
          JOIN weighings w ON w.id = r.weighing_id

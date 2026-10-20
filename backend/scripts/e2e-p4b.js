@@ -39,6 +39,7 @@ const upload = (tok, org, buf, fields, name = 'piece.pdf', type = 'application/p
     await call('POST', `/organizations/${org.id}/admins`, { token: adm, body: { email: mail, full_name: mail, password: pw } });
   const t1 = await login(`a1.${run}@t.test`, pw), tb = await login(`b1.${run}@t.test`, pw);
   const J = (t, o) => ({ token: t, org: o.id });
+  await call('PUT', '/purchase-declarations/settings/receipts', { token: t1, org: A.id, body: { mode: 'physical', series: 'A', required: false } }); // ces scénarios ne testent pas le reçu d'achat (voir e2e-recus.js)
   const vc = (await call('POST', '/value-chains', { ...J(t1, A), body: { code: 'CACAO', name: 'Cacao' } })).body;
   const prod = (await call('POST', '/producers', { ...J(t1, A), body: { last_name: 'KONE', first_names: 'Awa', village: 'Hiré', section: 'S1', value_chain_ids: [vc.id] } })).body.producer;
   const prod2 = (await call('POST', '/producers', { ...J(t1, A), body: { last_name: 'TRAORE', first_names: 'Moussa', village: 'Zoukougbeu', section: 'S2', value_chain_ids: [vc.id] } })).body.producer;

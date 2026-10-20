@@ -103,6 +103,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         title: Text('${d['producer_name'] ?? 'Producteur'}  •  ${d['quantity']} ${d['unit']}'),
                         subtitle: Text([
                           d['operation_date'], label,
+                          if (d['purchase_receipt_no'] != null) 'Reçu ${d['purchase_receipt_no']}${d['receipt_conflict'] == 1 ? ' (numéro déjà utilisé — à résoudre)' : ''}',
                           if (amount != null) 'Montant ${double.parse(amount).toStringAsFixed(0)} ${d['currency'] ?? ''}',
                           if (d['local_error'] != null) '${d['local_error']}',
                         ].join('  •  ')),

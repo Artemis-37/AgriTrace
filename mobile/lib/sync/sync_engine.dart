@@ -144,6 +144,7 @@ class SyncEngine {
         'producer_id': d['producer_id'], 'value_chain_id': d['value_chain_id'], 'campaign_id': d['campaign_id'], 'operation_date': (d['operation_date'] as String).substring(0, 10),
         'bags': d['bags'], 'quantity': d['quantity'].toString(), 'unit': d['unit'], 'unit_price': d['unit_price']?.toString(), 'currency': d['currency'],
         'amount': d['amount']?.toString(), 'status': d['status'], 'status_reason': d['status_reason'],
+        'purchase_receipt_no': d['purchase_receipt_no'], 'receipt_conflict': (d['receipt_conflict_with'] != null && d['receipt_override_by'] == null) ? 1 : 0,
       };
       final existing = await txn.query('declarations', columns: ['local_state'], where: 'id = ?', whereArgs: [d['id']]);
       if (existing.isEmpty) {

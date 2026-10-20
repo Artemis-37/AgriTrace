@@ -1,15 +1,16 @@
 import {
-  BadRequestException, Body, Controller, ForbiddenException, Get, NotFoundException, Param, ParseUUIDPipe,
-  Post, Query, Req, UnprocessableEntityException,
+  BadRequestException, Body, ConflictException, Controller, ForbiddenException, Get, NotFoundException, Param, ParseUUIDPipe,
+  Post, Put, Query, Req, UnprocessableEntityException,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiHeader, ApiTags } from '@nestjs/swagger';
-import { IsDateString, IsInt, IsOptional, IsString, IsUUID, Length, Min } from 'class-validator';
+import { IsBoolean, IsDateString, IsIn, IsInt, IsOptional, IsString, IsUUID, Length, Matches, Min } from 'class-validator';
 import { PoolClient } from 'pg';
 import { RequirePermissions } from '../access/decorators';
 import { AuditService } from '../audit/audit.service';
 import { Dec, isUniqueViolation } from '../common/dto';
 import { DbService } from '../db/db.service';
 import { canSubmit, canTransition, REASON_REQUIRED } from './declaration-states';
+import { assignReceipt, matchesMask, normalizeReceipt, receiptConfig } from './receipt.helpers';
 
 export class CreateDeclarationDto {
   @IsUUID() id: string;                       // identifiant local stable (généré sur l'appareil)
@@ -23,7 +24,21 @@ export class CreateDeclarationDto {
   @Dec(3) quantity: string;
   @IsString() @Length(1, 20) unit: string;
   @IsOptional() @IsString() @Length(0, 1000) notes?: string;
+  /** Numéro du reçu d'achat saisi par le collecteur dès la déclaration (mode « physique »). */
+  @IsOptional() @IsString() @Length(0, 40) purchase_receipt_no?: string;
 }
+export class ReceiptSettingsDto {
+  @IsIn(['physical', 'generated']) mode: 'physical' | 'generated';
+  @Matches(/^[A-Z0-9]{1,10}$/) series: string;
+  @IsBoolean() required: boolean;
+  @IsOptional() @IsString() @Length(1, 40) mask?: string;
+  @IsOptional() @Matches(/^[A-Z0-9-]{1,10}$/) prefix?: string;
+}
+class ReceiptCorrectionDto {
+  @IsString() @Length(1, 40) purchase_receipt_no: string;
+  @IsString() @Length(3, 500) reason: string;
+}
+class ReceiptOverrideDto { @IsString() @Length(3, 500) reason: string; }
 class TransitionDto {
   @IsString() to: string;
   @IsOptional() @IsString() @Length(3, 500) reason?: string;
@@ -76,12 +91,26 @@ export class DeclarationsController {
         if (k.campaign_status !== 'open') throw new BadRequestException('Campagne inconnue, fermée ou étrangère à la filière');
         if (!k.assigned) throw new ForbiddenException("Collecteur non affecté à cette filière");
 
-        const ins = await c.query(
-          `INSERT INTO purchase_declarations(id, organization_id, idempotency_key, collector_id, producer_id, value_chain_id, campaign_id,
-                                              operation_date, bags, quantity, unit, notes, created_by)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *`,
-          [b.id, req.org.id, b.idempotency_key, collectorId, b.producer_id, b.value_chain_id, b.campaign_id,
-           b.operation_date, b.bags ?? null, b.quantity, b.unit, b.notes ?? null, req.user.id]);
+        // Numéro de reçu d'achat : saisi (mode physique) ou attribué (mode généré). Un doublon n'est pas écrasé :
+        // la déclaration est enregistrée « en conflit » et ne peut être soumise ni validée avant résolution (CDC §13.4, §27.5).
+        const cfg = await receiptConfig(c);
+        const rc = await assignReceipt(c, req.org.id, req.user.id, b.purchase_receipt_no, cfg);
+        const insertSql = `INSERT INTO purchase_declarations(id, organization_id, idempotency_key, collector_id, producer_id, value_chain_id, campaign_id,
+                                              operation_date, bags, quantity, unit, notes, created_by,
+                                              purchase_receipt_series, purchase_receipt_no, purchase_receipt_entered, purchase_receipt_source, receipt_conflict_with)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18) RETURNING *`;
+        const args = (conflict: string | null) => [b.id, req.org.id, b.idempotency_key, collectorId, b.producer_id, b.value_chain_id, b.campaign_id,
+           b.operation_date, b.bags ?? null, b.quantity, b.unit, b.notes ?? null, req.user.id, rc.series, rc.no, rc.entered, rc.source, conflict];
+        await c.query('SAVEPOINT ins');
+        let ins;
+        try { ins = await c.query(insertSql, args(rc.conflictWith)); }
+        catch (e: any) {
+          // Course entre deux appareils sur le même numéro : on retombe sur le cas « conflit »
+          if (!(isUniqueViolation(e) && String(e.constraint).includes('uq_decl_purchase_receipt'))) throw e;
+          await c.query('ROLLBACK TO SAVEPOINT ins');
+          const other = (await c.query(`SELECT id FROM purchase_declarations WHERE purchase_receipt_series = $1 AND purchase_receipt_no = $2 AND receipt_conflict_with IS NULL`, [rc.series, rc.no])).rows[0];
+          ins = await c.query(insertSql, args(other.id));
+        }
         await this.history(c, req.org.id, b.id, null, 'draft', undefined, req.user.id);
         return { row: ins.rows[0], replay: false };
       });
@@ -94,20 +123,83 @@ export class DeclarationsController {
     }
   }
 
+  // ---- Paramètres de numérotation des reçus d'achat ----
+  @Get('settings/receipts')
+  @RequirePermissions('declarations:read')
+  settings(@Req() req: any) { return this.db.tx(req.org.id, (c) => receiptConfig(c)); }
+
+  @Put('settings/receipts')
+  @RequirePermissions('settings:receipts')
+  async putSettings(@Body() b: ReceiptSettingsDto, @Req() req: any) {
+    const out = await this.db.tx(req.org.id, async (c) => {
+      const prev = await receiptConfig(c);
+      const known = (await c.query(`SELECT mode FROM purchase_receipt_series WHERE series = $1`, [b.series])).rows[0];
+      if (known && known.mode !== b.mode)
+        throw new ConflictException(`La série « ${b.series} » existe en mode « ${known.mode} » : une série ne mélange pas les deux modes, choisir un autre nom de série.`);
+      return (await c.query(
+        `INSERT INTO org_settings(organization_id, purchase_receipt_mode, purchase_receipt_series, purchase_receipt_required, purchase_receipt_mask, purchase_receipt_prefix, updated_by)
+         VALUES ($1,$2,$3,$4,$5,$6,$7)
+         ON CONFLICT (organization_id) DO UPDATE SET purchase_receipt_mode = EXCLUDED.purchase_receipt_mode, purchase_receipt_series = EXCLUDED.purchase_receipt_series,
+           purchase_receipt_required = EXCLUDED.purchase_receipt_required, purchase_receipt_mask = EXCLUDED.purchase_receipt_mask,
+           purchase_receipt_prefix = EXCLUDED.purchase_receipt_prefix, updated_at = now(), updated_by = EXCLUDED.updated_by
+         RETURNING purchase_receipt_mode AS mode, purchase_receipt_series AS series, purchase_receipt_required AS required, purchase_receipt_mask AS mask, purchase_receipt_prefix AS prefix`,
+        [req.org.id, b.mode, b.series, b.required, b.mask ?? null, b.prefix ?? 'RA', req.user.id])).rows[0];
+    });
+    await this.audit.log({ organizationId: req.org.id, actorUserId: req.user.id, action: 'settings.purchase_receipts', entityType: 'org_settings', entityId: req.org.id, details: out });
+    return out;
+  }
+
+  /**
+   * Recherche d'une opération à partir du numéro de reçu d'achat : déclaration, pesées, réceptions, lots, paiements,
+   * mouvements de caisse et écritures comptables liés (CDC §13.8). Réservée aux rôles autorisés (magasinier, finances).
+   */
+  @Get('search/by-receipt')
+  @RequirePermissions('receipts:search')
+  async searchByReceipt(@Query('number') number: string, @Req() req: any) {
+    if (!number || number.trim().length < 2) throw new BadRequestException('Numéro de reçu requis (2 caractères minimum)');
+    const no = normalizeReceipt(number);
+    return this.db.tx(req.org.id, async (c) => {
+      const decls = (await c.query(
+        `SELECT d.id, d.purchase_receipt_series, d.purchase_receipt_no, d.purchase_receipt_entered, d.receipt_conflict_with, d.receipt_override_by,
+                d.status, d.operation_date, d.quantity, d.unit, d.amount, d.currency, d.producer_id,
+                p.internal_code AS producer_code, p.last_name || ' ' || p.first_names AS producer_name, d.collector_id
+           FROM purchase_declarations d JOIN producers p ON p.id = d.producer_id
+          WHERE d.purchase_receipt_no = $1 ORDER BY d.created_at LIMIT 20`, [no])).rows;
+      const ids = decls.map((d: any) => d.id);
+      if (!ids.length) return { number: no, declarations: [] };
+      const q = async (sql: string) => (await c.query(sql, [ids])).rows;
+      const weighings = await q(`SELECT id, declaration_id, status, net_kg, declared_kg, variance_kg, variance_pct, warehouse_id, weighed_at FROM weighings WHERE declaration_id = ANY($1)`);
+      const receipts = await q(`SELECT r.id, r.number, r.declaration_id, r.lot_id, l.code AS lot_code, r.created_at FROM receipts r JOIN lots l ON l.id = r.lot_id WHERE r.declaration_id = ANY($1)`);
+      const payments = await q(`SELECT id, status, amount, currency, method, reference_id, tx_id, entry_id FROM payments WHERE reference_type = 'purchase_declaration' AND reference_id = ANY($1)`);
+      const payIds = payments.map((p: any) => p.id);
+      const txs = (await c.query(
+        `SELECT id, direction, amount, currency, reason, reference_type, reference_id, created_at FROM financial_transactions
+          WHERE (reference_type = 'purchase_declaration' AND reference_id = ANY($1)) OR (reference_type = 'payment' AND reference_id = ANY($2))
+          ORDER BY created_at`, [ids, payIds])).rows;
+      const entries = (await c.query(
+        `SELECT id, number, entry_date, label, reference_type, reference_id FROM accounting_entries
+          WHERE (reference_type = 'purchase_declaration' AND reference_id = ANY($1)) OR (reference_type = 'payment' AND reference_id = ANY($2))
+          ORDER BY created_at`, [ids, payIds])).rows;
+      return { number: no, declarations: decls, weighings, receipts, payments, financial_transactions: txs, accounting_entries: entries };
+    });
+  }
+
   @Get()
   @RequirePermissions('declarations:read')
-  list(@Req() req: any, @Query('status') status?: string, @Query('limit') limit?: string, @Query('offset') offset?: string) {
+  list(@Req() req: any, @Query('status') status?: string, @Query('limit') limit?: string, @Query('offset') offset?: string, @Query('receipt_no') receiptNo?: string) {
     const all = req.org.permissions.has('declarations:validate');
     return this.db.tx(req.org.id, async (c) => {
       const mine = all ? null : await this.myCollector(c, req.user.id);
       if (!all && !mine) return [];
       return (await c.query(
         `SELECT id, collector_id, producer_id, value_chain_id, campaign_id, operation_date, bags, quantity, unit,
-                unit_price, currency, amount, status, status_reason, updated_at
+                unit_price, currency, amount, status, status_reason, updated_at,
+                purchase_receipt_series, purchase_receipt_no, receipt_conflict_with, receipt_override_by
            FROM purchase_declarations
           WHERE ($1::text IS NULL OR status = $1) AND ($2::uuid IS NULL OR collector_id = $2)
+            AND ($5::text IS NULL OR purchase_receipt_no LIKE $5 || '%')
           ORDER BY operation_date DESC, created_at DESC LIMIT $3 OFFSET $4`,
-        [status ?? null, mine ?? null, Math.min(Number(limit) || 50, 200), Number(offset) || 0])).rows;
+        [status ?? null, mine ?? null, Math.min(Number(limit) || 50, 200), Number(offset) || 0, receiptNo ? normalizeReceipt(receiptNo).replace(/[%_\\]/g, '') : null])).rows;
     });
   }
 
@@ -142,6 +234,10 @@ export class DeclarationsController {
     const row = await this.db.tx(req.org.id, async (c) => {
       const d = await this.load(c, id, req, true);
       if (!canSubmit(d.status)) throw new BadRequestException(`Soumission impossible depuis l'état « ${d.status} »`);
+      if (d.receipt_conflict_with && !d.receipt_override_by)
+        throw new ConflictException(`Numéro de reçu ${d.purchase_receipt_no} déjà utilisé : corriger le numéro ou obtenir une exception autorisée avant de soumettre`);
+      if (!d.purchase_receipt_no && (await receiptConfig(c)).required)
+        throw new BadRequestException("Le numéro du reçu d'achat est obligatoire avant la soumission");
 
       const p = await c.query(
         `SELECT v.id AS version_id, v.unit_price, s.currency, s.unit AS price_unit
@@ -182,6 +278,8 @@ export class DeclarationsController {
       const d = await this.load(c, id, req, true);
       if (!canTransition(d.status, b.to)) throw new BadRequestException(`Transition « ${d.status} » → « ${b.to} » interdite`);
       if (REASON_REQUIRED.has(b.to) && !b.reason) throw new BadRequestException('Un motif est obligatoire');
+      if (b.to === 'accepted' && d.receipt_conflict_with && !d.receipt_override_by)
+        throw new ConflictException(`Validation bloquée : numéro de reçu ${d.purchase_receipt_no} en doublon, non résolu`);
       const up = await c.query(
         `UPDATE purchase_declarations SET status = $2, status_reason = $3, updated_at = now(), updated_by = $4, version = version + 1 WHERE id = $1 RETURNING *`,
         [id, b.to, b.reason ?? null, req.user.id]);
@@ -189,6 +287,51 @@ export class DeclarationsController {
       return up.rows[0];
     });
     await this.audit.log({ organizationId: req.org.id, actorUserId: req.user.id, action: 'declaration.transition', entityType: 'purchase_declaration', entityId: id, details: { to: b.to } });
+    return row;
+  }
+
+  /** Correction du numéro saisi (valeur d'origine conservée ; auteur, date et motif consignés). */
+  @Post(':id/receipt-number')
+  @RequirePermissions('receipts:correct')
+  async correctReceipt(@Param('id', ParseUUIDPipe) id: string, @Body() b: ReceiptCorrectionDto, @Req() req: any) {
+    const row = await this.db.tx(req.org.id, async (c) => {
+      const d = await this.load(c, id, req, true);
+      if (['cancelled', 'rejected'].includes(d.status)) throw new BadRequestException(`Correction impossible : déclaration « ${d.status} »`);
+      if (d.purchase_receipt_source === 'generated') throw new BadRequestException('Un numéro généré par AgriTrace ne se corrige pas');
+      const cfg = await receiptConfig(c);
+      if (cfg.mode !== 'physical') throw new BadRequestException('La série courante est en mode « généré »');
+      const no = normalizeReceipt(b.purchase_receipt_no);
+      if (!matchesMask(no, cfg.mask)) throw new BadRequestException(`Format invalide : attendu « ${cfg.mask} »`);
+      const other = (await c.query(
+        `SELECT id FROM purchase_declarations WHERE purchase_receipt_series = $1 AND purchase_receipt_no = $2 AND receipt_conflict_with IS NULL AND id <> $3`, [cfg.series, no, id])).rows[0];
+      if (other) throw new ConflictException({ message: `Numéro ${no} déjà utilisé`, conflicting_declaration_id: other.id });
+      await c.query(
+        `INSERT INTO purchase_receipt_corrections(organization_id, declaration_id, kind, old_series, old_no, new_series, new_no, reason, actor_user_id)
+         VALUES ($1,$2,'correction',$3,$4,$5,$6,$7,$8)`, [req.org.id, id, d.purchase_receipt_series, d.purchase_receipt_no, cfg.series, no, b.reason, req.user.id]);
+      return (await c.query(
+        `UPDATE purchase_declarations SET purchase_receipt_series = $2, purchase_receipt_no = $3, purchase_receipt_source = 'physical',
+                purchase_receipt_entered = coalesce(purchase_receipt_entered, $3), receipt_conflict_with = NULL, receipt_override_by = NULL, receipt_override_reason = NULL,
+                updated_at = now(), updated_by = $4, version = version + 1 WHERE id = $1 RETURNING *`, [id, cfg.series, no, req.user.id])).rows[0];
+    });
+    await this.audit.log({ organizationId: req.org.id, actorUserId: req.user.id, action: 'declaration.receipt_correct', entityType: 'purchase_declaration', entityId: id, details: { purchase_receipt_no: row.purchase_receipt_no, reason: b.reason } });
+    return row;
+  }
+
+  /** Exception expresse et auditée : accepter un doublon de numéro (ex. reçu papier réellement émis deux fois). */
+  @Post(':id/receipt-override')
+  @RequirePermissions('receipts:override')
+  async overrideReceipt(@Param('id', ParseUUIDPipe) id: string, @Body() b: ReceiptOverrideDto, @Req() req: any) {
+    const row = await this.db.tx(req.org.id, async (c) => {
+      const d = await this.load(c, id, req, true);
+      if (!d.receipt_conflict_with) throw new BadRequestException('Aucun conflit de numéro sur cette déclaration');
+      await c.query(
+        `INSERT INTO purchase_receipt_corrections(organization_id, declaration_id, kind, old_series, old_no, new_series, new_no, reason, actor_user_id)
+         VALUES ($1,$2,'duplicate_exception',$3,$4,$3,$4,$5,$6)`, [req.org.id, id, d.purchase_receipt_series, d.purchase_receipt_no, b.reason, req.user.id]);
+      return (await c.query(
+        `UPDATE purchase_declarations SET receipt_override_by = $2, receipt_override_reason = $3, updated_at = now(), updated_by = $2, version = version + 1 WHERE id = $1 RETURNING *`,
+        [id, req.user.id, b.reason])).rows[0];
+    });
+    await this.audit.log({ organizationId: req.org.id, actorUserId: req.user.id, action: 'declaration.receipt_override', entityType: 'purchase_declaration', entityId: id, details: { reason: b.reason } });
     return row;
   }
 }

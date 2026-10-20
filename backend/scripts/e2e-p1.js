@@ -33,6 +33,7 @@ const login = async (email, password) => (await call('POST', '/auth/login', { bo
   for (const [org, mail] of [[A, `admin.a.${run}@t.test`], [B, `admin.b.${run}@t.test`]])
     await call('POST', `/organizations/${org.id}/admins`, { token: adm, body: { email: mail, full_name: 'Admin ' + org.code, password: pw } });
   const ta = await login(`admin.a.${run}@t.test`, pw), tb = await login(`admin.b.${run}@t.test`, pw);
+  await call('PUT', '/purchase-declarations/settings/receipts', { token: ta, org: A.id, body: { mode: 'physical', series: 'A', required: false } }); // ces scénarios ne testent pas le reçu d'achat (voir e2e-recus.js)
 
   console.log('Référentiels et prix');
   const vc = (await call('POST', '/value-chains', { token: ta, org: A.id, body: { code: 'CACAO', name: 'Cacao', default_unit: 'kg' } })).body;

@@ -31,6 +31,7 @@ const key = (p) => `${p}-${run}-${crypto.randomBytes(4).toString('hex')}`;
     await call('POST', `/organizations/${org.id}/admins`, { token: adm, body: { email: mail, full_name: mail, password: pw } });
   const t1 = await login(`a1.${run}@t.test`, pw), t2 = await login(`a2.${run}@t.test`, pw), tb = await login(`b1.${run}@t.test`, pw);
   const J = (t, o) => ({ token: t, org: o.id });
+  await call('PUT', '/purchase-declarations/settings/receipts', { token: t1, org: A.id, body: { mode: 'physical', series: 'A', required: false } }); // ces scénarios ne testent pas le reçu d'achat (voir e2e-recus.js)
 
   const vc = (await call('POST', '/value-chains', { ...J(t1, A), body: { code: 'CACAO', name: 'Cacao' } })).body;
   await call('POST', '/unit-conversions', { ...J(t1, A), body: { value_chain_id: vc.id, from_unit: 'sac', to_unit: 'kg', factor: '65' } });
