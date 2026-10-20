@@ -31,3 +31,28 @@ export const NEXT_DECLARATION: Record<string, [string, string][]> = {
   received: [['in_review', 'Mettre en vérification']],
   in_review: [['accepted', 'Accepter'], ['to_correct', 'Demander une correction'], ['rejected', 'Rejeter']],
 };
+
+export const TASK_STATUS: Record<string, [string, Tone]> = {
+  draft: ['Brouillon', 'neutral'], open: ['Ouverte', 'info'], in_progress: ['En cours', 'info'], pending_sync: ['En attente de synchro', 'warn'],
+  submitted: ['Soumise', 'warn'], to_correct: ['À corriger', 'bad'], validated: ['Validée', 'ok'], completed: ['Terminée', 'ok'], closed: ['Clôturée', 'neutral'], cancelled: ['Annulée', 'neutral'],
+};
+export const PRIORITY: Record<string, [string, Tone]> = { low: ['Basse', 'neutral'], normal: ['Normale', 'info'], high: ['Haute', 'warn'], urgent: ['Urgente', 'bad'] };
+export const TASK_CATEGORY: Record<string, string> = { mapping: 'Cartographie', visit: 'Visite', survey: 'Enquête', collection: 'Collecte', training: 'Formation', control: 'Contrôle', other: 'Autre' };
+export const ANOMALY_KIND: Record<string, string> = {
+  overlap_partial: 'Chevauchement partiel', overlap_inclusion: 'Parcelle incluse', duplicate_identical: 'Doublon identique', duplicate_near: 'Doublon proche',
+};
+export const ANOMALY_STATUS: Record<string, [string, Tone]> = { open: ['Ouverte', 'bad'], resolved: ['Corrigée', 'ok'], exception: ['Exception', 'warn'], dismissed: ['Écartée', 'neutral'] };
+export const ORDER_STATUS: Record<string, [string, Tone]> = {
+  draft: ['Brouillon', 'neutral'], confirmed: ['Confirmée', 'info'], partially_shipped: ['Part. expédiée', 'warn'], shipped: ['Expédiée', 'info'],
+  delivered: ['Livrée', 'ok'], closed: ['Clôturée', 'neutral'], cancelled: ['Annulée', 'neutral'],
+};
+export const SHIPMENT_STATUS: Record<string, [string, Tone]> = {
+  planned: ['Planifiée', 'neutral'], loaded: ['Chargée', 'info'], in_transit: ['En transit', 'warn'], delivered: ['Livrée', 'info'], validated: ['Validée', 'ok'], cancelled: ['Annulée', 'neutral'],
+};
+export const INVOICE_STATUS: Record<string, [string, Tone]> = { issued: ['Émise', 'info'], partially_paid: ['Part. payée', 'warn'], paid: ['Payée', 'ok'], cancelled: ['Annulée', 'neutral'] };
+export const COUNT_STATUS: Record<string, [string, Tone]> = { counting: ['Comptage', 'info'], submitted: ['Soumis', 'warn'], approved: ['Approuvé', 'ok'], rejected: ['Rejeté', 'bad'], cancelled: ['Annulé', 'neutral'] };
+export const PRODUCER_STATUS: Record<string, [string, Tone]> = {
+  creating: ['En création', 'neutral'], active: ['Actif', 'ok'], to_verify: ['À vérifier', 'warn'], suspended: ['Suspendu', 'bad'], inactive: ['Inactif', 'neutral'],
+  left: ['Sorti', 'neutral'], archived: ['Archivé', 'neutral'],
+};
+export const SEVERITY: Record<string, Tone> = { info: 'info', warning: 'warn', critical: 'bad' };

@@ -86,3 +86,11 @@ export function useAction() {
 export const Stat = ({ label, value, tone = 'neutral', hint }: { label: string; value: ReactNode; tone?: Tone; hint?: string }) => (
   <div className={`stat stat-${tone}`}><div className="stat-value">{value}</div><div className="stat-label">{label}</div>{hint && <small className="muted">{hint}</small>}</div>
 );
+
+export function Tabs<K extends string>({ tabs, value, onChange }: { tabs: [K, string][]; value: K; onChange: (k: K) => void }) {
+  return (
+    <div className="tabs" role="tablist">
+      {tabs.map(([k, label]) => <button key={k} role="tab" aria-selected={value === k} onClick={() => onChange(k)}>{label}</button>)}
+    </div>
+  );
+}

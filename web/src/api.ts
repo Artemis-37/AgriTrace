@@ -83,6 +83,7 @@ export async function api<T = any>(method: string, path: string, json?: unknown)
 }
 export const get = <T = any>(p: string) => api<T>('GET', p);
 export const post = <T = any>(p: string, b?: unknown) => api<T>('POST', p, b ?? {});
+export const put = <T = any>(p: string, b?: unknown) => api<T>('PUT', p, b ?? {});
 
 /** Téléchargement authentifié (PDF, Excel) : le jeton ne transite jamais dans une URL. */
 export async function download(path: string, filename: string) {
@@ -94,3 +95,16 @@ export async function download(path: string, filename: string) {
   a.href = url; a.download = filename; a.click();
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
+
+/** Envoi de fichier (multipart) : l'en-tête Content-Type est posé par le navigateur. */
+export async function postForm<T = any>(path: string, form: FormData): Promise<T> {
+  const res = await raw(path, { method: 'POST', body: form });
+  const text = await res.text();
+  let body: any = null;
+  try { body = text ? JSON.parse(text) : null; } catch { body = text; }
+  if (!res.ok) throw new ApiError(res.status, errorMessage(body, `Erreur ${res.status}`), body);
+  return body as T;
+}
+
+/** Clé d'idempotence pour une action de l'utilisateur (un double clic ne crée pas de doublon). */
+export const idem = () => (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `k-${Date.now()}-${Math.random().toString(16).slice(2)}`);
