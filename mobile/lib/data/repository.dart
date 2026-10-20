@@ -1,6 +1,10 @@
 import 'dart:convert';
 
+import 'dart:io';
+
 import 'package:decimal/decimal.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 import 'package:sqflite_sqlcipher/sqflite.dart';
 import 'package:uuid/uuid.dart';
 
@@ -103,6 +107,19 @@ class Repository {
     });
     return id;
   }
+
+  /// Photo du reçu : copiée dans le stockage de l'application (le cache de l'appareil peut être vidé) et mise en attente d'envoi.
+  /// Elle part après la déclaration, avec une clé propre : un renvoi ne crée jamais de doublon.
+  Future<void> queueReceiptPhoto({required String declarationId, required String sourcePath}) async {
+    final dir = Directory(p.join((await getApplicationDocumentsDirectory()).path, 'pending_photos'));
+    await dir.create(recursive: true);
+    final key = 'photo-${_uuid.v4()}';
+    final dest = p.join(dir.path, '$key${p.extension(sourcePath).isEmpty ? '.jpg' : p.extension(sourcePath)}');
+    await File(sourcePath).copy(dest);
+    await db.raw.insert('pending_uploads', {'client_key': key, 'declaration_id': declarationId, 'kind': 'Photo du reçu', 'file_path': dest, 'created_at': DateTime.now().toIso8601String()});
+  }
+
+  Future<int> pendingPhotos() async => Sqflite.firstIntValue(await db.raw.rawQuery("SELECT count(*) FROM pending_uploads WHERE status = 'pending'")) ?? 0;
 
   /// Convoi vers le magasin central : mis en file d'envoi, envoyé dès que le réseau revient (idempotent).
   Future<void> queueConvoy({required String convoyNo, required String driverName, required String truckNo, int? declaredBags, String? declaredKg}) async {

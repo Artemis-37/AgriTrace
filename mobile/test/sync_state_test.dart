@@ -51,4 +51,11 @@ void main() {
     expect(canSurveyParcel(['parcels:create']), isTrue);
     expect(canSurveyParcel(['declarations:create']), isFalse);
   });
+
+  test("la photo d'un reçu ne part qu'une fois la déclaration créée sur le serveur", () {
+    expect(canUploadPhoto('local_only'), isFalse);
+    expect(canUploadPhoto('error'), isFalse);
+    expect(canUploadPhoto('pending'), isTrue);
+    expect(canUploadPhoto('synced'), isTrue);
+  });
 }

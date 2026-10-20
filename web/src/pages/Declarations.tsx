@@ -3,6 +3,7 @@ import { download, get, post } from '../api';
 import { useAuth } from '../auth';
 import { DECLARATION_STATUS, NEXT_DECLARATION, date, money } from '../format';
 import NewPurchase from './NewPurchase';
+import DocumentsPanel from './DocumentsPanel';
 import { onFlushed } from '../offline';
 import { Card, ErrorBox, Field, Loading, Modal, PageHeader, StatusBadge, Table, useAction, useAsync } from '../ui';
 
@@ -17,6 +18,7 @@ export default function Declarations() {
   }, []);
   const rows = (data ?? []).filter((d) => !status || d.status === status);
   const [creating, setCreating] = useState(false);
+  const [docsFor, setDocsFor] = useState<any | null>(null);
   useEffect(() => onFlushed(reload), [reload]);
   const needsReason = (to: string) => ['to_correct', 'rejected'].includes(to);
 
@@ -39,6 +41,7 @@ export default function Declarations() {
             { header: 'Quantité', align: 'right', render: (d) => `${Number(d.quantity)} ${d.unit}` },
             { header: 'Montant', align: 'right', render: (d) => money(d.amount, d.currency ?? 'XOF') },
             { header: 'Statut', render: (d) => <StatusBadge map={DECLARATION_STATUS} value={d.status} /> },
+            { header: 'Pièces', render: (d) => can('documents:read') && <button className="link" onClick={() => setDocsFor(d)}>Pièces</button> },
             { header: '', render: (d) => can('declarations:validate') && (NEXT_DECLARATION[d.status] ?? []).length > 0 && (
               <div className="row-actions">
                 {NEXT_DECLARATION[d.status].map(([to, label]) => (
@@ -49,6 +52,11 @@ export default function Declarations() {
           ]} />
         )}
       </Card>
+      {docsFor && (
+        <Modal title={`Pièces — ${docsFor.producer_name}, ${date(docsFor.operation_date)}`} onClose={() => setDocsFor(null)}>
+          <DocumentsPanel subjectType="declaration" subjectId={docsFor.id} kinds={['Photo du reçu', 'Copie du reçu', 'Autre']} locked={!can('documents:upload')} />
+        </Modal>
+      )}
       {pending && <Confirm title={pending.label} reason={needsReason(pending.to)} onClose={() => setPending(null)}
         onSubmit={async (reason) => { await post(`/purchase-declarations/${pending.id}/transition`, { to: pending.to, ...(reason && { reason }) }); setPending(null); reload(); }} />}
     </>

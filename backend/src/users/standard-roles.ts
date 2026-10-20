@@ -16,7 +16,7 @@ export const STANDARD_ROLES: Record<string, { name: string; description: string;
   collecteur: {
     name: 'Collecteur (délégué)',
     description: 'Déclare ses achats chez les producteurs et ses convois, voit son stock, son historique et sa fiche de compte.',
-    permissions: ['declarations:create', 'declarations:read', 'producers:read', 'convoys:create', 'convoys:read', 'collector:stock', 'messages:use', 'sync:use'],
+    permissions: ['declarations:create', 'declarations:read', 'producers:read', 'convoys:create', 'convoys:read', 'collector:stock', 'documents:upload', 'messages:use', 'sync:use'],
     hidden: ['Tout ce qui concerne les autres collecteurs', 'Caisse', 'Comptabilité', 'Équipe'],
   },
 };

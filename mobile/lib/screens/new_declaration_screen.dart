@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../main.dart';
 
@@ -27,6 +30,7 @@ class _NewDeclarationScreenState extends State<NewDeclarationScreen> {
   String? _estimate;
   String? _error;
   bool _saving = false;
+  String? _photoPath;
 
   String get _dateStr => _date.toIso8601String().substring(0, 10);
 
@@ -66,6 +70,15 @@ class _NewDeclarationScreenState extends State<NewDeclarationScreen> {
     if (mounted) setState(() => _estimate = e == null ? null : '≈ ${e.amount} ${e.currency}');
   }
 
+  Future<void> _takePhoto() async {
+    try {
+      final x = await ImagePicker().pickImage(source: ImageSource.camera, maxWidth: 1600, imageQuality: 70);
+      if (x != null && mounted) setState(() => _photoPath = x.path);
+    } catch (_) {
+      if (mounted) setState(() => _error = "Appareil photo indisponible : autorisez-le dans les réglages ou continuez sans photo.");
+    }
+  }
+
   Future<void> _save() async {
     final q = _quantity.text.trim().replaceAll(',', '.');
     if (_producer == null || _chain == null || _campaign == null) return setState(() => _error = 'Choisissez le producteur, la filière et la campagne.');
@@ -74,9 +87,10 @@ class _NewDeclarationScreenState extends State<NewDeclarationScreen> {
     if (bags == null || bags <= 0) return setState(() => _error = 'Saisissez le nombre de sacs.');
     if (_receiptNo.text.trim().isEmpty) return setState(() => _error = 'Saisissez le numéro du reçu.');
     setState(() { _saving = true; _error = null; });
-    await services.repo.createDeclaration(
+    final declId = await services.repo.createDeclaration(
         producerId: _producer!['id'] as String, chainId: _chain!['id'] as String, campaignId: _campaign!['id'] as String,
         date: _dateStr, quantity: q, unit: _unit, bags: bags, notes: _notes.text.trim(), receiptNo: _receiptNo.text.trim());
+    if (_photoPath != null) await services.repo.queueReceiptPhoto(declarationId: declId, sourcePath: _photoPath!);
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Enregistrée sur l\'appareil. Elle sera envoyée dès que possible.')));
     Navigator.of(context).pop();
@@ -126,6 +140,12 @@ class _NewDeclarationScreenState extends State<NewDeclarationScreen> {
                 decoration: const InputDecoration(labelText: 'N° du reçu', helperText: 'Numéro du reçu remis au producteur.', border: OutlineInputBorder())),
             const SizedBox(height: 12),
             TextField(controller: _notes, decoration: const InputDecoration(labelText: 'Observations (facultatif)', border: OutlineInputBorder())),
+            const SizedBox(height: 12),
+            Row(children: [
+              OutlinedButton.icon(onPressed: _saving ? null : _takePhoto, icon: const Icon(Icons.photo_camera_outlined), label: Text(_photoPath == null ? 'Photo du reçu' : 'Reprendre la photo')),
+              const SizedBox(width: 12),
+              if (_photoPath != null) ClipRRect(borderRadius: BorderRadius.circular(6), child: Image.file(File(_photoPath!), width: 56, height: 56, fit: BoxFit.cover)),
+            ]),
             const SizedBox(height: 12),
             Card(child: Padding(padding: const EdgeInsets.all(12), child: Text(_estimate == null
                 ? 'Montant : sera calculé par le serveur.'

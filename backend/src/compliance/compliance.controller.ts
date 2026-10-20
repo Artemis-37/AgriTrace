@@ -66,6 +66,13 @@ export class ComplianceController {
     if (!/^[0-9a-f-]{36}$/.test(b.subject_id ?? '')) throw new BadRequestException('subject_id invalide');
     if (!b.kind || String(b.kind).length < 2 || String(b.kind).length > 60) throw new BadRequestException('kind requis (2 à 60 caractères)');
     if (b.retention_until && !DATE.test(b.retention_until)) throw new BadRequestException('retention_until : AAAA-MM-JJ');
+    const clientKey: string | null = typeof b.client_key === 'string' && b.client_key.length >= 8 && b.client_key.length <= 100 ? b.client_key : null;
+    const cols = 'id, subject_type, subject_id, kind, filename, mime, size_bytes, sha256, version, sensitive, retention_until, uploaded_at';
+    if (clientKey) {
+      // Renvoi du même envoi : on rend la pièce déjà enregistrée, sans second fichier.
+      const prior = (await this.db.tx(req.org.id, (c) => c.query(`SELECT ${cols}, subject_id AS sid, subject_type AS st FROM documents WHERE client_key = $1`, [clientKey]))).rows[0];
+      if (prior) { if (prior.sid !== b.subject_id || prior.st !== b.subject_type) throw new ConflictException('Cette clé a déjà servi pour une autre pièce'); return prior; }
+    }
     const sha = createHash('sha256').update(file.buffer).digest('hex');
     const storageKey = randomUUID();
     const dir = path.join(docsDir(), req.org.id);
@@ -75,6 +82,11 @@ export class ComplianceController {
       const row = await this.db.tx(req.org.id, async (c) => {
         if (!(await c.query(`SELECT 1 FROM ${DOC_SUBJECT_TABLE[b.subject_type]} WHERE id = $1`, [b.subject_id])).rowCount)
           throw new BadRequestException('Objet rattaché inconnu dans cette coopérative');
+        // Un collecteur ne joint des pièces qu'à ses propres déclarations d'achat.
+        if (b.subject_type === 'declaration' && !req.org.permissions.has('declarations:validate')) {
+          const mine = await c.query(`SELECT 1 FROM purchase_declarations d JOIN collectors k ON k.id = d.collector_id WHERE d.id = $1 AND k.user_id = $2`, [b.subject_id, req.user.id]);
+          if (!mine.rowCount) throw new ForbiddenException('Vous ne pouvez joindre des pièces qu\'à vos propres déclarations');
+        }
         let version = 1, sensitive = b.sensitive === 'true';
         if (b.replaces_id) {
           const p = (await c.query(`SELECT * FROM documents WHERE id = $1 FOR UPDATE`, [b.replaces_id])).rows[0];
@@ -82,11 +94,11 @@ export class ComplianceController {
           version = p.version + 1; sensitive = sensitive || p.sensitive;
         }
         return (await c.query(
-          `INSERT INTO documents(organization_id, subject_type, subject_id, kind, filename, mime, size_bytes, sha256, storage_key, version, replaces_id, sensitive, retention_until, uploaded_by)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+          `INSERT INTO documents(organization_id, subject_type, subject_id, kind, filename, mime, size_bytes, sha256, storage_key, version, replaces_id, sensitive, retention_until, uploaded_by, client_key)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
            RETURNING id, subject_type, subject_id, kind, filename, mime, size_bytes, sha256, version, sensitive, retention_until, uploaded_at`,
           [req.org.id, b.subject_type, b.subject_id, b.kind, safeFilename(file.originalname), mime, file.size, sha, storageKey, version, b.replaces_id ?? null,
-           sensitive, b.retention_until ?? null, req.user.id])).rows[0];
+           sensitive, b.retention_until ?? null, req.user.id, clientKey])).rows[0];
       });
       await this.log(req, 'document.upload', 'document', row.id, { subject: b.subject_type, version: row.version });
       return row;

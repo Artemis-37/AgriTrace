@@ -55,6 +55,9 @@ String? localStateAfterOperation({required String opType, required String opStat
   }
 }
 
+/// Une photo ne peut partir que si la déclaration existe déjà sur le serveur (création acceptée) et n'est pas rejetée.
+bool canUploadPhoto(String declarationLocalState) => const {'pending', 'pending_validation', 'synced'}.contains(declarationLocalState);
+
 /// Une opération est à renvoyer tant qu'elle n'a pas reçu de résultat définitif.
 bool isRetryable(String opStatus) => opStatus == 'pending' || opStatus == 'pending_validation';
 

@@ -4,7 +4,7 @@ import 'package:sqflite_sqlcipher/sqflite.dart';
 /// Base locale chiffrée (SQLCipher). Le schéma est versionné : chaque version a sa migration,
 /// pour mettre à jour l'application sans perdre les opérations en attente.
 class AppDatabase {
-  static const schemaVersion = 2;
+  static const schemaVersion = 3;
   final Database raw;
   AppDatabase._(this.raw);
 
@@ -55,6 +55,12 @@ class AppDatabase {
     2: (d) async {
       await d.execute('ALTER TABLE declarations ADD COLUMN purchase_receipt_no TEXT');
       await d.execute('ALTER TABLE declarations ADD COLUMN receipt_conflict INTEGER NOT NULL DEFAULT 0');
+    },
+    // Version 3 : photos (reçus d'achat) conservées sur l'appareil jusqu'à leur envoi, après celui de la déclaration.
+    3: (d) async {
+      await d.execute('''CREATE TABLE pending_uploads (
+        client_key TEXT PRIMARY KEY, declaration_id TEXT NOT NULL, kind TEXT NOT NULL, file_path TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'pending', error TEXT, attempts INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL)''');
     },
   };
 

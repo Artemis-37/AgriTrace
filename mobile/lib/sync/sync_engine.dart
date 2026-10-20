@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:sqflite_sqlcipher/sqflite.dart';
@@ -38,6 +39,7 @@ class SyncEngine {
     status.value = SyncStatus(SyncPhase.syncing, lastSuccess: previousSuccess);
     try {
       await _push();
+      await _pushPhotos();
       await _pull();
       status.value = SyncStatus(SyncPhase.idle, lastSuccess: DateTime.now());
     } on NetworkException catch (e) {
@@ -83,6 +85,31 @@ class SyncEngine {
           continue;
         }
         await db.raw.transaction((txn) => _applyOperationResult(txn, key, op['op_type'] as String, op['entity_id'] as String?, opStatus, item['error'] as String?));
+      }
+    }
+  }
+
+  /// Envoi des photos en attente, une à une, une fois leur déclaration créée sur le serveur.
+  /// Réseau coupé : on s'arrête et on reprendra ; refus définitif du serveur : la photo est mise de côté avec son motif.
+  Future<void> _pushPhotos() async {
+    final rows = await db.raw.rawQuery(
+        "SELECT u.*, d.local_state AS decl_state FROM pending_uploads u JOIN declarations d ON d.id = u.declaration_id WHERE u.status = 'pending' ORDER BY u.created_at");
+    for (final r in rows) {
+      if (!canUploadPhoto(r['decl_state'] as String)) continue;
+      final file = File(r['file_path'] as String);
+      if (!await file.exists()) {
+        await db.raw.update('pending_uploads', {'status': 'error', 'error': 'Fichier introuvable sur l\'appareil'}, where: 'client_key = ?', whereArgs: [r['client_key']]);
+        continue;
+      }
+      try {
+        await api.upload('/documents', filePath: file.path, filename: 'recu.jpg', fields: {
+          'subject_type': 'declaration', 'subject_id': r['declaration_id'] as String, 'kind': r['kind'] as String, 'client_key': r['client_key'] as String,
+        });
+        await db.raw.delete('pending_uploads', where: 'client_key = ?', whereArgs: [r['client_key']]);
+        await file.delete().catchError((_) => file);
+      } on ApiException catch (e) {
+        if (e.status == 401 || e.status >= 500) rethrow; // session expirée ou panne du serveur : on réessaiera
+        await db.raw.update('pending_uploads', {'status': 'error', 'error': e.message, 'attempts': (r['attempts'] as int) + 1}, where: 'client_key = ?', whereArgs: [r['client_key']]);
       }
     }
   }

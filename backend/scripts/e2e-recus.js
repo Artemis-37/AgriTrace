@@ -35,7 +35,7 @@ const sq = (lon, lat, s = 0.0009) => ({ type: 'Polygon', coordinates: [[[lon, la
   const p1 = (await call('POST', '/producers', { ...J(t1, A), body: { last_name: 'KONE', first_names: 'Awa', village: 'Hiré', section: 'S1', value_chain_ids: [vc.id] } })).body.producer;
   const p2 = (await call('POST', '/producers', { ...J(t1, A), body: { last_name: 'TRAORE', first_names: 'Moussa', village: 'Zoukougbeu', section: 'S2', value_chain_ids: [vc.id] } })).body.producer;
   const wh = (await call('POST', '/warehouses', { ...J(t1, A), body: { code: 'MAG1', name: 'Magasin 1' } })).body;
-  const role = (await call('POST', '/roles', { ...J(t1, A), body: { code: 'collecteur', name: 'Collecteur', permissions: ['declarations:create', 'declarations:read', 'producers:read', 'sync:use'] } })).body;
+  const role = (await call('POST', '/roles', { ...J(t1, A), body: { code: 'collecteur', name: 'Collecteur', permissions: ['declarations:create', 'declarations:read', 'producers:read', 'sync:use', 'documents:upload'] } })).body;
   const cu = (await call('POST', '/users', { ...J(t1, A), body: { email: `c1.${run}@t.test`, full_name: 'Collecteur', password: pw, role_id: role.id } })).body;
   const col = (await call('POST', '/collectors', { ...J(t1, A), body: { user_id: cu.id } })).body;
   await call('POST', `/collectors/${col.id}/assignments`, { ...J(t1, A), body: { value_chain_id: vc.id } });
@@ -160,6 +160,24 @@ const sq = (lon, lat, s = 0.0009) => ({ type: 'Polygon', coordinates: [[[lon, la
   const rx = await rawGet('/reports/purchases/xlsx?group=section', t1);
   check('rapport : export Excel', rx.status === 200 && rx.buf.slice(0, 2).toString() === 'PK', rx.status);
   check('rapport refusé au collecteur', (await rawGet('/reports/purchases', tc)).status === 403);
+  // Photo du reçu envoyée depuis le mobile : clé du client pour ne jamais créer de doublon, et seulement sur ses propres déclarations.
+  const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
+  const up = async (tok, decl, ck) => {
+    const f = new FormData(); f.append('file', new Blob([PNG], { type: 'image/png' }), 'recu.png');
+    f.append('subject_type', 'declaration'); f.append('subject_id', decl); f.append('kind', 'Photo du reçu'); if (ck) f.append('client_key', ck);
+    const r = await fetch(API + '/documents', { method: 'POST', headers: { authorization: `Bearer ${tok}`, 'x-organization-id': A.id }, body: f });
+    return { status: r.status, body: await r.json().catch(() => ({})) };
+  };
+  const ck = key('photo');
+  const u1 = await up(tc, d1.body.id, ck);
+  check('collecteur : photo du reçu jointe à sa déclaration', u1.status === 201 && u1.body.mime === 'image/png' && u1.body.kind === 'Photo du reçu', u1);
+  const u2 = await up(tc, d1.body.id, ck);
+  check('même envoi rejoué : même pièce, pas de doublon', u2.body.id === u1.body.id && (await call('GET', `/documents?subject_type=declaration&subject_id=${d1.body.id}`, J(t1, A))).body.length === 1, u2);
+  const cu2 = (await call('POST', '/users', { ...J(t1, A), body: { email: `c2.${run}@t.test`, full_name: 'Collecteur 2', password: pw, role_id: role.id } })).body;
+  await call('POST', '/collectors', { ...J(t1, A), body: { user_id: cu2.id } });
+  const tc2 = await login(`c2.${run}@t.test`, pw);
+  check('un autre collecteur ne peut pas joindre de pièce à cette déclaration (403)', (await up(tc2, d1.body.id, key('photo'))).status === 403);
+  check('le personnel peut joindre une pièce à toute déclaration', (await up(t1, d1.body.id, key('photo'))).status === 201);
   for (const [k, shape] of [['finance', (b) => Array.isArray(b.accounts) && b.sales && b.totals.treasury !== undefined], ['stock', (b) => Array.isArray(b.balances) && Array.isArray(b.flows) && b.totals.kg !== undefined], ['quality', (b) => Array.isArray(b.inspections) && Array.isArray(b.failing_rules) && 'rate' in b.totals]]) {
     const r = await call('GET', `/reports/${k}?from=2000-01-01&to=2100-01-01`, J(t1, A));
     check(`rapport ${k} : structure`, r.status === 200 && shape(r.body), r);

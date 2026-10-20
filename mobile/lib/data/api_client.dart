@@ -93,6 +93,43 @@ class ApiClient {
     }
   }
 
+  /// Envoi d'un fichier (pièce jointe). Même gestion de session et d'erreurs que les autres appels.
+  Future<dynamic> upload(String path, {required Map<String, String> fields, required String filePath, required String filename}) async {
+    Future<http.Response> once() async {
+      final req = http.MultipartRequest('POST', _uri(path))..fields.addAll(fields);
+      final t = await store.accessToken;
+      if (t != null) req.headers['authorization'] = 'Bearer $t';
+      final dev = await store.deviceToken;
+      if (dev != null) req.headers['x-device-token'] = dev;
+      final o = await store.orgId;
+      if (o != null) req.headers['x-organization-id'] = o;
+      req.files.add(await http.MultipartFile.fromPath('file', filePath, filename: filename));
+      final streamed = await _http.send(req).timeout(const Duration(seconds: 90));
+      return http.Response.fromStream(streamed);
+    }
+
+    try {
+      var res = await once();
+      if (res.statusCode == 401 && await _refresh()) res = await once();
+      if (res.statusCode >= 400) {
+        var msg = res.body;
+        try {
+          final j = jsonDecode(utf8.decode(res.bodyBytes));
+          final m = j is Map ? j['message'] : null;
+          msg = m is List ? m.join(', ') : (m?.toString() ?? msg);
+        } catch (_) {}
+        throw ApiException(res.statusCode, msg);
+      }
+      return res.body.isEmpty ? null : jsonDecode(utf8.decode(res.bodyBytes));
+    } on SocketException catch (e) {
+      throw NetworkException(e.message);
+    } on TimeoutException {
+      throw NetworkException('Délai dépassé');
+    } on http.ClientException catch (e) {
+      throw NetworkException(e.message);
+    }
+  }
+
   /// Renouvelle la session ; le serveur fait tourner le jeton de renouvellement.
   Future<bool> _refresh() async {
     final rt = await store.refreshToken;
