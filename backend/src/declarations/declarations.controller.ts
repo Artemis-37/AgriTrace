@@ -251,7 +251,8 @@ export class DeclarationsController {
       const mine = all ? null : await this.myCollector(c, req.user.id);
       if (!all && !mine) return [];
       return (await c.query(
-        `SELECT id, collector_id, producer_id, value_chain_id, campaign_id, operation_date, bags, quantity, unit,
+        `SELECT id, collector_id, producer_id, (SELECT last_name || ' ' || first_names FROM producers WHERE id = producer_id) AS producer_name,
+                value_chain_id, campaign_id, operation_date, bags, quantity, unit,
                 unit_price, currency, amount, status, status_reason, updated_at,
                 purchase_receipt_series, purchase_receipt_no, receipt_conflict_with, receipt_override_by
            FROM purchase_declarations

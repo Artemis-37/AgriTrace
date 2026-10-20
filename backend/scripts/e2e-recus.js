@@ -148,6 +148,8 @@ const sq = (lon, lat, s = 0.0009) => ({ type: 'Polygon', coordinates: [[[lon, la
   check('export Excel : refusé au collecteur (consultation seulement)', exc.status === 403, exc.status);
   check('export Excel : dates invalides refusées', (await rawGet('/purchase-declarations/export/xlsx?from=hier', t1)).status === 400);
 
+  const hist = await call('GET', '/purchase-declarations?limit=5', J(t1, A));
+  check('liste des achats : nom du producteur fourni (historique mobile)', hist.status === 200 && hist.body.length > 0 && hist.body.every((x) => typeof x.producer_name === 'string' && x.producer_name.length > 2), hist.body[0]);
   console.log('Rapports filtrables (§26)');
   const rp = await call('GET', '/reports/purchases?group=section', J(t1, A));
   check('rapport par section : lignes et totaux cohérents', rp.status === 200 && rp.body.rows.length >= 1 && rp.body.total.declarations === rp.body.rows.reduce((a, r) => a + r.declarations, 0), rp.body);

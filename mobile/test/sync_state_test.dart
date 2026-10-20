@@ -37,4 +37,13 @@ void main() {
     expect(canSync(['sync:use']), isTrue);
     expect(canSync(['declarations:create']), isFalse);
   });
+
+  test('menus du collecteur et du coach selon les droits', () {
+    expect(canReadHistory(['declarations:read', 'declarations:create']), isTrue);
+    expect(canReadHistory(['declarations:read']), isFalse);
+    expect(canSeeFiche(['collector:stock']), isTrue);
+    expect(canSeeFiche(['convoys:read']), isFalse);
+    expect(canSeeMissions(['tasks:read']), isTrue);
+    expect(canSeeMissions(['declarations:create']), isFalse);
+  });
 }

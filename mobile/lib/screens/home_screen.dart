@@ -4,6 +4,9 @@ import '../main.dart';
 import '../sync/sync_engine.dart';
 import '../sync/sync_state.dart';
 import 'login_screen.dart';
+import 'fiche_screen.dart';
+import 'history_screen.dart';
+import 'missions_screen.dart';
 import 'my_stock_screen.dart';
 import 'notifications_screen.dart';
 import 'new_convoy_screen.dart';
@@ -21,6 +24,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _problems = 0;
   bool _canCreate = false;
   bool _canConvoy = false;
+  bool _canHistory = false, _canFiche = false, _canMissions = false;
   int _unreadNotes = 0;
 
   @override
@@ -44,7 +48,7 @@ class _HomeScreenState extends State<HomeScreen> {
     int unread = _unreadNotes;
     try { final r = await services.api.get('/notifications/unread-count'); unread = (r['unread'] as num?)?.toInt() ?? 0; } catch (_) { /* hors connexion : compteur conservé */ }
     if (!mounted) return;
-    setState(() { _items = items; _pending = pending; _problems = problems; _canCreate = canCreateDeclaration(perms); _canConvoy = canCreateConvoy(perms); _unreadNotes = unread; });
+    setState(() { _items = items; _pending = pending; _problems = problems; _canCreate = canCreateDeclaration(perms); _canConvoy = canCreateConvoy(perms); _canHistory = canReadHistory(perms); _canFiche = canSeeFiche(perms); _canMissions = canSeeMissions(perms); _unreadNotes = unread; });
   }
 
   Color _color(String localState, String? status) {
@@ -74,7 +78,13 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Déclarations d\'achat'), actions: [
+      appBar: AppBar(title: const Text('Mes achats'), actions: [
+        if (_canHistory)
+          IconButton(tooltip: 'Historique', icon: const Icon(Icons.history), onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const HistoryScreen()))),
+        if (_canFiche)
+          IconButton(tooltip: 'Ma fiche de compte', icon: const Icon(Icons.receipt_long_outlined), onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const FicheScreen()))),
+        if (_canMissions)
+          IconButton(tooltip: 'Mes missions', icon: const Icon(Icons.assignment_outlined), onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MissionsScreen()))),
         if (_canConvoy)
           IconButton(tooltip: 'Mon stock', icon: const Icon(Icons.inventory_2_outlined), onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MyStockScreen()))),
         if (_canConvoy)

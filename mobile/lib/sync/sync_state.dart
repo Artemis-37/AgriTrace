@@ -62,3 +62,6 @@ bool isRetryable(String opStatus) => opStatus == 'pending' || opStatus == 'pendi
 bool canSync(List<String> permissions) => permissions.contains('sync:use');
 bool canCreateDeclaration(List<String> permissions) => permissions.contains('declarations:create');
 bool canCreateConvoy(List<String> permissions) => permissions.contains('convoys:create');
+bool canReadHistory(List<String> permissions) => permissions.contains('declarations:read') && permissions.contains('declarations:create');
+bool canSeeFiche(List<String> permissions) => permissions.contains('collector:stock');
+bool canSeeMissions(List<String> permissions) => permissions.contains('tasks:read');
