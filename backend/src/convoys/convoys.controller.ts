@@ -1,8 +1,9 @@
-import { BadRequestException, Body, ConflictException, Controller, Get, NotFoundException, Param, ParseUUIDPipe, Post, Query, Req } from '@nestjs/common';
+import { BadRequestException, Body, ConflictException, Controller, Get, NotFoundException, Param, ParseUUIDPipe, Post, Query, Req, UnprocessableEntityException } from '@nestjs/common';
 import { ApiBearerAuth, ApiHeader, ApiTags } from '@nestjs/swagger';
 import { IsInt, IsOptional, IsString, IsUUID, Length, Min } from 'class-validator';
 import { RequirePermissions } from '../access/decorators';
 import { AuditService } from '../audit/audit.service';
+import { accountingCodeOf, postEntry, today } from '../accounting/accounting.helpers';
 import { Dec } from '../common/dto';
 import { DbService } from '../db/db.service';
 
@@ -29,6 +30,13 @@ export class ReceiveConvoyDto {
 class SettleDto {
   @IsString() @Length(8, 100) idempotency_key: string;
   @Dec(4) unit_price: string;
+}
+
+export class PayoutDto {
+  @IsString() @Length(8, 100) idempotency_key: string;
+  @IsUUID() collector_id: string;
+  @IsUUID() cash_session_id: string;
+  @Dec(4) amount: string;
 }
 
 @ApiTags('convois')
@@ -163,15 +171,20 @@ export class ConvoysController {
       if (r.status === 'settled') return { row: r, replay: true };
       const v = (await c.query(`SELECT * FROM convoys WHERE id = $1`, [r.convoy_id])).rows[0];
       const u = (await c.query(`SELECT u.full_name FROM collectors k JOIN users u ON u.id = k.user_id WHERE k.id = $1`, [v.collector_id])).rows[0];
-      let acc = (await c.query(`SELECT id, currency FROM financial_accounts WHERE owner_type = 'collector' AND owner_id = $1 AND status = 'active' FOR UPDATE`, [v.collector_id])).rows[0];
+      let acc = (await c.query(`SELECT id, currency, accounting_code FROM financial_accounts WHERE owner_type = 'collector' AND owner_id = $1 AND status = 'active' FOR UPDATE`, [v.collector_id])).rows[0];
       if (!acc) acc = (await c.query(
-        `INSERT INTO financial_accounts(organization_id, owner_type, owner_id, name, created_by) VALUES ($1,'collector',$2,$3,$4) RETURNING id, currency`,
+        `INSERT INTO financial_accounts(organization_id, owner_type, owner_id, name, created_by) VALUES ($1,'collector',$2,$3,$4) RETURNING id, currency, accounting_code`,
         [req.org.id, v.collector_id, `Compte collecteur — ${u.full_name}`, req.user.id])).rows[0];
       const amt = (await c.query(`SELECT round($1::numeric * $2::numeric, 4) AS a`, [r.total_kg, b.unit_price])).rows[0].a;
       const tx = (await c.query(
         `INSERT INTO financial_transactions(organization_id, idempotency_key, account_id, direction, amount, currency, reason, reference_type, reference_id, created_by)
          VALUES ($1,$2,$3,'in',$4,$5,$6,'convoy_reception',$7,$8) RETURNING id`,
         [req.org.id, 'convoy-' + b.idempotency_key, acc.id, amt, acc.currency, `Convoi ${v.convoy_no} : ${r.total_kg} kg × ${b.unit_price}`, r.id, req.user.id])).rows[0];
+      await postEntry(c, {
+        orgId: req.org.id, userId: req.user.id, journal: 'ACH', date: today(), label: `Achat convoi ${v.convoy_no} — ${u.full_name}`,
+        lines: [{ code: '601', debit: amt }, { code: acc.accounting_code ?? '401', credit: amt }],
+        idempotencyKey: 'convoy-entry:' + r.id, referenceType: 'convoy_reception', referenceId: r.id,
+      });
       const upd = (await c.query(
         `UPDATE convoy_receptions SET status = 'settled', unit_price = $2, amount = $3, tx_id = $4, settled_by = $5, settled_at = now() WHERE id = $1 RETURNING *`,
         [id, b.unit_price, amt, tx.id, req.user.id])).rows[0];
@@ -179,6 +192,47 @@ export class ConvoysController {
       return { row: upd, replay: false };
     });
     if (!replay) await this.log(req, 'convoy.settle', row.convoy_id, { amount: row.amount, tx_id: row.tx_id });
+    return { ...row, replayed: replay };
+  }
+
+  /** Paiement en espèces au collecteur : débite son compte et sort la somme de la caisse (session ouverte), avec l'écriture comptable. */
+  @Post('convoys/payout')
+  @RequirePermissions('convoys:settle', 'cash:operate')
+  async payout(@Body() b: PayoutDto, @Req() req: any) {
+    if (Number(b.amount) <= 0) throw new BadRequestException('Montant doit être supérieur à zéro');
+    const { row, replay } = await this.db.tx(req.org.id, async (c) => {
+      const prev = await c.query(`SELECT id, amount FROM financial_transactions WHERE idempotency_key = $1`, ['payout-c:' + b.idempotency_key]);
+      if (prev.rowCount) return { row: prev.rows[0], replay: true };
+      const acc = (await c.query(`SELECT * FROM financial_accounts WHERE owner_type = 'collector' AND owner_id = $1 AND status = 'active' FOR UPDATE`, [b.collector_id])).rows[0];
+      if (!acc) throw new NotFoundException('Ce collecteur n\'a pas encore de compte crédité');
+      const sess = (await c.query(
+        `SELECT s.id, r.account_id FROM cash_sessions s JOIN cash_registers r ON r.id = s.register_id WHERE s.id = $1 AND s.status = 'open'`, [b.cash_session_id])).rows[0];
+      if (!sess) throw new BadRequestException('Session de caisse inconnue ou clôturée');
+      const cash = (await c.query(`SELECT * FROM financial_accounts WHERE id = $1 FOR UPDATE`, [sess.account_id])).rows[0];
+      const bal = (account: string) => c.query(
+        `SELECT $2::numeric <= coalesce(sum(CASE direction WHEN 'in' THEN amount ELSE -amount END), 0) AS ok, coalesce(sum(CASE direction WHEN 'in' THEN amount ELSE -amount END), 0) AS balance
+           FROM financial_transactions WHERE account_id = $1`, [account, b.amount]).then((r) => r.rows[0]);
+      const bc = await bal(acc.id);
+      if (!bc.ok) throw new UnprocessableEntityException(`Solde du compte du collecteur insuffisant (${bc.balance})`);
+      const bk = await bal(cash.id);
+      if (!bk.ok) throw new UnprocessableEntityException(`Solde de caisse insuffisant (${bk.balance})`);
+      const reason = 'Paiement en espèces au collecteur';
+      const t1 = (await c.query(
+        `INSERT INTO financial_transactions(organization_id, idempotency_key, account_id, direction, amount, currency, reason, reference_type, reference_id, created_by)
+         VALUES ($1,$2,$3,'out',$4,$5,$6,'collector_payout',$7,$8) RETURNING id, amount`,
+        [req.org.id, 'payout-c:' + b.idempotency_key, acc.id, b.amount, acc.currency, reason, b.collector_id, req.user.id])).rows[0];
+      await c.query(
+        `INSERT INTO financial_transactions(organization_id, idempotency_key, account_id, cash_session_id, direction, amount, currency, reason, reference_type, reference_id, created_by)
+         VALUES ($1,$2,$3,$4,'out',$5,$6,$7,'collector_payout',$8,$9)`,
+        [req.org.id, 'payout-k:' + b.idempotency_key, cash.id, b.cash_session_id, b.amount, cash.currency, reason, b.collector_id, req.user.id]);
+      await postEntry(c, {
+        orgId: req.org.id, userId: req.user.id, journal: 'CAI', date: today(), label: reason,
+        lines: [{ code: acc.accounting_code ?? '401', debit: b.amount }, { code: accountingCodeOf(cash), credit: b.amount }],
+        idempotencyKey: 'payout-entry:' + b.idempotency_key, referenceType: 'collector_payout', referenceId: t1.id,
+      });
+      return { row: t1, replay: false };
+    });
+    if (!replay) await this.log(req, 'convoy.payout', row.id, { amount: b.amount, collector_id: b.collector_id });
     return { ...row, replayed: replay };
   }
 }

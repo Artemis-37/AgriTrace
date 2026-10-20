@@ -11,3 +11,7 @@ Le numéro de connaissement (B/L) est **saisi** par l'opérateur (`POST /shipmen
 
 ## Nature du compte
 `GET /me` → `account_kind` (`collector`, `coach`, `staff`) et `mobile_first`. Collecteurs et coachs utilisent l'application mobile ; le portail leur reste ouvert mais restreint à leurs droits et leur périmètre.
+
+## Comptabilité et paiement en espèces
+- Le traitement en caisse poste l'écriture d'achat (journal ACH : débit 601, crédit 401 ou le code du compte du collecteur).
+- `POST /convoys/payout` (`convoys:settle` + `cash:operate`) : paiement en espèces au collecteur, session de caisse ouverte requise ; débite le compte du collecteur et la caisse (refus si solde insuffisant) et poste l'écriture CAI (débit 401, crédit 571). Idempotent.

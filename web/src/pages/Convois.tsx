@@ -123,8 +123,12 @@ function Cash() {
   const { data, loading, error, reload } = useAsync(() => get<any[]>('/convoys/cashier-queue'), []);
   useEffect(() => onFlushed(reload), [reload]);
   const [sel, setSel] = useState<any>(null);
+  const [paying, setPaying] = useState(false);
+  const { can } = useAuth();
   return (
     <Card title="Réceptions à traiter">
+      {can('cash:operate') && <div className="toolbar"><button className="btn btn-secondary" onClick={() => setPaying(true)}>Payer un collecteur en espèces</button></div>}
+      {paying && <Payout onClose={() => setPaying(false)} />}
       {error && <ErrorBox message={error} onRetry={reload} />}
       {loading ? <Loading /> : (
         <Table rows={data ?? []} empty="Aucune réception en attente." columns={[
@@ -155,6 +159,37 @@ function Settle({ r, onClose, onDone }: { r: any; onClose: () => void; onDone: (
         <button className="btn btn-secondary" onClick={onClose}>Annuler</button>
         <button className="btn" disabled={act.busy || !ok} onClick={() => act.run(async () => { await post(`/convoy-receptions/${r.id}/settle`, { idempotency_key: key, unit_price: price }); onDone(); })}>Créditer le compte du collecteur</button>
       </div>
+    </Modal>
+  );
+}
+
+function Payout({ onClose }: { onClose: () => void }) {
+  const act = useAction();
+  const { data, loading, error } = useAsync(async () => ({
+    accounts: (await get<any[]>('/financial-accounts')).filter((a) => a.owner_type === 'collector'),
+    registers: (await get<any[]>('/cash-registers')).filter((r) => r.open_session_id),
+  }), []);
+  const [col, setCol] = useState('');
+  const [session, setSession] = useState('');
+  const [amount, setAmount] = useState('');
+  const [key] = useState(idem());
+  const [done, setDone] = useState('');
+  const acc = data?.accounts.find((a) => a.owner_id === col);
+  const ok = col && session && /^\d+(\.\d{1,4})?$/.test(amount) && Number(amount) > 0 && acc && Number(amount) <= Number(acc.balance);
+  return (
+    <Modal title="Payer un collecteur en espèces" onClose={onClose}>
+      {loading && <Loading />}{error && <ErrorBox message={error} />}
+      {data && (
+        <>
+          <Field label="Collecteur"><select value={col} onChange={(e) => setCol(e.target.value)}><option value="">—</option>{data.accounts.map((a) => <option key={a.id} value={a.owner_id}>{a.name} — solde {Number(a.balance).toLocaleString('fr-FR')}</option>)}</select></Field>
+          <Field label="Caisse (session ouverte)"><select value={session} onChange={(e) => setSession(e.target.value)}><option value="">—</option>{data.registers.map((r) => <option key={r.id} value={r.open_session_id}>{r.name}</option>)}</select></Field>
+          <Field label="Montant (FCFA)" hint={acc ? `Maximum : ${Number(acc.balance).toLocaleString('fr-FR')}` : undefined}><input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} /></Field>
+          {act.error && <ErrorBox message={act.error} />}
+          {done && <p className="notice" role="status">{done}</p>}
+          <div className="modal-actions"><button className="btn btn-secondary" onClick={onClose}>Fermer</button>
+            <button className="btn" disabled={act.busy || !ok || !!done} onClick={() => act.run(async () => { await post('/convoys/payout', { idempotency_key: key, collector_id: col, cash_session_id: session, amount }); setDone('Paiement enregistré : compte du collecteur et caisse mis à jour.'); })}>Payer</button></div>
+        </>
+      )}
     </Modal>
   );
 }

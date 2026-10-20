@@ -57,4 +57,4 @@
 ## Convois, connaissement et espaces par nature de compte
 - Livré : B/L obligatoire au départ ; convois, réception, caisse, compte du collecteur (écriture immuable, montant exact poids × prix) ; `/me` renvoie la nature du compte (collecteur, coach, personnel) ; le collecteur ne voit que ses convois, ses achats, ses producteurs (filières affectées) et son stock ; menus « Mes achats / Mon stock / Historique » du portail.
 - Vérifié : e2e convois (36 contrôles), parcours navigateur (collecteur, magasinier, caisse), mobile non compilé ici (**écran de convoi Flutter écrit mais jamais compilé ni exécuté**).
-- Non couvert : liaison d'un convoi à des déclarations précises, écart de poids bloquant, paiement en espèces depuis la caisse après le crédit du compte, écrans mobiles de stock/historique du collecteur, périmètre des coachs limité aux missions déjà existantes.
+- Non couvert : liaison d'un convoi à des déclarations précises, écart de poids bloquant, écrans mobiles de stock/historique du collecteur, périmètre des coachs limité aux missions déjà existantes.
