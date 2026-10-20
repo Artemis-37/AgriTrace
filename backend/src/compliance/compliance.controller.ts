@@ -16,7 +16,7 @@ const MAX_DOC_BYTES = 10 * 1024 * 1024;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const DOC_SUBJECT_TABLE: Record<string, string> = {
   producer: 'producers', collector: 'collectors', declaration: 'purchase_declarations', lot: 'lots', receipt: 'receipts',
-  payment: 'payments', inspection: 'inspections', certificate: 'certificates', loan: 'loans', parcel: 'parcels', task: 'tasks', shipment: 'shipments', order: 'sales_orders', invoice: 'invoices', claim: 'sales_claims',
+  payment: 'payments', inspection: 'inspections', certificate: 'certificates', loan: 'loans', parcel: 'parcels', task: 'tasks', weighing: 'weighings', shipment: 'shipments', order: 'sales_orders', invoice: 'invoices', claim: 'sales_claims',
 };
 const CERT_HOLDER_TABLE: Record<string, string> = { producer: 'producers', warehouse: 'warehouses', lot: 'lots' };
 const docsDir = () => process.env.DOCUMENTS_DIR ?? path.join(process.cwd(), 'storage', 'documents');
@@ -86,6 +86,15 @@ export class ComplianceController {
         if (b.subject_type === 'declaration' && !req.org.permissions.has('declarations:validate')) {
           const mine = await c.query(`SELECT 1 FROM purchase_declarations d JOIN collectors k ON k.id = d.collector_id WHERE d.id = $1 AND k.user_id = $2`, [b.subject_id, req.user.id]);
           if (!mine.rowCount) throw new ForbiddenException('Vous ne pouvez joindre des pièces qu\'à vos propres déclarations');
+        }
+        // Parcelle : son relevé (created_by) ou le droit de la modifier. Mission : son responsable, son équipe ou la lecture de toutes les missions.
+        if (b.subject_type === 'parcel' && !req.org.permissions.has('parcels:update')) {
+          const mine = await c.query(`SELECT 1 FROM parcels WHERE id = $1 AND created_by = $2`, [b.subject_id, req.user.id]);
+          if (!mine.rowCount) throw new ForbiddenException('Vous ne pouvez joindre des pièces qu\'aux parcelles que vous avez relevées');
+        }
+        if (b.subject_type === 'task' && !req.org.permissions.has('tasks:read_all')) {
+          const mine = await c.query(`SELECT 1 FROM tasks WHERE id = $1 AND (assignee_id = $2 OR $2 = ANY(team_ids))`, [b.subject_id, req.user.id]);
+          if (!mine.rowCount) throw new ForbiddenException('Seul le responsable de la mission (ou son équipe) peut y joindre des pièces');
         }
         let version = 1, sensitive = b.sensitive === 'true';
         if (b.replaces_id) {

@@ -23,6 +23,19 @@ void main() {
     });
   });
 
+  group('photos et parcelles', () {
+    test('une photo de reçu attend sa déclaration, une photo de parcelle part tout de suite', () {
+      expect(canUploadPhotoFor('declaration', 'local_only'), isFalse);
+      expect(canUploadPhotoFor('declaration', null), isFalse);
+      expect(canUploadPhotoFor('declaration', 'synced'), isTrue);
+      expect(canUploadPhotoFor('parcel', null), isTrue);
+    });
+    test('reprendre un tracé demande parcels:update', () {
+      expect(canUpdateParcel(['parcels:create']), isFalse);
+      expect(canUpdateParcel(['parcels:create', 'parcels:update']), isTrue);
+    });
+  });
+
   group('declarationLabel', () {
     test("une déclaration non confirmée est signalée comme locale", () {
       expect(declarationLabel(localState: 'local_only'), 'Brouillon local');

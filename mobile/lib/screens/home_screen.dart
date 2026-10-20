@@ -10,6 +10,7 @@ import 'missions_screen.dart';
 import 'my_stock_screen.dart';
 import 'notifications_screen.dart';
 import 'parcel_survey_screen.dart';
+import 'parcels_screen.dart';
 import 'new_convoy_screen.dart';
 import 'new_declaration_screen.dart';
 
@@ -89,6 +90,8 @@ class _HomeScreenState extends State<HomeScreen> {
             final saved = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => const ParcelSurveyScreen()));
             if (saved == true) services.sync.run();
           }),
+        if (_canSurvey)
+          IconButton(tooltip: 'Mes parcelles', icon: const Icon(Icons.landscape_outlined), onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ParcelsScreen()))),
         if (_canMissions)
           IconButton(tooltip: 'Mes missions', icon: const Icon(Icons.assignment_outlined), onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MissionsScreen()))),
         if (_canConvoy)

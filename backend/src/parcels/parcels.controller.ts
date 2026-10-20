@@ -30,13 +30,14 @@ export class CreateParcelDto {
   @IsOptional() @IsObject() geometry?: any;
   @IsOptional() @IsBoolean() confirm_not_duplicate?: boolean;
 }
-class UpdateParcelDto {
+export class UpdateParcelDto {
   @IsOptional() @Dec(4) declared_area_ha?: string;
   @IsOptional() @IsNumber() @Min(-90) @Max(90) latitude?: number;
   @IsOptional() @IsNumber() @Min(-180) @Max(180) longitude?: number;
   @IsOptional() @IsObject() geometry?: any;
   @IsOptional() @IsString() @Length(3, 500) reason?: string;
 }
+export class SyncUpdateParcelDto extends UpdateParcelDto { @IsUUID() id: string; }
 class NoteDto { @IsOptional() @IsString() @Length(1, 500) note?: string; }
 
 @ApiTags('parcelles')

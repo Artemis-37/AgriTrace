@@ -4,7 +4,7 @@ import 'package:sqflite_sqlcipher/sqflite.dart';
 /// Base locale chiffrée (SQLCipher). Le schéma est versionné : chaque version a sa migration,
 /// pour mettre à jour l'application sans perdre les opérations en attente.
 class AppDatabase {
-  static const schemaVersion = 3;
+  static const schemaVersion = 4;
   final Database raw;
   AppDatabase._(this.raw);
 
@@ -61,6 +61,14 @@ class AppDatabase {
       await d.execute('''CREATE TABLE pending_uploads (
         client_key TEXT PRIMARY KEY, declaration_id TEXT NOT NULL, kind TEXT NOT NULL, file_path TEXT NOT NULL,
         status TEXT NOT NULL DEFAULT 'pending', error TEXT, attempts INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL)''');
+    },
+    // Version 4 : parcelles connues de l'appareil (pour reprendre un tracé et photographier) ; une photo peut viser une parcelle
+    // (la colonne declaration_id contient alors l'identifiant de l'objet visé, subject_type en donne le type).
+    4: (d) async {
+      await d.execute('''CREATE TABLE parcels (
+        id TEXT PRIMARY KEY, code TEXT, producer_id TEXT, value_chain_id TEXT, declared_area_ha TEXT, geometry_area_ha TEXT,
+        geometry TEXT, verification_status TEXT, status TEXT)''');
+      await d.execute("ALTER TABLE pending_uploads ADD COLUMN subject_type TEXT NOT NULL DEFAULT 'declaration'");
     },
   };
 

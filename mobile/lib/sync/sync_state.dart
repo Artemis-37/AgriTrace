@@ -65,6 +65,11 @@ bool isRetryable(String opStatus) => opStatus == 'pending' || opStatus == 'pendi
 bool canSync(List<String> permissions) => permissions.contains('sync:use');
 bool canCreateDeclaration(List<String> permissions) => permissions.contains('declarations:create');
 bool canSurveyParcel(List<String> permissions) => permissions.contains('parcels:create');
+/// Reprendre le tracé d'une parcelle existante demande le droit de la modifier (le serveur le vérifie aussi).
+bool canUpdateParcel(List<String> permissions) => permissions.contains('parcels:update');
+/// Une photo de parcelle ou de mission vise un objet déjà connu du serveur ; une photo de reçu attend que sa déclaration y soit.
+bool canUploadPhotoFor(String subjectType, String? declarationLocalState) =>
+    subjectType == 'declaration' ? declarationLocalState != null && canUploadPhoto(declarationLocalState) : true;
 bool canCreateConvoy(List<String> permissions) => permissions.contains('convoys:create');
 bool canReadHistory(List<String> permissions) => permissions.contains('declarations:read') && permissions.contains('declarations:create');
 bool canSeeFiche(List<String> permissions) => permissions.contains('collector:stock');

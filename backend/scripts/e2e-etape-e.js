@@ -45,6 +45,12 @@ const today = new Date().toISOString().slice(0, 10);
     await call('POST', `/purchase-declarations/${d.id}/transition`, { ...J(), body: { to: 'in_review' } });
     await call('POST', `/purchase-declarations/${d.id}/transition`, { ...J(), body: { to: 'accepted' } });
     const w = (await call('POST', '/weighings', { ...J(), body: { idempotency_key: key('w'), declaration_id: d.id, warehouse_id: wh.id, gross_kg: grossKg, tare_kg: tare } })).body;
+    if (!mkStock.docChecked) {
+      mkStock.docChecked = true;
+      const f = new FormData(); f.append('file', new Blob([Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64')], { type: 'image/png' }), 't.png');
+      f.append('subject_type', 'weighing'); f.append('subject_id', w.id); f.append('kind', 'Ticket de pesée'); f.append('client_key', key('wd'));
+      const wr = await fetch(API + '/documents', { method: 'POST', headers: { authorization: `Bearer ${T}`, 'x-organization-id': org.id }, body: f }); const wd = { status: wr.status, body: await wr.text() }; check('pesée : ticket joint comme pièce', wd.status === 201, wd.body);
+    }
     const rc = (await call('POST', '/receipts', { ...J(), body: { weighing_id: w.id } })).body;
     return { decl: d, lot: rc.receipt?.lot_id ?? rc.lot_id };
   };

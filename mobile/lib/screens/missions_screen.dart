@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 
 import '../data/api_client.dart';
 import '../main.dart';
+import 'photo_capture.dart';
 
 /// Missions du coach (ou de l'agent de terrain) : liste, démarrage, saisie d'observations / résultats / position, soumission. Nécessite le réseau.
 class MissionsScreen extends StatefulWidget {
@@ -106,6 +107,16 @@ class _MissionScreenState extends State<MissionScreen> {
         setState(() => _msg = 'Saisie enregistrée.');
       });
 
+  /// Photo d'une mission (preuve de réalisation) : envoyée tout de suite, comme le reste de la mission (réseau nécessaire).
+  Future<void> _photo() => _run(() async {
+        final path = await takePhotoPath();
+        if (path == null) { setState(() => _msg = 'Aucune photo prise.'); return; }
+        await services.api.upload('/documents', filePath: path, filename: 'photo.jpg', fields: {
+          'subject_type': 'task', 'subject_id': _t['id'] as String, 'kind': 'Photo de la mission', 'client_key': 'photo-${const Uuid().v4()}',
+        });
+        setState(() => _msg = 'Photo envoyée.');
+      });
+
   @override
   Widget build(BuildContext context) {
     final st = _t['status'] as String;
@@ -134,6 +145,8 @@ class _MissionScreenState extends State<MissionScreen> {
             TextField(controller: _text, minLines: 3, maxLines: 6, decoration: const InputDecoration(labelText: 'Texte', border: OutlineInputBorder())),
           const SizedBox(height: 8),
           FilledButton.tonal(onPressed: _busy ? null : _entry, child: const Text('Enregistrer la saisie')),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(onPressed: _busy ? null : _photo, icon: const Icon(Icons.photo_camera_outlined), label: const Text('Joindre une photo (facultatif)')),
           const SizedBox(height: 16),
           FilledButton(onPressed: _busy ? null : () => _move('submitted'), child: const Text('Soumettre la mission')),
         ],

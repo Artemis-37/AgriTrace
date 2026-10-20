@@ -93,17 +93,18 @@ class SyncEngine {
   /// Réseau coupé : on s'arrête et on reprendra ; refus définitif du serveur : la photo est mise de côté avec son motif.
   Future<void> _pushPhotos() async {
     final rows = await db.raw.rawQuery(
-        "SELECT u.*, d.local_state AS decl_state FROM pending_uploads u JOIN declarations d ON d.id = u.declaration_id WHERE u.status = 'pending' ORDER BY u.created_at");
+        "SELECT u.*, d.local_state AS decl_state FROM pending_uploads u LEFT JOIN declarations d ON d.id = u.declaration_id AND u.subject_type = 'declaration' WHERE u.status = 'pending' ORDER BY u.created_at");
     for (final r in rows) {
-      if (!canUploadPhoto(r['decl_state'] as String)) continue;
+      final type = r['subject_type'] as String;
+      if (!canUploadPhotoFor(type, r['decl_state'] as String?)) continue;
       final file = File(r['file_path'] as String);
       if (!await file.exists()) {
         await db.raw.update('pending_uploads', {'status': 'error', 'error': 'Fichier introuvable sur l\'appareil'}, where: 'client_key = ?', whereArgs: [r['client_key']]);
         continue;
       }
       try {
-        await api.upload('/documents', filePath: file.path, filename: 'recu.jpg', fields: {
-          'subject_type': 'declaration', 'subject_id': r['declaration_id'] as String, 'kind': r['kind'] as String, 'client_key': r['client_key'] as String,
+        await api.upload('/documents', filePath: file.path, filename: 'photo.jpg', fields: {
+          'subject_type': type, 'subject_id': r['declaration_id'] as String, 'kind': r['kind'] as String, 'client_key': r['client_key'] as String,
         });
         await db.raw.delete('pending_uploads', where: 'client_key = ?', whereArgs: [r['client_key']]);
         await file.delete().catchError((_) => file);
@@ -163,6 +164,17 @@ class SyncEngine {
     } else {
       // Permission retirée : on supprime les données qui ne sont plus autorisées.
       await txn.delete('producers');
+    }
+
+    // Parcelles : on ne remplace pas un tracé dont la modification attend encore son envoi.
+    for (final r in ((ch['parcels'] as List?) ?? const [])) {
+      final c = r as Map<String, dynamic>;
+      final held = await txn.rawQuery("SELECT 1 FROM outbox WHERE entity_id = ? AND op_type = 'parcel.update' AND status IN ('pending','pending_validation') LIMIT 1", [c['id']]);
+      if (held.isNotEmpty) continue;
+      await txn.insert('parcels', {
+        'id': c['id'], 'code': c['code'], 'producer_id': c['producer_id'], 'value_chain_id': c['value_chain_id'], 'declared_area_ha': c['declared_area_ha']?.toString(),
+        'geometry_area_ha': c['geometry_area_ha']?.toString(), 'geometry': c['geometry'] == null ? null : jsonEncode(c['geometry']), 'verification_status': c['verification_status'], 'status': c['status'],
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
     }
 
     for (final r in (ch['declarations'] as List)) {

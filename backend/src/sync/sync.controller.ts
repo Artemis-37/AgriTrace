@@ -6,7 +6,7 @@ import { ArrayMaxSize, ArrayMinSize, IsArray, IsObject, IsString, Length, valida
 import { RequirePermissions } from '../access/decorators';
 import { DbService } from '../db/db.service';
 import { CreateDeclarationDto, DeclarationsController } from '../declarations/declarations.controller';
-import { CreateParcelDto, ParcelsController } from '../parcels/parcels.controller';
+import { CreateParcelDto, ParcelsController, SyncUpdateParcelDto, UpdateParcelDto } from '../parcels/parcels.controller';
 import { FinanceController, TransactionDto } from '../finance/finance.controller';
 import { TaskEntryDto, TasksController } from '../tasks/tasks.controller';
 import { MessagesController, SendMessageDto } from '../messages/messages.controller';
@@ -51,6 +51,11 @@ export class SyncController {
           return ctl.submit(p.id, req);
         } },
       'parcel.create': { controller: ParcelsController, permission: 'parcels:create', dto: CreateParcelDto, run: (ctl, p, req) => ctl.create(p, req) },
+      'parcel.update': { controller: ParcelsController, permission: 'parcels:update', dto: SyncUpdateParcelDto, run: (ctl, p, req) => {
+        const { id, ...rest } = p ?? {};
+        if (typeof id !== 'string' || !/^[0-9a-f-]{36}$/i.test(id)) throw new BadRequestException('payload.id (uuid) requis');
+        return ctl.update(id, plainToInstance(UpdateParcelDto, rest), req);
+      } },
       'message.send': { controller: MessagesController, permission: 'messages:use', dto: SendMessageDto, run: (ctl, p, req) => ctl.send(p, req) },
       'weighing.create': { controller: ReceptionController, permission: 'weighings:create', dto: CreateWeighingDto,
         run: (ctl, p, req) => ctl.createWeighing(p, req) },
@@ -182,6 +187,8 @@ export class SyncController {
         { key: 'producers', sql: `SELECT p.id, p.internal_code, p.last_name, p.first_names, p.phone, p.region, p.department, p.section, p.village, p.status,
                                           coalesce((SELECT array_agg(value_chain_id) FROM producer_value_chains x WHERE x.producer_id = p.id), '{}') AS value_chain_ids,
                                           p.updated_at AS ts FROM producers p` },
+        { key: 'parcels', sql: `SELECT id, code, producer_id, value_chain_id, declared_area_ha, geometry_area_ha, geometry, verification_status, status, updated_at AS ts FROM parcels
+                                  WHERE status = 'active' AND ($3::boolean OR created_by = $4)`, params: [req.org.permissions.has('parcels:update'), req.user.id] },
         { key: 'warehouses', sql: `SELECT id, code, name, status, updated_at AS ts FROM warehouses` },
         { key: 'my_assignments', sql: `SELECT id, collector_id, value_chain_id, zone, created_at AS ts FROM collector_assignments WHERE collector_id = $3`, params: [mine] },
         { key: 'declarations', sql: `SELECT id, collector_id, producer_id, value_chain_id, campaign_id, operation_date, bags, quantity, unit, unit_price, currency, amount,

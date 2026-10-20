@@ -9,7 +9,9 @@ import '../main.dart';
 /// Relevé du tracé d'une parcelle au GPS : le technicien fait le tour de la parcelle et ajoute un point à chaque angle.
 /// Tout se calcule sur l'appareil (surface, périmètre, contrôle du tracé) ; l'enregistrement part à la synchronisation, réseau ou non.
 class ParcelSurveyScreen extends StatefulWidget {
-  const ParcelSurveyScreen({super.key});
+  /// Parcelle déjà connue dont on reprend le tracé (null : nouvelle parcelle).
+  final Map<String, Object?>? existing;
+  const ParcelSurveyScreen({super.key, this.existing});
   @override
   State<ParcelSurveyScreen> createState() => _ParcelSurveyScreenState();
 }
@@ -31,6 +33,12 @@ class _ParcelSurveyScreenState extends State<ParcelSurveyScreen> {
   @override
   void initState() {
     super.initState();
+    final e = widget.existing;
+    if (e != null) {
+      _producer = {'id': e['producer_id'], 'last_name': (e['producer_name'] ?? '').toString(), 'first_names': '', 'internal_code': e['producer_code'] ?? ''};
+      _chainId = e['value_chain_id'] as String?;
+      _declared.text = (e['declared_area_ha'] ?? '').toString();
+    }
     _find('');
   }
 
@@ -93,10 +101,15 @@ class _ParcelSurveyScreenState extends State<ParcelSurveyScreen> {
 
   Future<void> _save() async {
     setState(() => _saving = true);
-    await services.repo.queueParcel(
-      producerId: _producer!['id'] as String, valueChainId: _chainId!,
-      declaredAreaHa: _declaredHa!.toStringAsFixed(4), geometry: toGeoJson(_points),
-    );
+    final e = widget.existing;
+    if (e != null) {
+      await services.repo.queueParcelUpdate(parcelId: e['id'] as String, declaredAreaHa: _declaredHa!.toStringAsFixed(4), geometry: toGeoJson(_points));
+    } else {
+      await services.repo.queueParcel(
+        producerId: _producer!['id'] as String, valueChainId: _chainId!,
+        declaredAreaHa: _declaredHa!.toStringAsFixed(4), geometry: toGeoJson(_points),
+      );
+    }
     if (!mounted) return;
     Navigator.of(context).pop(true);
   }
@@ -106,7 +119,7 @@ class _ParcelSurveyScreenState extends State<ParcelSurveyScreen> {
     final measured = areaHa(_points);
     final gap = _declaredHa == null || _points.length < 3 ? null : gapPct(_declaredHa!, measured);
     return Scaffold(
-      appBar: AppBar(title: const Text('Relever une parcelle')),
+      appBar: AppBar(title: Text(widget.existing == null ? 'Relever une parcelle' : 'Reprendre le tracé')),
       body: ListView(padding: const EdgeInsets.all(16), children: [
         if (_producer == null) ...[
           TextField(controller: _search, decoration: const InputDecoration(labelText: 'Producteur (nom ou code)', prefixIcon: Icon(Icons.search)), onChanged: _find),
@@ -115,7 +128,7 @@ class _ParcelSurveyScreenState extends State<ParcelSurveyScreen> {
         ] else ...[
           ListTile(
             contentPadding: EdgeInsets.zero, title: Text('${_producer!['last_name']} ${_producer!['first_names']}'), subtitle: Text('${_producer!['internal_code']}'),
-            trailing: TextButton(onPressed: _points.isEmpty ? () => setState(() { _producer = null; _chainId = null; }) : null, child: const Text('Changer')),
+            trailing: widget.existing != null ? null : TextButton(onPressed: _points.isEmpty ? () => setState(() { _producer = null; _chainId = null; }) : null, child: const Text('Changer')),
           ),
           if (_chains.length > 1)
             DropdownButtonFormField<String>(
@@ -123,6 +136,10 @@ class _ParcelSurveyScreenState extends State<ParcelSurveyScreen> {
               items: [for (final c in _chains) DropdownMenuItem(value: c['id'] as String, child: Text('${c['name']}'))], onChanged: (v) => setState(() => _chainId = v),
             ),
           TextField(controller: _declared, decoration: const InputDecoration(labelText: 'Superficie déclarée (ha)'), keyboardType: const TextInputType.numberWithOptions(decimal: true), onChanged: (_) => setState(() {})),
+          if (widget.existing != null)
+            Padding(padding: const EdgeInsets.only(top: 8), child: Text(
+                'Tracé actuel : ${widget.existing!['geometry_area_ha'] ?? '—'} ha. Le nouveau tracé le remplace une fois envoyé ; le serveur le revérifie (chevauchements, écart de superficie) et la parcelle repasse « déclarée ».',
+                style: const TextStyle(color: Colors.black54))),
           const SizedBox(height: 12),
           Container(
             height: 240, decoration: BoxDecoration(border: Border.all(color: Colors.black26), borderRadius: BorderRadius.circular(8)),

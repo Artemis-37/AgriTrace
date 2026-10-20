@@ -4,11 +4,13 @@ import { useAuth } from '../auth';
 import { dateTime, kg } from '../format';
 import { Badge, Card, ErrorBox, Loading, Modal, PageHeader, Table, useAction, useAsync } from '../ui';
 import { Confirm } from './Declarations';
+import DocumentsPanel from './DocumentsPanel';
 
 export default function Stocks() {
   const { can } = useAuth();
   const [trace, setTrace] = useState<string | null>(null);
   const [approve, setApprove] = useState<any | null>(null);
+  const [docsFor, setDocsFor] = useState<any | null>(null);
   const { data, loading, error, reload } = useAsync(async () => {
     const [stocks, lots, weighings] = await Promise.all([
       get<any[]>('/stocks'),
@@ -32,7 +34,12 @@ export default function Stocks() {
             { header: 'Net', align: 'right', render: (w) => kg(w.net_kg) },
             { header: 'Déclaré', align: 'right', render: (w) => kg(w.declared_kg) },
             { header: 'Écart', align: 'right', render: (w) => <Badge tone="warn">{Number(w.variance_pct).toFixed(1)} %</Badge> },
-            { header: '', render: (w) => can('weighings:approve') && <button className="btn btn-small" onClick={() => setApprove(w)}>Examiner</button> },
+            { header: '', render: (w) => (
+              <div className="row-actions">
+                {can('documents:read') && <button className="btn btn-small btn-secondary" onClick={() => setDocsFor(w)}>Pièces</button>}
+                {can('weighings:approve') && <button className="btn btn-small" onClick={() => setApprove(w)}>Examiner</button>}
+              </div>
+            ) },
           ]} />
         </Card>
       )}
@@ -61,6 +68,11 @@ export default function Stocks() {
         </Card>
       )}
       {trace && <Traceability id={trace} onClose={() => setTrace(null)} />}
+      {docsFor && (
+        <Modal title={`Pièces — pesée du ${dateTime(docsFor.weighed_at)}`} onClose={() => setDocsFor(null)}>
+          <DocumentsPanel subjectType="weighing" subjectId={docsFor.id} kinds={['weighing_ticket', 'photo', 'other']} locked={!can('documents:upload')} />
+        </Modal>
+      )}
       {approve && <Confirm title="Valider l'écart de pesée" reason optional label="Commentaire (facultatif)" onClose={() => setApprove(null)}
         intro={`Net ${kg(approve.net_kg)} pour ${kg(approve.declared_kg)} déclarés (${Number(approve.variance_pct).toFixed(1)} %).`}
         onSubmit={async (c) => { await post(`/weighings/${approve.id}/approve`, { approve: true, ...(c && { comment: c }) }); setApprove(null); reload(); }} />}

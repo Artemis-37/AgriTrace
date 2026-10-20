@@ -110,13 +110,17 @@ class Repository {
 
   /// Photo du reçu : copiée dans le stockage de l'application (le cache de l'appareil peut être vidé) et mise en attente d'envoi.
   /// Elle part après la déclaration, avec une clé propre : un renvoi ne crée jamais de doublon.
-  Future<void> queueReceiptPhoto({required String declarationId, required String sourcePath}) async {
+  Future<void> queueReceiptPhoto({required String declarationId, required String sourcePath}) =>
+      queuePhoto(subjectType: 'declaration', subjectId: declarationId, kind: 'Photo du reçu', sourcePath: sourcePath);
+
+  /// Photo d'un objet du serveur (reçu, parcelle) : même mécanisme, même garantie contre les doublons.
+  Future<void> queuePhoto({required String subjectType, required String subjectId, required String kind, required String sourcePath}) async {
     final dir = Directory(p.join((await getApplicationDocumentsDirectory()).path, 'pending_photos'));
     await dir.create(recursive: true);
     final key = 'photo-${_uuid.v4()}';
     final dest = p.join(dir.path, '$key${p.extension(sourcePath).isEmpty ? '.jpg' : p.extension(sourcePath)}');
     await File(sourcePath).copy(dest);
-    await db.raw.insert('pending_uploads', {'client_key': key, 'declaration_id': declarationId, 'kind': 'Photo du reçu', 'file_path': dest, 'created_at': DateTime.now().toIso8601String()});
+    await db.raw.insert('pending_uploads', {'client_key': key, 'subject_type': subjectType, 'declaration_id': subjectId, 'kind': kind, 'file_path': dest, 'created_at': DateTime.now().toIso8601String()});
   }
 
   Future<int> pendingPhotos() async => Sqflite.firstIntValue(await db.raw.rawQuery("SELECT count(*) FROM pending_uploads WHERE status = 'pending'")) ?? 0;
@@ -142,6 +146,23 @@ class Repository {
     await db.raw.insert('outbox', {'idempotency_key': key, 'op_type': 'parcel.create', 'payload': jsonEncode(payload), 'entity_id': key, 'created_at': DateTime.now().toIso8601String()});
   }
 
+  /// Nouveau tracé d'une parcelle existante : envoyé à la synchronisation, le serveur recalcule la surface et revérifie les chevauchements.
+  /// Le tracé local est remplacé tout de suite ; la prochaine synchronisation le confirme (ou le corrige).
+  Future<void> queueParcelUpdate({required String parcelId, required String declaredAreaHa, required Map<String, Object> geometry}) async {
+    final key = 'parcel-upd-${_uuid.v4()}';
+    final payload = {'id': parcelId, 'declared_area_ha': declaredAreaHa, 'geometry': geometry};
+    await db.raw.transaction((txn) async {
+      await txn.insert('outbox', {'idempotency_key': key, 'op_type': 'parcel.update', 'payload': jsonEncode(payload), 'entity_id': parcelId, 'created_at': DateTime.now().toIso8601String()});
+      await txn.update('parcels', {'geometry': jsonEncode(geometry), 'declared_area_ha': declaredAreaHa, 'verification_status': 'declared'}, where: 'id = ?', whereArgs: [parcelId]);
+    });
+  }
+
+  /// Parcelles connues de l'appareil, avec le producteur et l'envoi en attente éventuel.
+  Future<List<Map<String, Object?>>> parcels() => db.raw.rawQuery('''
+    SELECT c.*, p.last_name || ' ' || p.first_names AS producer_name, p.internal_code AS producer_code,
+           (SELECT count(*) FROM outbox o WHERE o.entity_id = c.id AND o.op_type = 'parcel.update' AND o.status IN ('pending','pending_validation')) AS pending_updates
+      FROM parcels c LEFT JOIN producers p ON p.id = c.producer_id ORDER BY c.code LIMIT 500''');
+
   Future<List<Map<String, Object?>>> declarations() => db.raw.rawQuery('''
     SELECT d.*, p.last_name || ' ' || p.first_names AS producer_name, p.internal_code AS producer_code
       FROM declarations d LEFT JOIN producers p ON p.id = d.producer_id
@@ -163,7 +184,7 @@ class Repository {
     if (current == orgId) return true;
     if (current != null && await db.pendingCount() > 0) return false;
     await db.raw.transaction((txn) async {
-      for (final t in ['value_chains', 'campaigns', 'unit_conversions', 'price_versions', 'producers', 'my_assignments', 'declarations', 'outbox']) {
+      for (final t in ['value_chains', 'campaigns', 'unit_conversions', 'price_versions', 'producers', 'my_assignments', 'declarations', 'outbox', 'parcels', 'pending_uploads']) {
         await txn.delete(t);
       }
       await txn.delete('kv', where: "k IN ('cursor','permissions','my_collector_id')");
