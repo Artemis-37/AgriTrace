@@ -112,12 +112,15 @@ await step('émettre la facture de 995 kg', async () => {
   await m.getByRole('button', { name: 'Émettre', exact: true }).click(); await page.waitForTimeout(1000);
   must(/995\s?000/.test(await page.locator('tbody').innerText()), 'montant 995 000 absent');
 });
-await step('trop-perçu refusé puis encaissement en deux fois jusqu\'à « Payée »', async () => {
+await step('trop-perçu refusé, avoir de 5 000 puis encaissement jusqu\'à « Payée »', async () => {
   await page.locator('button.link').first().click(); await page.waitForTimeout(500);
   const m = modal(); const pay = async (v) => { await m.getByLabel('Montant', { exact: true }).fill(v); await m.getByRole('button', { name: 'Enregistrer le paiement' }).click(); await page.waitForTimeout(900); };
   await pay('2000000'); must(/supérieur au solde/.test(await text()), 'trop-perçu non refusé'); expectedRefusals++;
   await pay('500000'); must((await text()).includes('Part. payée'), 'statut Part. payée absent');
-  await pay('495000'); must((await text()).includes('Payée'), 'statut Payée absent');
+  await m.getByLabel("Montant de l'avoir").fill('5000'); await m.getByLabel("Motif de l'avoir").fill('Écart de poids constaté');
+  await m.getByRole('button', { name: 'Émettre un avoir' }).click(); await page.waitForTimeout(900);
+  must(/AV-\d{4}-\d{5}/.test(await text()), 'avoir non émis');
+  await pay('490000'); must((await text()).includes('Payée'), 'statut Payée absent après avoir');
   await m.locator('input[type=file]').setInputFiles(PROOF); await m.getByRole('button', { name: 'Joindre' }).click(); await page.waitForTimeout(1000);
   must((await text()).includes('Copie de facture') && (await text()).includes('proof.png'), 'pièce jointe de la facture absente');
   const [dl] = await Promise.all([page.waitForEvent('download', { timeout: 15000 }), m.getByRole('button', { name: 'Télécharger' }).click()]);

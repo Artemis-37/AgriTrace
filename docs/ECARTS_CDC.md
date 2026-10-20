@@ -35,7 +35,8 @@
 
 **Commerce et finance**
 - Paiements des acheteurs : comptabilisés (compte financier crédité + écriture 411/banque ou caisse) lorsqu'un compte de réception est choisi ; sans choix, le paiement reste enregistré seul (comportement antérieur conservé).
-- Pas d'avoir, pas de retour de stock après chargement (un incident est enregistré), pas d'accès externe pour acheteurs/partenaires.
+- Avoirs (migration 021) : `POST /invoices/:id/credit-notes` (droit `invoices:issue`), numéro AV-AAAA-nnnnn, plafonné au solde non encore encaissé (pas de remboursement géré), écriture Dr 701 / Cr 411 au journal des ventes VTE, non modifiable ; la facture soldée par avoir passe à « Payée » ; annulation de facture refusée si un avoir existe. La facture elle-même passe désormais Dr 411 / Cr 701 (rattrapée automatiquement pour les factures plus anciennes), et son annulation extourne l'écriture.
+- Pas de retour de stock après chargement (un incident est enregistré), pas d'accès externe pour acheteurs/partenaires.
 - Préfinancement relié aux comptes (migration 020) : le fonds reçu crédite un compte financier (banque/caisse) et passe Dr banque / Cr 168 ; chaque utilisation sort du compte (Dr 601 achat, 605 dépense, 409 avance, 471 autre) ; chaque remboursement passe Dr 168 / Cr banque. Solde du compte vérifié (422 si insuffisant). Les anciens préfinancements (sans compte) restent consultables sans écriture.
 - Netting avances (409) / dettes (401) : à chaque règlement de livraison, les avances non soldées du collecteur sont imputées (automatique, plafonné, ou montant choisi) avec l'écriture OD Dr 401 / Cr 409 ; la fiche affiche les avances restantes.
 

@@ -303,6 +303,8 @@ function InvoiceDetail({ id, onClose }: { id: string; onClose: () => void }) {
   const [p, setP] = useState({ amount: '', received_on: new Date().toISOString().slice(0, 10), method: 'bank_transfer', reference: '' });
   const [key, setKey] = useState(idem());
   const [cancel, setCancel] = useState(false);
+  const [cn, setCn] = useState({ amount: '', reason: '' });
+  const [cnKey, setCnKey] = useState(idem());
   const act = useAction();
   const banks = useAsync(async () => (can('cash:operate') && can('finance:read') ? (await get<any[]>('/financial-accounts')).filter((a) => a.owner_type === 'other' && a.status === 'active') : []), []);
   const [acct, setAcct] = useState('');
@@ -325,8 +327,17 @@ function InvoiceDetail({ id, onClose }: { id: string; onClose: () => void }) {
               <button className="btn" disabled={act.busy || !p.amount} onClick={() => act.run(async () => { await post(`/invoices/${id}/payments`, { idempotency_key: key, amount: p.amount, received_on: p.received_on, method: p.method, ...(p.reference && { reference: p.reference }), ...(acct && { account_id: acct }) }); setKey(idem()); setP({ ...p, amount: '', reference: '' }); reload(); })}>Enregistrer le paiement</button>
             </div>
           )}
+          {(i.credit_notes.length > 0 || (can('invoices:issue') && ['issued', 'partially_paid'].includes(i.status))) && <h3>Avoirs</h3>}
+          {i.credit_notes.length > 0 && <Table rows={i.credit_notes} columns={[{ header: 'N°', render: (x: any) => x.number }, { header: 'Date', render: (x: any) => date(x.issued_on) }, { header: 'Motif', render: (x: any) => x.reason }, { header: 'Montant', align: 'right', render: (x: any) => money(x.amount, i.currency) }]} />}
+          {can('invoices:issue') && ['issued', 'partially_paid'].includes(i.status) && Number(i.balance) > 0 && (
+            <div className="toolbar">
+              <input aria-label="Montant de l'avoir" placeholder="Montant de l'avoir" inputMode="decimal" value={cn.amount} onChange={(e) => setCn({ ...cn, amount: e.target.value })} />
+              <input aria-label="Motif de l'avoir" placeholder="Motif (écart de poids, qualité…)" value={cn.reason} onChange={(e) => setCn({ ...cn, reason: e.target.value })} />
+              <button className="btn btn-secondary" disabled={act.busy || !cn.amount || cn.reason.length < 3} onClick={() => act.run(async () => { await post(`/invoices/${id}/credit-notes`, { idempotency_key: cnKey, amount: cn.amount, reason: cn.reason }); setCn({ amount: '', reason: '' }); setCnKey(idem()); reload(); })}>Émettre un avoir</button>
+            </div>
+          )}
           <DocumentsPanel subjectType="invoice" subjectId={id} kinds={['invoice_copy', 'payment_proof', 'other']} locked={i.status === 'cancelled'} />
-          <div className="modal-foot">{can('invoices:issue') && i.status !== 'cancelled' && !i.payments.length && <button className="btn btn-secondary" onClick={() => setCancel(true)}>Annuler la facture</button>}</div>
+          <div className="modal-foot">{can('invoices:issue') && i.status !== 'cancelled' && !i.payments.length && !i.credit_notes.length && <button className="btn btn-secondary" onClick={() => setCancel(true)}>Annuler la facture</button>}</div>
           {cancel && <Confirm title="Annuler la facture" reason label="Motif" onClose={() => setCancel(false)} onSubmit={async (reason) => { await post(`/invoices/${id}/cancel`, { reason }); setCancel(false); reload(); }} />}
         </>
       )}

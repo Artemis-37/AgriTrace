@@ -7,7 +7,7 @@ import { ArrayMaxSize, ArrayMinSize, IsArray, IsEmail, IsIn, IsInt, IsOptional, 
 import { PoolClient } from 'pg';
 import { RequirePermissions } from '../access/decorators';
 import { AuditService } from '../audit/audit.service';
-import { accountingCodeOf, postEntry, today } from '../accounting/accounting.helpers';
+import { accountingCodeOf, postEntry, reverseEntry, today } from '../accounting/accounting.helpers';
 import { Dec, isUniqueViolation } from '../common/dto';
 import { DbService } from '../db/db.service';
 import { addLotEvent, nextNumber, pad } from '../stock/stock.helpers';
@@ -51,6 +51,12 @@ class OrderDto {
   @IsArray() @ArrayMinSize(1) @ArrayMaxSize(50) @ValidateNested({ each: true }) @Type(() => LineDto) lines: LineDto[];
 }
 class AllocDto { @IsUUID() line_id: string; @IsUUID() lot_id: string; @IsUUID() warehouse_id: string; @Dec(3) quantity_kg: string; }
+class CreditNoteDto {
+  @IsString() @Length(8, 100) idempotency_key: string;
+  @Dec(2) amount: string;
+  @IsString() @Length(3, 500) reason: string;
+  @IsOptional() @Matches(/^\d{4}-\d{2}-\d{2}$/) issued_on?: string;
+}
 class ReasonDto { @IsString() @Length(3, 300) reason: string; }
 class InvLineDto { @IsUUID() shipment_item_id: string; @Dec(3) quantity_kg: string; }
 class InvoiceDto {
@@ -296,10 +302,25 @@ export class SalesController {
   }
 
   // ---- Factures et paiements reçus ----
+  /** Écriture de vente (Dr 411 clients / Cr 701 ventes), idempotente ; rattrape aussi les factures émises avant son introduction. */
+  private async saleEntry(c: PoolClient, req: any, inv: any) {
+    await c.query(`SELECT accounting_seed($1::uuid)`, [req.org.id]);
+    await c.query(`INSERT INTO journals(organization_id, code, label) VALUES ($1,'VTE','Journal des ventes') ON CONFLICT DO NOTHING`, [req.org.id]);
+    if (Number(inv.total) <= 0) return null;
+    const day = (await c.query(`SELECT issue_date::text AS d FROM invoices WHERE id = $1`, [inv.id])).rows[0].d;
+    return postEntry(c, {
+      orgId: req.org.id, userId: req.user.id, journal: 'VTE', date: day, label: `Facture ${inv.number}`,
+      lines: [{ code: '411', debit: inv.total }, { code: '701', credit: inv.total }],
+      idempotencyKey: 'sale-entry:' + inv.id, referenceType: 'invoice', referenceId: inv.id,
+    });
+  }
+
   private invoiceSql(where: string) {
     return `SELECT i.*, b.code AS buyer_code, b.name AS buyer_name,
                    coalesce((SELECT sum(amount) FROM invoice_payments p WHERE p.invoice_id = i.id), 0)::numeric(18,2) AS paid,
-                   (i.total - coalesce((SELECT sum(amount) FROM invoice_payments p WHERE p.invoice_id = i.id), 0))::numeric(18,2) AS balance,
+                   coalesce((SELECT sum(amount) FROM credit_notes n WHERE n.invoice_id = i.id), 0)::numeric(18,2) AS credited,
+                   (i.total - coalesce((SELECT sum(amount) FROM invoice_payments p WHERE p.invoice_id = i.id), 0)
+                            - coalesce((SELECT sum(amount) FROM credit_notes n WHERE n.invoice_id = i.id), 0))::numeric(18,2) AS balance,
                    (i.status IN ('issued','partially_paid') AND i.due_date < current_date) AS overdue
               FROM invoices i JOIN buyers b ON b.id = i.buyer_id ${where} ORDER BY i.issue_date DESC, i.number DESC LIMIT 500`;
   }
@@ -342,6 +363,7 @@ export class SalesController {
         await c.query(`UPDATE shipment_items SET invoiced_kg = invoiced_kg + $2 WHERE id = $1`, [l.item.id, l.qty]);
         await addLotEvent(c, req.org.id, req.user.id, l.item.lot_id, 'invoiced', l.qty, { type: 'invoice', id: inv.id }, { invoice: number });
       }
+      await this.saleEntry(c, req, inv);
       await this.log(req, 'invoice.issue', 'invoice', inv.id, { number, total });
       return inv;
     });
@@ -361,7 +383,8 @@ export class SalesController {
       if (!i) throw new NotFoundException();
       const lines = (await c.query(`SELECT l.*, lt.code AS lot_code FROM invoice_lines l JOIN lots lt ON lt.id = l.lot_id WHERE l.invoice_id = $1`, [id])).rows;
       const payments = (await c.query(`SELECT * FROM invoice_payments WHERE invoice_id = $1 ORDER BY received_on, created_at`, [id])).rows;
-      return { ...i, lines, payments };
+      const credit_notes = (await c.query(`SELECT * FROM credit_notes WHERE invoice_id = $1 ORDER BY issued_on, created_at`, [id])).rows;
+      return { ...i, lines, payments, credit_notes };
     });
   }
 
@@ -372,11 +395,50 @@ export class SalesController {
       if (!i) throw new NotFoundException();
       if (i.status === 'cancelled') return i;
       if ((await c.query(`SELECT 1 FROM invoice_payments WHERE invoice_id = $1`, [id])).rowCount) throw new ConflictException('Des paiements sont enregistrés : annulation impossible');
+      if ((await c.query(`SELECT 1 FROM credit_notes WHERE invoice_id = $1`, [id])).rowCount) throw new ConflictException('Des avoirs sont émis sur cette facture : annulation impossible');
+      const sale = (await c.query(`SELECT id FROM accounting_entries WHERE idempotency_key = $1`, ['sale-entry:' + id])).rows[0];
+      if (sale) await reverseEntry(c, req.org.id, req.user.id, sale.id, `Annulation facture ${i.number}`, today());
       for (const l of (await c.query(`SELECT * FROM invoice_lines WHERE invoice_id = $1`, [id])).rows)
         await c.query(`UPDATE shipment_items SET invoiced_kg = invoiced_kg - $2 WHERE id = $1`, [l.shipment_item_id, l.quantity_kg]);
       const r = (await c.query(`UPDATE invoices SET status = 'cancelled', cancel_reason = $2, cancelled_by = $3, cancelled_at = now() WHERE id = $1 RETURNING *`, [id, b.reason, req.user.id])).rows[0];
       await this.log(req, 'invoice.cancel', 'invoice', id, { reason: b.reason }); return r;
     });
+  }
+
+  /** Avoir : réduit le solde à encaisser (jamais en dessous de zéro) ; écriture Dr 701 / Cr 411 ; non modifiable. */
+  @Post('invoices/:id/credit-notes') @RequirePermissions('invoices:issue')
+  async creditNote(@Param('id', ParseUUIDPipe) id: string, @Body() b: CreditNoteDto, @Req() req: any) {
+    if (Number(b.amount) <= 0) throw new BadRequestException('Montant doit être supérieur à zéro');
+    const out = await this.db.tx(req.org.id, async (c) => {
+      const prior = (await c.query(`SELECT * FROM credit_notes WHERE idempotency_key = $1`, [b.idempotency_key])).rows[0];
+      if (prior) return prior;
+      const i = (await c.query(`SELECT * FROM invoices WHERE id = $1 FOR UPDATE`, [id])).rows[0];
+      if (!i) throw new NotFoundException();
+      if (i.status === 'cancelled') throw new ConflictException('Facture annulée');
+      const paid = (await c.query(`SELECT coalesce(sum(amount),0) AS p FROM invoice_payments WHERE invoice_id = $1`, [id])).rows[0].p;
+      const credited = (await c.query(`SELECT coalesce(sum(amount),0) AS n FROM credit_notes WHERE invoice_id = $1`, [id])).rows[0].n;
+      const left = (await c.query(`SELECT ($1::numeric - $2::numeric - $3::numeric) AS l`, [i.total, paid, credited])).rows[0].l;
+      if (Number(b.amount) > Number(left)) throw new BadRequestException(`Avoir supérieur au solde non encaissé de la facture (${left}) : un remboursement n'est pas géré`);
+      const issued = b.issued_on ?? today();
+      if (issued > today()) throw new BadRequestException("Date d'avoir dans le futur");
+      await this.saleEntry(c, req, i);
+      const n = await nextNumber(c, req.org.id, 'credit_note');
+      const number = `AV-${new Date().getUTCFullYear()}-${pad(n, 5)}`;
+      const entry = await postEntry(c, {
+        orgId: req.org.id, userId: req.user.id, journal: 'VTE', date: issued, label: `Avoir ${number} sur facture ${i.number} : ${b.reason}`,
+        lines: [{ code: '701', debit: b.amount }, { code: '411', credit: b.amount }],
+        idempotencyKey: 'credit-entry:' + b.idempotency_key, referenceType: 'credit_note', referenceId: id,
+      });
+      const cn = (await c.query(
+        `INSERT INTO credit_notes(organization_id, idempotency_key, number, invoice_id, buyer_id, amount, currency, reason, issued_on, entry_number, created_by)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
+        [req.org.id, b.idempotency_key, number, id, i.buyer_id, b.amount, i.currency, b.reason, issued, entry.number, req.user.id])).rows[0];
+      const rest = (await c.query(`SELECT ($1::numeric - $2::numeric - $3::numeric - $4::numeric) AS r`, [i.total, paid, credited, b.amount])).rows[0].r;
+      if (Number(rest) === 0) await c.query(`UPDATE invoices SET status = 'paid' WHERE id = $1`, [id]);
+      await this.log(req, 'invoice.credit_note', 'invoice', id, { number, amount: b.amount, reason: b.reason });
+      return { ...cn, balance: rest };
+    });
+    return out;
   }
 
   @Post('invoices/:id/payments') @RequirePermissions('invoices:payments')
@@ -388,12 +450,13 @@ export class SalesController {
       if (!i) throw new NotFoundException();
       if (i.status === 'cancelled') throw new ConflictException('Facture annulée');
       const paid = (await c.query(`SELECT coalesce(sum(amount),0) AS p FROM invoice_payments WHERE invoice_id = $1`, [id])).rows[0].p;
-      const balance = (await c.query(`SELECT ($1::numeric - $2::numeric) AS b`, [i.total, paid])).rows[0].b;
+      const credited = (await c.query(`SELECT coalesce(sum(amount),0) AS n FROM credit_notes WHERE invoice_id = $1`, [id])).rows[0].n;
+      const balance = (await c.query(`SELECT ($1::numeric - $2::numeric - $3::numeric) AS b`, [i.total, paid, credited])).rows[0].b;
       if (Number(b.amount) > Number(balance)) throw new BadRequestException(`Montant supérieur au solde de la facture (${balance})`);
       if (b.received_on > new Date().toISOString().slice(0, 10)) throw new BadRequestException('Date d\'encaissement dans le futur');
       const p = (await c.query(`INSERT INTO invoice_payments(organization_id, idempotency_key, invoice_id, amount, received_on, method, reference, created_by) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
         [req.org.id, b.idempotency_key, id, b.amount, b.received_on, b.method, b.reference ?? null, req.user.id])).rows[0];
-      const rest = (await c.query(`SELECT ($1::numeric - $2::numeric - $3::numeric) AS r`, [i.total, paid, b.amount])).rows[0].r;
+      const rest = (await c.query(`SELECT ($1::numeric - $2::numeric - $3::numeric - $4::numeric) AS r`, [i.total, paid, b.amount, credited])).rows[0].r;
       await c.query(`UPDATE invoices SET status = $2 WHERE id = $1`, [id, Number(rest) === 0 ? 'paid' : 'partially_paid']);
       if (b.account_id) {
         if (!req.org.permissions.has('cash:operate')) throw new ForbiddenException('Comptabiliser un encaissement exige le droit « cash:operate »');
