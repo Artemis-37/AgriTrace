@@ -1,12 +1,14 @@
-import { BadRequestException, Body, ConflictException, Controller, Get, NotFoundException, Param, ParseUUIDPipe, Post, Req } from '@nestjs/common';
+import { BadRequestException, Body, ConflictException, Controller, Get, NotFoundException, UnprocessableEntityException, Param, ParseUUIDPipe, Post, Req } from '@nestjs/common';
 import { ApiBearerAuth, ApiHeader, ApiTags } from '@nestjs/swagger';
 import { IsIn, IsOptional, IsString, IsUUID, Length, Matches } from 'class-validator';
+import { randomUUID } from 'crypto';
 import { PoolClient } from 'pg';
 import { RequirePermissions } from '../access/decorators';
 import { AuditService } from '../audit/audit.service';
 import { Dec } from '../common/dto';
 import { DbService } from '../db/db.service';
 import { nextNumber, pad } from '../stock/stock.helpers';
+import { accountingCodeOf, postEntry } from '../accounting/accounting.helpers';
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 class PrefinDto {
@@ -14,6 +16,8 @@ class PrefinDto {
   @IsString() @Length(2, 200) funder: string;
   @Dec(2) amount: string;
   @Matches(/^[A-Z]{3}$/) currency: string;
+  /** Compte financier (banque ou caisse) qui reçoit les fonds. */
+  @IsUUID() account_id: string;
   @Matches(DATE) received_on: string;
   @IsOptional() @IsString() @Length(1, 2000) conditions?: string;
   @IsOptional() @IsUUID() campaign_id?: string;
@@ -51,12 +55,43 @@ export class PrefinancingController {
       coalesce((SELECT sum(amount) FROM prefinancing_repayments r WHERE r.prefinancing_id = p.id),0)::numeric(18,2) AS repaid,
       (p.amount - coalesce((SELECT sum(amount) FROM prefinancing_repayments r WHERE r.prefinancing_id = p.id),0))::numeric(18,2) AS outstanding,
       coalesce((SELECT sum(amount) FROM prefinancing_uses u WHERE u.prefinancing_id = p.id AND u.kind = 'purchase'),0)::numeric(18,2) AS purchases_financed,
-      (p.status = 'active' AND p.due_date < current_date) AS overdue
+      (p.status = 'active' AND p.due_date < current_date) AS overdue,
+      (SELECT name FROM financial_accounts fa WHERE fa.id = p.account_id) AS account_name
     FROM prefinancings p`;
   private async lock(c: PoolClient, id: string) {
     const p = (await c.query(`SELECT * FROM prefinancings WHERE id = $1 FOR UPDATE`, [id])).rows[0];
     if (!p) throw new NotFoundException();
     return p;
+  }
+
+  /** Compte financier (banque/caisse) du préfinancement, verrouillé ; devise identique. */
+  private async fundAccount(c: PoolClient, id: string, currency: string) {
+    const a = (await c.query(`SELECT * FROM financial_accounts WHERE id = $1 AND status = 'active' FOR UPDATE`, [id])).rows[0];
+    if (!a || !['cash_register', 'other'].includes(a.owner_type)) throw new BadRequestException('Compte financier inconnu (banque ou caisse requis)');
+    if (a.currency !== currency) throw new BadRequestException(`Devise du compte (${a.currency}) différente de celle du préfinancement (${currency})`);
+    return a;
+  }
+  /** Mouvement sur le compte + écriture comptable équilibrée (journal BQ pour une banque, CAI pour une caisse). */
+  private async book(c: PoolClient, req: any, acc: any, dir: 'in' | 'out', amount: string, date: string, label: string, key: string, refId: string,
+                     other: { code: string; label?: string }) {
+    if (dir === 'out') {
+      const bal = (await c.query(`SELECT coalesce(sum(CASE direction WHEN 'in' THEN amount ELSE -amount END),0) AS b FROM financial_transactions WHERE account_id = $1`, [acc.id])).rows[0].b;
+      if (Number(amount) > Number(bal)) throw new UnprocessableEntityException(`Solde du compte insuffisant (${Number(bal)})`);
+    }
+    const tx = (await c.query(
+      `INSERT INTO financial_transactions(organization_id, idempotency_key, account_id, direction, amount, currency, reason, reference_type, reference_id, created_by)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,'prefinancing',$8,$9) RETURNING id`,
+      [req.org.id, `pf-tx:${key}`, acc.id, dir, amount, acc.currency, label, refId, req.user.id])).rows[0];
+    await c.query(`SELECT accounting_seed($1::uuid)`, [req.org.id]);
+    await c.query(`INSERT INTO accounting_accounts(organization_id, code, label) VALUES ($1,'168','Préfinancements reçus (dettes)') ON CONFLICT DO NOTHING`, [req.org.id]);
+    const cash = { code: accountingCodeOf(acc) };
+    const entry = await postEntry(c, {
+      orgId: req.org.id, userId: req.user.id, journal: acc.owner_type === 'cash_register' ? 'CAI' : 'BQ', date, label,
+      lines: dir === 'in' ? [{ code: cash.code, debit: amount }, { code: other.code, credit: amount, label: other.label }]
+                          : [{ code: other.code, debit: amount, label: other.label }, { code: cash.code, credit: amount }],
+      idempotencyKey: `pf-entry:${key}`, referenceType: 'prefinancing', referenceId: refId,
+    });
+    return { tx_id: tx.id, entry_number: entry.number };
   }
 
   @Post()
@@ -73,8 +108,11 @@ export class PrefinancingController {
         `INSERT INTO prefinancings(organization_id, idempotency_key, number, funder, amount, currency, received_on, conditions, campaign_id, value_chain_id, due_date, created_by)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *`,
         [req.org.id, b.idempotency_key, `PF-${new Date().getUTCFullYear()}-${pad(n, 4)}`, b.funder, b.amount, b.currency, b.received_on, b.conditions ?? null, b.campaign_id ?? null, b.value_chain_id ?? null, b.due_date ?? null, req.user.id])).rows[0];
-      await this.log(req, 'prefinancing.create', r.id, { number: r.number, amount: b.amount });
-      return r;
+      const acc = await this.fundAccount(c, b.account_id, b.currency);
+      const bk = await this.book(c, req, acc, 'in', b.amount, b.received_on, `Préfinancement ${r.number} reçu de ${b.funder}`, `create:${r.id}`, r.id, { code: '168', label: b.funder });
+      const upd = (await c.query(`UPDATE prefinancings SET account_id = $2, receipt_tx_id = $3, receipt_entry_number = $4 WHERE id = $1 RETURNING *`, [r.id, acc.id, bk.tx_id, bk.entry_number])).rows[0];
+      await this.log(req, 'prefinancing.create', r.id, { number: r.number, amount: b.amount, account_id: acc.id, entry: bk.entry_number });
+      return upd;
     });
   }
 
@@ -122,9 +160,14 @@ export class PrefinancingController {
       const left = (await c.query(`SELECT ($1::numeric - $2::numeric) AS l`, [p.amount, used])).rows[0].l;
       if (Number(b.amount) > Number(left)) throw new BadRequestException(`Montant supérieur aux fonds disponibles (${left})`);
       if (b.used_on > new Date().toISOString().slice(0, 10)) throw new BadRequestException('Date d\'utilisation dans le futur');
-      const r = (await c.query(`INSERT INTO prefinancing_uses(organization_id, idempotency_key, prefinancing_id, kind, amount, used_on, purpose, declaration_id, document_ref, created_by)
-                                VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
-        [req.org.id, b.idempotency_key, id, b.kind, b.amount, b.used_on, b.purpose, b.declaration_id ?? null, b.document_ref, req.user.id])).rows[0];
+      const uid = randomUUID();
+      const counter = { purchase: '601', expense: '605', advance: '409', other: '471' }[b.kind] as string;
+      let bk: { tx_id: string; entry_number: string } | null = null;
+      if (p.account_id) bk = await this.book(c, req, await this.fundAccount(c, p.account_id, p.currency), 'out', b.amount, b.used_on,
+        `Utilisation ${p.number} (${b.kind}) : ${b.purpose}`, `use:${b.idempotency_key}`, uid, { code: counter });
+      const r = (await c.query(`INSERT INTO prefinancing_uses(id, organization_id, idempotency_key, prefinancing_id, kind, amount, used_on, purpose, declaration_id, document_ref, created_by, tx_id, entry_number)
+                                VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *`,
+        [uid, req.org.id, b.idempotency_key, id, b.kind, b.amount, b.used_on, b.purpose, b.declaration_id ?? null, b.document_ref, req.user.id, bk?.tx_id ?? null, bk?.entry_number ?? null])).rows[0];
       await this.log(req, 'prefinancing.use', id, { amount: b.amount, kind: b.kind });
       return r;
     });
@@ -142,8 +185,12 @@ export class PrefinancingController {
       const out = (await c.query(`SELECT ($1::numeric - $2::numeric) AS o`, [p.amount, repaid])).rows[0].o;
       if (Number(b.amount) > Number(out)) throw new BadRequestException(`Montant supérieur au reste à rembourser (${out})`);
       if (b.paid_on > new Date().toISOString().slice(0, 10)) throw new BadRequestException('Date de remboursement dans le futur');
-      const r = (await c.query(`INSERT INTO prefinancing_repayments(organization_id, idempotency_key, prefinancing_id, amount, paid_on, reference, created_by) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
-        [req.org.id, b.idempotency_key, id, b.amount, b.paid_on, b.reference ?? null, req.user.id])).rows[0];
+      const rid = randomUUID();
+      let bk: { tx_id: string; entry_number: string } | null = null;
+      if (p.account_id) bk = await this.book(c, req, await this.fundAccount(c, p.account_id, p.currency), 'out', b.amount, b.paid_on,
+        `Remboursement ${p.number}${b.reference ? ' — ' + b.reference : ''}`, `repay:${b.idempotency_key}`, rid, { code: '168', label: p.funder });
+      const r = (await c.query(`INSERT INTO prefinancing_repayments(id, organization_id, idempotency_key, prefinancing_id, amount, paid_on, reference, created_by, tx_id, entry_number) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
+        [rid, req.org.id, b.idempotency_key, id, b.amount, b.paid_on, b.reference ?? null, req.user.id, bk?.tx_id ?? null, bk?.entry_number ?? null])).rows[0];
       const rest = (await c.query(`SELECT ($1::numeric - $2::numeric - $3::numeric) AS r`, [p.amount, repaid, b.amount])).rows[0].r;
       if (Number(rest) === 0) await c.query(`UPDATE prefinancings SET status = 'repaid' WHERE id = $1`, [id]);
       await this.log(req, 'prefinancing.repayment', id, { amount: b.amount });

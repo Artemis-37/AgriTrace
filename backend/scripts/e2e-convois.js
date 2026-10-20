@@ -66,6 +66,7 @@ const key = (p) => `${p}-${run}-${crypto.randomBytes(4).toString('hex')}`;
   check('prix nul refusé', (await call('POST', `/convoy-receptions/${r.body.id}/settle`, { ...J(cai.t), body: { idempotency_key: key('st'), unit_price: '0' } })).status === 400);
   check('le magasinier ne peut pas traiter en caisse', (await call('POST', `/convoy-receptions/${r.body.id}/settle`, { ...J(mag.t), body: { idempotency_key: key('st'), unit_price: '1000' } })).status === 403);
   const sk = key('st');
+  check('netting supérieur aux avances refusé', (await call('POST', `/convoy-receptions/${r.body.id}/settle`, { ...J(cai.t), body: { idempotency_key: key('st'), unit_price: '1000', net_advance: '100' } })).status === 400);
   const s = await call('POST', `/convoy-receptions/${r.body.id}/settle`, { ...J(cai.t), body: { idempotency_key: sk, unit_price: '1000.5' } });
   check('traitement : montant exact poids × prix', s.status === 201 && s.body.status === 'settled' && Number(s.body.amount) === 2587.5 * 1000.5, s.body);
   const s2 = await call('POST', `/convoy-receptions/${r.body.id}/settle`, { ...J(cai.t), body: { idempotency_key: key('st'), unit_price: '1' } });
@@ -110,7 +111,10 @@ const key = (p) => `${p}-${run}-${crypto.randomBytes(4).toString('hex')}`;
   const s3 = await call('POST', `/convoy-receptions/${rc3.id}/settle`, { ...J(cai.t), body: { idempotency_key: key('st'), unit_price: '1800' } });
   check('livraison : brut 3 727 800, transport 124 260, retenue 62 130, net 3 789 930',
     s3.status === 201 && Number(s3.body.gross_amount) === 3727800 && Number(s3.body.transport_total) === 124260 && Number(s3.body.retention_amount) === 62130 && Number(s3.body.amount) === 3789930, s3.body);
+  check('netting automatique : 2 000 000 d\'avances imputés, reste à payer 1 789 930, écriture OD',
+    Number(s3.body.advance_netted) === 2000000 && s3.body.cash_due === 1789930 && /^EC-/.test(s3.body.netting_entry_number), s3.body);
   const fi = await call('GET', `/convoys/statement?collector_id=${col3.id}`, J(cai.t));
+  check('fiche : avances non soldées = 0 après netting', Number(fi.body.advance_outstanding) === 0 && Number(fi.body.rows[2].advance_netted) === 2000000, fi.body);
   const last = fi.body.rows[fi.body.rows.length - 1];
   check('fiche : 3 lignes, solde = 2 253 350 + 2 000 000 − 3 789 930 = 463 420', fi.status === 200 && fi.body.rows.length === 3 && Number(fi.body.solde) === 463420 && Number(last.solde) === 463420, fi.body);
   check('fiche : report puis financement dans l\'ordre, soldes progressifs', Number(fi.body.rows[0].solde) === 2253350 && Number(fi.body.rows[1].solde) === 4253350 && fi.body.rows[1].piece === '947719', fi.body.rows);

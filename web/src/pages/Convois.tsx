@@ -159,6 +159,11 @@ function Settle({ r, onClose, onDone }: { r: any; onClose: () => void; onDone: (
   const w = Number(r.total_kg);
   const gross = ok ? Math.round(w * Number(price)) : 0, transport = ok ? Math.round(w * Number(t)) : 0, ret = ok ? Math.round(w * Number(q)) : 0;
   const net = gross + transport - ret;
+  const cols = useAsync(() => get<any[]>('/convoys/collectors'), []);
+  const outstanding = Math.max(0, Number(cols.data?.find((c: any) => c.id === r.collector_id)?.advance_outstanding ?? 0));
+  const maxNet = Math.max(0, Math.min(outstanding, net));
+  const [nt, setNt] = useState<string | null>(null);
+  const netted = nt === null ? maxNet : Math.min(Math.max(0, Number(nt) || 0), maxNet);
   const [key] = useState(idem());
   const f = (n: number) => n.toLocaleString('fr-FR');
   return (
@@ -173,10 +178,14 @@ function Settle({ r, onClose, onDone }: { r: any; onClose: () => void; onDone: (
         <tr><td>Montant total produit</td><td className="r">{f(gross + transport)}</td></tr>
         <tr><td>Retenue</td><td className="r">− {f(ret)}</td></tr>
         <tr><td><strong>Net à payer (porté au compte du collecteur)</strong></td><td className="r"><strong>{f(net)}</strong></td></tr></tbody></table>}
+      {ok && outstanding > 0 && <>
+        <p className="notice">Avances (financements) non soldées de ce collecteur : <strong>{f(outstanding)}</strong>. Elles sont imputées sur ce net à payer (dette 401 compensée par l'avance 409).</p>
+        <Field label="Avances à imputer sur cette livraison (FCFA)"><input aria-label="Avances à imputer" inputMode="numeric" value={nt ?? String(maxNet)} onChange={(e) => setNt(e.target.value)} /></Field>
+        <table><tbody><tr><td><strong>Reste à payer au collecteur après imputation</strong></td><td className="r"><strong>{f(net - netted)}</strong></td></tr></tbody></table></>}
       {act.error && <ErrorBox message={act.error} />}
       <div className="modal-actions">
         <button className="btn btn-secondary" onClick={onClose}>Annuler</button>
-        <button className="btn" disabled={act.busy || !ok || net <= 0} onClick={() => act.run(async () => { await post(`/convoy-receptions/${r.id}/settle`, { idempotency_key: key, unit_price: price, transport_unit: t, retention_per_kg: q }); onDone(); })}>Enregistrer le net à payer</button>
+        <button className="btn" disabled={act.busy || !ok || net <= 0} onClick={() => act.run(async () => { await post(`/convoy-receptions/${r.id}/settle`, { idempotency_key: key, unit_price: price, transport_unit: t, retention_per_kg: q, ...(outstanding > 0 && { net_advance: String(netted) }) }); onDone(); })}>Enregistrer le net à payer</button>
       </div>
     </Modal>
   );
@@ -240,6 +249,7 @@ function Fiche({ collectorId }: { collectorId?: string }) {
           ))}
           {!data.rows.length && <tr><td colSpan={13} className="muted">Aucune opération sur la période.</td></tr>}
         </tbody></table></div>
+      {Number(data.advance_outstanding) > 0 && <p className="notice">Avances non encore imputées sur une livraison : {FR(data.advance_outstanding)} FCFA.</p>}
       <p className="notice">{s > 0 ? `Le collecteur doit ${FR(s)} FCFA à la coopérative (financements non encore couverts par ses livraisons).` : s < 0 ? `La coopérative doit ${FR(-s)} FCFA au collecteur.` : 'Compte soldé.'}</p>
     </>
   );

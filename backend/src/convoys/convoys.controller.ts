@@ -36,6 +36,8 @@ class SettleDto {
   @IsOptional() @Dec(4) transport_unit?: string;
   /** Retenue au kg (par défaut : réglage de la coopérative). Déduite du total. */
   @IsOptional() @Dec(4) retention_per_kg?: string;
+  /** Netting : part du net à payer compensée par les financements (409) non encore soldés. Omis = automatique (maximum possible) ; « 0 » = aucun. */
+  @IsOptional() @Dec(4) net_advance?: string;
 }
 class SettingsDto {
   @Dec(4) transport_unit: string;
@@ -211,6 +213,12 @@ export class ConvoysController {
         [r.total_kg, b.unit_price, tu, rt])).rows[0];
       const amt = (await c.query(`SELECT $1::numeric + $2::numeric - $3::numeric AS n`, [m.gross, m.transport, m.retention])).rows[0].n;
       if (Number(amt) <= 0) throw new BadRequestException('La retenue dépasse le produit : net à payer nul ou négatif');
+      const outstanding = (await c.query(
+        `SELECT coalesce((SELECT sum(amount) FROM collector_advances WHERE collector_id = $1 AND kind = 'advance'), 0)
+              - coalesce((SELECT sum(r2.advance_netted) FROM convoy_receptions r2 JOIN convoys v2 ON v2.id = r2.convoy_id WHERE v2.collector_id = $1), 0) AS o`, [v.collector_id])).rows[0].o;
+      const maxNet = Math.max(0, Math.min(Number(outstanding), Number(amt)));
+      const netted = b.net_advance === undefined ? maxNet : Number(b.net_advance);
+      if (netted < 0 || netted > maxNet + 1e-9) throw new BadRequestException(`Netting supérieur au plafond possible (${maxNet} : avances non soldées ${Number(outstanding)}, net à payer ${Number(amt)})`);
       const tx = (await c.query(
         `INSERT INTO financial_transactions(organization_id, idempotency_key, account_id, direction, amount, currency, reason, reference_type, reference_id, created_by)
          VALUES ($1,$2,$3,'in',$4,$5,$6,'convoy_reception',$7,$8) RETURNING id`,
@@ -224,17 +232,24 @@ export class ConvoysController {
         orgId: req.org.id, userId: req.user.id, journal: 'ACH', date: today(), label: `Achat convoi ${v.convoy_no} — ${u.full_name}`,
         lines, idempotencyKey: 'convoy-entry:' + r.id, referenceType: 'convoy_reception', referenceId: r.id,
       });
+      let nettingNo: string | null = null;
+      if (netted > 0) nettingNo = (await postEntry(c, {
+        orgId: req.org.id, userId: req.user.id, journal: 'OD', date: today(), label: `Netting avances / dettes — convoi ${v.convoy_no} — ${u.full_name}`,
+        lines: [{ code: acc.accounting_code ?? '401', debit: String(netted), label: 'Dette compensée' }, { code: '409', credit: String(netted), label: 'Avance imputée' }],
+        idempotencyKey: 'convoy-netting:' + r.id, referenceType: 'convoy_reception', referenceId: r.id,
+      })).number;
       const upd = (await c.query(
         `UPDATE convoy_receptions SET status = 'settled', unit_price = $2, amount = $3, tx_id = $4, settled_by = $5, settled_at = now(),
-                gross_amount = $6, transport_unit = $7, transport_total = $8, retention_per_kg = $9, retention_amount = $10 WHERE id = $1 RETURNING *`,
-        [id, b.unit_price, amt, tx.id, req.user.id, m.gross, tu, m.transport, rt, m.retention])).rows[0];
+                gross_amount = $6, transport_unit = $7, transport_total = $8, retention_per_kg = $9, retention_amount = $10,
+                advance_netted = $11, netting_entry_number = $12 WHERE id = $1 RETURNING *`,
+        [id, b.unit_price, amt, tx.id, req.user.id, m.gross, tu, m.transport, rt, m.retention, netted, nettingNo])).rows[0];
       await c.query(`UPDATE convoys SET status = 'settled' WHERE id = $1`, [v.id]);
       await this.notif.notifyUsers(c, req.org.id, [(await c.query(`SELECT user_id FROM collectors WHERE id = $1`, [v.collector_id])).rows[0]?.user_id], { kind: 'convoy_settled',
-        title: `Net à payer porté à votre compte : ${amt}`, body: `Convoi ${v.convoy_no} · ${r.total_kg} kg`, entityType: 'convoy', entityId: v.id, dedupe: `convoy_settled:${v.id}` });
+        title: `Net à payer porté à votre compte : ${amt}`, body: `Convoi ${v.convoy_no} · ${r.total_kg} kg` + (netted > 0 ? ` · dont ${netted} imputés sur vos avances` : ''), entityType: 'convoy', entityId: v.id, dedupe: `convoy_settled:${v.id}` });
       return { row: upd, replay: false };
     });
     if (!replay) await this.log(req, 'convoy.settle', row.convoy_id, { amount: row.amount, tx_id: row.tx_id });
-    return { ...row, replayed: replay };
+    return { ...row, cash_due: Number(row.amount) - Number(row.advance_netted), replayed: replay };
   }
 
 
@@ -245,7 +260,9 @@ export class ConvoysController {
     return this.db.tx(req.org.id, async (c) => (await c.query(
       `SELECT k.id, u.full_name AS name,
               coalesce((SELECT sum(CASE t.direction WHEN 'out' THEN t.amount ELSE -t.amount END) FROM financial_accounts a JOIN financial_transactions t ON t.account_id = a.id
-                         WHERE a.owner_type = 'collector' AND a.owner_id = k.id), 0) AS solde
+                         WHERE a.owner_type = 'collector' AND a.owner_id = k.id), 0) AS solde,
+              coalesce((SELECT sum(amount) FROM collector_advances WHERE collector_id = k.id AND kind = 'advance'), 0)
+                - coalesce((SELECT sum(r2.advance_netted) FROM convoy_receptions r2 JOIN convoys v2 ON v2.id = r2.convoy_id WHERE v2.collector_id = k.id), 0) AS advance_outstanding
          FROM collectors k JOIN users u ON u.id = k.user_id WHERE k.status = 'active' ORDER BY u.full_name`)).rows);
   }
 
@@ -339,7 +356,7 @@ export class ConvoysController {
       const who = (await c.query(`SELECT k.id, u.full_name FROM collectors k JOIN users u ON u.id = k.user_id WHERE k.id = $1`, [cid])).rows[0];
       if (!who) throw new NotFoundException('Collecteur inconnu');
       const acc = (await c.query(`SELECT id FROM financial_accounts WHERE owner_type = 'collector' AND owner_id = $1`, [cid])).rows[0];
-      if (!acc) return { collector: who, opening: '0', rows: [], totals: { finance: '0', net: '0' }, solde: '0' };
+      if (!acc) return { collector: who, opening: '0', rows: [], totals: { finance: '0', net: '0' }, solde: '0', advance_outstanding: '0' };
       const f = from ?? '1900-01-01', t = to ?? '2999-12-31';
       const opening = (await c.query(
         `SELECT coalesce(sum(CASE direction WHEN 'out' THEN amount ELSE -amount END), 0) AS o FROM financial_transactions WHERE account_id = $1 AND created_at < $2::date`, [acc.id, f])).rows[0].o;
@@ -347,7 +364,7 @@ export class ConvoysController {
         `SELECT x.id, x.created_at AS date, x.direction, x.amount, x.reason AS label, x.reference_type,
                 coalesce(a.piece_no, v.convoy_no) AS piece, r.total_kg AS weight, r.unit_price, r.gross_amount, r.transport_unit, r.transport_total,
                 (r.gross_amount + r.transport_total) AS product_total, r.retention_per_kg, r.retention_amount,
-                CASE WHEN x.direction = 'in' THEN x.amount END AS net_payable, CASE WHEN x.direction = 'out' THEN x.amount END AS finance
+                r.advance_netted, CASE WHEN x.direction = 'in' THEN x.amount END AS net_payable, CASE WHEN x.direction = 'out' THEN x.amount END AS finance
            FROM financial_transactions x
            LEFT JOIN convoy_receptions r ON x.reference_type = 'convoy_reception' AND r.id = x.reference_id
            LEFT JOIN convoys v ON v.id = r.convoy_id
@@ -364,7 +381,10 @@ export class ConvoysController {
         `SELECT coalesce(sum(amount) FILTER (WHERE direction = 'out'), 0) AS finance, coalesce(sum(amount) FILTER (WHERE direction = 'in'), 0) AS net
            FROM financial_transactions WHERE account_id = $1 AND created_at >= $2::date AND created_at < ($3::date + 1)`, [acc.id, f, t])).rows[0];
       const end = withSolde.length ? withSolde[withSolde.length - 1].solde : opening;
-      return { collector: who, opening, rows: withSolde, totals, solde: end };
+      const advOut = (await c.query(
+        `SELECT coalesce((SELECT sum(amount) FROM collector_advances WHERE collector_id = $1 AND kind = 'advance'), 0)
+              - coalesce((SELECT sum(r2.advance_netted) FROM convoy_receptions r2 JOIN convoys v2 ON v2.id = r2.convoy_id WHERE v2.collector_id = $1), 0) AS o`, [cid])).rows[0].o;
+      return { collector: who, opening, rows: withSolde, totals, solde: end, advance_outstanding: advOut };
     });
   }
 

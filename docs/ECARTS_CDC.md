@@ -36,7 +36,8 @@
 **Commerce et finance**
 - Paiements des acheteurs : comptabilisés (compte financier crédité + écriture 411/banque ou caisse) lorsqu'un compte de réception est choisi ; sans choix, le paiement reste enregistré seul (comportement antérieur conservé).
 - Pas d'avoir, pas de retour de stock après chargement (un incident est enregistré), pas d'accès externe pour acheteurs/partenaires.
-- Le préfinancement reçu n'est pas relié à un compte financier ni à des écritures.
+- Préfinancement relié aux comptes (migration 020) : le fonds reçu crédite un compte financier (banque/caisse) et passe Dr banque / Cr 168 ; chaque utilisation sort du compte (Dr 601 achat, 605 dépense, 409 avance, 471 autre) ; chaque remboursement passe Dr 168 / Cr banque. Solde du compte vérifié (422 si insuffisant). Les anciens préfinancements (sans compte) restent consultables sans écriture.
+- Netting avances (409) / dettes (401) : à chaque règlement de livraison, les avances non soldées du collecteur sont imputées (automatique, plafonné, ou montant choisi) avec l'écriture OD Dr 401 / Cr 409 ; la fiche affiche les avances restantes.
 
 **Notifications**
 - Persistées, consultables et filtrées selon les droits ; cloche sur le portail et le mobile ; aucune poussée distante (FCM) ni courriel (le mobile ne les reçoit qu'avec du réseau). Alertes « documents manquants » (expédition partie ou livrée sans pièce jointe, prêt approuvé sans justificatif) et « à approuver » (prêts/préfinancements, inventaires, achats en attente depuis plus de 2 jours) générées par la recherche d'alertes, une fois par jour et par destinataire selon ses droits.
