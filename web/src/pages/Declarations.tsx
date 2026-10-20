@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { get, post } from '../api';
+import { download, get, post } from '../api';
 import { useAuth } from '../auth';
 import { DECLARATION_STATUS, NEXT_DECLARATION, date, money } from '../format';
 import NewPurchase from './NewPurchase';
@@ -22,7 +22,7 @@ export default function Declarations() {
 
   return (
     <>
-      <PageHeader title="Déclarations d'achat" subtitle="Achats déclarés par les collecteurs, avant et après réception" actions={can('declarations:create') && <button className="btn" onClick={() => setCreating(true)}>Saisir un achat</button>} />
+      <PageHeader title="Déclarations d'achat" subtitle="Achats déclarés par les collecteurs, avant et après réception" actions={<>{<button className="btn btn-secondary" onClick={() => download('/purchase-declarations/export/xlsx', 'achats-declares.xlsx').catch(() => undefined)}>Exporter vers Excel</button>}{can('declarations:create') && <button className="btn" onClick={() => setCreating(true)}>Saisir un achat</button>}</>} />
       {creating && <NewPurchase onClose={() => setCreating(false)} onDone={() => setTimeout(reload, 800)} />}
       <Card>
         <div className="toolbar">

@@ -54,7 +54,7 @@ class _NewDeclarationScreenState extends State<NewDeclarationScreen> {
     final units = await services.repo.unitsFor(id);
     setState(() {
       _error = null; _chain = c; _campaigns = camps; _campaign = camps.length == 1 ? camps.first : null;
-      _units = units; _unit = units.contains(_unit) ? _unit : units.first;
+      _units = units; _unit = units.contains('kg') ? 'kg' : (units.contains(_unit) ? _unit : units.first);
     });
     await _updateEstimate();
   }
@@ -69,9 +69,10 @@ class _NewDeclarationScreenState extends State<NewDeclarationScreen> {
   Future<void> _save() async {
     final q = _quantity.text.trim().replaceAll(',', '.');
     if (_producer == null || _chain == null || _campaign == null) return setState(() => _error = 'Choisissez le producteur, la filière et la campagne.');
-    if (!RegExp(r'^\d{1,14}(\.\d{1,3})?$').hasMatch(q) || double.parse(q) <= 0) return setState(() => _error = 'Quantité invalide (nombre positif, 3 décimales maximum).');
-    final bags = _bags.text.trim().isEmpty ? null : int.tryParse(_bags.text.trim());
-    if (_bags.text.trim().isNotEmpty && (bags == null || bags < 0)) return setState(() => _error = 'Nombre de sacs invalide.');
+    if (!RegExp(r'^\d{1,14}(\.\d{1,3})?$').hasMatch(q) || double.parse(q) <= 0) return setState(() => _error = 'Poids invalide (nombre positif, 3 décimales maximum).');
+    final bags = int.tryParse(_bags.text.trim());
+    if (bags == null || bags <= 0) return setState(() => _error = 'Saisissez le nombre de sacs.');
+    if (_receiptNo.text.trim().isEmpty) return setState(() => _error = 'Saisissez le numéro du reçu.');
     setState(() { _saving = true; _error = null; });
     await services.repo.createDeclaration(
         producerId: _producer!['id'] as String, chainId: _chain!['id'] as String, campaignId: _campaign!['id'] as String,
@@ -87,7 +88,7 @@ class _NewDeclarationScreenState extends State<NewDeclarationScreen> {
       appBar: AppBar(title: const Text('Nouvelle déclaration')),
       body: ListView(padding: const EdgeInsets.all(16), children: [
         if (_producer == null) ...[
-          TextField(controller: _search, decoration: const InputDecoration(labelText: 'Rechercher un producteur (nom, code, téléphone)', prefixIcon: Icon(Icons.search), border: OutlineInputBorder()), onChanged: _findProducers),
+          TextField(controller: _search, decoration: const InputDecoration(labelText: 'Rechercher un producteur (code ou nom)', prefixIcon: Icon(Icons.search), border: OutlineInputBorder()), onChanged: _findProducers),
           const SizedBox(height: 8),
           if (_producers.isEmpty) const Padding(padding: EdgeInsets.all(16), child: Text('Aucun producteur. Synchronisez pour télécharger la liste.')),
           for (final p in _producers) ListTile(title: Text('${p['last_name']} ${p['first_names']}'), subtitle: Text('${p['internal_code']}  •  ${p['village'] ?? ''}'), onTap: () => _pickProducer(p)),
@@ -107,14 +108,14 @@ class _NewDeclarationScreenState extends State<NewDeclarationScreen> {
                 onChanged: (c) { setState(() => _campaign = c); _updateEstimate(); }),
             const SizedBox(height: 12),
             Row(children: [
-              Expanded(flex: 3, child: TextField(controller: _quantity, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Quantité', border: OutlineInputBorder()), onChanged: (_) => _updateEstimate())),
+              Expanded(flex: 3, child: TextField(controller: _quantity, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Poids (kg)', border: OutlineInputBorder()), onChanged: (_) => _updateEstimate())),
               const SizedBox(width: 8),
               Expanded(flex: 2, child: DropdownButtonFormField<String>(
                   decoration: const InputDecoration(labelText: 'Unité', border: OutlineInputBorder()), value: _unit,
                   items: [for (final u in _units) DropdownMenuItem(value: u, child: Text(u))], onChanged: (u) { setState(() => _unit = u!); _updateEstimate(); })),
             ]),
             const SizedBox(height: 12),
-            TextField(controller: _bags, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Nombre de sacs (facultatif)', border: OutlineInputBorder())),
+            TextField(controller: _bags, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Nombre de sacs', border: OutlineInputBorder())),
             const SizedBox(height: 12),
             ListTile(contentPadding: EdgeInsets.zero, title: Text('Date de l\'opération : $_dateStr'), trailing: const Icon(Icons.calendar_today),
                 onTap: () async {
@@ -122,7 +123,7 @@ class _NewDeclarationScreenState extends State<NewDeclarationScreen> {
                   if (d != null) { setState(() => _date = d); _updateEstimate(); }
                 }),
             TextField(controller: _receiptNo, textCapitalization: TextCapitalization.characters,
-                decoration: const InputDecoration(labelText: 'Numéro du reçu d\'achat', helperText: 'Numéro du reçu remis au producteur. Laisser vide si la coopérative utilise des reçus générés par AgriTrace.', border: OutlineInputBorder())),
+                decoration: const InputDecoration(labelText: 'N° du reçu', helperText: 'Numéro du reçu remis au producteur.', border: OutlineInputBorder())),
             const SizedBox(height: 12),
             TextField(controller: _notes, decoration: const InputDecoration(labelText: 'Observations (facultatif)', border: OutlineInputBorder())),
             const SizedBox(height: 12),

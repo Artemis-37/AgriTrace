@@ -19,33 +19,56 @@ export default function NewPurchase({ onClose, onDone }: { onClose: () => void; 
     }
     return { producers: producers.filter((p) => ['active', 'to_verify'].includes(p.status)), chains, campaigns };
   }, []);
-  const [f, setF] = useState({ producer_id: '', value_chain_id: '', campaign_id: '', operation_date: new Date().toISOString().slice(0, 10), quantity: '', unit: 'kg', bags: '', receipt: '' });
+  const [f, setF] = useState({ producer_id: '', value_chain_id: '', campaign_id: '', operation_date: new Date().toISOString().slice(0, 10), kg: '', bags: '', receipt: '' });
+  const [q, setQ] = useState('');
   const set = (k: keyof typeof f) => (e: any) => setF({ ...f, [k]: e.target.value });
-  if (loading) return <Modal title="Saisir un achat" onClose={onClose}><Loading /></Modal>;
-  if (error || !data) return <Modal title="Saisir un achat" onClose={onClose}><ErrorBox message={error ?? 'Chargement impossible'} /></Modal>;
-  const camps = data.campaigns.filter((c) => !f.value_chain_id || c.value_chain_id === f.value_chain_id);
-  const valid = f.producer_id && f.value_chain_id && f.campaign_id && /^\d+(\.\d{1,3})?$/.test(f.quantity) && Number(f.quantity) > 0;
+  if (loading) return <Modal title="Déclarer un achat" onClose={onClose}><Loading /></Modal>;
+  if (error || !data) return <Modal title="Déclarer un achat" onClose={onClose}><ErrorBox message={error ?? 'Chargement impossible'} /></Modal>;
+  const norm = (v: string) => v.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+  const producer = data.producers.find((p) => p.id === f.producer_id);
+  // Recherche par code ou par nom (nom, prénoms, dans les deux ordres), sans accents ni casse ; fonctionne hors connexion.
+  const hits = !producer && q.trim().length >= 1
+    ? data.producers.filter((p) => { const hay = norm(`${p.internal_code} ${p.last_name} ${p.first_names} ${p.first_names} ${p.last_name}`); return norm(q).split(/\s+/).every((w) => hay.includes(w)); }).slice(0, 8)
+    : [];
+  const chains = data.chains.filter((c) => !producer?.value_chain_ids?.length || producer.value_chain_ids.includes(c.id));
+  const chainId = f.value_chain_id || (chains.length === 1 ? chains[0].id : '');
+  const camps = data.campaigns.filter((c) => !chainId || c.value_chain_id === chainId);
+  const campId = f.campaign_id || (camps.length === 1 ? camps[0].id : '');
+  const valid = !!producer && !!chainId && !!campId && /^\d+(\.\d{1,3})?$/.test(f.kg) && Number(f.kg) > 0 && /^\d+$/.test(f.bags) && f.receipt.trim().length > 0;
   return (
-    <Modal title="Saisir un achat" onClose={onClose}>
+    <Modal title="Déclarer un achat" onClose={onClose}>
       {off.offline && <p className="notice" role="status">Hors connexion : l'achat sera enregistré sur ce poste et envoyé dès que le serveur sera joignable.</p>}
-      <Field label="Producteur"><select value={f.producer_id} onChange={set('producer_id')}><option value="">—</option>{data.producers.map((p) => <option key={p.id} value={p.id}>{p.last_name} {p.first_names} ({p.internal_code})</option>)}</select></Field>
-      <Field label="Filière"><select value={f.value_chain_id} onChange={(e) => setF({ ...f, value_chain_id: e.target.value, campaign_id: '' })}><option value="">—</option>{data.chains.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></Field>
-      <Field label="Campagne"><select value={f.campaign_id} onChange={set('campaign_id')}><option value="">—</option>{camps.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></Field>
-      <Field label="Date de l'achat"><input type="date" value={f.operation_date} onChange={set('operation_date')} /></Field>
-      <Field label="Quantité"><input inputMode="decimal" value={f.quantity} onChange={set('quantity')} placeholder="ex. 650" /></Field>
-      <Field label="Unité"><select value={f.unit} onChange={set('unit')}><option value="kg">kg</option><option value="sac">sac</option></select></Field>
-      <Field label="Nombre de sacs (facultatif)"><input inputMode="numeric" value={f.bags} onChange={set('bags')} /></Field>
-      <Field label="Numéro du reçu d'achat (facultatif)"><input value={f.receipt} onChange={set('receipt')} maxLength={40} /></Field>
+      {!producer ? (
+        <Field label="Producteur" hint="Tapez le code ou le nom du producteur.">
+          <input type="search" role="combobox" aria-expanded={hits.length > 0} aria-label="Rechercher un producteur" placeholder="Code ou nom du producteur…" value={q} autoFocus onChange={(e) => setQ(e.target.value)} />
+          {q.trim() && !hits.length && <small className="muted">Aucun producteur ne correspond.</small>}
+          {!!hits.length && <ul className="search-hits" role="listbox">{hits.map((p) => (
+            <li key={p.id} role="option"><button type="button" onClick={() => { setF({ ...f, producer_id: p.id, value_chain_id: '', campaign_id: '' }); setQ(''); }}>
+              <strong>{p.last_name} {p.first_names}</strong> <span className="muted">{p.internal_code}{p.village ? ` · ${p.village}` : ''}</span></button></li>))}</ul>}
+        </Field>
+      ) : (
+        <p className="notice"><strong>{producer.last_name} {producer.first_names}</strong> — {producer.internal_code}{producer.village ? ` · ${producer.village}` : ''}{' '}
+          <button type="button" className="btn btn-small btn-secondary" onClick={() => setF({ ...f, producer_id: '', value_chain_id: '', campaign_id: '' })}>Changer</button></p>
+      )}
+      {producer && (
+        <>
+          {chains.length > 1 && <Field label="Filière"><select value={f.value_chain_id} onChange={(e) => setF({ ...f, value_chain_id: e.target.value, campaign_id: '' })}><option value="">—</option>{chains.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></Field>}
+          {camps.length > 1 && <Field label="Campagne"><select value={f.campaign_id} onChange={set('campaign_id')}><option value="">—</option>{camps.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></Field>}
+          <Field label="Poids (kg)"><input inputMode="decimal" value={f.kg} onChange={set('kg')} placeholder="ex. 650" autoFocus /></Field>
+          <Field label="Nombre de sacs"><input inputMode="numeric" value={f.bags} onChange={set('bags')} placeholder="ex. 10" /></Field>
+          <Field label="N° du reçu"><input value={f.receipt} onChange={set('receipt')} maxLength={40} /></Field>
+          <Field label="Date de l'achat"><input type="date" value={f.operation_date} onChange={set('operation_date')} /></Field>
+        </>
+      )}
       {act.error && <ErrorBox message={act.error} />}
       <div className="modal-actions">
         <button className="btn btn-secondary" onClick={onClose}>Annuler</button>
         <button className="btn" disabled={act.busy || !valid || !org} onClick={() => act.run(async () => {
           const id = crypto.randomUUID ? crypto.randomUUID() : idem();
-          const producer = data.producers.find((p) => p.id === f.producer_id);
           await enqueue(org!.id, 'purchase_declaration.create', {
-            id, producer_id: f.producer_id, value_chain_id: f.value_chain_id, campaign_id: f.campaign_id, operation_date: f.operation_date,
-            quantity: f.quantity, unit: f.unit, ...(f.bags && { bags: Number(f.bags) }), ...(f.receipt.trim() && { purchase_receipt_no: f.receipt.trim() }),
-          }, `Achat de ${f.quantity} ${f.unit} — ${producer?.last_name ?? ''}`);
+            id, producer_id: f.producer_id, value_chain_id: chainId, campaign_id: campId, operation_date: f.operation_date,
+            quantity: f.kg, unit: 'kg', bags: Number(f.bags), purchase_receipt_no: f.receipt.trim(),
+          }, `Achat de ${f.kg} kg — ${producer?.last_name ?? ''}`);
           await enqueue(org!.id, 'purchase_declaration.submit', { id }, `Soumission de l'achat — ${producer?.last_name ?? ''}`);
           onDone(); onClose();
         })}>{off.offline ? 'Enregistrer sur ce poste' : 'Enregistrer et soumettre'}</button>

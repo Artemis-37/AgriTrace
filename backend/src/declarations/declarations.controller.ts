@@ -1,9 +1,10 @@
 import {
   BadRequestException, Body, ConflictException, Controller, ForbiddenException, Get, NotFoundException, Param, ParseUUIDPipe,
-  Post, Put, Query, Req, UnprocessableEntityException,
+  Post, Put, Query, Req, StreamableFile, UnprocessableEntityException,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiHeader, ApiTags } from '@nestjs/swagger';
 import { IsBoolean, IsDateString, IsIn, IsInt, IsOptional, IsString, IsUUID, Length, Matches, Min } from 'class-validator';
+import * as ExcelJS from 'exceljs';
 import { PoolClient } from 'pg';
 import { RequirePermissions } from '../access/decorators';
 import { AuditService } from '../audit/audit.service';
@@ -185,6 +186,52 @@ export class DeclarationsController {
           WHERE (reference_type = 'purchase_declaration' AND reference_id = ANY($1)) OR (reference_type = 'payment' AND reference_id = ANY($2))
           ORDER BY created_at`, [ids, payIds])).rows;
       return { number: no, declarations: decls, weighings, receipts, payments, financial_transactions: txs, accounting_entries: entries };
+    });
+  }
+
+  /**
+   * Export Excel des achats déclarés (une ligne par achat). Mêmes règles de visibilité que la liste :
+   * un collecteur n'exporte que ses achats. La disposition des colonnes est définie par COLUMNS (à ajuster au modèle de la coopérative).
+   */
+  @Get('export/xlsx')
+  @RequirePermissions('declarations:read')
+  async exportXlsx(@Req() req: any, @Query('from') from?: string, @Query('to') to?: string, @Query('status') status?: string) {
+    if ((from && !/^\d{4}-\d{2}-\d{2}$/.test(from)) || (to && !/^\d{4}-\d{2}-\d{2}$/.test(to))) throw new BadRequestException('Dates attendues au format AAAA-MM-JJ');
+    const all = req.org.permissions.has('declarations:validate');
+    const rows = await this.db.tx(req.org.id, async (c) => {
+      const mine = all ? null : await this.myCollector(c, req.user.id);
+      if (!all && !mine) return [];
+      return (await c.query(
+        `SELECT d.operation_date, p.internal_code, p.last_name, p.first_names, p.village, p.section, cu.full_name AS collector, d.bags, d.quantity, d.unit,
+                CASE WHEN d.unit = 'kg' THEN d.quantity ELSE round(d.quantity * coalesce(f.factor, 0), 3) END AS weight_kg,
+                d.purchase_receipt_no, d.unit_price, d.amount, d.status
+           FROM purchase_declarations d
+           JOIN producers p ON p.id = d.producer_id
+           JOIN collectors k ON k.id = d.collector_id JOIN users cu ON cu.id = k.user_id
+           LEFT JOIN unit_conversions f ON f.value_chain_id = d.value_chain_id AND f.from_unit = d.unit AND f.to_unit = 'kg'
+          WHERE d.status <> 'draft' AND ($1::uuid IS NULL OR d.collector_id = $1) AND ($2::date IS NULL OR d.operation_date >= $2) AND ($3::date IS NULL OR d.operation_date <= $3)
+            AND ($4::text IS NULL OR d.status = $4)
+          ORDER BY d.operation_date, d.created_at`, [mine ?? null, from ?? null, to ?? null, status ?? null])).rows;
+    });
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet('Achats');
+    const COLUMNS: [string, string, number][] = [
+      ['Date', 'date', 12], ['Code producteur', 'code', 16], ['Nom du producteur', 'name', 28], ['Village / section', 'place', 22], ['Collecteur', 'collector', 22],
+      ['Poids (kg)', 'weight', 12], ['Nombre de sacs', 'bags', 14], ['N° reçu', 'receipt', 14], ['Prix unitaire', 'price', 12], ['Montant', 'amount', 14], ['Statut', 'status', 16],
+    ];
+    ws.columns = COLUMNS.map(([header, key, width]) => ({ header, key, width }));
+    ws.getRow(1).font = { bold: true };
+    ws.views = [{ state: 'frozen', ySplit: 1 }];
+    for (const r of rows) ws.addRow({
+      date: r.operation_date, code: r.internal_code, name: `${r.last_name} ${r.first_names}`, place: [r.village, r.section].filter(Boolean).join(' / '), collector: r.collector,
+      weight: r.weight_kg === null ? null : Number(r.weight_kg), bags: r.bags, receipt: r.purchase_receipt_no, price: r.unit_price === null ? null : Number(r.unit_price),
+      amount: r.amount === null ? null : Number(r.amount), status: r.status,
+    });
+    ws.getColumn('weight').numFmt = '#,##0.000'; ws.getColumn('amount').numFmt = '#,##0';
+    const n = ws.rowCount + 1;
+    ws.addRow({ name: 'TOTAL', weight: { formula: `SUM(F2:F${n - 1})` }, bags: { formula: `SUM(G2:G${n - 1})` }, amount: { formula: `SUM(J2:J${n - 1})` } }).font = { bold: true };
+    return new StreamableFile(Buffer.from(await wb.xlsx.writeBuffer()), {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', disposition: 'attachment; filename="achats-declares.xlsx"',
     });
   }
 

@@ -149,3 +149,9 @@ dl.kv dd { margin: 0; }
 .dot { flex: 0 0 .6rem; height: .6rem; margin-top: .4rem; border-radius: 50%; background: #4b8bbe; }
 .dot-warn { background: #d99a2b; } .dot-bad { background: #c0392b; }
 @media print { .topbar { display: none; } }
+
+/* Recherche de producteur */
+.search-hits { list-style: none; margin: .3rem 0 0; padding: 0; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.search-hits li + li { border-top: 1px solid var(--line); }
+.search-hits button { display: block; width: 100%; text-align: left; background: transparent; border: 0; padding: .6rem .75rem; cursor: pointer; color: inherit; }
+.search-hits button:hover, .search-hits button:focus-visible { background: rgba(0,0,0,.06); }

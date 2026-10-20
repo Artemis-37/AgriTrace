@@ -40,9 +40,16 @@ await step('hors connexion : la liste des déclarations reste lisible (copie du 
 await step('hors connexion : saisie d\'un achat enregistrée sur le poste', async () => {
   await page.getByRole('button', { name: 'Déclarer un achat' }).click(); await page.waitForTimeout(1200);
   const m = page.locator('[role=dialog]');
-  await m.getByLabel('Producteur').selectOption({ index: 1 }); await m.getByLabel('Filière').selectOption({ index: 1 });
-  await page.waitForTimeout(200); await m.getByLabel('Campagne').selectOption({ index: 1 });
-  await m.getByLabel('Quantité').fill('420');
+  const search = m.getByLabel('Rechercher un producteur');
+  await search.fill('zzzz'); await page.waitForTimeout(200);
+  must((await m.innerText()).includes('Aucun producteur ne correspond'), 'recherche sans résultat non signalée');
+  await search.fill('awa kone'); await page.waitForTimeout(300);   // nom, dans l'ordre inverse, sans casse
+  must((await m.innerText()).includes('KONE Awa'), 'recherche par nom absente');
+  await search.fill('kone'); await page.waitForTimeout(200);
+  await m.getByRole('option').first().getByRole('button').click(); await page.waitForTimeout(300);
+  must(await m.getByLabel('Poids (kg)').count(), 'saisie du poids absente après sélection du producteur');
+  must(await m.getByRole('button', { name: 'Enregistrer sur ce poste' }).isDisabled(), 'enregistrement possible sans poids, sacs ni reçu');
+  await m.getByLabel('Poids (kg)').fill('420'); await m.getByLabel('Nombre de sacs').fill('7'); await m.getByLabel('N° du reçu').fill('RC-0420');
   await m.getByRole('button', { name: 'Enregistrer sur ce poste' }).click(); await page.waitForTimeout(1200);
   must((await page.locator('.offline-bar').innerText()).includes('2 en attente'), 'file non mise à jour');
 });

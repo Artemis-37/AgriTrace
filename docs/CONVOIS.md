@@ -28,3 +28,9 @@ La fiche papier devient le compte du collecteur. Colonnes reprises : A poids, B 
 - Chaque utilisateur ne reçoit et ne voit que ce qui le concerne : une alerte adressée « par droit » porte ce droit (`permission_code`) et n'est visible, comptée et marquée comme lue que tant que le rôle l'accorde ; une alerte personnelle n'est visible que de son destinataire.
 - Événements : convoi en route (→ réception au magasin), réception à traiter (→ caisse) et réception de son convoi (→ collecteur), net à payer porté au compte (→ collecteur), financement remis (→ collecteur) ; s'ajoutent les alertes existantes (missions en retard, factures échues, écarts de pesée, stocks négatifs, échéances de prêt…).
 - Portail : cloche en haut de page (compteur, dernières alertes, « tout marquer comme lu », accès à la liste complète, clic = ouverture de la page concernée). Mobile : cloche dans la barre de l'écran d'accueil (nécessite le réseau ; pas de notification poussée).
+
+## Déclaration d'achat par le collecteur et export Excel
+
+- Saisie (web et mobile) : recherche du producteur par code ou nom, puis **Poids (kg)**, **Nombre de sacs**, **N° du reçu** (tous obligatoires) et date.
+- Export : `GET /purchase-declarations/export/xlsx?from=&to=&status=` (bouton « Exporter vers Excel » dans Déclarations, Mes achats et Historique). Colonnes : Date, Code producteur, Nom, Village/section, Collecteur, Poids (kg), Sacs, N° reçu, Prix unitaire, Montant, Statut, avec ligne TOTAL (formules). Un collecteur n'exporte que ses achats.
+- **En attente** : le modèle Excel de la coopérative n'a pas encore été fourni ; la disposition ci-dessus est une disposition par défaut à aligner sur ce modèle (`COLUMNS` dans `declarations.controller.ts`).

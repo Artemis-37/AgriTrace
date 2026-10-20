@@ -134,6 +134,17 @@ const sq = (lon, lat, s = 0.0009) => ({ type: 'Polygon', coordinates: [[[lon, la
   const c1 = await call('POST', '/parcels', { ...J(t1, A), body: { idempotency_key: key('pc'), producer_id: pB.id, value_chain_id: vc.id, declared_area_ha: '2', latitude: 7.9, longitude: -5.5 } });
   check('compteur propre à chaque producteur', c1.body.code === `${pB.internal_code}-P1`, c1.body.code);
 
+  console.log('Export Excel des achats');
+  const rawGet = async (path, tok) => { const r = await fetch(API + path, { headers: { authorization: `Bearer ${tok}`, 'x-organization-id': A.id } }); return { status: r.status, type: r.headers.get('content-type'), buf: Buffer.from(await r.arrayBuffer()) }; };
+  const ex = await rawGet('/purchase-declarations/export/xlsx', t1);
+  check('export Excel : fichier .xlsx', ex.status === 200 && /spreadsheetml/.test(ex.type ?? '') && ex.buf.slice(0, 2).toString() === 'PK', ex.status);
+  const ExcelJS = require('exceljs'); const wb = new ExcelJS.Workbook(); await wb.xlsx.load(ex.buf); const ws = wb.worksheets[0];
+  const head = ws.getRow(1).values.slice(1).join('|');
+  check('export Excel : colonnes Date, code, nom, poids, sacs, N° reçu', head.startsWith('Date|Code producteur|Nom du producteur') && head.includes('Poids (kg)') && head.includes('Nombre de sacs') && head.includes('N° reçu'), head);
+  const exc = await rawGet('/purchase-declarations/export/xlsx', tc);
+  check('export Excel du collecteur : accessible', exc.status === 200);
+  check('export Excel : dates invalides refusées', (await rawGet('/purchase-declarations/export/xlsx?from=hier', t1)).status === 400);
+
   console.log(`\n${ok} contrôles réussis, ${ko} en échec`);
   process.exit(ko ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(1); });
