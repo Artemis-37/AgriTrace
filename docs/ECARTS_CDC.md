@@ -42,6 +42,8 @@
 - Persistées, consultables et filtrées selon les droits ; cloche sur le portail et le mobile ; aucune poussée distante (FCM) ni courriel (le mobile ne les reçoit qu'avec du réseau). Alertes « documents manquants » et « opérations financières à approuver » non générées automatiquement (visibles via les alertes P4b / listes existantes).
 
 **Tableaux de bord et rapports (§26)**
+- **Rapports d'achats livrés** : page Rapports (`reports:read`), filtres période/section/collecteur/filière, regroupements, totaux, export Excel. Non couvert : rapports financiers, stock ou qualité unifiés ; envoi automatique.
+- **Rapports d'achats (§26) livrés** : page Rapports (permission `reports:read`) filtrable par période, section, collecteur et filière, regroupée par section, village, collecteur, filière ou jour, avec totaux et export Excel (`e2e-recus` 53 contrôles, `parcours-rapports`). Non couvert : rapports financiers, de stock ou de qualité unifiés, et planification/envoi automatique des rapports.
 - Le tableau de bord web présente maintenant commandes, créances (dont échues), missions en retard, anomalies de cartographie et préfinancement à rembourser ; l'état de la synchronisation avec le serveur central y figure désormais (serveur local). Pas de rapports filtrables par période/section/agent unifiés.
 
 **Exigences non techniques**
@@ -51,6 +53,7 @@
 - Livré : modes local et central, réplication à sens unique avec jumelage, reprise après panne, central en lecture seule pour les coopératives gérées en local, vue consolidée (producteurs, parcelles, quantités, facturé), console du central dans le portail, écran de premier démarrage, page Synchronisation et indicateur au tableau de bord. Application Electron pour Windows hébergeant le serveur (PostgreSQL embarqué) ou en poste client, sauvegarde, pare-feu à l'installation.
 - Vérifié : e2e à trois serveurs (78 contrôles), orchestration du serveur local sous Node, application lancée sous Linux, parcours Chromium (premier démarrage, console centrale).
 - **Non vérifié** : l'installateur `.exe` et le comportement sous Windows (construit seulement par le workflow GitHub, jamais exécuté ici) ; signature de code absente.
+- Livré en plus : poste unique / serveur / client, recherche réseau automatique (balise UDP + balayage), icônes de connexion, association des postes par code (jeton révocable, règle obligatoire) — voir `CONVOIS.md`.
 - Non couvert : sens central → local, plusieurs serveurs locaux pour une même coopérative, rattachement d'une coopérative déjà peuplée au central, TLS sur le réseau local, mise à jour automatique de l'application.
 - Postes clients : fonctionnement hors connexion (achat et messages rejoués au retour du serveur, session conservée au redémarrage), messagerie interne, thèmes doux et nuit, nom et rôle du poste choisis à l'installation. Non couvert : validation, paiements et stocks hors connexion ; messages poste à poste sans serveur ; lecture hors connexion d'un écran jamais ouvert en ligne.
 

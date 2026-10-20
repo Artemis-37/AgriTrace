@@ -167,3 +167,5 @@ dl.kv dd { margin: 0; }
 .conn-panel li { display: flex; gap: .55rem; align-items: center; font-size: .9rem; }
 .conn-panel .conn-st { padding-left: 1.6rem; border-top: 1px solid var(--line); padding-top: .5rem; }
 .conn-panel .conn-st li { font-size: .85rem; }
+.filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: .75rem; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: .75rem; margin: .75rem 0; }

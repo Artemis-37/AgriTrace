@@ -7,6 +7,7 @@ import Inventaire from './pages/Inventaire';
 import Prefinancement from './pages/Prefinancement';
 import Notifications from './pages/Notifications';
 import Equipe from './pages/Equipe';
+import Rapports from './pages/Rapports';
 import Commerce from './pages/Commerce';
 import Cartographie from './pages/Cartographie';
 import Declarations from './pages/Declarations';
@@ -49,6 +50,7 @@ const NAV: { to: string; label: string; icon: string; perm: string[]; any?: bool
   { to: '/declarations', label: 'Déclarations d\'achat', icon: '✎', perm: ['declarations:read'], notFor: 'collector' },
   { to: '/missions', label: 'Missions', icon: '⚑', perm: ['tasks:read'] },
   { to: '/stocks', label: 'Stocks et lots', icon: '▤', perm: ['warehouses:read'] },
+  { to: '/rapports', label: 'Rapports', icon: '▥', perm: ['reports:read'] },
   { to: '/finances', label: 'Finances', icon: '₣', perm: ['finance:read'] },
   { to: '/qualite', label: 'Qualité et conformité', icon: '✔', perm: ['inspections:read'] },
 ];
@@ -116,6 +118,7 @@ export default function App() {
           <Route path="/messages" element={<Messages onChange={refreshUnread} />} />
           <Route path="/synchronisation" element={<Synchronisation />} />
           <Route path="/equipe" element={<Equipe />} />
+          <Route path="/rapports" element={<Rapports />} />
           <Route path="/notifications" element={<Notifications onChange={refreshUnread} />} />
           <Route path="/declarations" element={<Declarations />} />
           <Route path="/missions" element={<Missions />} />
