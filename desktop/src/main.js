@@ -1,7 +1,8 @@
 // Application de bureau AgriTrace (Windows). Deux rôles, choisis au premier lancement :
 //   - « server » : ce poste héberge le serveur de la coopérative (PostgreSQL embarqué + API + portail), accessible aux autres postes du réseau local ;
 //   - « client » : ce poste affiche le portail d'un serveur déjà installé ailleurs (serveur local de la coopérative, ou serveur central).
-const { app, BrowserWindow, Menu, Tray, dialog, ipcMain, shell, nativeImage } = require('electron');
+const { app, BrowserWindow, Menu, Tray, dialog, ipcMain, shell, nativeImage, protocol, net } = require('electron');
+const { pathToFileURL } = require('url');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -14,8 +15,31 @@ const loadCfg = () => { try { return JSON.parse(fs.readFileSync(cfgFile(), 'utf8
 const saveCfg = (c) => { fs.mkdirSync(path.dirname(cfgFile()), { recursive: true }); fs.writeFileSync(cfgFile(), JSON.stringify(c, null, 2)); cfg = c; };
 const logFile = () => path.join(app.getPath('userData'), 'agritrace.log');
 const log = (m) => { try { fs.appendFileSync(logFile(), `${new Date().toISOString()} ${m}\n`); } catch { /* ignoré */ } };
-const appDir = () => (app.isPackaged ? path.join(process.resourcesPath, 'app-payload') : path.join(__dirname, '..', 'payload'));
+const appDir = () => process.env.AGRITRACE_PAYLOAD || (app.isPackaged ? path.join(process.resourcesPath, 'app-payload') : path.join(__dirname, '..', 'payload'));
 const lanAddresses = () => Object.values(os.networkInterfaces()).flat().filter((i) => i && i.family === 'IPv4' && !i.internal).map((i) => `http://${i.address}:${PORT}`);
+
+// Le poste client charge le portail depuis l'application elle-même (agritrace://app) : il s'ouvre même si le serveur est éteint.
+// Les appels /v1/* sont relayés vers le serveur ; s'il ne répond pas, le portail reçoit un 503 marqué et passe en mode hors connexion.
+protocol.registerSchemesAsPrivileged([{ scheme: 'agritrace', privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } }]);
+const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon', '.json': 'application/json', '.woff2': 'font/woff2' };
+function registerClientProtocol() {
+  protocol.handle('agritrace', async (req) => {
+    const u = new URL(req.url);
+    if (u.pathname.startsWith('/v1/') || u.pathname === '/v1') {
+      try {
+        const headers = new Headers(req.headers); headers.delete('host'); headers.delete('origin');
+        return await net.fetch(cfg.serverUrl + u.pathname + u.search, { method: req.method, headers, body: ['GET', 'HEAD'].includes(req.method) ? undefined : req.body, duplex: 'half', signal: AbortSignal.timeout(25000) });
+      } catch {
+        return new Response(JSON.stringify({ message: 'Serveur injoignable', offline: true }), { status: 503, headers: { 'content-type': 'application/json', 'x-agritrace-offline': '1' } });
+      }
+    }
+    const root = path.join(appDir(), 'web');
+    let file = path.normalize(path.join(root, decodeURIComponent(u.pathname)));
+    if (!file.startsWith(root) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) file = path.join(root, 'index.html');
+    const r = await net.fetch(pathToFileURL(file).toString());
+    return new Response(r.body, { status: r.status, headers: { 'content-type': MIME[path.extname(file)] ?? 'application/octet-stream' } });
+  });
+}
 
 if (!app.requestSingleInstanceLock()) app.quit();
 app.on('second-instance', () => { if (win) { win.show(); win.focus(); } });
@@ -24,7 +48,7 @@ function page(name) { return path.join(__dirname, name); }
 
 function mainWindow(url) {
   if (win) { win.loadURL(url); win.show(); return; }
-  win = new BrowserWindow({ width: 1366, height: 860, minWidth: 900, minHeight: 600, title: 'AgriTrace', backgroundColor: '#f4f1ea', webPreferences: { contextIsolation: true, sandbox: true, preload: page('preload.js') } });
+  win = new BrowserWindow({ width: 1366, height: 860, minWidth: 900, minHeight: 600, title: cfg?.stationName ? `AgriTrace — ${cfg.stationName}` : 'AgriTrace', backgroundColor: '#efebe1', webPreferences: { contextIsolation: true, sandbox: true, preload: page('preload.js') } });
   win.loadURL(url);
   win.webContents.setWindowOpenHandler(({ url: u }) => { shell.openExternal(u); return { action: 'deny' }; });
   win.webContents.on('did-fail-load', (_e, code, desc, failed, isMain) => {
@@ -53,7 +77,7 @@ function buildMenu() {
       { type: 'separator' }, { label: isServer ? 'Quitter et arrêter le serveur' : 'Quitter', role: 'quit' },
     ] },
     { label: 'Affichage', submenu: [{ role: 'reload', label: 'Actualiser' }, { role: 'togglefullscreen', label: 'Plein écran' }, { type: 'separator' }, { role: 'zoomIn', label: 'Agrandir' }, { role: 'zoomOut', label: 'Réduire' }, { role: 'resetZoom', label: 'Taille normale' }] },
-    { label: 'Aide', submenu: [{ label: 'À propos', click: () => dialog.showMessageBox({ title: 'AgriTrace', message: `AgriTrace ${app.getVersion()}`, detail: isServer ? `Serveur de la coopérative.\nAdresses pour les autres postes :\n${lanAddresses().join('\n') || '(aucune carte réseau active)'}` : `Poste client relié à ${cfg?.serverUrl}` }) }] },
+    { label: 'Aide', submenu: [{ label: 'À propos', click: () => dialog.showMessageBox({ title: 'AgriTrace', message: `AgriTrace ${app.getVersion()}`, detail: isServer ? `Poste « ${cfg?.stationName ?? 'serveur'} » — serveur de la coopérative.\nAdresses pour les autres postes :\n${lanAddresses().join('\n') || '(aucune carte réseau active)'}` : `Poste « ${cfg?.stationName ?? 'client'} » relié à ${cfg?.serverUrl}.\nSi le serveur est éteint, ce poste continue de fonctionner et enverra son travail au retour du serveur.` }) }] },
   ]));
 }
 
@@ -92,7 +116,7 @@ async function startServerRole() {
     app.exit(1); return;
   }
   splash.close();
-  tray = new Tray(nativeImage.createFromPath(path.join(__dirname, '..', 'build', 'icon.png')));
+  tray = new Tray(nativeImage.createFromPath(path.join(__dirname, '..', 'build', 'icon.png')).resize({ width: 16, height: 16 }));
   tray.setToolTip('AgriTrace — serveur actif');
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: 'Ouvrir AgriTrace', click: () => { win?.show(); win?.focus(); } },
@@ -117,7 +141,7 @@ async function main() {
     buildMenu();
   }
   if (cfg.role === 'server') await startServerRole();
-  else mainWindow(cfg.serverUrl);
+  else { registerClientProtocol(); mainWindow('agritrace://app/'); }
 }
 
 ipcMain.handle('setup:check', async (_e, url) => {

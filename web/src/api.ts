@@ -2,6 +2,9 @@ export class ApiError extends Error {
   constructor(public status: number, message: string, public body?: unknown) { super(message); }
 }
 
+import { OfflineError, cacheGet, cachePut, clearCache, configure, markOffline } from './offline';
+export { OfflineError } from './offline';
+
 const REFRESH_KEY = 'agritrace.refresh';
 const ORG_KEY = 'agritrace.org';
 let accessToken: string | null = null;
@@ -9,11 +12,28 @@ let orgId: string | null = (() => { try { return sessionStorage.getItem(ORG_KEY)
 let onSessionLost: () => void = () => undefined;
 
 // Le jeton d'accès reste en mémoire ; seul le jeton de renouvellement est gardé dans la session du navigateur (effacée à la fermeture de l'onglet).
+// Sur l'application de bureau, la session survit au redémarrage du poste (indispensable pour reprendre le travail quand le serveur est éteint).
+const desktop = typeof window !== 'undefined' && !!(window as any).agritrace?.desktop;
+const area = () => (desktop ? localStorage : sessionStorage);
 const store = {
-  get: () => { try { return sessionStorage.getItem(REFRESH_KEY); } catch { return null; } },
-  set: (v: string | null) => { try { v ? sessionStorage.setItem(REFRESH_KEY, v) : sessionStorage.removeItem(REFRESH_KEY); } catch { /* stockage indisponible */ } },
+  get: () => { try { return area().getItem(REFRESH_KEY); } catch { return null; } },
+  set: (v: string | null) => { try { v ? area().setItem(REFRESH_KEY, v) : area().removeItem(REFRESH_KEY); } catch { /* stockage indisponible */ } },
 };
+const UID_KEY = 'agritrace.uid';
+const uidOf = (jwt: string) => { try { return JSON.parse(atob(jwt.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).sub as string; } catch { return ''; } };
+const rememberUser = (jwt: string) => { const u = uidOf(jwt); if (u) { try { area().setItem(UID_KEY, u); } catch { /* ignoré */ } configure(u, back); } };
+const knownUser = () => { try { return area().getItem(UID_KEY) ?? ''; } catch { return ''; } };
+let offlineSession = false;
+/** Retour du réseau : on renouvelle le jeton ; si la session a été révoquée entre-temps, retour à la connexion. */
+async function back(): Promise<boolean> {
+  if (!offlineSession && accessToken) return true;
+  const r = await refresh();
+  if (r === 'ok') { offlineSession = false; return true; }
+  if (r === 'denied') { clearSession(); onSessionLost(); }
+  return false;
+}
 
+export const isOfflineSession = () => offlineSession;
 export const setOrg = (id: string | null) => { orgId = id; try { id ? sessionStorage.setItem(ORG_KEY, id) : sessionStorage.removeItem(ORG_KEY); } catch { /* ignoré */ } };
 export const getOrg = () => orgId;
 export const hasStoredSession = () => !!store.get();
@@ -27,30 +47,34 @@ export function errorMessage(body: any, fallback: string): string {
   return fallback;
 }
 
-async function raw(path: string, init: RequestInit & { json?: unknown } = {}, retry = true): Promise<Response> {
+async function raw(path: string, init: RequestInit & { json?: unknown } = {}, retry = true, org: string | null = orgId): Promise<Response> {
   const headers = new Headers(init.headers);
   if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`);
-  if (orgId) headers.set('X-Organization-Id', orgId);
+  if (org) headers.set('X-Organization-Id', org);
   let body = init.body;
   if (init.json !== undefined) { headers.set('Content-Type', 'application/json'); body = JSON.stringify(init.json); }
-  const res = await fetch(`/v1${path}`, { ...init, headers, body });
-  if (res.status === 401 && retry && (await refresh())) return raw(path, init, false);
+  let res: Response;
+  try { res = await fetch(`/v1${path}`, { ...init, headers, body }); } catch { markOffline(); throw new OfflineError(); }
+  if (res.status === 503 && res.headers.get('x-agritrace-offline')) { markOffline(); throw new OfflineError(); }
+  if (res.status === 401 && retry && (await refresh()) === 'ok') return raw(path, init, false, org);
   if (res.status === 401) { clearSession(); onSessionLost(); }
   return res;
 }
 
-let refreshing: Promise<boolean> | null = null;
-async function refresh(): Promise<boolean> {
+type RefreshResult = 'ok' | 'denied' | 'offline';
+let refreshing: Promise<RefreshResult> | null = null;
+async function refresh(): Promise<RefreshResult> {
   const token = store.get();
-  if (!token) return false;
+  if (!token) return 'denied';
   refreshing ??= (async () => {
     try {
       const res = await fetch('/v1/auth/refresh', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ refresh_token: token }) });
-      if (!res.ok) return false;
+      if (res.status === 503 && res.headers.get('x-agritrace-offline')) return 'offline' as const;
+      if (!res.ok) return 'denied' as const;
       const j = await res.json();
-      accessToken = j.access_token; store.set(j.refresh_token);
-      return true;
-    } catch { return false; } finally { refreshing = null; }
+      accessToken = j.access_token; store.set(j.refresh_token); offlineSession = false; rememberUser(j.access_token);
+      return 'ok' as const;
+    } catch { return 'offline' as const; } finally { refreshing = null; }
   })();
   return refreshing;
 }
@@ -61,26 +85,44 @@ export async function login(email: string, password: string) {
   const res = await fetch('/v1/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password, device_label: 'Portail web' }) });
   const body = await res.json().catch(() => null);
   if (!res.ok) throw new ApiError(res.status, res.status === 401 ? 'Identifiants invalides.' : errorMessage(body, 'Connexion impossible.'), body);
-  accessToken = body.access_token; store.set(body.refresh_token);
+  accessToken = body.access_token; store.set(body.refresh_token); offlineSession = false; rememberUser(body.access_token);
 }
 
 /** Reprend une session existante (rechargement de page) en renouvelant le jeton. */
-export const resume = () => refresh();
+export async function resume(): Promise<boolean> {
+  const r = await refresh();
+  if (r === 'offline' && store.get() && knownUser()) { offlineSession = true; configure(knownUser(), back); markOffline(); return true; }
+  return r === 'ok';
+}
 
 export async function logout() {
   const token = store.get();
   if (token) await fetch('/v1/auth/logout', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}) }, body: JSON.stringify({ refresh_token: token }) }).catch(() => undefined);
-  clearSession(); setOrg(null);
+  clearSession(); setOrg(null); await clearCache();
 }
 
-export async function api<T = any>(method: string, path: string, json?: unknown): Promise<T> {
-  const res = await raw(path, { method, json });
+/** `org` : organisation de l'opération (rejeu de la file) ; sinon celle de l'écran courant. Les lectures sont mises en mémoire pour le mode hors connexion. */
+export async function api<T = any>(method: string, path: string, json?: unknown, org: string | null = orgId): Promise<T> {
+  let res: Response;
+  try { res = await raw(path, { method, json }, true, org); } catch (e) {
+    if (e instanceof OfflineError && method === 'GET') {
+      const hit = await cacheGet(org, path);
+      if (hit) { lastStale = Math.min(lastStale || Infinity, hit.at); return hit.body as T; }
+      throw new ApiError(0, 'Hors connexion : ces données n’ont pas encore été chargées sur ce poste.');
+    }
+    if (e instanceof OfflineError) throw new ApiError(0, 'Hors connexion : action impossible pour le moment.');
+    throw e;
+  }
   const text = await res.text();
   let body: any = null;
   try { body = text ? JSON.parse(text) : null; } catch { body = text; }
   if (!res.ok) throw new ApiError(res.status, errorMessage(body, `Erreur ${res.status}`), body);
+  if (method === 'GET' && body !== null && typeof body === 'object') void cachePut(org, path, body);
   return body as T;
 }
+let lastStale = 0;
+/** Date de la plus ancienne copie servie hors connexion (0 = aucune). */
+export const staleSince = () => lastStale;
 export const get = <T = any>(p: string) => api<T>('GET', p);
 export const post = <T = any>(p: string, b?: unknown) => api<T>('POST', p, b ?? {});
 export const put = <T = any>(p: string, b?: unknown) => api<T>('PUT', p, b ?? {});

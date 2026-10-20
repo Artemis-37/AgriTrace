@@ -8,6 +8,7 @@ import { DbService } from '../db/db.service';
 import { CreateDeclarationDto, DeclarationsController } from '../declarations/declarations.controller';
 import { FinanceController, TransactionDto } from '../finance/finance.controller';
 import { TaskEntryDto, TasksController } from '../tasks/tasks.controller';
+import { MessagesController, SendMessageDto } from '../messages/messages.controller';
 import { CreateWeighingDto, ReceptionController } from '../reception/reception.controller';
 
 class SyncOperationDto {
@@ -47,6 +48,7 @@ export class SyncController {
           if (typeof p?.id !== 'string' || !/^[0-9a-f-]{36}$/i.test(p.id)) throw new BadRequestException('payload.id (uuid) requis');
           return ctl.submit(p.id, req);
         } },
+      'message.send': { controller: MessagesController, permission: 'messages:use', dto: SendMessageDto, run: (ctl, p, req) => ctl.send(p, req) },
       'weighing.create': { controller: ReceptionController, permission: 'weighings:create', dto: CreateWeighingDto,
         run: (ctl, p, req) => ctl.createWeighing(p, req) },
       'task.start': { controller: TasksController, permission: 'tasks:execute', run: (ctl, p, req) => ctl.start(this.uuid(p), req) },

@@ -12,6 +12,8 @@ import Cartographie from './pages/Cartographie';
 import Declarations from './pages/Declarations';
 import Finance from './pages/Finance';
 import Login from './pages/Login';
+import Messages from './pages/Messages';
+import OfflineBar from './OfflineBar';
 import Synchronisation from './pages/Synchronisation';
 import CentralConsole from './pages/CentralConsole';
 import Missions from './pages/Missions';
@@ -21,6 +23,9 @@ import Quality from './pages/Quality';
 import Stocks from './pages/Stocks';
 import { Loading } from './ui';
 
+const THEMES: [string, string][] = [['doux', 'Thème doux'], ['night', 'Thème nuit']];
+const readTheme = () => { try { return localStorage.getItem('agritrace.theme') ?? ''; } catch { return ''; } };
+
 const NAV: { to: string; label: string; icon: string; perm: string[]; any?: boolean }[] = [
   { to: '/', label: 'Tableau de bord', icon: '▦', perm: [] },
   { to: '/producteurs', label: 'Producteurs', icon: '☺', perm: ['producers:read'] },
@@ -29,6 +34,7 @@ const NAV: { to: string; label: string; icon: string; perm: string[]; any?: bool
   { to: '/commerce', label: 'Commerce', icon: '⇄', perm: ['buyers:read', 'logistics:read', 'invoices:read'], any: true },
   { to: '/inventaire', label: 'Inventaire', icon: '☰', perm: ['stock:count'] },
   { to: '/prefinancement', label: 'Préfinancement', icon: '◈', perm: ['prefinancing:read'] },
+  { to: '/messages', label: 'Messages', icon: '✉', perm: ['messages:use'] },
   { to: '/synchronisation', label: 'Synchronisation', icon: '⇅', perm: ['replication:manage'] },
   { to: '/equipe', label: 'Équipe', icon: '⚙', perm: ['users:read'] },
   { to: '/declarations', label: 'Déclarations d\'achat', icon: '✎', perm: ['declarations:read'] },
@@ -41,14 +47,20 @@ const NAV: { to: string; label: string; icon: string; perm: string[]; any?: bool
 export default function App() {
   const { status, org, me, can, signOut } = useAuth();
   const [open, setOpen] = useState(false);
+  const [theme, setTheme] = useState(readTheme() || (window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'night' : 'doux'));
+  useEffect(() => { document.documentElement.dataset.theme = theme; try { localStorage.setItem('agritrace.theme', theme); } catch { /* ignoré */ } }, [theme]);
   const [unread, setUnread] = useState(0);
   const [managed, setManaged] = useState<string | null>(null);
   useEffect(() => {
     if (status !== 'ready') return;
     get<any>('/replication/status').then((r) => setManaged(r.mode === 'central' && r.site ? r.site.name : null)).catch(() => setManaged(null));
   }, [status, org?.id]);
-  const refreshUnread = useCallback(() => { get<{ unread: number }>('/notifications/unread-count').then((r) => setUnread(r.unread)).catch(() => undefined); }, []);
-  useEffect(() => { if (status !== 'ready') return; refreshUnread(); const t = setInterval(refreshUnread, 60000); return () => clearInterval(t); }, [status, org?.id, refreshUnread]);
+  const [msgUnread, setMsgUnread] = useState(0);
+  const refreshUnread = useCallback(() => {
+    get<{ unread: number }>('/notifications/unread-count').then((r) => setUnread(r.unread)).catch(() => undefined);
+    if (can('messages:use')) get<{ unread: number }>('/messages/unread-count').then((r) => setMsgUnread(r.unread)).catch(() => undefined);
+  }, [can]);
+  useEffect(() => { if (status !== 'ready') return; refreshUnread(); const t = setInterval(refreshUnread, 15000); return () => clearInterval(t); }, [status, org?.id, refreshUnread]);
   if (status === 'loading') return <div style={{ padding: '3rem' }}><Loading /></div>;
   if (status === 'platform') return <CentralConsole />;
   if (status !== 'ready') return <Login />;
@@ -63,16 +75,17 @@ export default function App() {
         <div className="brand"><strong>Agri<span>Trace</span></strong><small>La traçabilité agricole, de la parcelle au marché.</small></div>
         <nav className="nav" aria-label="Navigation principale" onClick={() => setOpen(false)}>
           {NAV.filter((n) => (n.any ? n.perm.some((p) => can(p)) : can(...n.perm))).map((n) => (
-            <NavLink key={n.to} to={n.to} end={n.to === '/'}><span aria-hidden="true">{n.icon}</span>{n.label}</NavLink>
+            <NavLink key={n.to} to={n.to} end={n.to === '/'}><span aria-hidden="true">{n.icon}</span>{n.label}{n.to === '/messages' && msgUnread > 0 && <span className="badge badge-bad" style={{ marginLeft: 'auto' }} aria-label={`${msgUnread} message(s) non lu(s)`}>{msgUnread}</span>}</NavLink>
           ))}
           <NavLink to="/notifications"><span aria-hidden="true">🔔</span>Notifications{unread > 0 && <span className="badge badge-bad" style={{ marginLeft: 'auto' }} aria-label={`${unread} non lue(s)`}>{unread}</span>}</NavLink>
         </nav>
         <div className="who">
           <strong>{org?.name}</strong><br />{me?.user.full_name}
-          <div><button className="btn btn-ghost btn-small" onClick={signOut}>Se déconnecter</button></div>
+          <div><button className="btn btn-ghost btn-small" onClick={() => setTheme(theme === 'night' ? 'doux' : 'night')} aria-label="Changer de thème d'affichage">{THEMES.find(([k]) => k !== theme)?.[1]}</button>{' '}<button className="btn btn-ghost btn-small" onClick={signOut}>Se déconnecter</button></div>
         </div>
       </aside>
       <main className="main">
+        <OfflineBar />
         {managed && <p className="notice" role="status">Lecture seule : cette coopérative est gérée par son serveur local (« {managed} »). Les modifications se font là-bas ; elles arrivent ici par synchronisation.</p>}
         <Routes>
           <Route path="/" element={<Dashboard />} />
@@ -82,6 +95,7 @@ export default function App() {
           <Route path="/commerce" element={<Commerce />} />
           <Route path="/inventaire" element={<Inventaire />} />
           <Route path="/prefinancement" element={<Prefinancement />} />
+          <Route path="/messages" element={<Messages onChange={refreshUnread} />} />
           <Route path="/synchronisation" element={<Synchronisation />} />
           <Route path="/equipe" element={<Equipe />} />
           <Route path="/notifications" element={<Notifications onChange={refreshUnread} />} />

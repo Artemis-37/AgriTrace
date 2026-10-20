@@ -37,7 +37,7 @@ export async function seedBase() {
   await call('POST', `/price-schedules/${sched.id}/versions`, { ...J, body: { unit_price: '1000', valid_from: '2025-10-01' } });
   const prod = (await call('POST', '/producers', { ...J, body: { last_name: 'KONE', first_names: 'Awa', village: 'Hiré', value_chain_ids: [vc.id] } })).producer;
   const wh = await call('POST', '/warehouses', { ...J, body: { code: 'MAG1', name: 'Magasin 1' } });
-  const rcol = await call('POST', '/roles', { ...J, body: { code: 'collecteur', name: 'Collecteur', permissions: ['declarations:create', 'declarations:read', 'producers:read', 'sync:use'] } });
+  const rcol = await call('POST', '/roles', { ...J, body: { code: 'collecteur', name: 'Collecteur', permissions: ['declarations:create', 'declarations:read', 'producers:read', 'sync:use', 'messages:use'] } });
   const cu = await call('POST', '/users', { ...J, body: { email: `col.${run}@t.test`, full_name: 'col', password: PW, role_id: rcol.id } });
   const col = await call('POST', '/collectors', { ...J, body: { user_id: cu.id } });
   await call('POST', `/collectors/${col.id}/assignments`, { ...J, body: { value_chain_id: vc.id } });
@@ -49,5 +49,5 @@ export async function seedBase() {
   const w = await call('POST', '/weighings', { ...J, body: { idempotency_key: key('w'), declaration_id: d.id, warehouse_id: wh.id, gross_kg: '1305', tare_kg: '5' } });
   const rc = await call('POST', '/receipts', { ...J, body: { weighing_id: w.id } });
   must(rc.receipt?.lot_id ?? rc.lot_id, 'mise en stock', rc);
-  return { email, J, vc, prod, wh };
+  return { email, J, vc, prod, wh, colEmail: `col.${run}@t.test` };
 }

@@ -51,3 +51,4 @@
 - Vérifié : e2e à trois serveurs (78 contrôles), orchestration du serveur local sous Node, application lancée sous Linux, parcours Chromium (premier démarrage, console centrale).
 - **Non vérifié** : l'installateur `.exe` et le comportement sous Windows (construit seulement par le workflow GitHub, jamais exécuté ici) ; signature de code absente.
 - Non couvert : sens central → local, plusieurs serveurs locaux pour une même coopérative, rattachement d'une coopérative déjà peuplée au central, TLS sur le réseau local, mise à jour automatique de l'application.
+- Postes clients : fonctionnement hors connexion (achat et messages rejoués au retour du serveur, session conservée au redémarrage), messagerie interne, thèmes doux et nuit, nom et rôle du poste choisis à l'installation. Non couvert : validation, paiements et stocks hors connexion ; messages poste à poste sans serveur ; lecture hors connexion d'un écran jamais ouvert en ligne.

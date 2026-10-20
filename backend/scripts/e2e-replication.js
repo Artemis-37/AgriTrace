@@ -57,7 +57,7 @@ async function mkInstance(tag, mode, port) {
 
   console.log('Modes');
   const mc = (await call(C.base, 'GET', '/mode')).body, ml = (await call(L1.base, 'GET', '/mode')).body;
-  check('central annonce son mode', mc.mode === 'central' && mc.schema_version.startsWith('012'), mc);
+  check('central annonce son mode', mc.mode === 'central' && /^01\d_/.test(mc.schema_version), mc);
   check('serveur local vierge : non initialisé', ml.mode === 'local' && ml.initialized === false, ml);
   check('le central refuse le bootstrap local', (await call(C.base, 'POST', '/bootstrap/local', { body: { admin_name: 'Xx', admin_email: 'x@x.test', admin_password: pw, organization_code: 'X1', organization_name: 'Xx' } })).status === 403);
 

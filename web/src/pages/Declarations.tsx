@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { get, post } from '../api';
 import { useAuth } from '../auth';
 import { DECLARATION_STATUS, NEXT_DECLARATION, date, money } from '../format';
+import NewPurchase from './NewPurchase';
+import { onFlushed } from '../offline';
 import { Card, ErrorBox, Field, Loading, Modal, PageHeader, StatusBadge, Table, useAction, useAsync } from '../ui';
 
 export default function Declarations() {
@@ -14,11 +16,14 @@ export default function Declarations() {
     return decls.map((d) => ({ ...d, producer_name: names.get(d.producer_id) ?? '—' }));
   }, []);
   const rows = (data ?? []).filter((d) => !status || d.status === status);
+  const [creating, setCreating] = useState(false);
+  useEffect(() => onFlushed(reload), [reload]);
   const needsReason = (to: string) => ['to_correct', 'rejected'].includes(to);
 
   return (
     <>
-      <PageHeader title="Déclarations d'achat" subtitle="Achats déclarés par les collecteurs, avant et après réception" />
+      <PageHeader title="Déclarations d'achat" subtitle="Achats déclarés par les collecteurs, avant et après réception" actions={can('declarations:create') && <button className="btn" onClick={() => setCreating(true)}>Saisir un achat</button>} />
+      {creating && <NewPurchase onClose={() => setCreating(false)} onDone={() => setTimeout(reload, 800)} />}
       <Card>
         <div className="toolbar">
           <select aria-label="Filtrer par statut" value={status} onChange={(e) => setStatus(e.target.value)}>

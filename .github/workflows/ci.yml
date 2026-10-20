@@ -73,7 +73,7 @@ jobs:
         working-directory: backend
       - run: npm ci && npm run build && npx playwright-core install --with-deps chromium
         working-directory: web
-      - run: npm ci --omit=dev
+      - run: npm ci
         working-directory: desktop
       - name: Orchestration (démarrage, migrations, données, sauvegarde, redémarrage)
         run: node test/orchestration.js ..
@@ -84,6 +84,11 @@ jobs:
           ONLY_START=1 TEST_PORT=3150 node test/orchestration.js .. > /tmp/srv.log 2>&1 &
           for i in $(seq 1 60); do curl -fs http://127.0.0.1:3150/v1/mode > /dev/null && break; sleep 1; done
           cd ../web && WEB=http://127.0.0.1:3150 node e2e/parcours-premier-demarrage.mjs
+      - name: Poste client Electron (serveur éteint, redémarrage hors connexion, rejeu au retour)
+        working-directory: desktop
+        run: |
+          npm ci
+          xvfb-run -a node test/client-electron.js ..
       - name: Journal en cas d'échec
         if: failure()
         run: tail -n 60 /tmp/srv.log || true

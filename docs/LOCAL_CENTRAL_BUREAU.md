@@ -36,6 +36,24 @@ Le code se renouvelle depuis la console (*Nouveau code*) ; l'ancien jeton cesse 
 
 La réception désactive les déclencheurs le temps d'appliquer un lot (`session_replication_role = replica`). Le rôle applicatif doit en avoir le droit : la migration 012 exécute `GRANT SET ON PARAMETER session_replication_role TO agritrace_app` (PostgreSQL 15+) et signale en `NOTICE` si elle n'a pas pu (rôle sans super-utilisateur) : à faire alors une fois à la main.
 
+## Postes clients d'une coopérative : hors connexion et messagerie
+
+Un poste client **continue de fonctionner quand le serveur local est injoignable** (serveur éteint, câble débranché, panne) :
+
+* L'application charge le portail **depuis elle-même** (`agritrace://app`) et relaie les appels vers le serveur ; si le serveur ne répond pas, le portail passe en mode hors connexion (bandeau orange). La session est conservée sur le poste : un redémarrage serveur éteint ne redemande pas la connexion.
+* **Lecture** : les écrans déjà ouverts sont servis depuis la copie du poste (ancienne, mais lisible). Un écran jamais ouvert en ligne n'a pas de copie.
+* **Écriture** : seules deux opérations sont prévues pour le rejeu sûr — la **saisie d'un achat** (création puis soumission) et les **messages**. Elles sont gardées sur le poste (IndexedDB) et envoyées par `/sync/batch` dès que le serveur répond, avec une clé d'idempotence : aucun doublon, même si la liaison coupe en plein envoi. Le serveur **revérifie les droits et les règles** à la réception ; une opération refusée ou à corriger reste dans la liste « Détails » avec le motif.
+* Qui voit quoi : une fois reçues, les opérations suivent les droits habituels (une déclaration n'est visible que de son collecteur et des valideurs ; un message direct, de son expéditeur et de son destinataire seulement).
+* Les autres opérations (validation, paiements, stocks…) exigent le serveur : le poste affiche « Hors connexion : action impossible pour le moment ».
+
+**Messagerie** (page *Messages*, droit `messages:use`) : canal général et messages directs entre les postes d'une même coopérative, non lus, rafraîchissement toutes les 8 s. Les messages restent sur le serveur de la coopérative (non répliqués vers le central). Un message écrit hors connexion est marqué « écrit hors connexion » avec son heure de rédaction. Les postes passent par le serveur : si le serveur est éteint, les messages attendent son retour (pas de liaison poste à poste directe).
+
+**Affichage** : thème « doux » par défaut (fond crème, contrastes adoucis, pas de blanc pur) et thème « nuit » ; bouton dans le menu, choix mémorisé, thème nuit proposé d'office si le système est en mode sombre.
+
+**Rôle du poste** : choisi à l'installation (*serveur de la coopérative* ou *poste client*, avec le nom du poste, ex. « Comptabilité »), modifiable dans *Fichier → Changer de mode*.
+
+Limites : la copie de lecture est locale à chaque poste ; l'achat hors connexion exige un compte collecteur (règle du serveur, vérifiée au rejeu) ; le portail embarqué dans le poste client peut être plus ancien ou plus récent que le serveur après une mise à jour (mettre à jour tous les postes) ; la session persistante reste valable 30 jours (`REFRESH_TTL_DAYS`) et le serveur peut la révoquer dès son retour.
+
 ## Application Windows
 
 Au premier lancement : **serveur de la coopérative** ou **poste client** (adresse du serveur).
@@ -52,7 +70,7 @@ L'installateur Windows se construit sur Windows : workflow GitHub **Application 
 
 ### Ce qui est vérifié, et ce qui ne l'est pas
 
-Vérifié automatiquement (CI) : la réplication à trois serveurs (`backend/scripts/e2e-replication.js`), l'orchestration du serveur local sous Node (PostgreSQL embarqué → migrations → API + portail → premier démarrage → sauvegarde → redémarrage), le premier démarrage dans Chromium, la console centrale. L'application Electron a aussi été lancée avec succès sous Linux (écran virtuel) et a démarré le serveur complet.
+Vérifié automatiquement (CI) : le poste client Electron réel face à un vrai serveur (`desktop/test/client-electron.js` : serveur éteint, redémarrage du poste hors connexion, rejeu au retour), la messagerie et son rejeu (`e2e-messagerie.js`), le parcours hors connexion dans Chromium, la réplication à trois serveurs (`backend/scripts/e2e-replication.js`), l'orchestration du serveur local sous Node (PostgreSQL embarqué → migrations → API + portail → premier démarrage → sauvegarde → redémarrage), le premier démarrage dans Chromium, la console centrale. L'application Electron a aussi été lancée avec succès sous Linux (écran virtuel) et a démarré le serveur complet.
 
 **Non vérifié** : l'installateur `.exe` lui-même, le pare-feu Windows, le comportement de PostgreSQL embarqué sous Windows, l'icône (provisoire) et l'absence de signature de code (Windows SmartScreen affichera un avertissement tant que l'installateur n'est pas signé). À essayer sur un vrai poste avant de déployer.
 
