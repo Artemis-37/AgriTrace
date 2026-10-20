@@ -41,3 +41,11 @@ La fiche papier devient le compte du collecteur. Colonnes reprises : A poids, B 
 - Mobile : l'adresse du serveur est intégrée à l'application à la compilation, jamais saisie ni affichée.
 - Jumelage coopérative ↔ serveur central : le code de jumelage contient l'adresse du central ; l'écran Synchronisation n'affiche plus d'adresse.
 - Limite : la découverte sonde le sous-réseau (port du serveur) ; elle ne traverse pas plusieurs réseaux séparés (dans ce cas, l'option technique reste nécessaire). Testée par `desktop/test/discovery.js` ; non essayée sur un vrai poste Windows.
+
+## Rôles types et cloisonnement
+
+Équipe → « Rôles types » crée en un clic les rôles **Magasinier**, **Caissier** et **Collecteur** (`POST /roles/standard`, idempotent). Les menus et les API suivent les permissions, jamais le nom du rôle.
+- **Magasinier** : convois (lecture, réception), magasins et lots, mouvements de stock, inventaire, messages. Il ne voit ni qualité/conformité, ni cartographie, ni parcelles, ni caisse, finances ou comptabilité, ni équipe, ni missions (menus absents et API en 403, vérifié par `e2e-roles.js` et le parcours navigateur).
+- **Caissier** : convois à traiter, caisse, comptes financiers et comptabilité en lecture ; pas de stocks, d'équipe ni de missions.
+- **Collecteur** : ses achats, convois, stock et fiche uniquement.
+- « Ajouter un utilisateur » (Équipe) crée le compte avec le rôle choisi.

@@ -1,9 +1,9 @@
 // Navigateur : le collecteur déclare un convoi, l'administrateur (magasinier + caisse) le réceptionne puis crédite le collecteur.
 //   API=... WEB=... ADMIN_EMAIL=... ADMIN_PASSWORD=... node e2e/parcours-convois.mjs
 import { chromium } from 'playwright-core';
-import { WEB, PW, must, seedBase } from './lib.mjs';
+import { WEB, PW, must, seedBase, call } from './lib.mjs';
 
-const { email, colEmail } = await seedBase();
+const { email, colEmail, J } = await seedBase();
 const browser = await chromium.launch({ args: ['--no-sandbox'], executablePath: process.env.CHROMIUM_PATH || undefined });
 let page = await browser.newPage({ viewport: { width: 1300, height: 1000 } });
 const problems = [];
@@ -111,6 +111,19 @@ await step('espace du collecteur : Mes achats, Mon stock, Historique, sans menus
   must((await page.innerText('main')).includes('Historique de mes achats'), 'page Historique absente');
   await page.getByRole('link', { name: /Mes achats/ }).click(); await page.waitForTimeout(800);
   must(await page.getByRole('button', { name: 'Déclarer un achat' }).count(), 'bouton Déclarer un achat absent');
+});
+await step('le magasinier ne voit ni conformité, ni cartographie, ni caisse/comptabilité, ni équipe, ni missions', async () => {
+  const r = await call('POST', '/roles/standard', { ...J, body: { code: 'magasinier' } });
+  await call('POST', '/users', { ...J, body: { email: 'mag.' + colEmail, full_name: 'Magasinier', password: PW, role_id: r.id } });
+  await login('mag.' + colEmail);
+  const nav = await page.locator('nav').first().innerText();
+  for (const t of ['Convois', 'Stocks et lots', 'Messages']) must(nav.includes(t), `menu ${t} absent pour le magasinier : ${nav.replace(/\s+/g, ' ')}`);
+  for (const t of ['Cartographie', 'Qualité et conformité', 'Finances', 'Équipe', 'Missions', 'Préfinancement', 'Parcelles', 'Commerce', 'Synchronisation']) must(!nav.includes(t), `le magasinier voit « ${t} »`);
+  await page.getByRole('link', { name: /Convois/ }).click(); await page.waitForTimeout(900);
+  must(!(await page.getByRole('tab', { name: 'Caisse' }).count()) && !(await page.getByRole('tab', { name: 'Comptes collecteurs' }).count()), 'le magasinier voit la caisse');
+  must(await page.getByRole('tab', { name: 'Réception au magasin' }).count(), 'onglet Réception absent');
+  await page.goto(WEB + '/finances'); await page.waitForTimeout(800);
+  must(!(await page.innerText('main')).includes('Comptes financiers'), 'page Finances accessible par URL');
 });
 await browser.close();
 if (problems.length) { console.log(problems.join('\n')); process.exit(1); }

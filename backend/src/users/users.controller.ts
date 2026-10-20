@@ -5,6 +5,7 @@ import { RequirePermissions } from '../access/decorators';
 import { AuditService } from '../audit/audit.service';
 import { AuthService } from '../auth/auth.service';
 import { DbService } from '../db/db.service';
+import { STANDARD_ROLES } from './standard-roles';
 
 class CreateUserDto {
   @IsEmail() email: string;
@@ -50,6 +51,33 @@ export class UsersController {
     return this.db.tx(req.org.id, async (c) =>
       (await c.query(`SELECT id, code, name FROM roles WHERE organization_id = $1 ORDER BY name`, [req.org.id])).rows,
     );
+  }
+
+  /** Rôles types disponibles et état (déjà créé ou non) pour cette coopérative. */
+  @Get('roles/templates')
+  @RequirePermissions('users:read')
+  async templates(@Req() req: any) {
+    const have = await this.db.tx(req.org.id, async (c) => (await c.query(`SELECT code FROM roles WHERE organization_id = $1`, [req.org.id])).rows.map((r) => r.code));
+    return Object.entries(STANDARD_ROLES).map(([code, t]) => ({ code, name: t.name, description: t.description, hidden: t.hidden, created: have.includes(code) }));
+  }
+
+  /** Crée un rôle type (idempotent). Seul un administrateur qui détient lui-même ces permissions peut l'accorder. */
+  @Post('roles/standard')
+  @RequirePermissions('roles:manage')
+  async createStandard(@Body() b: { code: string }, @Req() req: any) {
+    const t = STANDARD_ROLES[b?.code];
+    if (!t) throw new BadRequestException('Rôle type inconnu');
+    const missing = t.permissions.filter((p) => !req.org.permissions.has(p));
+    if (missing.length) throw new ForbiddenException(`Permissions non détenues : ${missing.join(', ')}`);
+    const role = await this.db.tx(req.org.id, async (c) => {
+      const ex = await c.query(`SELECT id, code, name FROM roles WHERE organization_id = $1 AND code = $2`, [req.org.id, b.code]);
+      if (ex.rowCount) return ex.rows[0];
+      const r = await c.query(`INSERT INTO roles(organization_id, code, name) VALUES ($1,$2,$3) RETURNING id, code, name`, [req.org.id, b.code, t.name]);
+      for (const p of t.permissions) await c.query(`INSERT INTO role_permissions(role_id, permission_code) VALUES ($1,$2)`, [r.rows[0].id, p]);
+      return r.rows[0];
+    });
+    await this.audit.log({ organizationId: req.org.id, actorUserId: req.user.id, action: 'role.create', entityType: 'role', entityId: role.id, details: { standard: b.code } });
+    return role;
   }
 
   /** Création d'un rôle propre à l'organisation. On ne peut accorder que des permissions que l'on détient soi-même. */
