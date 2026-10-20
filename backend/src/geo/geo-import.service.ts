@@ -146,7 +146,7 @@ export class GeoImportService {
         if (sameGeom && sameArea) it.outcome = 'unchanged';
         else if (mode === 'create_only') { it.reasons.push(`existe_déjà : « ${ex.code} » (mode création uniquement)`); it.hard = true; }
         else it.outcome = 'update';
-      } else if (!it.declared) { it.reasons.push('surface_déclarée_manquante : obligatoire pour créer une parcelle'); it.hard = true; }
+      } else if (!it.declared) { it.reasons = it.reasons.filter((r) => r !== 'surface_déclarée_manquante'); it.reasons.push('surface_déclarée_manquante : obligatoire pour créer une parcelle'); it.hard = true; }
     }
 
     // 3. doublons et codes répétés dans le fichier

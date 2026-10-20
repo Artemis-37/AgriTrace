@@ -95,6 +95,8 @@ function Merge({ a, onClose, onDone }: { a: any; onClose: () => void; onDone: ()
   );
 }
 
+const OUTCOME_FR: Record<string, string> = { create: 'À créer', update: 'À mettre à jour', unchanged: 'Inchangé', rejected: 'Rejeté', quarantined: 'Isolé' };
+const IMPORT_STATUS_FR: Record<string, [string, 'ok' | 'bad' | 'info' | 'warn']> = { simulated: ['Simulé', 'info'], processing: ['En cours', 'warn'], completed: ['Terminé', 'ok'], failed: ['Échec', 'bad'] };
 const MODES: Record<string, string> = { simulate: 'Simulation (rien n\'est écrit)', create_only: 'Créer seulement', create_update: 'Créer et mettre à jour', quarantine: 'Créer, isoler les lignes en anomalie' };
 
 function Imports() {
@@ -129,7 +131,7 @@ function Imports() {
         {error && <ErrorBox message={error} />}
         {r && (
           <>
-            <h2>{current.file_name} — {current.status === 'simulated' ? 'simulation' : current.status}</h2>
+            <h2>{current.file_name} — {(IMPORT_STATUS_FR[current.status] ?? [current.status])[0].toLowerCase()}</h2>
             {current.error && <ErrorBox message={current.error} />}
             <div className="grid">
               <Stat label="Objets examinés" value={r.examined} /><Stat label="À créer" value={r.creatable} tone="ok" /><Stat label="À mettre à jour" value={r.updatable} tone="info" />
@@ -138,7 +140,7 @@ function Imports() {
             </div>
             <Table rows={((r.anomalies ?? []) as any[]).slice(0, 100).map((x: any, i: number) => ({ ...x, id: String(i) })) as any[]} empty="Aucune anomalie dans le fichier." columns={[
               { header: 'Ligne', render: (x) => x.row }, { header: 'Producteur', render: (x) => x.producer_code ?? '—' },
-              { header: 'Résultat', render: (x) => <Badge tone={x.outcome === 'rejected' ? 'bad' : 'warn'}>{x.outcome}</Badge> }, { header: 'Motifs', render: (x) => x.reasons.join(' ; ') },
+              { header: 'Résultat', render: (x) => <Badge tone={x.outcome === 'rejected' ? 'bad' : 'warn'}>{OUTCOME_FR[x.outcome] ?? x.outcome}</Badge> }, { header: 'Motifs', render: (x) => x.reasons.join(' ; ') },
             ]} />
             <div className="modal-foot">
               {current.status === 'completed' && r.pending_correction > 0 && <button className="btn btn-secondary" onClick={() => download(`/geo/imports/${current.id}/quarantine.geojson`, 'quarantaine.geojson')}>Télécharger la quarantaine ({r.pending_correction})</button>}
@@ -152,7 +154,7 @@ function Imports() {
           <Table rows={history.data ?? []} empty="Aucun import." columns={[
             { header: 'Date', render: (i) => dateTime(i.created_at) }, { header: 'Fichier', render: (i) => i.file_name }, { header: 'Format', render: (i) => i.format },
             { header: 'Mode', render: (i) => MODES[i.mode] ?? i.mode }, { header: 'Objets', align: 'right', render: (i) => i.total },
-            { header: 'Statut', render: (i) => <Badge tone={i.status === 'failed' ? 'bad' : i.status === 'completed' ? 'ok' : 'info'}>{i.status}</Badge> },
+            { header: 'Statut', render: (i) => <Badge tone={(IMPORT_STATUS_FR[i.status] ?? ['', 'info'])[1]}>{(IMPORT_STATUS_FR[i.status] ?? [i.status])[0]}</Badge> },
           ]} />
         )}
       </Card>
