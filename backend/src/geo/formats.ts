@@ -52,7 +52,7 @@ export function detectFormat(buf: Buffer): GeoFormat | 'zip' | null {
   return null;
 }
 
-export async function parseGeoFile(buf: Buffer, filename: string, opts: { assumeWgs84?: boolean; layer?: string } = {}): Promise<ParsedFile> {
+export async function parseGeoFile(buf: Buffer, filename: string, opts: { assumeWgs84?: boolean; layer?: string; allowWebMercator?: boolean } = {}): Promise<ParsedFile> {
   const real = detectFormat(buf);
   if (!real) throw new GeoFormatError('Format non reconnu : GeoJSON, KML, KMZ, Shapefile (ZIP) ou GeoPackage attendus');
   const ext = (filename.split('.').pop() ?? '').toLowerCase();
@@ -66,9 +66,9 @@ export async function parseGeoFile(buf: Buffer, filename: string, opts: { assume
     else throw new GeoFormatError('Archive ZIP sans fichier .shp ni .kml');
   } else {
     if (declared !== real && !(real === 'geojson' && declared === 'geojson')) throw mismatch(ext, real === 'gpkg' ? 'GeoPackage' : real === 'kml' ? 'KML' : 'GeoJSON');
-    if (real === 'geojson') parsed = parseGeoJson(buf.toString('utf8'));
+    if (real === 'geojson') parsed = parseGeoJson(buf.toString('utf8'), opts);
     else if (real === 'kml') parsed = parseKml(buf.toString('utf8'));
-    else parsed = parseGpkg(buf, opts.layer);
+    else parsed = parseGpkg(buf, opts.layer, opts);
   }
   if (parsed.features.length > MAX_FEATURES) throw new GeoFormatError(`Fichier refusé : ${parsed.features.length} objets (maximum ${MAX_FEATURES} par import)`);
   if (!parsed.features.length) throw new GeoFormatError('Fichier sans aucun objet géographique');
@@ -76,15 +76,28 @@ export async function parseGeoFile(buf: Buffer, filename: string, opts: { assume
 }
 const mismatch = (ext: string, real: string) => new GeoFormatError(`L'extension « .${ext} » ne correspond pas au contenu réel du fichier (${real})`);
 
-export function parseGeoJson(text: string): ParsedFile {
+/** Web Mercator (EPSG:3857) → WGS84, en place sur une copie. Utilisé seulement pour les couches de référence (le WDPA est diffusé en 3857). */
+export function mercatorToWgs84(g: any): any {
+  if (!g || !g.coordinates) return g;
+  const R = 6378137;
+  const conv = (c: any): any => (typeof c[0] === 'number'
+    ? [(c[0] / R) * 180 / Math.PI, (2 * Math.atan(Math.exp(c[1] / R)) - Math.PI / 2) * 180 / Math.PI, ...c.slice(2)]
+    : c.map(conv));
+  return { ...g, coordinates: conv(g.coordinates) };
+}
+const isMercator = (v: unknown) => /(3857|900913|Pseudo-Mercator)/i.test(String(v));
+
+export function parseGeoJson(text: string, opts: { allowWebMercator?: boolean } = {}): ParsedFile {
   let o: any;
   try { o = JSON.parse(text.replace(/^﻿/, '')); } catch { throw new GeoFormatError('GeoJSON mal formé (JSON invalide)'); }
   const crsName = o?.crs?.properties?.name;
-  if (crsName && !/(4326|CRS84)/i.test(String(crsName))) throw new GeoFormatError(`Système de coordonnées non pris en charge (${crsName}) : WGS84 (EPSG:4326) attendu`);
+  const reproject = !!crsName && !!opts.allowWebMercator && isMercator(crsName);
+  if (crsName && !reproject && !/(4326|CRS84)/i.test(String(crsName))) throw new GeoFormatError(`Système de coordonnées non pris en charge (${crsName}) : WGS84 (EPSG:4326) attendu`);
   const feats: any[] = o?.type === 'FeatureCollection' && Array.isArray(o.features) ? o.features
     : o?.type === 'Feature' ? [o] : o?.type && o.coordinates ? [{ type: 'Feature', properties: {}, geometry: o }] : [];
   if (!feats.length && !(o?.type === 'FeatureCollection')) throw new GeoFormatError('GeoJSON sans Feature exploitable');
-  return { format: 'geojson', crs: 'EPSG:4326', warnings: [], features: feats.map((f) => ({ props: f?.properties && typeof f.properties === 'object' ? f.properties : {}, geometry: f?.geometry ?? null })) };
+  return { format: 'geojson', crs: 'EPSG:4326', features: feats.map((f) => ({ props: f?.properties && typeof f.properties === 'object' ? f.properties : {}, geometry: reproject ? mercatorToWgs84(f?.geometry ?? null) : f?.geometry ?? null })),
+    warnings: reproject ? ['Coordonnées en Web Mercator (EPSG:3857) converties en WGS84'] : [] };
 }
 
 export function parseKml(text: string, format: GeoFormat = 'kml'): ParsedFile {
@@ -232,7 +245,7 @@ function gpkgBlobToGeometry(blob: Buffer): any | null {
   return readWkb(blob, { p: 8 + envBytes });
 }
 
-export function parseGpkg(buf: Buffer, layer?: string): ParsedFile {
+export function parseGpkg(buf: Buffer, layer?: string, opts: { allowWebMercator?: boolean } = {}): ParsedFile {
   const dir = mkdtempSync(join(tmpdir(), 'agritrace-gpkg-'));
   const file = join(dir, 'in.gpkg');
   try {
@@ -248,16 +261,18 @@ export function parseGpkg(buf: Buffer, layer?: string): ParsedFile {
       if (!c) throw new GeoFormatError(`Couche « ${layer} » introuvable (disponibles : ${cols.map((x) => x.table_name).join(', ')})`);
       const srs = db.prepare('SELECT organization, organization_coordsys_id FROM gpkg_spatial_ref_sys WHERE srs_id = ?').get(c.srs_id) as any;
       const epsg = srs ? Number(srs.organization_coordsys_id) : c.srs_id;
-      if (epsg !== 4326) throw new GeoFormatError(`Système de coordonnées non pris en charge (EPSG:${epsg}) : WGS84 (EPSG:4326) attendu, aucune reprojection n'est effectuée`);
+      const reproject = !!opts.allowWebMercator && epsg === 3857;
+      if (epsg !== 4326 && !reproject) throw new GeoFormatError(`Système de coordonnées non pris en charge (EPSG:${epsg}) : WGS84 (EPSG:4326) attendu, aucune reprojection n'est effectuée`);
       void app;
       const rows = db.prepare(`SELECT * FROM ${qIdent(c.table_name)} LIMIT ${MAX_FEATURES + 1}`).all() as any[];
       const features: RawFeature[] = rows.map((r) => {
         const props: Record<string, any> = {};
         for (const [k, v] of Object.entries(r)) if (k !== c.column_name && !(v instanceof Uint8Array)) props[k] = typeof v === 'bigint' ? Number(v) : v;
         const blob = r[c.column_name];
-        return { props, geometry: blob ? gpkgBlobToGeometry(Buffer.from(blob)) : null };
+        const geo = blob ? gpkgBlobToGeometry(Buffer.from(blob)) : null;
+        return { props, geometry: reproject ? mercatorToWgs84(geo) : geo };
       });
-      return { format: 'gpkg', crs: 'EPSG:4326', warnings: cols.length > 1 ? [`Plusieurs couches : « ${c.table_name} » lue`] : [], features };
+      return { format: 'gpkg', crs: 'EPSG:4326', warnings: [...(cols.length > 1 ? [`Plusieurs couches : « ${c.table_name} » lue`] : []), ...(reproject ? ['Coordonnées en Web Mercator (EPSG:3857) converties en WGS84'] : [])], features };
     } catch (e: any) {
       if (e instanceof GeoFormatError) throw e;
       throw new GeoFormatError(`GeoPackage illisible ou non conforme : ${String(e.message).slice(0, 120)}`);

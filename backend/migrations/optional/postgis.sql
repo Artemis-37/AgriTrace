@@ -20,5 +20,13 @@ BEGIN
       GENERATED ALWAYS AS (CASE WHEN geometry IS NULL THEN NULL ELSE ST_SetSRID(ST_Force2D(ST_GeomFromGeoJSON(geometry)), 4326) END) STORED$q$;
   END IF;
   EXECUTE 'CREATE INDEX IF NOT EXISTS idx_parcels_geom ON parcels USING gist (geom)';
+  -- Couches de référence (zones protégées) : même principe, si la table existe déjà.
+  IF to_regclass('public.reference_features') IS NOT NULL THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_attribute WHERE attrelid = 'reference_features'::regclass AND attname = 'geom' AND NOT attisdropped) THEN
+      EXECUTE $q$ALTER TABLE reference_features ADD COLUMN geom geometry(MultiPolygon, 4326)
+        GENERATED ALWAYS AS (ST_Multi(ST_SetSRID(ST_Force2D(ST_GeomFromGeoJSON(geometry)), 4326))) STORED$q$;
+    END IF;
+    EXECUTE 'CREATE INDEX IF NOT EXISTS idx_reference_features_geom ON reference_features USING gist (geom)';
+  END IF;
 END
 $mig$;

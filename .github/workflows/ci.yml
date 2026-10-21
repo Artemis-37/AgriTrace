@@ -50,6 +50,7 @@ jobs:
           PORT=3001 GEO_ENGINE=js node dist/main > /tmp/api-js.log 2>&1 &
           for i in $(seq 1 30); do curl -fs http://localhost:3001/v1/ready && break; sleep 1; done
           API=http://localhost:3001/v1 EXPECT_ENGINE=js node scripts/e2e-postgis.js
+          API=http://localhost:3001/v1 EXPECT_ENGINE=js node scripts/e2e-zones-protegees.js
           API=http://localhost:3001/v1 node scripts/e2e-geo.js
       - name: Portail web (build, aperçu relié à l'API) et navigateur
         working-directory: web

@@ -24,7 +24,7 @@ export const STANDARD_ROLES: Record<string, { name: string; description: string;
     description: 'Responsable de la conformité et de la certification : suit les certificats, les inspections et la qualité, contrôle et vérifie les parcelles, met en place les missions des coachs et décide de leurs demandes.',
     permissions: [
       'certificates:read', 'certificates:manage', 'inspections:read', 'inspections:perform', 'quality:read', 'quality:manage', 'alerts:read', 'notifications:scan',
-      'parcels:read', 'parcels:control', 'parcels:verify', 'geo:anomalies', 'geo:export', 'documents:read', 'documents:upload', 'documents:sensitive',
+      'parcels:read', 'parcels:control', 'parcels:verify', 'geo:anomalies', 'geo:layers', 'geo:export', 'documents:read', 'documents:upload', 'documents:sensitive',
       'tasks:read', 'tasks:read_all', 'tasks:create', 'tasks:update', 'tasks:assign', 'tasks:review', 'tasks:close', 'tasks:decide_requests',
       'producers:read', 'collectors:read', 'value_chains:read', 'campaigns:read', 'reports:read', 'messages:use', 'sync:use',
     ],

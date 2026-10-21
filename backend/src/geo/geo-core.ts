@@ -12,7 +12,7 @@ export interface GeoSettings {
 }
 export const DEFAULT_GEO_SETTINGS: GeoSettings = { overlap_min_m2: 25, overlap_min_pct: 1, near_duplicate_iou: 0.95, overlap_policy: 'block' };
 
-export type AnomalyKind = 'duplicate_identical' | 'duplicate_equivalent' | 'duplicate_near' | 'overlap_partial' | 'overlap_inclusion';
+export type AnomalyKind = 'duplicate_identical' | 'duplicate_equivalent' | 'duplicate_near' | 'overlap_partial' | 'overlap_inclusion' | 'protected_overlap';
 
 const r7 = (n: number) => Math.round(n * 1e7) / 1e7; // ~1 cm : sert à comparer des géométries équivalentes
 
@@ -105,5 +105,6 @@ export const RECOMMENDED: Record<AnomalyKind, string> = {
   duplicate_equivalent: 'Même tracé après normalisation : remplacer le doublon (fusion contrôlée)',
   duplicate_near: 'Tracés presque identiques : comparer sur la carte, puis remplacer le doublon ou corriger un tracé',
   overlap_partial: 'Corriger le polygone d\'une des deux parcelles (nouveau relevé GPS) ou enregistrer une exception motivée',
+  protected_overlap: 'Parcelle en partie dans une zone protégée : vérifier le tracé et la limite de la zone (souvent peu précise), documenter la situation (EUDR, certification), corriger le tracé ou enregistrer une exception motivée',
   overlap_inclusion: 'Une parcelle est incluse dans l\'autre : vérifier le terrain, corriger ou enregistrer une exception motivée',
 };

@@ -272,7 +272,7 @@ export class GeoController {
   async anomalies(@Req() req: any, @Query('status') status?: string, @Query('kind') kind?: string, @Query('parcel_id') parcelId?: string, @Query('limit') limit?: string) {
     const names = req.org.permissions.has('producers:read');
     return this.db.tx(req.org.id, async (c) => (await c.query(
-      `SELECT a.id, a.kind, a.status, a.blocking, a.intersection_m2, a.pct_a, a.pct_b, a.iou, a.detected_at, a.source, a.recommended_action, a.assigned_to, a.resolved_at, a.resolution_note,
+      `SELECT a.id, a.kind, a.status, a.blocking, a.reference_label, a.reference_feature_id, a.intersection_m2, a.pct_a, a.pct_b, a.iou, a.detected_at, a.source, a.recommended_action, a.assigned_to, a.resolved_at, a.resolution_note,
               pa.id AS parcel_a_id, pa.code AS parcel_a_code, ra.internal_code AS producer_a_code, ${names ? "ra.last_name || ' ' || ra.first_names" : 'NULL'} AS producer_a_name, va.code AS chain_a,
               pb.id AS parcel_b_id, pb.code AS parcel_b_code, rb.internal_code AS producer_b_code, ${names ? "rb.last_name || ' ' || rb.first_names" : 'NULL'} AS producer_b_name, vb.code AS chain_b,
               (SELECT code FROM organizations WHERE id = a.organization_id) AS cooperative
@@ -289,6 +289,10 @@ export class GeoController {
       const a = (await c.query(`SELECT * FROM parcel_anomalies WHERE id = $1 FOR UPDATE`, [id])).rows[0];
       if (!a) throw new NotFoundException();
       if (a.status !== 'open') throw new BadRequestException(`Anomalie déjà traitée (${a.status})`);
+      if (b.resolution === 'corrected' && a.kind === 'protected_overlap' && a.reference_feature_id) {
+        const still = await this.svc.stillInProtected(c, a.parcel_a, a.reference_feature_id, await this.svc.settings(c));
+        if (still.still) throw new ConflictException(`La parcelle est toujours dans la zone protégée (${still.inter_m2} m²) : corriger le tracé, ou enregistrer une exception motivée`);
+      }
       if (b.resolution === 'corrected' && a.parcel_b) {
         const s = await this.svc.settings(c);
         const g = (await c.query(`SELECT id, geometry, status FROM parcels WHERE id = ANY($1)`, [[a.parcel_a, a.parcel_b]])).rows;

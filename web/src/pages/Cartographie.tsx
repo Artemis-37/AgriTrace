@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { useDeepLink } from '../notifTarget';
-import { ApiError, download, get, post, postForm, put } from '../api';
+import { ApiError, api, download, get, post, postForm, put } from '../api';
 import { useAuth } from '../auth';
 import { ANOMALY_KIND, ANOMALY_STATUS, dateTime } from '../format';
 import { Badge, Card, ErrorBox, Field, Loading, Modal, PageHeader, Stat, StatusBadge, Table, Tabs, useAction, useAsync } from '../ui';
@@ -9,8 +9,8 @@ import ParcelMap from './ParcelMap';
 
 export default function Cartographie() {
   const { can } = useAuth();
-  const all: ['map' | 'anomalies' | 'import' | 'export' | 'settings', string, boolean][] = [
-    ['map', 'Carte', can('parcels:read')], ['anomalies', 'Anomalies', can('geo:anomalies')], ['import', 'Importer', can('geo:import')], ['export', 'Exporter', can('geo:export')], ['settings', 'Tolérances', can('geo:settings')],
+  const all: ['map' | 'anomalies' | 'zones' | 'import' | 'export' | 'settings', string, boolean][] = [
+    ['map', 'Carte', can('parcels:read')], ['anomalies', 'Anomalies', can('geo:anomalies')], ['zones', 'Zones protégées', can('geo:anomalies')], ['import', 'Importer', can('geo:import')], ['export', 'Exporter', can('geo:export')], ['settings', 'Tolérances', can('geo:settings')],
   ];
   const tabs = all.filter((t) => t[2]);
   const dl = useDeepLink(tabs.map((t) => t[0]));
@@ -21,6 +21,7 @@ export default function Cartographie() {
       <Tabs value={tab} onChange={setTab} tabs={tabs.map(([k, l]) => [k, l] as [typeof tab, string])} />
       {tab === 'map' && <ParcelMap />}
       {tab === 'anomalies' && <Anomalies />}
+      {tab === 'zones' && <Zones />}
       {tab === 'import' && <Imports />}
       {tab === 'export' && <Export />}
       {tab === 'settings' && <Settings />}
@@ -53,8 +54,8 @@ function Anomalies() {
         <Table rows={data ?? []} empty="Aucune anomalie." columns={[
           { header: 'Type', render: (a) => <>{ANOMALY_KIND[a.kind] ?? a.kind} {a.blocking && <Badge tone="bad">Bloquante</Badge>}</> },
           { header: 'Parcelle A', render: (a) => <><strong>{a.parcel_a_code}</strong><br /><small className="muted">{a.producer_a_name}</small></> },
-          { header: 'Parcelle B', render: (a) => <><strong>{a.parcel_b_code}</strong><br /><small className="muted">{a.producer_b_name}</small></> },
-          { header: 'Surface commune', align: 'right', render: (a) => `${Math.round(Number(a.intersection_m2)).toLocaleString('fr-FR')} m² (${Number(a.pct_a).toFixed(0)} % / ${Number(a.pct_b).toFixed(0)} %)` },
+          { header: 'Parcelle B / zone', render: (a) => a.kind === 'protected_overlap' ? <><strong>{a.reference_label}</strong><br /><small className="muted">Zone protégée</small></> : <><strong>{a.parcel_b_code}</strong><br /><small className="muted">{a.producer_b_name}</small></> },
+          { header: 'Surface commune', align: 'right', render: (a) => a.kind === 'protected_overlap' ? `${Math.round(Number(a.intersection_m2)).toLocaleString('fr-FR')} m² (${Number(a.pct_a).toFixed(0)} % de la parcelle)` : `${Math.round(Number(a.intersection_m2)).toLocaleString('fr-FR')} m² (${Number(a.pct_a).toFixed(0)} % / ${Number(a.pct_b).toFixed(0)} %)` },
           { header: 'Détectée', render: (a) => dateTime(a.detected_at) },
           { header: 'Statut', render: (a) => <StatusBadge map={ANOMALY_STATUS} value={a.status} /> },
           { header: '', render: (a) => a.status === 'open' && (
@@ -211,3 +212,57 @@ function Settings() {
 }
 
 export { ApiError };
+
+
+/** Couches de référence : zones protégées chargées par la coopérative (GeoJSON ou GeoPackage). */
+function Zones() {
+  const { can } = useAuth();
+  const { data, loading, error, reload } = useAsync(() => get<any[]>('/geo/layers'), []);
+  const file = useRef<HTMLInputElement>(null);
+  const [name, setName] = useState('Aires protégées');
+  const [source, setSource] = useState('');
+  const [license, setLicense] = useState('');
+  const [replace, setReplace] = useState(false);
+  const [report, setReport] = useState<any>(null);
+  const up = useAction();
+  const del = useAction();
+  const send = () => up.run(async () => {
+    const f = file.current?.files?.[0];
+    if (!f) throw new Error('Choisissez un fichier GeoJSON ou GeoPackage.');
+    const form = new FormData();
+    form.append('file', f); form.append('name', name); form.append('source', source); form.append('license', license); form.append('replace', String(replace));
+    setReport(await postForm('/geo/layers', form));
+    if (file.current) file.current.value = '';
+    reload();
+  });
+  return (
+    <>
+      <Card>
+        <p className="notice">Les parcelles qui touchent une zone chargée ici sont signalées dans l'onglet Anomalies (non bloquant). Les couches restent propres à votre coopérative et ne sont pas synchronisées vers les appareils. Vérifiez la licence du jeu de données avant de le charger (la base mondiale WDPA est limitée à un usage non commercial sauf autorisation de l'UNEP-WCMC).</p>
+        {error && <ErrorBox message={error} onRetry={reload} />}
+        {loading ? <Loading /> : (
+          <Table rows={data ?? []} empty="Aucune couche chargée." columns={[
+            { header: 'Couche', render: (l) => <><strong>{l.name}</strong><br /><small className="muted">{l.source || '—'}{l.license ? ` · ${l.license}` : ''}</small></> },
+            { header: 'Zones', align: 'right', render: (l) => Number(l.feature_count).toLocaleString('fr-FR') },
+            { header: 'Parcelles concernées', align: 'right', render: (l) => <Badge tone={Number(l.open_overlaps) ? 'warn' : 'ok'}>{l.open_overlaps}</Badge> },
+            { header: 'Chargée', render: (l) => dateTime(l.imported_at) },
+            { header: '', render: (l) => can('geo:layers') && <button className="btn btn-small btn-secondary" disabled={del.busy} onClick={() => { if (window.confirm(`Retirer la couche « ${l.name} » ? Les anomalies ouvertes correspondantes seront fermées.`)) del.run(async () => { await api('DELETE', `/geo/layers/${l.id}`); reload(); }); }}>Retirer</button> },
+          ]} />
+        )}
+        {del.error && <ErrorBox message={del.error} />}
+      </Card>
+      {can('geo:layers') && (
+        <Card title="Charger une couche">
+          <Field label="Fichier (GeoJSON ou GeoPackage, 50 Mo max)"><input ref={file} type="file" accept=".geojson,.json,.gpkg" /></Field>
+          <Field label="Nom de la couche"><input value={name} onChange={(e) => setName(e.target.value)} /></Field>
+          <Field label="Source"><input value={source} onChange={(e) => setSource(e.target.value)} /></Field>
+          <Field label="Licence"><input value={license} onChange={(e) => setLicense(e.target.value)} /></Field>
+          <label><input type="checkbox" checked={replace} onChange={(e) => setReplace(e.target.checked)} /> Remplacer la couche du même nom</label>
+          <div className="toolbar"><button className="btn" disabled={up.busy} onClick={send}>{up.busy ? 'Chargement…' : 'Charger'}</button></div>
+          {up.error && <ErrorBox message={up.error} />}
+          {report && <p className="notice">{report.features} zone(s) chargée(s){(report.warnings ?? []).length ? ` — ${report.warnings.join(' ; ')}` : ''}. {report.parcels_in_zones?.found ?? 0} parcelle(s) en zone protégée trouvée(s).{(report.skipped ?? []).map((s: any) => ` ${s.count} ignorée(s) : ${s.reason}.`).join('')}</p>}
+        </Card>
+      )}
+    </>
+  );
+}

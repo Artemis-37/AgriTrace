@@ -39,7 +39,7 @@ export const TASK_STATUS: Record<string, [string, Tone]> = {
 export const PRIORITY: Record<string, [string, Tone]> = { low: ['Basse', 'neutral'], normal: ['Normale', 'info'], high: ['Haute', 'warn'], urgent: ['Urgente', 'bad'] };
 export const TASK_CATEGORY: Record<string, string> = { mapping: 'Cartographie', visit: 'Visite', survey: 'Enquête', collection: 'Collecte', training: 'Formation', control: 'Contrôle', other: 'Autre' };
 export const ANOMALY_KIND: Record<string, string> = {
-  overlap_partial: 'Chevauchement partiel', overlap_inclusion: 'Parcelle incluse', duplicate_identical: 'Doublon identique', duplicate_near: 'Doublon proche',
+  overlap_partial: 'Chevauchement partiel', overlap_inclusion: 'Parcelle incluse', duplicate_identical: 'Doublon identique', duplicate_near: 'Doublon proche', protected_overlap: 'Zone protégée',
 };
 export const ANOMALY_STATUS: Record<string, [string, Tone]> = { open: ['Ouverte', 'bad'], resolved: ['Corrigée', 'ok'], exception: ['Exception', 'warn'], dismissed: ['Écartée', 'neutral'] };
 export const ORDER_STATUS: Record<string, [string, Tone]> = {

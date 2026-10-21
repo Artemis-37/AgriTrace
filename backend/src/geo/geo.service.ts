@@ -4,6 +4,9 @@ import { AuditService } from '../audit/audit.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { DbService } from '../db/db.service';
 import { Polygon } from '../parcels/geo';
+import intersect from '@turf/intersect';
+import area from '@turf/area';
+import { featureCollection, polygon as turfPolygon, multiPolygon as turfMulti } from '@turf/helpers';
 import { analysePair, AnomalyKind, classifyPair, DEFAULT_GEO_SETTINGS, GeoSettings, isBlocking, PairAnalysis, RECOMMENDED } from './geo-core';
 
 export type GeoEngineName = 'postgis' | 'js';
@@ -109,6 +112,7 @@ export class GeoService {
         const a = await this.record(c, orgId, me, { id: o.o_id, code: o.o_code }, classifyPair(toMetrics(o), settings), settings, userId, source);
         if (a) out.push(a);
       }
+      out.push(...await this.detectProtectedForParcel(c, orgId, parcelId, userId, source, settings));
       return out;
     }
     const others = (await c.query(
@@ -119,7 +123,96 @@ export class GeoService {
       const a = await this.record(c, orgId, me, o, r, settings, userId, source);
       if (a) out.push(a);
     }
+    out.push(...await this.detectProtectedForParcel(c, orgId, parcelId, userId, source, settings));
     return out;
+  }
+
+
+  // ------------------------------------------------------------------------------------------------------------------
+  // Zones protégées (couches de référence)
+  // ------------------------------------------------------------------------------------------------------------------
+
+  /**
+   * Recouvrements entre parcelles actives (une seule si [parcelId]) et zones des couches de référence de la coopérative.
+   * PostGIS : `&&` puis ST_Intersects sur la zone corrigée (ST_MakeValid) ; surfaces sur l'ellipsoïde. Sinon : emprises (index GiST) puis turf.
+   */
+  async protectedOverlaps(c: PoolClient, parcelId?: string): Promise<{ parcel_id: string; parcel_code: string; feature_id: string; label: string; layer_name: string; inter_m2: number; parcel_m2: number }[]> {
+    const label = (name: string, desig: string | null) => (desig ? `${name} (${desig})` : name);
+    if (!(await c.query(`SELECT 1 FROM reference_layers LIMIT 1`)).rowCount) return [];
+    if (await this.engine(c) === 'postgis' && (await c.query(`SELECT 1 FROM pg_attribute WHERE attrelid = 'reference_features'::regclass AND attname = 'geom' AND NOT attisdropped`)).rowCount) {
+      const rows = (await c.query(
+        `SELECT p.id AS parcel_id, p.code AS parcel_code, f.id AS feature_id, f.name, f.designation, l.name AS layer_name,
+                ST_Area(p.geom::geography) AS parcel_m2,
+                ST_Area(ST_CollectionExtract(ST_Intersection(ST_MakeValid(p.geom), ST_MakeValid(f.geom)), 3)::geography) AS inter_m2
+           FROM parcels p JOIN reference_features f ON f.geom && p.geom JOIN reference_layers l ON l.id = f.layer_id
+          WHERE p.status = 'active' AND p.geom IS NOT NULL AND ($1::uuid IS NULL OR p.id = $1) AND ST_Intersects(p.geom, ST_MakeValid(f.geom))`, [parcelId ?? null])).rows;
+      return rows.map((r: any) => ({ parcel_id: r.parcel_id, parcel_code: r.parcel_code, feature_id: r.feature_id, label: label(r.name, r.designation), layer_name: r.layer_name, inter_m2: Number(r.inter_m2), parcel_m2: Number(r.parcel_m2) }));
+    }
+    const rows = (await c.query(
+      `SELECT p.id AS parcel_id, p.code AS parcel_code, p.geometry AS pgeom, f.id AS feature_id, f.name, f.designation, f.geometry AS fgeom, l.name AS layer_name
+         FROM parcels p JOIN reference_features f ON f.bbox && p.bbox JOIN reference_layers l ON l.id = f.layer_id
+        WHERE p.status = 'active' AND p.geometry IS NOT NULL AND ($1::uuid IS NULL OR p.id = $1)`, [parcelId ?? null])).rows;
+    const out = [];
+    for (const r of rows) {
+      let inter = 0;
+      try {
+        const fp = r.fgeom.type === 'Polygon' ? turfPolygon(r.fgeom.coordinates) : turfMulti(r.fgeom.coordinates);
+        const x = intersect(featureCollection<any>([turfPolygon(r.pgeom.coordinates), fp as any]));
+        inter = x ? area(x) : 0;
+      } catch { inter = 0; }
+      if (inter > 0) out.push({ parcel_id: r.parcel_id, parcel_code: r.parcel_code, feature_id: r.feature_id, label: label(r.name, r.designation), layer_name: r.layer_name, inter_m2: inter, parcel_m2: area(turfPolygon(r.pgeom.coordinates)) });
+    }
+    return out;
+  }
+
+  /** Seuils communs avec les autres chevauchements : on ignore les liserés (limites de zones imprécises). */
+  private protectedCounts(o: { inter_m2: number; parcel_m2: number }, s: GeoSettings) {
+    const pct = o.parcel_m2 > 0 ? (o.inter_m2 / o.parcel_m2) * 100 : 0;
+    return { pct, significant: o.inter_m2 >= s.overlap_min_m2 && pct >= s.overlap_min_pct };
+  }
+
+  private async recordProtected(c: PoolClient, orgId: string, o: { parcel_id: string; parcel_code: string; feature_id: string; label: string; layer_name: string; inter_m2: number; parcel_m2: number },
+                                s: GeoSettings, userId: string | null, source: 'edit' | 'import' | 'periodic'): Promise<DetectedAnomaly | null> {
+    const { pct, significant } = this.protectedCounts(o, s);
+    if (!significant) return null;
+    const exc = await c.query(`SELECT 1 FROM parcel_anomalies WHERE kind = 'protected_overlap' AND parcel_a = $1 AND reference_feature_id = $2 AND status = 'exception' LIMIT 1`, [o.parcel_id, o.feature_id]);
+    if (exc.rowCount) return null;
+    const blocking = isBlocking('protected_overlap', s);
+    const ins = await c.query(
+      `INSERT INTO parcel_anomalies(organization_id, kind, parcel_a, intersection_m2, pct_a, blocking, recommended_action, detected_by, source, reference_feature_id, reference_label)
+       VALUES ($1,'protected_overlap',$2,$3,$4,$5,$6,$7,$8,$9,$10) ON CONFLICT DO NOTHING RETURNING id`,
+      [orgId, o.parcel_id, Number(o.inter_m2.toFixed(2)), Number(pct.toFixed(3)), blocking, RECOMMENDED.protected_overlap, userId, source, o.feature_id, o.label]);
+    if (!ins.rowCount) return null;
+    await c.query(`INSERT INTO parcel_history(organization_id, parcel_id, event, details, actor_id) VALUES ($1,$2,'anomaly',$3,$4)`,
+      [orgId, o.parcel_id, JSON.stringify({ anomaly_id: ins.rows[0].id, kind: 'protected_overlap', with: o.label }), userId ?? '00000000-0000-0000-0000-000000000000']);
+    await this.notif.notifyPermission(c, orgId, 'geo:anomalies', { kind: 'geo_anomaly', severity: blocking ? 'critical' : 'warning',
+      title: `Zone protégée : ${o.parcel_code} recoupe ${o.label}`, body: `${Math.round(o.inter_m2)} m² dans la zone (${pct.toFixed(1)} % de la parcelle)`,
+      entityType: 'parcel_anomaly', entityId: ins.rows[0].id, dedupe: `geo_anomaly:${ins.rows[0].id}` }, userId ?? undefined);
+    return { id: ins.rows[0].id, kind: 'protected_overlap', other_id: o.feature_id, other_code: o.label, intersection_m2: Number(o.inter_m2.toFixed(2)), blocking };
+  }
+
+  /** Contrôle d'une parcelle contre les zones protégées (appelé avec le contrôle des chevauchements). */
+  async detectProtectedForParcel(c: PoolClient, orgId: string, parcelId: string, userId: string | null, source: 'edit' | 'import' | 'periodic', s: GeoSettings): Promise<DetectedAnomaly[]> {
+    const out: DetectedAnomaly[] = [];
+    for (const o of await this.protectedOverlaps(c, parcelId)) { const a = await this.recordProtected(c, orgId, o, s, userId, source); if (a) out.push(a); }
+    return out;
+  }
+
+  /** Contrôle de toutes les parcelles contre les zones protégées. Retourne le nombre de recouvrements significatifs trouvés et créés. */
+  async runProtectedScan(c: PoolClient, orgId: string, userId: string | null, s: GeoSettings, source: 'periodic' | 'import' = 'periodic'): Promise<{ found: number; created: number }> {
+    let found = 0, created = 0;
+    for (const o of await this.protectedOverlaps(c)) {
+      if (!this.protectedCounts(o, s).significant) continue;
+      found++;
+      if (await this.recordProtected(c, orgId, o, s, userId, source)) created++;
+    }
+    return { found, created };
+  }
+
+  /** Vrai si la parcelle recoupe encore (au-dessus des seuils) cette zone : sert à refuser « corrigée » tant que le problème subsiste. */
+  async stillInProtected(c: PoolClient, parcelId: string, featureId: string, s: GeoSettings): Promise<{ still: boolean; inter_m2: number }> {
+    const o = (await this.protectedOverlaps(c, parcelId)).find((x) => x.feature_id === featureId);
+    return o && this.protectedCounts(o, s).significant ? { still: true, inter_m2: Math.round(o.inter_m2) } : { still: false, inter_m2: 0 };
   }
 
   /** Anomalies bloquantes encore ouvertes pour une parcelle (empêchent le contrôle et la vérification). */
@@ -166,6 +259,9 @@ export class GeoService {
           if (d) created++;
         }
       }
+      const prot = await this.runProtectedScan(c, orgId, userId, s, 'periodic');
+      if (prot.found) found.protected_overlap = prot.found;
+      created += prot.created;
       const open = Number((await c.query(`SELECT count(*) FROM parcel_anomalies WHERE status = 'open'`)).rows[0].count);
       return { engine, parcels_examined: total, candidate_pairs: candidates, anomalies_found: found, new_anomalies: created, open_anomalies: open, policy: s.overlap_policy, truncated: candidates >= 100000 };
     });
