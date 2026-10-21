@@ -22,6 +22,7 @@ import 'package:agritrace_mobile/screens/new_convoy_screen.dart';
 import 'package:agritrace_mobile/screens/new_declaration_screen.dart';
 import 'package:agritrace_mobile/screens/notifications_screen.dart';
 import 'package:agritrace_mobile/screens/parcels_screen.dart';
+import 'package:agritrace_mobile/screens/producers_screen.dart';
 import 'package:agritrace_mobile/sync/sync_engine.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -192,6 +193,9 @@ void main() {
     await shot(t, 'coach-accueil', const HomeScreen(), perms: _coach);
     await shot(t, 'coach-missions', const MissionsScreen(), perms: _coach);
     await shot(t, 'coach-parcelles', const ParcelsScreen(), perms: _coach);
+    await shot(t, 'coach-producteurs', const ProducersScreen(), perms: _coach);
+    await shot(t, 'coach-producteur-fiche', const ProducersScreen(), perms: _coach, after: (t) async { await t.tap(find.textContaining('KONÉ')); await t.pumpAndSettle(); });
+    await shot(t, 'coach-producteur-infos', const ProducersScreen(), perms: _coach, after: (t) async { await t.tap(find.textContaining('KONÉ')); await t.pumpAndSettle(); await t.tap(find.text('Informations')); await t.pumpAndSettle(); });
     await shot(t, 'connexion', const LoginScreen());
     } finally { debugDisableShadows = true; }
   });

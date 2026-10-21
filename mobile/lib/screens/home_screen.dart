@@ -12,6 +12,7 @@ import 'my_stock_screen.dart';
 import 'notifications_screen.dart';
 import 'parcel_survey_screen.dart';
 import 'parcels_screen.dart';
+import 'producers_screen.dart';
 import 'new_convoy_screen.dart';
 import 'new_declaration_screen.dart';
 import 'map_pack_screen.dart';
@@ -133,7 +134,7 @@ class _HomeScreenState extends State<HomeScreen> {
       body: Column(children: [
         _HomeHeader(
           now: _now, name: _identity.name, org: _identity.org, zone: _identity.zone,
-          count: t.count, unread: _unreadNotes, onNotes: () => _open(const NotificationsScreen()),
+          count: _coachMode ? null : t.count, unread: _unreadNotes, onNotes: () => _open(const NotificationsScreen()),
           onSync: () => services.sync.run(),
           onSignOut: _signOut,
           onMap: _canSurvey ? () => _open(const MapPackScreen()) : null,
@@ -142,7 +143,7 @@ class _HomeScreenState extends State<HomeScreen> {
           valueListenable: services.sync.status,
           builder: (_, s, __) => _SyncBanner(status: s, pending: _pending, problems: _problems),
         ),
-        Expanded(
+        if (_coachMode) Expanded(child: _coachBody()) else Expanded(
           child: RefreshIndicator(
             onRefresh: () async { await services.sync.run(); await _reload(); },
             child: ListView(padding: const EdgeInsets.fromLTRB(16, 12, 16, 24), children: [
@@ -155,6 +156,65 @@ class _HomeScreenState extends State<HomeScreen> {
             ]),
           ),
         ),
+      ]),
+    );
+  }
+
+  /// Profil terrain (coach) : pas d'achats ni de convoi, mais des relevés de parcelles et des missions.
+  bool get _coachMode => !_canCreate && !_canConvoy && (_canSurvey || _canMissions);
+
+  Widget _tile(IconData icon, String label, VoidCallback onTap, {double height = 120}) => Material(
+        color: const Color(0xFF3F9B2E), elevation: 2, borderRadius: BorderRadius.circular(6),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(6), onTap: onTap,
+          child: SizedBox(height: height, child: Padding(
+            padding: const EdgeInsets.all(10),
+            child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+              Icon(icon, color: Colors.white, size: 44),
+              const SizedBox(height: 8),
+              Text(label.toUpperCase(), textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700)),
+            ]),
+          )),
+        ),
+      );
+
+  Widget _coachBody() {
+    final big = <Widget>[
+      if (_canSurvey) _tile(Icons.add_location_alt_outlined, 'Relever une nouvelle parcelle', () async {
+        final saved = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => const ParcelSurveyScreen()));
+        if (saved == true) services.sync.run();
+        _reload();
+      }, height: 150),
+      _tile(Icons.groups_outlined, 'Producteurs', () => _open(const ProducersScreen()), height: 150),
+    ];
+    final small = <Widget>[
+      if (_canSurvey) _tile(Icons.landscape_outlined, 'Mes parcelles', () => _open(const ParcelsScreen())),
+      if (_canMissions) _tile(Icons.assignment_outlined, 'Mes missions', () => _open(const MissionsScreen())),
+      if (_canSurvey) _tile(Icons.map_outlined, 'Fond de carte', () => _open(const MapPackScreen())),
+    ];
+    Widget row(List<Widget> w) => Row(children: [for (var i = 0; i < w.length; i++) ...[if (i > 0) const SizedBox(width: 10), Expanded(child: w[i])]]);
+    return RefreshIndicator(
+      onRefresh: () async { await services.sync.run(); await _reload(); },
+      child: ListView(padding: const EdgeInsets.fromLTRB(12, 14, 12, 24), children: [
+        if (big.isNotEmpty) row(big),
+        if (big.isNotEmpty) const SizedBox(height: 10),
+        if (small.isNotEmpty) row(small),
+        const SizedBox(height: 16),
+        Material(
+          color: const Color(0xFFE9EEE3),
+          child: InkWell(
+            onTap: () => services.sync.run(),
+            child: Padding(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14), child: Row(children: [
+              const Text('Éléments à soumettre', style: TextStyle(fontSize: 18)),
+              const SizedBox(width: 10),
+              CircleAvatar(radius: 16, backgroundColor: const Color(0xFF6B73C1), child: Text('$_pending', style: const TextStyle(color: Colors.white))),
+              const Spacer(),
+              const Icon(Icons.cloud_upload_outlined, size: 28),
+            ])),
+          ),
+        ),
+        if (_problems > 0) Padding(padding: const EdgeInsets.only(top: 8), child: Text('$_problems opération(s) à corriger', style: TextStyle(color: Colors.red.shade700, fontWeight: FontWeight.w700))),
+        if (_pending == 0 && _problems == 0) const Padding(padding: EdgeInsets.all(20), child: Center(child: Text('Rien à envoyer : tout est synchronisé.'))),
       ]),
     );
   }
@@ -187,7 +247,8 @@ class _HomeScreenState extends State<HomeScreen> {
 /// En-tête de l'accueil, sur le modèle du terminal SNT : date, salutation, coopérative, zone, total du jour.
 class _HomeHeader extends StatelessWidget {
   final String now, name, org, zone;
-  final int count, unread;
+  final int? count;
+  final int unread;
   final VoidCallback onSync, onSignOut, onNotes;
   final VoidCallback? onMap;
   const _HomeHeader({required this.now, required this.name, required this.org, required this.zone, required this.count, required this.unread, required this.onNotes, required this.onSync, required this.onSignOut, this.onMap});
@@ -231,10 +292,10 @@ class _HomeHeader extends StatelessWidget {
         if (name.isNotEmpty) Text('Bonjour, ${name.toUpperCase()}', style: const TextStyle(color: white, fontSize: 18, fontWeight: FontWeight.w700)),
         if (org.isNotEmpty) Text(org, style: const TextStyle(color: white, fontSize: 15)),
         if (zone.isNotEmpty) Text('Zone : $zone', style: const TextStyle(color: white, fontSize: 14, fontWeight: FontWeight.w600)),
-        const SizedBox(height: 10),
-        Center(child: Column(children: [
-          Text("Achats d'aujourd'hui : $count", style: const TextStyle(color: white, fontSize: 18, fontWeight: FontWeight.w800)),
-        ])),
+        if (count != null) ...[
+          const SizedBox(height: 10),
+          Center(child: Text("Achats d'aujourd'hui : $count", style: const TextStyle(color: white, fontSize: 18, fontWeight: FontWeight.w800))),
+        ],
       ]),
     );
   }

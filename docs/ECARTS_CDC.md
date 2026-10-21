@@ -109,3 +109,7 @@
 - Accueil : en-tête (date, nom, coopérative, zone, nombre d'achats du jour) et gros boutons ; « Acheter du produit » → fiche « Informations du producteur » → « Continuer ».
 - Non repris : « Potentiel de vente » et « Limite de la carte » (pas de donnée dans AgriTrace), et, sur consigne, impression du dernier reçu, recharge de compte, paiements en attente, producteurs pré-enregistrés.
 - Aucun montant n'est affiché sur l'accueil ; la cloche des notifications est dans l'en-tête.
+
+## Interface coach inspirée d'un outil terrain existant (octobre 2026)
+- Accueil en tuiles, barre « Éléments à soumettre », recherche de producteur et fiche à deux onglets (Parcelles / Informations).
+- Non repris : formations, infrastructures sociales, distribution d'articles, enquêtes (hors périmètre actuel) et toute donnée des captures fournies.
