@@ -83,6 +83,14 @@ export class ProducersController {
         [like, section ?? null, village ?? null, vc ?? null, Math.min(Number(limit) || 50, 200), Number(offset) || 0, staff, req.user.id])).rows);
   }
 
+  /** Sections de la coopérative avec leur nombre de producteurs : alimente le filtre « Section » (portail et téléphone). */
+  @Get('sections')
+  @RequirePermissions('producers:read')
+  sections(@Req() req: any) {
+    return this.db.tx(req.org.id, async (c) => (await c.query(
+      `SELECT section, count(*)::int AS producers, count(DISTINCT village)::int AS villages FROM producers WHERE section IS NOT NULL AND btrim(section) <> '' GROUP BY section ORDER BY section`)).rows);
+  }
+
   @Get('imports/template')
   @RequirePermissions('producers:import')
   async template() {

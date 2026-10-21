@@ -1,10 +1,10 @@
 import {
-  BadRequestException, Body, ConflictException, Controller, ForbiddenException, Get, NotFoundException, Param, ParseUUIDPipe, Post, Query, Req,
+  BadRequestException, Body, ConflictException, Controller, ForbiddenException, Get, NotFoundException, Param, ParseUUIDPipe, Post, Put, Query, Req,
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiHeader, ApiTags } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { ArrayMaxSize, IsArray, IsIn, IsISO8601, IsNumber, IsOptional, IsString, IsUUID, Length, Matches, Max, Min } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsIn, IsInt, IsISO8601, IsNumber, IsOptional, IsString, IsUUID, Length, Matches, Max, Min } from 'class-validator';
 import { PoolClient } from 'pg';
 import { RequirePermissions } from '../access/decorators';
 import { AuditService } from '../audit/audit.service';
@@ -29,6 +29,10 @@ const TRANSITIONS: Record<string, string[]> = {
   closed: [],
   cancelled: [],
 };
+
+export class TaskSettingsDto {
+  @IsInt() @Min(0) @Max(365) done_visible_days: number;
+}
 
 export class TaskDto {
   @IsString() @Length(8, 100) idempotency_key: string;
@@ -166,20 +170,51 @@ export class TasksController {
     return out;
   }
 
+  /** Délai (en jours) pendant lequel une mission validée, terminée ou clôturée reste visible, grisée, dans la file. */
+  private async doneDays(c: any, orgId: string): Promise<number> {
+    const r = (await c.query(`SELECT tasks_done_visible_days FROM organization_profile WHERE organization_id = $1`, [orgId])).rows[0];
+    return r?.tasks_done_visible_days ?? 7;
+  }
+
+  @Get('tasks/settings')
+  @RequirePermissions('tasks:read')
+  settings(@Req() req: any) {
+    return this.db.tx(req.org.id, async (c) => ({ done_visible_days: await this.doneDays(c, req.org.id) }));
+  }
+
+  @Put('tasks/settings')
+  @RequirePermissions('tasks:update')
+  async saveSettings(@Body() b: TaskSettingsDto, @Req() req: any) {
+    await this.db.tx(req.org.id, (c) => c.query(
+      `INSERT INTO organization_profile(organization_id, tasks_done_visible_days, updated_by) VALUES ($1,$2,$3)
+       ON CONFLICT (organization_id) DO UPDATE SET tasks_done_visible_days = $2, updated_by = $3, updated_at = now()`, [req.org.id, b.done_visible_days, req.user.id]));
+    await this.audit.log({ organizationId: req.org.id, actorUserId: req.user.id, action: 'tasks.settings_update', entityType: 'organization', entityId: req.org.id, details: { done_visible_days: b.done_visible_days } });
+    return { done_visible_days: b.done_visible_days };
+  }
+
   @Get('tasks')
   @RequirePermissions('tasks:read')
   list(@Req() req: any, @Query('status') status?: string, @Query('assignee_id') assignee?: string, @Query('category') cat?: string,
-       @Query('producer_id') prod?: string, @Query('overdue') overdue?: string) {
+       @Query('producer_id') prod?: string, @Query('overdue') overdue?: string, @Query('include_done') includeDone?: string) {
     const all = this.has(req, 'tasks:read_all');
-    return this.db.tx(req.org.id, async (c) => (await c.query(
-      `SELECT t.*, (t.due_date < current_date AND t.status NOT IN ('validated','completed','closed','cancelled')) AS overdue
-         FROM tasks t
-        WHERE ($1::boolean OR ((t.assignee_id = $2 OR $2 = ANY(t.team_ids)) AND t.status <> 'draft'))
-          AND ($3::text IS NULL OR t.status = $3) AND ($4::uuid IS NULL OR t.assignee_id = $4) AND ($5::text IS NULL OR t.category = $5)
-          AND ($6::uuid IS NULL OR t.producer_id = $6)
-          AND ($7::boolean IS NOT TRUE OR (t.due_date < current_date AND t.status NOT IN ('validated','completed','closed','cancelled')))
-        ORDER BY array_position(ARRAY['urgent','high','normal','low'], t.priority), t.due_date NULLS LAST, t.created_at DESC LIMIT 500`,
-      [all, req.user.id, status ?? null, assignee ?? null, cat ?? null, prod ?? null, overdue === 'true' ? true : null])).rows);
+    // Missions validées / terminées / clôturées : renvoyées avec finished = true (grisées côté client), retirées une fois le délai dépassé.
+    // Les responsables (tasks:read_all) peuvent les retrouver avec include_done=true ou en filtrant sur ce statut.
+    const withDone = (all && includeDone === 'true') || (all && ['validated', 'completed', 'closed'].includes(status ?? ''));
+    return this.db.tx(req.org.id, async (c) => {
+      const days = await this.doneDays(c, req.org.id);
+      return (await c.query(
+        `SELECT t.*, (t.due_date < current_date AND t.status NOT IN ('validated','completed','closed','cancelled')) AS overdue,
+                (t.status IN ('validated','completed','closed')) AS finished,
+                CASE WHEN t.status IN ('validated','completed','closed') THEN coalesce(t.closed_at, t.reviewed_at, t.updated_at) + make_interval(days => $9::int) END AS visible_until
+           FROM tasks t
+          WHERE ($1::boolean OR ((t.assignee_id = $2 OR $2 = ANY(t.team_ids)) AND t.status <> 'draft'))
+            AND ($3::text IS NULL OR t.status = $3) AND ($4::uuid IS NULL OR t.assignee_id = $4) AND ($5::text IS NULL OR t.category = $5)
+            AND ($6::uuid IS NULL OR t.producer_id = $6)
+            AND ($7::boolean IS NOT TRUE OR (t.due_date < current_date AND t.status NOT IN ('validated','completed','closed','cancelled')))
+            AND ($8::boolean OR t.status NOT IN ('validated','completed','closed') OR coalesce(t.closed_at, t.reviewed_at, t.updated_at) + make_interval(days => $9::int) > now())
+          ORDER BY (t.status IN ('validated','completed','closed')), array_position(ARRAY['urgent','high','normal','low'], t.priority), t.due_date NULLS LAST, t.created_at DESC LIMIT 500`,
+        [all, req.user.id, status ?? null, assignee ?? null, cat ?? null, prod ?? null, overdue === 'true' ? true : null, withDone, days])).rows;
+    });
   }
 
   @Get('tasks/dashboard')

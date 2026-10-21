@@ -137,16 +137,20 @@ class _ProducerDetailScreenState extends State<ProducerDetailScreen> {
         if (rows == null && _taskError == null) const Padding(padding: EdgeInsets.all(32), child: Center(child: CircularProgressIndicator())),
         if (rows != null && rows.isEmpty) const Padding(padding: EdgeInsets.all(24), child: Center(child: Text('Aucune tâche pour ce producteur.'))),
         for (final t in rows ?? const [])
-          Card(color: Colors.white, elevation: 0, shape: RoundedRectangleBorder(side: const BorderSide(color: Color(0xFFDDDDDD)), borderRadius: BorderRadius.circular(2)), child: ListTile(
+          // Mission terminée et validée par l'ADG : grisée et non cliquable ; le serveur la retire de la liste une fois le délai réglé dépassé.
+          Opacity(opacity: t['finished'] == true ? 0.45 : 1, child: Card(color: t['finished'] == true ? const Color(0xFFEDEDED) : Colors.white, elevation: 0, shape: RoundedRectangleBorder(side: const BorderSide(color: Color(0xFFDDDDDD)), borderRadius: BorderRadius.circular(2)), child: ListTile(
+            enabled: t['finished'] != true,
             title: Text('${t['title']}', maxLines: 1, overflow: TextOverflow.ellipsis),
             subtitle: Text('${t['status'] == 'open' ? 'Nouvelle tâche' : missionStatusLabel(t['status'])}${t['due_date'] != null ? ' • échéance ${t['due_date'].toString().substring(0, 10)}' : ''}',
                 style: TextStyle(color: t['overdue'] == true ? Colors.red.shade700 : Colors.black54)),
-            trailing: Icon(t['overdue'] == true ? Icons.warning_amber_rounded : Icons.description_outlined, color: t['overdue'] == true ? Colors.red : Colors.black87, size: 30),
-            onTap: _canMissions ? () async {
+            trailing: t['finished'] == true
+                ? const Icon(Icons.check_circle_outline, color: Colors.black54, size: 30)
+                : Icon(t['overdue'] == true ? Icons.warning_amber_rounded : Icons.description_outlined, color: t['overdue'] == true ? Colors.red : Colors.black87, size: 30),
+            onTap: _canMissions && t['finished'] != true ? () async {
               await Navigator.of(context).push(MaterialPageRoute(builder: (_) => MissionScreen(task: Map<String, dynamic>.from(t as Map))));
               _loadTasks();
             } : null,
-          )),
+          ))),
         if (_canRequest)
           Padding(padding: const EdgeInsets.only(top: 8), child: OutlinedButton.icon(
             onPressed: () async { final m = await askMission(context, producerId: widget.producer['id'] as String); if (m != null && mounted) { setState(() => _msg = m); _loadTasks(); } },

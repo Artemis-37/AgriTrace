@@ -18,6 +18,7 @@ import 'add_producer_screen.dart';
 import 'distribution_screen.dart';
 import 'download_screen.dart';
 import 'social_infra_screen.dart';
+import 'training_library_screen.dart';
 import 'training_screen.dart';
 import 'new_convoy_screen.dart';
 import 'new_declaration_screen.dart';
@@ -34,7 +35,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _problems = 0;
   bool _canCreate = false;
   bool _canConvoy = false;
-  bool _canHistory = false, _canFiche = false, _canMissions = false, _canSurvey = false;
+  bool _canTraining = false, _canHistory = false, _canFiche = false, _canMissions = false, _canSurvey = false;
   int _unreadNotes = 0;
   bool _canProducer = false, _canField = false;
   List<({String label, String detail, String state, String? error})> _pendingItems = [];
@@ -83,7 +84,7 @@ class _HomeScreenState extends State<HomeScreen> {
     int unread = _unreadNotes;
     try { final r = await services.api.get('/notifications/unread-count'); unread = (r['unread'] as num?)?.toInt() ?? 0; } catch (_) { /* hors connexion : compteur conservé */ }
     if (!mounted) return;
-    setState(() { _items = items; _pending = pending; _problems = problems; _canCreate = canCreateDeclaration(perms); _canConvoy = canCreateConvoy(perms); _canHistory = canReadHistory(perms); _canFiche = canSeeFiche(perms); _canMissions = canSeeMissions(perms); _canSurvey = canSurveyParcel(perms); _unreadNotes = unread; _identity = identity; _canProducer = canCreateProducer(perms); _canField = canFieldRecord(perms); _pendingItems = pendingItems; });
+    setState(() { _items = items; _pending = pending; _problems = problems; _canCreate = canCreateDeclaration(perms); _canConvoy = canCreateConvoy(perms); _canHistory = canReadHistory(perms); _canFiche = canSeeFiche(perms); _canMissions = canSeeMissions(perms); _canTraining = perms.contains('training:read'); _canSurvey = canSurveyParcel(perms); _unreadNotes = unread; _identity = identity; _canProducer = canCreateProducer(perms); _canField = canFieldRecord(perms); _pendingItems = pendingItems; });
   }
 
   Color _color(String localState, String? status) {
@@ -202,6 +203,7 @@ class _HomeScreenState extends State<HomeScreen> {
     ];
     final r3 = <Widget>[
       if (_canField) _tile(Icons.school, 'Enregistrer une formation', () => _open(const TrainingListScreen(), sync: true), height: 130),
+      if (_canTraining) _tile(Icons.menu_book, 'Modules de formation', () => _open(const TrainingLibraryScreen()), height: 130),
     ];
     Widget row(List<Widget> w) => Row(children: [for (var i = 0; i < w.length; i++) ...[if (i > 0) const SizedBox(width: 10), Expanded(child: w[i])]]);
     return RefreshIndicator(

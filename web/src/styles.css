@@ -200,3 +200,7 @@ dl.kv dd { margin: 0; }
   body.printing-receipt #root, body.printing-receipt .modal-backdrop { display: none !important; }
   body.printing-receipt .receipt-sheet { display: block; color: #000; background: #fff; padding: 1cm; }
 }
+
+/* Missions validées : grisées, non cliquables (retirées de la liste après le délai réglé par l'ADG) */
+.row-done { opacity: .5; filter: grayscale(1); pointer-events: none; }
+.row-done-open { pointer-events: auto; } /* les responsables gardent l'accès (clôture, historique) */

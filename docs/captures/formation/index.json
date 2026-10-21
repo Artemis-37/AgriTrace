@@ -302,36 +302,6 @@
       "visible": true
     }
   ],
-  "agent_terrain": [
-    {
-      "name": "accueil",
-      "route": "/",
-      "tab": null,
-      "file": "agent_terrain-accueil.png",
-      "visible": true
-    },
-    {
-      "name": "producteurs",
-      "route": "/producteurs",
-      "tab": null,
-      "file": "agent_terrain-producteurs.png",
-      "visible": true
-    },
-    {
-      "name": "missions",
-      "route": "/missions",
-      "tab": null,
-      "file": "agent_terrain-missions.png",
-      "visible": true
-    },
-    {
-      "name": "terrain",
-      "route": "/terrain",
-      "tab": null,
-      "file": "agent_terrain-terrain.png",
-      "visible": true
-    }
-  ],
   "responsable_magasin": [
     {
       "name": "accueil",
@@ -477,42 +447,26 @@
       "visible": true
     }
   ],
-  "collecteur": [
-    {
-      "name": "accueil",
-      "route": "/",
-      "tab": null,
-      "file": "collecteur-accueil.png",
-      "visible": true
-    },
-    {
-      "name": "mes-achats",
-      "route": "/mes-achats",
-      "tab": null,
-      "file": "collecteur-mes-achats.png",
-      "visible": true
-    },
-    {
-      "name": "mon-stock",
-      "route": "/mon-stock",
-      "tab": null,
-      "file": "collecteur-mon-stock.png",
-      "visible": true
-    },
-    {
-      "name": "historique",
-      "route": "/historique",
-      "tab": null,
-      "file": "collecteur-historique.png",
-      "visible": true
-    }
-  ],
   "adg": [
     {
       "name": "accueil",
       "route": "/",
       "tab": null,
       "file": "adg-accueil.png",
+      "visible": true
+    },
+    {
+      "name": "modules-formation",
+      "route": "/modules-formation",
+      "tab": null,
+      "file": "adg-modules-formation.png",
+      "visible": true
+    },
+    {
+      "name": "missions",
+      "route": "/missions",
+      "tab": null,
+      "file": "adg-missions.png",
       "visible": true
     },
     {
@@ -528,36 +482,6 @@
       "tab": null,
       "file": "adg-operations.png",
       "visible": false
-    }
-  ],
-  "coach": [
-    {
-      "name": "accueil",
-      "route": "/",
-      "tab": null,
-      "file": "coach-accueil.png",
-      "visible": true
-    },
-    {
-      "name": "producteurs",
-      "route": "/producteurs",
-      "tab": null,
-      "file": "coach-producteurs.png",
-      "visible": true
-    },
-    {
-      "name": "missions",
-      "route": "/missions",
-      "tab": null,
-      "file": "coach-missions.png",
-      "visible": true
-    },
-    {
-      "name": "terrain",
-      "route": "/terrain",
-      "tab": null,
-      "file": "coach-terrain.png",
-      "visible": true
     }
   ]
 }

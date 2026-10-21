@@ -199,7 +199,8 @@ const PROFILS = [
   await soft('rapport programmé', () => call('POST', '/report-schedules', { ...A, body: { report: 'finance', frequency: 'weekly', weekday: 1, recipients: [users.direction.id] } }));
 
   // ── Écriture du fichier d'accès
-  const rows = accounts.map((a) => `| ${a.label} | ${a.name} | \`${a.email}\` |`).join('\n');
+  const MOBILE_ONLY = new Set(['collecteur', 'agent_terrain', 'coach']);
+  const rows = accounts.map((a) => `| ${a.label}${MOBILE_ONLY.has(a.role) ? ' — **application mobile uniquement**' : ''} | ${a.name} | \`${a.email}\` |`).join('\n');
   const doc = `# Comptes de la version de démonstration\n\n> Données **entièrement fictives**. Ne jamais utiliser en production.\n\n- Mot de passe commun : \`${PASSWORD}\`\n- Coopérative : « ${org.name} » (code ${org.code ?? CODE})\n\n| Profil | Utilisateur fictif | Identifiant |\n|---|---|---|\n${rows}\n`;
   if (!process.env.DEMO_NO_DOC) {
     const out = path.join(__dirname, '..', '..', 'docs', 'COMPTES_DEMO.md');

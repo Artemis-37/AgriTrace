@@ -1,6 +1,6 @@
 import { FormEvent, useState } from 'react';
 import { useDeepLink } from '../notifTarget';
-import { get, idem, post } from '../api';
+import { get, idem, post, put } from '../api';
 import { useAuth } from '../auth';
 import { PRIORITY, TASK_CATEGORY, TASK_STATUS, date, dateTime } from '../format';
 import { Badge, Card, ErrorBox, Field, Loading, Modal, PageHeader, Stat, StatusBadge, Table, Tabs, useAction, useAsync } from '../ui';
@@ -14,14 +14,18 @@ export default function Missions() {
   const [status, setStatus] = useState('');
   const [detail, setDetail] = useState<string | null>(null);
   const [creating, setCreating] = useState<'task' | 'request' | null>(null);
+  const [showDone, setShowDone] = useState(false);
   const [scope, setScope] = useState<'mine' | 'all'>(can('tasks:read_all') ? 'all' : 'mine');
   const { data, loading, error, reload } = useAsync(async () => {
     const [tasks, dash, users, producers] = await Promise.all([
-      get<any[]>('/tasks'), get<any>(`/tasks/dashboard${scope === 'all' ? '?scope=all' : ''}`).catch(() => null),
+      get<any[]>(`/tasks${showDone ? '?include_done=true' : ''}`), get<any>(`/tasks/dashboard${scope === 'all' ? '?scope=all' : ''}`).catch(() => null),
       can('users:read') ? get<any[]>('/users').catch(() => []) : Promise.resolve([]), can('producers:read') ? get<any[]>('/producers').catch(() => []) : Promise.resolve([]),
     ]);
     return { tasks, dash, users: new Map(users.map((u) => [u.id, u.full_name])), producers: new Map(producers.map((p) => [p.id, `${p.last_name} ${p.first_names}`])) };
-  }, [scope]);
+  }, [scope, showDone]);
+  const settings = useAsync(() => get<{ done_visible_days: number }>('/tasks/settings').catch(() => null), []);
+  const [days, setDays] = useState<string | null>(null);
+  const act = useAction();
   const c = data?.dash?.counts;
   const rows = (data?.tasks ?? []).filter((t) => !status || t.status === status);
 
@@ -51,12 +55,23 @@ export default function Missions() {
             <select aria-label="Filtrer par statut" value={status} onChange={(e) => setStatus(e.target.value)}>
               <option value="">Tous les statuts</option>{Object.entries(TASK_STATUS).map(([k, [l]]) => <option key={k} value={k}>{l}</option>)}
             </select>
+            {can('tasks:read_all') && <label><input type="checkbox" checked={showDone} onChange={(e) => setShowDone(e.target.checked)} /> Afficher aussi les missions terminées masquées</label>}
+            {can('tasks:update') && settings.data && (
+              <span className="muted" style={{ display: 'inline-flex', gap: '.4rem', alignItems: 'center' }}>
+                Missions validées visibles pendant
+                <input aria-label="Jours de visibilité des missions validées" inputMode="numeric" style={{ width: '4rem' }} value={days ?? String(settings.data.done_visible_days)} onChange={(e) => setDays(e.target.value.replace(/\D/g, ''))} />
+                jour(s)
+                {days !== null && days !== String(settings.data.done_visible_days) && <button className="btn btn-small" disabled={act.busy || days === '' || Number(days) > 365} onClick={() => act.run(async () => { await put('/tasks/settings', { done_visible_days: Number(days) }); setDays(null); settings.reload(); reload(); })}>Enregistrer</button>}
+              </span>
+            )}
             {can('tasks:read_all') && <select aria-label="Périmètre" value={scope} onChange={(e) => setScope(e.target.value as 'mine' | 'all')}><option value="all">Toute la coopérative</option><option value="mine">Mes missions</option></select>}
           </div>
           {error && <ErrorBox message={error} onRetry={reload} />}
           {loading ? <Loading /> : (
-            <Table rows={rows} empty="Aucune mission." columns={[
-              { header: 'Code', render: (t) => <button className="btn btn-ghost btn-small" onClick={() => setDetail(t.id)}><strong>{t.code}</strong></button> },
+            <Table rows={rows} empty="Aucune mission." rowClass={(t: any) => (t.finished ? (can('tasks:read_all') ? 'row-done row-done-open' : 'row-done') : undefined)} columns={[
+              { header: 'Code', render: (t) => t.finished && !can('tasks:read_all')
+                ? <span className="muted" aria-disabled="true" title="Mission terminée et validée : consultation désactivée, elle sera retirée de la liste après le délai défini"><strong>{t.code}</strong></span>
+                : <button className="btn btn-ghost btn-small" onClick={() => setDetail(t.id)}><strong>{t.code}</strong></button> },
               { header: 'Titre', render: (t) => t.title },
               { header: 'Catégorie', render: (t) => TASK_CATEGORY[t.category] ?? t.category },
               { header: 'Producteur', render: (t) => data?.producers.get(t.producer_id) ?? '—' },

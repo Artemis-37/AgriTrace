@@ -52,7 +52,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<AuthState>(() => ({
     status, orgs, org, me,
-    signIn: async (email, password) => { await client.login(email, password); await afterLogin(); },
+    signIn: async (email, password) => {
+      await client.login(email, password);
+      try { await afterLogin(); } catch (e: any) {
+        // Compte réservé au mobile détecté après la connexion (rôle personnalisé) : on ferme la session et on l'explique.
+        if (e?.body?.code === 'MOBILE_ONLY') { await client.logout(); setStatus('anonymous'); setMe(null); setOrgState(null); throw new client.ApiError(403, "Ce compte se connecte uniquement depuis l'application mobile AgriTrace."); }
+        throw e;
+      }
+    },
     chooseOrg: (id) => enter(orgs, id),
     signOut: async () => { await client.logout(); setStatus('anonymous'); setMe(null); setOrgState(null); },
     can: (...perms) => perms.every((p) => me?.permissions.includes(p)),

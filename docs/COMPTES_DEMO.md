@@ -3,7 +3,7 @@
 > Données **entièrement fictives**. Ne jamais utiliser en production.
 
 - Mot de passe commun : `Demo-AgriTrace-2026!`
-- Coopérative : « Coopérative Agricole de Démonstration » (code DEMO4F7B)
+- Coopérative : « Coopérative Agricole de Démonstration » (code DEMO7C29)
 
 | Profil | Utilisateur fictif | Identifiant |
 |---|---|---|
@@ -15,13 +15,13 @@
 | Responsable traçabilité | Éric Tano | `responsable.tracabilite@demo.agritrace.test` |
 | Responsable cartographie | Clarisse Ahoua | `responsable.cartographie@demo.agritrace.test` |
 | Cartographe | Jean-Marc Gnahoré | `cartographe@demo.agritrace.test` |
-| Agent de terrain | Rosine Yapi | `agent.terrain@demo.agritrace.test` |
+| Agent de terrain — **application mobile uniquement** | Rosine Yapi | `agent.terrain@demo.agritrace.test` |
 | Responsable de magasin | Daouda Fofana | `responsable.magasin@demo.agritrace.test` |
 | Responsable financier | Estelle Aké | `responsable.financier@demo.agritrace.test` |
 | Responsable qualité | Hortense Zadi | `responsable.qualite@demo.agritrace.test` |
 | Responsable logistique | Lassina Cissé | `responsable.logistique@demo.agritrace.test` |
 | Auditeur (lecture seule) | Patrick Dago | `auditeur@demo.agritrace.test` |
 | Acheteur / commercial | Fanta Kamara | `acheteur@demo.agritrace.test` |
-| Collecteur (application téléphone) | Brahima Sylla | `collecteur@demo.agritrace.test` |
+| Collecteur (application téléphone) — **application mobile uniquement** | Brahima Sylla | `collecteur@demo.agritrace.test` |
 | Assistant de direction générale | Mireille Ouattara | `adg@demo.agritrace.test` |
-| Coach / conseiller agricole | Gilbert Koffi | `coach@demo.agritrace.test` |
+| Coach / conseiller agricole — **application mobile uniquement** | Gilbert Koffi | `coach@demo.agritrace.test` |

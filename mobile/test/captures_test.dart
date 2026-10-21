@@ -83,7 +83,9 @@ class _Repo extends Repository {
   @override
   Future<({String name, String org, String zone})> identity() async => (name: 'Koffi Yao Serge', org: 'Société Coopérative Agricole Démo du Haut-Sassandra', zone: 'Section Est');
   @override
-  Future<List<Map<String, Object?>>> searchProducers(String q) async => [
+  @override
+  Future<List<Map<String, Object?>>> producerSections() async => [{'section': 'Section Est', 'n': 12}, {'section': 'Section Ouest', 'n': 9}];
+  Future<List<Map<String, Object?>>> searchProducers(String q, {String? section, int limit = 200}) async => [
         {'id': 'pr1', 'internal_code': 'P00112', 'last_name': 'KONÉ', 'first_names': 'Awa', 'phone': '07 00 00 00 01', 'village': 'Hiré', 'section': 'Section Est'},
         {'id': 'pr2', 'internal_code': 'P00131', 'last_name': 'YAO', 'first_names': 'Marie', 'phone': '05 00 00 00 02', 'village': 'Zégban', 'section': 'Section Est'},
       ];
@@ -128,7 +130,7 @@ final _parcels = <Map<String, Object?>>[
   {'id': 'p3', 'code': 'P00044-02', 'producer_name': 'BAMBA Salif', 'producer_code': 'P00044', 'declared_area_ha': '1.8', 'geometry_area_ha': '1.74', 'pending_updates': 1},
 ];
 const _collector = ['declarations:create', 'declarations:read', 'producers:read', 'convoys:create', 'convoys:read', 'collector:stock', 'documents:upload', 'messages:use', 'sync:use'];
-const _coach = ['producers:create', 'field_records:create', 'field_records:read', 'tasks:read', 'tasks:execute', 'tasks:request', 'parcels:create', 'parcels:read', 'producers:read', 'inspections:perform', 'documents:upload', 'messages:use', 'sync:use'];
+const _coach = ['producers:create', 'field_records:create', 'field_records:read', 'tasks:read', 'tasks:execute', 'tasks:request', 'parcels:create', 'parcels:read', 'producers:read', 'inspections:perform', 'documents:upload', 'messages:use', 'sync:use', 'training:read'];
 
 final _routes = <String, dynamic>{
   '/notifications/unread-count': {'unread': 2},

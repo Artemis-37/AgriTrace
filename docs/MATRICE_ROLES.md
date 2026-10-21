@@ -2,7 +2,7 @@
 
 Fichier généré par `backend/scripts/gen-matrice-roles.js` à partir du code : ne pas le modifier à la main. Les menus du portail et les routes de l'API se règlent sur les **permissions**, jamais sur le nom du rôle. Une coopérative crée ses propres rôles en combinant ces permissions ; les cinq rôles ci-dessous sont des modèles proposés.
 
-126 permissions, 300 routes protégées. Les droits sensibles (paiements, ajustements, exports de noms) peuvent en plus exiger une seconde approbation, réglée par rôle.
+128 permissions, 311 routes protégées. Les droits sensibles (paiements, ajustements, exports de noms) peuvent en plus exiger une seconde approbation, réglée par rôle.
 
 ## Rôles types
 - **Magasinier** (`magasinier`) : Réceptionne et pèse les convois au magasin central, tient les stocks et l'inventaire.
@@ -93,7 +93,7 @@ Colonnes : ✓ = accordé par le rôle type. Les rôles Administrateur de coopé
 ### convoys
 | Permission | Rôle du droit | Magasinier | Caissier | Comptable | Direction | Responsable de traçabilité | Responsable cartographie | Cartographe | Agent de terrain | Responsable de magasin | Responsable financier | Responsable qualité | Responsable logistique | Auditeur | Acheteur / partenaire externe | Collecteur | Administrateur de groupe | Coach | Routes |
 |---|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|---|
-| `convoys:create` | Déclarer un convoi (collecteur : n° de convoi, chauffeur, camion) |  |  |  |  |  |  |  |  |  |  |  |  |  |  | ✓ |  |  | `POST /convoys`<br>`GET /convoys/available-declarations` |
+| `convoys:create` | Déclarer un convoi (collecteur : n° de convoi, chauffeur, camion) |  |  |  |  |  |  |  |  |  |  |  |  |  |  | ✓ |  |  | `POST /convoys`<br>`GET /convoys/next-number`<br>`GET /convoys/available-declarations` |
 | `convoys:read` | Consulter les convois | ✓ | ✓ | ✓ | ✓ |  |  |  |  | ✓ |  |  |  | ✓ |  | ✓ |  |  | `GET /convoys/:id/declarations`<br>`GET /convoys`<br>`GET /convoys/statement` |
 | `convoys:receive` | Réceptionner un convoi au magasin central (poids total, sacs) | ✓ |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | `GET /convoys/expected`<br>`POST /convoys/receive` |
 | `convoys:settle` | Traiter un convoi en caisse et créditer le compte du collecteur |  | ✓ |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | `GET /convoys/cashier-queue`<br>`POST /convoy-receptions/:id/settle`<br>`GET /convoys/collectors`<br>… +4 |
@@ -236,7 +236,7 @@ Colonnes : ✓ = accordé par le rôle type. Les rôles Administrateur de coopé
 | `producers:create` | Créer des producteurs |  |  |  |  |  |  |  | ✓ |  |  |  |  |  |  |  |  | ✓ | `POST /producers`<br>`POST /producers/imports` |
 | `producers:export` | Exporter les producteurs |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | — |
 | `producers:import` | Importer des producteurs depuis Excel |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | `GET /producers/imports/template`<br>`POST /producers/imports` |
-| `producers:read` | Consulter les producteurs |  |  |  | ✓ | ✓ | ✓ | ✓ | ✓ |  |  |  |  | ✓ |  | ✓ | ✓ | ✓ | `GET /producers/:id/status-history`<br>`GET /producers`<br>`GET /producers/:id` |
+| `producers:read` | Consulter les producteurs |  |  |  | ✓ | ✓ | ✓ | ✓ | ✓ |  |  |  |  | ✓ |  | ✓ | ✓ | ✓ | `GET /producers/:id/status-history`<br>`GET /producers`<br>`GET /producers/sections`<br>… +1 |
 | `producers:status` | Changer le statut d'un producteur |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | `POST /producers/:id/status` |
 | `producers:update` | Modifier des producteurs |  |  |  |  |  |  |  | ✓ |  |  |  |  |  |  |  |  |  | — |
 
@@ -309,11 +309,17 @@ Colonnes : ✓ = accordé par le rôle type. Les rôles Administrateur de coopé
 | `tasks:create` | Créer des missions officielles |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | ✓ |  | `POST /tasks` |
 | `tasks:decide_requests` | Accepter ou refuser les demandes de mission |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | ✓ |  | `POST /task-requests/:id/decide` |
 | `tasks:execute` | Exécuter une mission attribuée (observations, GPS, photos, soumission) |  |  |  |  |  |  |  | ✓ |  |  |  |  |  |  |  |  | ✓ | `POST /tasks/:id/entries` |
-| `tasks:read` | Consulter les tâches qui me sont attribuées |  |  |  |  |  |  |  | ✓ |  |  |  |  |  |  |  | ✓ | ✓ | `GET /tasks`<br>`GET /tasks/dashboard`<br>`GET /tasks/:id`<br>… +1 |
+| `tasks:read` | Consulter les tâches qui me sont attribuées |  |  |  |  |  |  |  | ✓ |  |  |  |  |  |  |  | ✓ | ✓ | `GET /tasks/settings`<br>`GET /tasks`<br>`GET /tasks/dashboard`<br>… +2 |
 | `tasks:read_all` | Consulter toutes les tâches de la coopérative |  |  |  | ✓ |  |  |  |  |  |  |  |  |  |  |  | ✓ |  | — |
 | `tasks:request` | Demander la création d'une mission |  |  |  |  |  |  |  | ✓ |  |  |  |  |  |  |  |  | ✓ | `POST /task-requests`<br>`GET /task-requests` |
 | `tasks:review` | Vérifier une mission soumise (valider ou renvoyer à corriger) |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | ✓ |  | — |
-| `tasks:update` | Modifier les instructions officielles d'une mission |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | ✓ |  | `POST /tasks/:id/update` |
+| `tasks:update` | Modifier les instructions officielles d'une mission |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | ✓ |  | `PUT /tasks/settings`<br>`POST /tasks/:id/update` |
+
+### training
+| Permission | Rôle du droit | Magasinier | Caissier | Comptable | Direction | Responsable de traçabilité | Responsable cartographie | Cartographe | Agent de terrain | Responsable de magasin | Responsable financier | Responsable qualité | Responsable logistique | Auditeur | Acheteur / partenaire externe | Collecteur | Administrateur de groupe | Coach | Routes |
+|---|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|---|
+| `training:manage` | Conserver, modifier, créer et supprimer les modules de formation de la bibliothèque |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | ✓ |  | `POST /training-modules`<br>`PUT /training-modules/:id`<br>`POST /training-modules/:id/keep`<br>… +2 |
+| `training:read` | Consulter la bibliothèque de modules de formation agricole |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | ✓ | ✓ | `GET /training-modules`<br>`GET /training-modules/:id` |
 
 ### users
 | Permission | Rôle du droit | Magasinier | Caissier | Comptable | Direction | Responsable de traçabilité | Responsable cartographie | Cartographe | Agent de terrain | Responsable de magasin | Responsable financier | Responsable qualité | Responsable logistique | Auditeur | Acheteur / partenaire externe | Collecteur | Administrateur de groupe | Coach | Routes |

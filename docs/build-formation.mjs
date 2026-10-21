@@ -39,6 +39,7 @@ const LEGENDE = {
   'mes-achats': 'Mes achats : achats déclarés par le collecteur.',
   'mon-stock': 'Mon stock : stock du collecteur et solde de son compte.',
   historique: 'Historique du collecteur.',
+  'modules-formation': 'Modules de formation : bibliothèque préchargée (cacao puis café), à conserver, modifier ou supprimer.',
 };
 
 // Contenu pédagogique par profil.
@@ -156,13 +157,14 @@ const MOD = {
     niveau: 'Niveau 1 — Opérateur', duree: '1 h 30', mobile: ['coach'],
     objectifs: ['Enregistrer un producteur', 'Exécuter une mission', 'Saisir un relevé de terrain (même hors connexion)'],
     pas: [
-      ['Enregistrer un producteur', 'Menu **Producteurs** → nouveau : nom, prénoms, village, section, téléphone, filière.'],
-      ['Exécuter une mission', 'Menu **Missions** : ouvrez la mission, suivez les instructions, joignez des preuves (photos) et passez-la à « terminée ».'],
-      ['Saisir un relevé', 'Menu **Relevés de terrain** : formation, infrastructure sociale ou distribution. Sur téléphone, la saisie fonctionne hors connexion et se synchronise ensuite.'],
+      ['Se connecter', '**Application mobile uniquement** : ce compte est refusé sur le portail web (message « Ce compte se connecte uniquement par l\'application mobile »).'],
+      ['Enregistrer un producteur', 'Application → **Producteurs** → nouveau : nom, prénoms, village, section, téléphone, filière. Recherche par nom ou code et filtre par section.'],
+      ['Exécuter une mission', 'Fiche du producteur → onglet **Tâches** : suivez les instructions, joignez des preuves (photos). Une tâche terminée et validée par l\'ADG est grisée, non cliquable, puis disparaît de la liste après le délai fixé par l\'ADG.'],
+      ['Saisir un relevé', 'Formation, infrastructure sociale ou distribution. La saisie fonctionne hors connexion et se synchronise ensuite.'],
     ],
     exos: [
       ['Enregistrez un nouveau producteur fictif dans le village de Hiré.', 'Il apparaît dans la liste, filière Cacao.'],
-      ['Exécutez la mission « Visite de la parcelle de Awa KONE ».', 'La mission passe en attente de validation.'],
+      ['Exécutez la mission « Visite de la parcelle de Awa KONE ».', 'La mission passe en attente de validation ; une fois validée par l\'ADG, elle est grisée dans la liste.'],
     ],
   },
   responsable_magasin: {
@@ -226,9 +228,10 @@ const MOD = {
     niveau: 'Niveau 1 — Opérateur', duree: '2 h', mobile: ['collecteur'],
     objectifs: ['Déclarer un achat chez un producteur', 'Créer un convoi', 'Consulter son stock et sa fiche de compte'],
     pas: [
+      ['Se connecter', '**Application mobile uniquement** : ce compte est refusé sur le portail web.'],
       ['Déclarer un achat', 'Sur le téléphone : **Nouvel achat** → choisir le producteur → quantité, unité, sacs. L\'achat se synchronise dès que le réseau est disponible.'],
       ['Créer un convoi', 'Sur le téléphone : **Convoi** → chauffeur, camion, sacs et poids annoncés. Le **numéro de connaissement est attribué par le logiciel** : `code CCC de la coopérative` - `année` - `3 premières lettres du nom du collecteur` - `n° d\'ordre` (ex. `{{CV1}}`). Hors connexion, le numéro définitif est attribué à l\'envoi.'],
-      ['Suivre son stock et son compte', 'Portail ou téléphone : *Mon stock*, *Historique* et *Fiche de compte*.'],
+      ['Suivre son stock et son compte', 'Sur le téléphone : *Mon stock*, *Historique* et *Fiche de compte*.'],
     ],
     exos: [
       ['Déclarez un achat de 3 sacs chez TRAORE Moussa.', 'L\'achat apparaît « Soumis » dans Mes achats.'],
@@ -241,18 +244,22 @@ const MOD = {
     pas: [
       ['Suivre les certificats', 'Rapports et alertes : le certificat de démonstration expire dans moins de 30 jours.'],
       ['Créer et affecter une mission', 'Menu **Missions** : titre, catégorie, priorité, échéance, producteur, coach assigné, critères de validation ; publiez.'],
-      ['Valider le résultat', 'Revoyez les preuves transmises par le coach puis validez ou demandez une correction.'],
+      ['Valider le résultat', 'Revoyez les preuves transmises par le coach puis validez ou demandez une correction. Une tâche validée est grisée ; elle disparaît de la liste après le nombre de jours réglé en haut de la page *Missions* (« Jours de visibilité des missions validées », 7 par défaut).'],
+      ['Gérer les modules de formation', 'Menu **Modules de formation** : une bibliothèque agricole (cacao en priorité, puis café) liée aux certifications est préchargée. Pour chaque module : *Conserver* (validé tel quel), *Modifier* ou *Supprimer*. *Rétablir les modules par défaut* ne rajoute que les modules supprimés. Le contenu fourni est un socle général : adaptez-le à votre cahier des charges de certification.'],
     ],
-    exos: [['Créez une mission de formation et assignez-la au coach.', 'Le coach la voit dans ses missions (application et portail).']],
+    exos: [['Créez une mission de formation et assignez-la au coach.', 'Le coach la voit dans ses missions (application mobile).'], ['Dans **Modules de formation**, modifiez un module cacao puis supprimez un module café.', 'Le module modifié est marqué « Modifié » ; le coach ne voit plus le module supprimé après actualisation.']],
   },
   coach: {
     niveau: 'Niveau 1 — Opérateur', duree: '2 h', mobile: ['coach'],
-    objectifs: ['Exécuter ses missions', 'Enregistrer producteurs, parcelles et relevés', 'Demander de nouvelles missions'],
+    objectifs: ['Exécuter ses missions', 'Rechercher et filtrer les producteurs par section', 'Consulter les modules de formation', 'Enregistrer producteurs, parcelles et relevés'],
     pas: [
-      ['Lire ses missions', 'Menu **Missions** (ou application) : instructions, échéance, résultat attendu.'],
+      ['Se connecter', '**Application mobile uniquement** : ce compte est refusé sur le portail web.'],
+      ['Trouver un producteur', 'Application → **Producteurs** : tapez un nom, un code ou un village, et touchez une *section* pour ne voir que ses producteurs.'],
+      ['Lire un module de formation', 'Application → **Modules de formation** : filtrez par culture (cacao, café) ou par thème, ouvrez un module (objectifs, points à enseigner, erreurs à éviter, questions de vérification). Les modules sont conservés sur le téléphone pour être lus sans réseau.'],
+      ['Lire ses missions', 'Fiche du producteur → **Tâches** : instructions, échéance, résultat attendu. Les tâches terminées et validées sont grisées.'],
       ['Saisir un relevé', 'Formations, infrastructures sociales, distributions (liste de bénéficiaires, articles) avec photos.'],
     ],
-    exos: [['Saisissez une formation de 12 participants à Hiré.', 'Le relevé apparaît dans **Relevés de terrain** après synchronisation.']],
+    exos: [['Saisissez une formation de 12 participants à Hiré.', 'Le relevé apparaît dans **Relevés de terrain** (portail de l\'ADG) après synchronisation.'], ['Filtrez les producteurs sur la section Est, puis ouvrez le module « Fermentation du cacao ».', 'La liste est réduite à la section ; le module s\'ouvre, même sans réseau après une première ouverture.']],
   },
 };
 

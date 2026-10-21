@@ -53,18 +53,21 @@ Pour repartir de zéro, recréez la base de démonstration (ou utilisez une base
 | Partie du portail | Comptes qui y accèdent |
 |---|---|
 | Tableau de bord, Messages, Notifications | tous |
-| Producteurs | administrateur, agent de terrain, coach, responsable traçabilité, direction, auditeur |
+| Producteurs | administrateur, responsable traçabilité, direction, auditeur — agent de terrain et coach : **application mobile** (recherche et filtre par section) |
 | Parcelles / Cartographie | administrateur, responsable cartographie, cartographe, ADG, direction (lecture), auditeur (lecture) |
-| Déclarations d'achat | administrateur, responsable traçabilité, collecteur (les siennes), direction, auditeur |
-| Convois | administrateur, magasinier, caissier, responsable magasin, responsable logistique (lecture), collecteur (les siens) |
+| Déclarations d'achat | administrateur, responsable traçabilité, collecteur (les siennes, application mobile), direction, auditeur |
+| Convois | administrateur, magasinier, caissier, responsable magasin, responsable logistique (lecture), collecteur (les siens, application mobile) |
 | Stocks et lots / Inventaire | administrateur, magasinier, responsable magasin, responsable traçabilité, qualité, direction |
 | Caisse et comptabilité / Finances | administrateur, caissier, comptable, responsable financier, direction (lecture), auditeur (lecture) |
 | Préfinancement | administrateur, responsable financier, direction (approbation) |
 | Qualité et certificats | administrateur, responsable qualité, ADG, direction, auditeur |
 | Commerce | administrateur, responsable logistique, acheteur (ses commandes) |
-| Missions / Relevés de terrain | administrateur, ADG, agent de terrain, coach, direction |
+| Missions / Relevés de terrain | administrateur, ADG, direction — agent de terrain et coach : **application mobile** |
+| Modules de formation | administrateur et ADG (conserver, modifier, supprimer) ; coach : lecture sur l'application mobile |
 | Rapports et envoi automatique | administrateur, direction, responsable financier, comptable, ADG, auditeur |
 | Équipe | administrateur |
 | Mes opérations | administrateur, magasinier, caissier, comptable, responsables (demande) ; direction et responsable financier (décision) |
+
+**Comptes mobile uniquement** : collecteur, agent de terrain et coach se connectent uniquement par l'application Android ; sur le portail web, leur connexion est refusée avec un message explicite. C'est une règle d'usage de l'interface (le portail s'identifie par un en-tête), pas une barrière de sécurité : les droits de chaque rôle restent contrôlés par le serveur.
 
 Le détail exact figure dans `MATRICE_ROLES.md` ; en cas de différence, la matrice fait foi.

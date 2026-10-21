@@ -14,6 +14,11 @@ Document de suivi tenu à jour avec `ECARTS_CDC.md`. Il répond à trois questio
 | Postes de bureau hors connexion | §27 | Achats et messages seulement ; pas de validation, paiements ni stocks | À arbitrer avec la coopérative |
 | Carte du portail web | §8 | Fonds Plan/Satellite en ligne livrés ; pas de dessin à la souris, pas de fond hors ligne | Fournisseur de tuiles sous contrat si le trafic grandit |
 | Couches de zones protégées sur les appareils | §10 | Contrôle côté serveur seulement | Réplication des couches (licence WDPA à régler d'abord) |
+| Modules de formation préchargés | — | **Livré** : 26 modules (cacao en priorité, puis café), lecture par les coachs (mobile, copie hors connexion), conservation / modification / suppression par l'ADG ; testé de bout en bout côté serveur | Le contenu est un **socle général sans chiffres réglementaires précis** : relecture obligatoire par l'ADG et, si besoin, par l'organisme de certification. Les nouvelles tables ne sont pas répliquées entre serveur local et central |
+| Comptes « mobile uniquement » | — | **Livré** : collecteur, agent de terrain et coach refusés sur le portail web (connexion et requêtes) | C'est une **règle d'usage**, pas une barrière de sécurité : le portail s'identifie par l'en-tête `X-Client: web`, qu'un client mal intentionné peut omettre ; les droits restent contrôlés par le serveur. Pas d'écran pour poser ce réglage sur un rôle personnalisé |
+| Tâches terminées grisées puis retirées | — | **Livré** (délai réglé par l'ADG, 7 jours par défaut, mobile et portail) ; testé | « Période définie » interprétée comme un nombre de jours après la validation : à confirmer |
+| Numéro de connaissement automatique | — | **Livré** : `code CCC-année-3 lettres-n°` ; hors connexion, numéro définitif attribué à l'envoi | Les 3 lettres viennent du 1er mot du nom du collecteur ; confirmer le cas des noms composés ou homonymes |
+| Installateur Windows (Inno Setup) | §27 | Script `desktop/installer/agritrace.iss` + mode d'emploi fournis ; mise à jour automatique compatible | **Non compilé ni essayé** ici (Linux) : à tester sur un poste Windows (installation, pare-feu, mise à jour, désinstallation) |
 
 ## 2. Non prouvé à ce jour (§33, §36)
 - Application Android compilée et installée sur un appareil réel : vérifiée par les tests et la CI seulement.

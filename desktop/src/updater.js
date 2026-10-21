@@ -41,7 +41,7 @@ async function downloadInstaller({ origin, pin = null, update, destDir, onProgre
  */
 function installCommand(installer, appExe) {
   const q = (p) => `"${String(p).replace(/"/g, '')}"`;
-  return { cmd: 'cmd.exe', args: ['/c', `ping -n 11 127.0.0.1 >nul & start /wait "" ${q(installer)} /S & start "" ${q(appExe)}`] };
+  return { cmd: 'cmd.exe', args: ['/c', `ping -n 11 127.0.0.1 >nul & start /wait "" ${q(installer)} /S /VERYSILENT /SUPPRESSMSGBOXES /NORESTART & start "" ${q(appExe)}`] };
 }
 
 /** Anciennes versions téléchargées : on garde seulement la plus récente. */

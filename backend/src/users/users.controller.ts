@@ -1,7 +1,7 @@
 import { BadRequestException, Body, ConflictException, Controller, ForbiddenException, Get, NotFoundException, Param, ParseUUIDPipe, Post, Req } from '@nestjs/common';
 import { randomBytes } from 'crypto';
 import { ApiBearerAuth, ApiHeader, ApiTags } from '@nestjs/swagger';
-import { ArrayMaxSize, ArrayNotEmpty, IsArray, IsEmail, IsOptional, IsString, IsUUID, Length, Matches, MinLength } from 'class-validator';
+import { ArrayMaxSize, ArrayNotEmpty, IsArray, IsBoolean, IsEmail, IsOptional, IsString, IsUUID, Length, Matches, MinLength } from 'class-validator';
 import { RequirePermissions } from '../access/decorators';
 import { AuditService } from '../audit/audit.service';
 import { AuthService } from '../auth/auth.service';
@@ -20,6 +20,8 @@ class CreateRoleDto {
   @Matches(/^[a-z0-9_]{2,40}$/) code: string;
   @IsString() @Length(2, 100) name: string;
   @IsArray() @ArrayNotEmpty() @ArrayMaxSize(100) @IsString({ each: true }) permissions: string[];
+  /** Les comptes de ce rôle se connectent uniquement depuis l'application mobile (collecteurs, coachs, agents de terrain). */
+  @IsOptional() @IsBoolean() mobile_only?: boolean;
 }
 
 @ApiTags('users')
@@ -73,7 +75,7 @@ export class UsersController {
     const role = await this.db.tx(req.org.id, async (c) => {
       const ex = await c.query(`SELECT id, code, name FROM roles WHERE organization_id = $1 AND code = $2`, [req.org.id, b.code]);
       if (ex.rowCount) return ex.rows[0];
-      const r = await c.query(`INSERT INTO roles(organization_id, code, name) VALUES ($1,$2,$3) RETURNING id, code, name`, [req.org.id, b.code, t.name]);
+      const r = await c.query(`INSERT INTO roles(organization_id, code, name, mobile_only) VALUES ($1,$2,$3,$4) RETURNING id, code, name, mobile_only`, [req.org.id, b.code, t.name, t.mobileOnly === true]);
       for (const p of t.permissions) await c.query(`INSERT INTO role_permissions(role_id, permission_code) VALUES ($1,$2)`, [r.rows[0].id, p]);
       return r.rows[0];
     });
@@ -91,7 +93,7 @@ export class UsersController {
       const role = await this.db.tx(req.org.id, async (c) => {
         const known = await c.query(`SELECT code FROM permissions WHERE code = ANY($1)`, [b.permissions]);
         if (known.rowCount !== new Set(b.permissions).size) throw new BadRequestException('Permission inconnue');
-        const r = await c.query(`INSERT INTO roles(organization_id, code, name) VALUES ($1,$2,$3) RETURNING id, code, name`, [req.org.id, b.code, b.name]);
+        const r = await c.query(`INSERT INTO roles(organization_id, code, name, mobile_only) VALUES ($1,$2,$3,$4) RETURNING id, code, name, mobile_only`, [req.org.id, b.code, b.name, b.mobile_only === true]);
         for (const p of new Set(b.permissions))
           await c.query(`INSERT INTO role_permissions(role_id, permission_code) VALUES ($1,$2)`, [r.rows[0].id, p]);
         return r.rows[0];

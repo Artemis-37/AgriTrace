@@ -11,6 +11,7 @@ const OUT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 
 fs.mkdirSync(OUT, { recursive: true });
 const demo = JSON.parse(fs.readFileSync(process.env.DEMO_JSON ?? '/tmp/demo-accounts.json', 'utf8'));
 
+// Coach, agent de terrain et collecteur se connectent uniquement par l'application mobile : pas de capture du portail pour eux.
 // Pages à photographier par profil : [nom du fichier, route, onglet facultatif]
 const PAGES = {
   coop_admin: [['accueil', '/'], ['producteurs', '/producteurs'], ['parcelles', '/parcelles'], ['convois', '/convois'], ['finances', '/finances'], ['equipe', '/equipe'], ['operations', '/operations'], ['rapports', '/rapports'], ['rapprochement', '/finances', 'Rapprochement bancaire'], ['envoi-auto', '/rapports', 'Envoi automatique'], ['compte', '/compte']],
@@ -21,16 +22,13 @@ const PAGES = {
   responsable_tracabilite: [['accueil', '/'], ['producteurs', '/producteurs'], ['declarations', '/declarations'], ['missions', '/missions'], ['stocks', '/stocks']],
   responsable_cartographie: [['accueil', '/'], ['parcelles', '/parcelles'], ['cartographie', '/cartographie']],
   cartographe: [['accueil', '/'], ['parcelles', '/parcelles'], ['cartographie', '/cartographie']],
-  agent_terrain: [['accueil', '/'], ['producteurs', '/producteurs'], ['missions', '/missions'], ['terrain', '/terrain']],
   responsable_magasin: [['accueil', '/'], ['convois', '/convois'], ['stocks', '/stocks'], ['inventaire', '/inventaire']],
   responsable_financier: [['accueil', '/'], ['finances', '/finances'], ['prefinancement', '/prefinancement'], ['operations', '/operations']],
   responsable_qualite: [['accueil', '/'], ['qualite', '/qualite'], ['stocks', '/stocks']],
   responsable_logistique: [['accueil', '/'], ['convois', '/convois'], ['stocks', '/stocks']],
   auditeur: [['accueil', '/'], ['finances', '/finances'], ['rapports', '/rapports']],
   acheteur: [['accueil', '/'], ['commerce', '/commerce']],
-  collecteur: [['accueil', '/'], ['mes-achats', '/mes-achats'], ['mon-stock', '/mon-stock'], ['historique', '/historique']],
-  adg: [['accueil', '/'], ['rapports', '/rapports'], ['operations', '/operations']],
-  coach: [['accueil', '/'], ['producteurs', '/producteurs'], ['missions', '/missions'], ['terrain', '/terrain']],
+  adg: [['accueil', '/'], ['modules-formation', '/modules-formation'], ['missions', '/missions'], ['rapports', '/rapports'], ['operations', '/operations']],
 };
 
 const browser = await chromium.launch({ args: ['--no-sandbox'], executablePath: process.env.CHROMIUM_PATH || undefined });

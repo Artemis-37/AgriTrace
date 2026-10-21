@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, UnauthorizedException } from '@nestjs/common';
+import { Injectable, BadRequestException, ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as argon2 from 'argon2';
 import { createHash, randomBytes } from 'crypto';
@@ -22,7 +22,7 @@ export class AuthService {
     return argon2.hash(p, { type: argon2.argon2id });
   }
 
-  async login(email: string, password: string, ip?: string, deviceLabel?: string) {
+  async login(email: string, password: string, ip?: string, deviceLabel?: string, webClient = false) {
     const [u] = await this.db.query(
       `SELECT id, password_hash, status, failed_logins, locked_until FROM users WHERE email = $1`,
       [email],
@@ -43,6 +43,18 @@ export class AuthService {
       throw invalid;
     }
     await this.db.query(`UPDATE users SET failed_logins = 0, locked_until = NULL WHERE id = $1`, [u.id]);
+
+    // Coachs, collecteurs et agents de terrain : application mobile uniquement. Refus seulement si TOUS leurs accès le sont (un compte qui administre aussi une autre coopérative peut se connecter).
+    if (webClient) {
+      // `roles` est protégée par organisation (RLS) : on lit le drapeau dans le contexte de chaque coopérative du compte.
+      const links = await this.db.query<{ organization_id: string; role_id: string }>(`SELECT organization_id, role_id FROM user_organizations WHERE user_id = $1 AND status = 'active'`, [u.id]);
+      const m: { mobile_only: boolean }[] = [];
+      for (const l of links) m.push({ mobile_only: !!(await this.db.tx(l.organization_id, (c) => c.query(`SELECT mobile_only FROM roles WHERE id = $1`, [l.role_id]))).rows[0]?.mobile_only });
+      if (m.length && m.every((x) => x.mobile_only)) {
+        await this.audit.log({ actorUserId: u.id, action: 'auth.login_refused_mobile_only', ip });
+        throw new ForbiddenException({ message: 'Ce compte se connecte uniquement depuis l\'application mobile AgriTrace.', code: 'MOBILE_ONLY' });
+      }
+    }
 
     let deviceId: string | null = null;
     if (deviceLabel) {

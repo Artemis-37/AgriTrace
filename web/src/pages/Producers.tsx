@@ -1,4 +1,4 @@
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { get, post } from '../api';
 import { useAuth } from '../auth';
 import { PRODUCER_STATUS } from '../format';
@@ -7,17 +7,30 @@ import { Card, Empty, ErrorBox, Field, Loading, Modal, PageHeader, StatusBadge, 
 export default function Producers() {
   const { can } = useAuth();
   const [q, setQ] = useState('');
+  const [qd, setQd] = useState('');
+  const [section, setSection] = useState('');
+  const [limit, setLimit] = useState(100);
+  useEffect(() => { const t = setTimeout(() => { setQd(q.trim()); setLimit(100); }, 250); return () => clearTimeout(t); }, [q]);
+  const sections = useAsync(() => get<{ section: string; producers: number }[]>('/producers/sections').catch(() => []), []);
   const [creating, setCreating] = useState(false);
   const [chg, setChg] = useState<any | null>(null);
-  const { data, loading, error, reload } = useAsync(() => get<any[]>('/producers'), []);
-
-  const rows = (data ?? []).filter((p) => `${p.internal_code} ${p.last_name} ${p.first_names} ${p.village ?? ''} ${p.phone ?? ''}`.toLowerCase().includes(q.toLowerCase()));
+  // Recherche et filtre par section faits par le serveur (toute la liste, pas seulement les premiers producteurs).
+  const { data, loading, error, reload } = useAsync(
+    () => get<any[]>(`/producers?limit=${limit}${qd ? `&q=${encodeURIComponent(qd)}` : ''}${section ? `&section=${encodeURIComponent(section)}` : ''}`), [qd, section, limit]);
+  const rows = data ?? [];
   return (
     <>
       <PageHeader title="Producteurs" subtitle="Registre des producteurs de la coopérative"
         actions={can('producers:create') && <button className="btn" onClick={() => setCreating(true)}>Nouveau producteur</button>} />
       <Card>
-        <div className="toolbar"><input type="search" aria-label="Rechercher" placeholder="Rechercher (nom, code, village, téléphone)" value={q} onChange={(e) => setQ(e.target.value)} style={{ minWidth: 300 }} /></div>
+        <div className="toolbar">
+          <input type="search" aria-label="Rechercher" placeholder="Rechercher (nom, code, téléphone)" value={q} onChange={(e) => setQ(e.target.value)} style={{ minWidth: 300 }} />
+          <select aria-label="Filtrer par section" value={section} onChange={(e) => { setSection(e.target.value); setLimit(100); }}>
+            <option value="">Toutes les sections</option>
+            {(sections.data ?? []).map((s) => <option key={s.section} value={s.section}>{s.section} ({s.producers})</option>)}
+          </select>
+          {(section || q) && <button className="btn btn-ghost btn-small" onClick={() => { setQ(''); setSection(''); }}>Effacer les filtres</button>}
+        </div>
         {error && <ErrorBox message={error} onRetry={reload} />}
         {loading ? <Loading /> : (
           <Table rows={rows} empty="Aucun producteur trouvé." columns={[
@@ -30,6 +43,7 @@ export default function Producers() {
             { header: '', render: (p) => can('producers:status') && p.status !== 'archived' && <button className="btn btn-small btn-secondary" onClick={() => setChg(p)}>Statut</button> },
           ]} />
         )}
+        {!loading && rows.length >= limit && <div className="toolbar"><button className="btn btn-secondary" onClick={() => setLimit(limit + 100)}>Afficher plus de producteurs</button></div>}
       </Card>
       {chg && <ChangeStatus p={chg} onClose={() => setChg(null)} onDone={() => { setChg(null); reload(); }} />}
       {creating && <NewProducer onClose={() => setCreating(false)} onDone={() => { setCreating(false); reload(); }} />}

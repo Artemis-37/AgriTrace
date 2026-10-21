@@ -32,12 +32,17 @@ class Repository {
     return (v == null || v.isEmpty) ? null : v;
   }
 
-  Future<List<Map<String, Object?>>> searchProducers(String q) {
+  Future<List<Map<String, Object?>>> searchProducers(String q, {String? section, int limit = 200}) {
     final like = '%${q.trim().toLowerCase()}%';
     return db.raw.query('producers',
-        where: "status = 'active' AND (lower(last_name) LIKE ? OR lower(first_names) LIKE ? OR lower(internal_code) LIKE ? OR coalesce(phone,'') LIKE ?)",
-        whereArgs: [like, like, like, like], orderBy: 'last_name, first_names', limit: 50);
+        where: "status = 'active' AND (lower(last_name) LIKE ? OR lower(first_names) LIKE ? OR lower(internal_code) LIKE ? OR coalesce(phone,'') LIKE ? OR lower(coalesce(village,'')) LIKE ?)"
+            "${section == null ? '' : ' AND section = ?'}",
+        whereArgs: [like, like, like, like, like, if (section != null) section], orderBy: 'last_name, first_names', limit: limit);
   }
+
+  /// Sections présentes parmi les producteurs de l'appareil, avec leur effectif (filtre de la recherche, utilisable hors connexion).
+  Future<List<Map<String, Object?>>> producerSections() => db.raw.rawQuery(
+      "SELECT section, count(*) AS n FROM producers WHERE status = 'active' AND section IS NOT NULL AND trim(section) <> '' GROUP BY section ORDER BY section");
 
   /// Filières que ce collecteur peut déclarer pour ce producteur (affectation du collecteur ∩ filières du producteur).
   Future<List<Map<String, Object?>>> chainsFor(String producerId) async {

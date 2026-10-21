@@ -26,7 +26,7 @@ export class AuthController {
   @Post('login')
   @HttpCode(200)
   login(@Body() b: LoginDto, @Req() req: any) {
-    return this.auth.login(b.email.toLowerCase(), b.password, req.ip, b.device_label);
+    return this.auth.login(b.email.toLowerCase(), b.password, req.ip, b.device_label, req.headers['x-client'] === 'web');
   }
 
   @Public()

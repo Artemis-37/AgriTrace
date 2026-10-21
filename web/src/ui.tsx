@@ -40,13 +40,13 @@ export const Loading = () => <p className="muted" aria-live="polite">Chargement�
 export const Empty = ({ children }: { children: ReactNode }) => <p className="empty">{children}</p>;
 
 export interface Column<T> { header: string; render: (row: T) => ReactNode; align?: 'right'; className?: string }
-export function Table<T extends object>({ rows, columns, empty = 'Aucun élément.' }: { rows: T[]; columns: Column<T>[]; empty?: string }) {
+export function Table<T extends object>({ rows, columns, empty = 'Aucun élément.', rowClass }: { rows: T[]; columns: Column<T>[]; empty?: string; rowClass?: (row: T) => string | undefined }) {
   if (!rows.length) return <Empty>{empty}</Empty>;
   return (
     <div className="table-wrap">
       <table>
         <thead><tr>{columns.map((c) => <th key={c.header} className={c.align === 'right' ? 'num' : ''}>{c.header}</th>)}</tr></thead>
-        <tbody>{rows.map((r, i) => <tr key={(r as { id?: string }).id ?? i}>{columns.map((c) => <td key={c.header} className={`${c.align === 'right' ? 'num' : ''} ${c.className ?? ''}`}>{c.render(r)}</td>)}</tr>)}</tbody>
+        <tbody>{rows.map((r, i) => <tr key={(r as { id?: string }).id ?? i} className={rowClass?.(r)}>{columns.map((c) => <td key={c.header} className={`${c.align === 'right' ? 'num' : ''} ${c.className ?? ''}`}>{c.render(r)}</td>)}</tr>)}</tbody>
       </table>
     </div>
   );

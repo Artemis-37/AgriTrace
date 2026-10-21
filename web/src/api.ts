@@ -39,7 +39,7 @@ export const deviceToken = (): string | null => { try { return localStorage.getI
 export const setDeviceToken = (t: string | null) => { try { t ? localStorage.setItem(DEV_KEY, t) : localStorage.removeItem(DEV_KEY); } catch { /* ignoré */ } };
 /** Échange le code d'association contre le jeton du poste (avant toute connexion). */
 export async function pairWorkstation(code: string): Promise<string> {
-  const res = await fetch('/v1/workstations/pair', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code }) });
+  const res = await fetch('/v1/workstations/pair', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Client': 'web' }, body: JSON.stringify({ code }) });
   const body = await res.json().catch(() => null);
   if (!res.ok) throw new ApiError(res.status, errorMessage(body, 'Association impossible.'), body);
   setDeviceToken(body.device_token); return body.name as string;
@@ -62,6 +62,7 @@ export function errorMessage(body: any, fallback: string): string {
 async function raw(path: string, init: RequestInit & { json?: unknown } = {}, retry = true, org: string | null = orgId): Promise<Response> {
   const headers = new Headers(init.headers);
   if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`);
+  headers.set('X-Client', 'web'); // les comptes réservés au mobile sont refusés par le serveur
   if (org) headers.set('X-Organization-Id', org);
   const dev = deviceToken(); if (dev) headers.set('X-Device-Token', dev);
   let body = init.body;
@@ -82,7 +83,7 @@ async function refresh(): Promise<RefreshResult> {
   if (!token) return 'denied';
   refreshing ??= (async () => {
     try {
-      const res = await fetch('/v1/auth/refresh', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ refresh_token: token }) });
+      const res = await fetch('/v1/auth/refresh', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Client': 'web' }, body: JSON.stringify({ refresh_token: token }) });
       if (res.status === 503 && res.headers.get('x-agritrace-offline')) return 'offline' as const;
       if (!res.ok) return 'denied' as const;
       const j = await res.json();
@@ -96,9 +97,9 @@ async function refresh(): Promise<RefreshResult> {
 export function clearSession() { accessToken = null; store.set(null); }
 
 export async function login(email: string, password: string) {
-  const res = await fetch('/v1/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password, device_label: 'Portail web' }) });
+  const res = await fetch('/v1/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Client': 'web' }, body: JSON.stringify({ email, password, device_label: 'Portail web' }) });
   const body = await res.json().catch(() => null);
-  if (!res.ok) throw new ApiError(res.status, res.status === 401 ? 'Identifiants invalides.' : errorMessage(body, 'Connexion impossible.'), body);
+  if (!res.ok) throw new ApiError(res.status, res.status === 401 ? 'Identifiants invalides.' : res.status === 403 && body?.code === 'MOBILE_ONLY' ? "Ce compte se connecte uniquement depuis l'application mobile AgriTrace." : errorMessage(body, 'Connexion impossible.'), body);
   accessToken = body.access_token; store.set(body.refresh_token); offlineSession = false; rememberUser(body.access_token);
 }
 

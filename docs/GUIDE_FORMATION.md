@@ -633,33 +633,16 @@ Enregistre les producteurs et les données de terrain, exécute les missions qui
 - Exécuter une mission
 - Saisir un relevé de terrain (même hors connexion)
 
-### Ce que vous voyez
-
-![Tableau de bord : les indicateurs affichés dépendent de vos droits.](captures/formation/agent_terrain-accueil.png)
-
-*Tableau de bord : les indicateurs affichés dépendent de vos droits.*
-
-![Liste des producteurs de la coopérative.](captures/formation/agent_terrain-producteurs.png)
-
-*Liste des producteurs de la coopérative.*
-
-![Missions (tâches de terrain) : création, suivi, validation.](captures/formation/agent_terrain-missions.png)
-
-*Missions (tâches de terrain) : création, suivi, validation.*
-
-![Relevés de terrain : formations, infrastructures sociales, distributions.](captures/formation/agent_terrain-terrain.png)
-
-*Relevés de terrain : formations, infrastructures sociales, distributions.*
-
 ### Sur le téléphone
 
 <table class="phones"><tr><td><img src="captures/mobile/coach-accueil.png" alt="coach-accueil"></td><td><img src="captures/mobile/coach-formations.png" alt="coach-formations"></td><td><img src="captures/mobile/coach-infrastructure.png" alt="coach-infrastructure"></td><td><img src="captures/mobile/coach-producteurs.png" alt="coach-producteurs"></td></tr></table>
 
 ### Pas à pas
 
-1. **Enregistrer un producteur.** Menu **Producteurs** → nouveau : nom, prénoms, village, section, téléphone, filière.
-2. **Exécuter une mission.** Menu **Missions** : ouvrez la mission, suivez les instructions, joignez des preuves (photos) et passez-la à « terminée ».
-3. **Saisir un relevé.** Menu **Relevés de terrain** : formation, infrastructure sociale ou distribution. Sur téléphone, la saisie fonctionne hors connexion et se synchronise ensuite.
+1. **Se connecter.** **Application mobile uniquement** : ce compte est refusé sur le portail web (message « Ce compte se connecte uniquement par l'application mobile »).
+2. **Enregistrer un producteur.** Application → **Producteurs** → nouveau : nom, prénoms, village, section, téléphone, filière. Recherche par nom ou code et filtre par section.
+3. **Exécuter une mission.** Fiche du producteur → onglet **Tâches** : suivez les instructions, joignez des preuves (photos). Une tâche terminée et validée par l'ADG est grisée, non cliquable, puis disparaît de la liste après le délai fixé par l'ADG.
+4. **Saisir un relevé.** Formation, infrastructure sociale ou distribution. La saisie fonctionne hors connexion et se synchronise ensuite.
 
 ### Ce que ce profil ne voit pas
 
@@ -673,7 +656,7 @@ Enregistre les producteurs et les données de terrain, exécute les missions qui
 | # | À faire | Résultat attendu |
 |---|---|---|
 | 1 | Enregistrez un nouveau producteur fictif dans le village de Hiré. | Il apparaît dans la liste, filière Cacao. |
-| 2 | Exécutez la mission « Visite de la parcelle de Awa KONE ». | La mission passe en attente de validation. |
+| 2 | Exécutez la mission « Visite de la parcelle de Awa KONE ». | La mission passe en attente de validation ; une fois validée par l'ADG, elle est grisée dans la liste. |
 
 ### Acquis (à cocher)
 
@@ -871,33 +854,16 @@ Déclare ses achats chez les producteurs et ses convois, voit son stock, son his
 - Créer un convoi
 - Consulter son stock et sa fiche de compte
 
-### Ce que vous voyez
-
-![Tableau de bord : les indicateurs affichés dépendent de vos droits.](captures/formation/collecteur-accueil.png)
-
-*Tableau de bord : les indicateurs affichés dépendent de vos droits.*
-
-![Mes achats : achats déclarés par le collecteur.](captures/formation/collecteur-mes-achats.png)
-
-*Mes achats : achats déclarés par le collecteur.*
-
-![Mon stock : stock du collecteur et solde de son compte.](captures/formation/collecteur-mon-stock.png)
-
-*Mon stock : stock du collecteur et solde de son compte.*
-
-![Historique du collecteur.](captures/formation/collecteur-historique.png)
-
-*Historique du collecteur.*
-
 ### Sur le téléphone
 
 <table class="phones"><tr><td><img src="captures/mobile/collecteur-accueil.png" alt="collecteur-accueil"></td><td><img src="captures/mobile/collecteur-nouvel-achat.png" alt="collecteur-nouvel-achat"></td><td><img src="captures/mobile/collecteur-convoi.png" alt="collecteur-convoi"></td><td><img src="captures/mobile/collecteur-fiche.png" alt="collecteur-fiche"></td></tr></table>
 
 ### Pas à pas
 
-1. **Déclarer un achat.** Sur le téléphone : **Nouvel achat** → choisir le producteur → quantité, unité, sacs. L'achat se synchronise dès que le réseau est disponible.
-2. **Créer un convoi.** Sur le téléphone : **Convoi** → chauffeur, camion, sacs et poids annoncés. Le **numéro de connaissement est attribué par le logiciel** : `code CCC de la coopérative` - `année` - `3 premières lettres du nom du collecteur` - `n° d'ordre` (ex. `SC000000-2026-BRA-1`). Hors connexion, le numéro définitif est attribué à l'envoi.
-3. **Suivre son stock et son compte.** Portail ou téléphone : *Mon stock*, *Historique* et *Fiche de compte*.
+1. **Se connecter.** **Application mobile uniquement** : ce compte est refusé sur le portail web.
+2. **Déclarer un achat.** Sur le téléphone : **Nouvel achat** → choisir le producteur → quantité, unité, sacs. L'achat se synchronise dès que le réseau est disponible.
+3. **Créer un convoi.** Sur le téléphone : **Convoi** → chauffeur, camion, sacs et poids annoncés. Le **numéro de connaissement est attribué par le logiciel** : `code CCC de la coopérative` - `année` - `3 premières lettres du nom du collecteur` - `n° d'ordre` (ex. `SC000000-2026-BRA-1`). Hors connexion, le numéro définitif est attribué à l'envoi.
+4. **Suivre son stock et son compte.** Sur le téléphone : *Mon stock*, *Historique* et *Fiche de compte*.
 
 ### Ce que ce profil ne voit pas
 
@@ -939,6 +905,14 @@ Responsable de la conformité et de la certification : suit les certificats, les
 
 *Tableau de bord : les indicateurs affichés dépendent de vos droits.*
 
+![Modules de formation : bibliothèque préchargée (cacao puis café), à conserver, modifier ou supprimer.](captures/formation/adg-modules-formation.png)
+
+*Modules de formation : bibliothèque préchargée (cacao puis café), à conserver, modifier ou supprimer.*
+
+![Missions (tâches de terrain) : création, suivi, validation.](captures/formation/adg-missions.png)
+
+*Missions (tâches de terrain) : création, suivi, validation.*
+
 ![Rapports et exports Excel.](captures/formation/adg-rapports.png)
 
 *Rapports et exports Excel.*
@@ -947,7 +921,8 @@ Responsable de la conformité et de la certification : suit les certificats, les
 
 1. **Suivre les certificats.** Rapports et alertes : le certificat de démonstration expire dans moins de 30 jours.
 2. **Créer et affecter une mission.** Menu **Missions** : titre, catégorie, priorité, échéance, producteur, coach assigné, critères de validation ; publiez.
-3. **Valider le résultat.** Revoyez les preuves transmises par le coach puis validez ou demandez une correction.
+3. **Valider le résultat.** Revoyez les preuves transmises par le coach puis validez ou demandez une correction. Une tâche validée est grisée ; elle disparaît de la liste après le nombre de jours réglé en haut de la page *Missions* (« Jours de visibilité des missions validées », 7 par défaut).
+4. **Gérer les modules de formation.** Menu **Modules de formation** : une bibliothèque agricole (cacao en priorité, puis café) liée aux certifications est préchargée. Pour chaque module : *Conserver* (validé tel quel), *Modifier* ou *Supprimer*. *Rétablir les modules par défaut* ne rajoute que les modules supprimés. Le contenu fourni est un socle général : adaptez-le à votre cahier des charges de certification.
 
 ### Ce que ce profil ne voit pas
 
@@ -961,7 +936,8 @@ Responsable de la conformité et de la certification : suit les certificats, les
 
 | # | À faire | Résultat attendu |
 |---|---|---|
-| 1 | Créez une mission de formation et assignez-la au coach. | Le coach la voit dans ses missions (application et portail). |
+| 1 | Créez une mission de formation et assignez-la au coach. | Le coach la voit dans ses missions (application mobile). |
+| 2 | Dans **Modules de formation**, modifiez un module cacao puis supprimez un module café. | Le module modifié est marqué « Modifié » ; le coach ne voit plus le module supprimé après actualisation. |
 
 ### Acquis (à cocher)
 
@@ -980,26 +956,9 @@ Agent de terrain suivi par l'ADG : exécute ses missions, enregistre des product
 ### Objectifs
 
 - Exécuter ses missions
+- Rechercher et filtrer les producteurs par section
+- Consulter les modules de formation
 - Enregistrer producteurs, parcelles et relevés
-- Demander de nouvelles missions
-
-### Ce que vous voyez
-
-![Tableau de bord : les indicateurs affichés dépendent de vos droits.](captures/formation/coach-accueil.png)
-
-*Tableau de bord : les indicateurs affichés dépendent de vos droits.*
-
-![Liste des producteurs de la coopérative.](captures/formation/coach-producteurs.png)
-
-*Liste des producteurs de la coopérative.*
-
-![Missions (tâches de terrain) : création, suivi, validation.](captures/formation/coach-missions.png)
-
-*Missions (tâches de terrain) : création, suivi, validation.*
-
-![Relevés de terrain : formations, infrastructures sociales, distributions.](captures/formation/coach-terrain.png)
-
-*Relevés de terrain : formations, infrastructures sociales, distributions.*
 
 ### Sur le téléphone
 
@@ -1007,8 +966,11 @@ Agent de terrain suivi par l'ADG : exécute ses missions, enregistre des product
 
 ### Pas à pas
 
-1. **Lire ses missions.** Menu **Missions** (ou application) : instructions, échéance, résultat attendu.
-2. **Saisir un relevé.** Formations, infrastructures sociales, distributions (liste de bénéficiaires, articles) avec photos.
+1. **Se connecter.** **Application mobile uniquement** : ce compte est refusé sur le portail web.
+2. **Trouver un producteur.** Application → **Producteurs** : tapez un nom, un code ou un village, et touchez une *section* pour ne voir que ses producteurs.
+3. **Lire un module de formation.** Application → **Modules de formation** : filtrez par culture (cacao, café) ou par thème, ouvrez un module (objectifs, points à enseigner, erreurs à éviter, questions de vérification). Les modules sont conservés sur le téléphone pour être lus sans réseau.
+4. **Lire ses missions.** Fiche du producteur → **Tâches** : instructions, échéance, résultat attendu. Les tâches terminées et validées sont grisées.
+5. **Saisir un relevé.** Formations, infrastructures sociales, distributions (liste de bénéficiaires, articles) avec photos.
 
 ### Ce que ce profil ne voit pas
 
@@ -1022,13 +984,15 @@ Agent de terrain suivi par l'ADG : exécute ses missions, enregistre des product
 
 | # | À faire | Résultat attendu |
 |---|---|---|
-| 1 | Saisissez une formation de 12 participants à Hiré. | Le relevé apparaît dans **Relevés de terrain** après synchronisation. |
+| 1 | Saisissez une formation de 12 participants à Hiré. | Le relevé apparaît dans **Relevés de terrain** (portail de l'ADG) après synchronisation. |
+| 2 | Filtrez les producteurs sur la section Est, puis ouvrez le module « Fermentation du cacao ». | La liste est réduite à la section ; le module s'ouvre, même sans réseau après une première ouverture. |
 
 ### Acquis (à cocher)
 
 - [ ] Exécuter ses missions
+- [ ] Rechercher et filtrer les producteurs par section
+- [ ] Consulter les modules de formation
 - [ ] Enregistrer producteurs, parcelles et relevés
-- [ ] Demander de nouvelles missions
 
 ---
 
