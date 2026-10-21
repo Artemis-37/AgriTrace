@@ -134,3 +134,8 @@
 ## Données de terrain dans le portail web
 - Ajouté : page « Données de terrain » (distributions, formations, infrastructures sociales, détail avec pièces jointes) et gestion du catalogue des articles (ajout, retrait) ; route `POST /distribution-articles/:id/retirer`, test `e2e-terrain` (23 contrôles).
 - Limites : pas d'export ni de filtre par date ou par coach ; les enregistrements restent hors réplication poste local ↔ cloud ; une page validée seulement par la compilation et les tests API (non essayée dans un navigateur).
+
+## Modèles de saisie propres à chaque coopérative (migration 031)
+- Ajouté : table `field_templates` (brouillon / version déployée par coopérative), droit `field_templates:manage` (ADG et administrateur de coopérative), routes `GET/POST /field-templates`, `POST /field-templates/:id/deployer`, `/retirer`, `/defaults` ; éditeur dans le portail ; l'application des coachs lit les modèles déployés (cache hors connexion, modèles intégrés à défaut). Test `e2e-terrain` : 39 contrôles.
+- Les enregistrements d'infrastructure portent désormais `category` ; ceux déjà saisis avec « Ecole » restent lisibles.
+- Limites : les questions ne gèrent que texte, nombre et liste de choix (pas de conditions « si… alors », pas de date ni de photo par question) ; les modèles se mettent à jour à l'ouverture de l'écran avec réseau (pas de poussée) ; l'ADG des rôles déjà créés reçoit les droits par la migration, mais les rôles personnalisés doivent recevoir `field_templates:manage` dans Équipe ; la liste des devises et le contenu des catégories de distribution restent à valider ; non essayé dans un navigateur ni sur téléphone.

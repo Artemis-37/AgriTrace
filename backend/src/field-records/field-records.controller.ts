@@ -4,6 +4,7 @@ import { IsIn, IsNumber, IsObject, IsOptional, IsString, IsUUID, Length, Max, Mi
 import { RequirePermissions } from '../access/decorators';
 import { AuditService } from '../audit/audit.service';
 import { DbService } from '../db/db.service';
+import { DEFAULT_INFRASTRUCTURES, DEFAULT_TRAINING_THEMES, cleanDefinition } from './field-templates';
 
 export const FIELD_KINDS = ['social_infrastructure', 'training', 'distribution'] as const;
 
@@ -16,6 +17,12 @@ export class CreateFieldRecordDto {
   @IsOptional() @IsNumber() @Min(-90) @Max(90) latitude?: number;
   @IsOptional() @IsNumber() @Min(-180) @Max(180) longitude?: number;
   @IsObject() data: Record<string, unknown>;
+}
+
+export class SaveTemplateDto {
+  @IsIn(['infrastructure', 'training_theme']) kind: string;
+  @IsString() @Length(1, 120) category: string;
+  @IsObject() definition: Record<string, unknown>;
 }
 
 export class CreateArticleDto {
@@ -89,5 +96,73 @@ export class FieldRecordsController {
     const r = await this.db.tx(req.org.id, (c) => c.query(`UPDATE distribution_articles SET active = false WHERE id = $1`, [id]));
     if (!r.rowCount) throw new NotFoundException('Article introuvable');
     return { ok: true };
+  }
+
+  /** Modèles déployés (coach) ; avec `?all=1` et le droit de gestion : brouillons, état de déploiement et modèles retirés. */
+  @Get('field-templates')
+  @RequirePermissions('field_records:read')
+  async templates(@Req() req: any, @Query('all') all?: string) {
+    const manage = all === '1' && req.org.permissions.has('field_templates:manage');
+    if (all === '1' && !manage) throw new BadRequestException('Droit de gestion requis');
+    return this.db.tx(req.org.id, async (c) => (await c.query(manage
+      ? `SELECT id, kind, category, definition, deployed_definition, deployed_at, version, active, updated_at,
+                (deployed_definition IS NOT NULL AND deployed_definition IS DISTINCT FROM definition) AS modified_since_deploy
+           FROM field_templates ORDER BY kind, category`
+      : `SELECT id, kind, category, deployed_definition AS definition, version, deployed_at FROM field_templates
+          WHERE active AND deployed_definition IS NOT NULL ORDER BY kind, category`)).rows);
+  }
+
+  /** Crée ou met à jour le brouillon d'un modèle (rien n'atteint les coachs avant le déploiement). */
+  @Post('field-templates')
+  @RequirePermissions('field_templates:manage')
+  async saveTemplate(@Body() b: SaveTemplateDto, @Req() req: any) {
+    const d = cleanDefinition(b.kind, b.definition);
+    if (d.error) throw new BadRequestException(d.error);
+    const row = await this.db.tx(req.org.id, async (c) => (await c.query(
+      `INSERT INTO field_templates(organization_id, kind, category, definition, updated_by) VALUES ($1,$2,$3,$4,$5)
+       ON CONFLICT (organization_id, kind, category) DO UPDATE SET definition = EXCLUDED.definition, active = true, updated_by = EXCLUDED.updated_by, updated_at = now()
+       RETURNING id, kind, category, version`, [req.org.id, b.kind, b.category.trim(), JSON.stringify(d.value), req.user.id])).rows[0]);
+    await this.audit.log({ organizationId: req.org.id, actorUserId: req.user.id, action: 'field_template.save', entityType: 'field_template', entityId: row.id });
+    return row;
+  }
+
+  /** Déploie le brouillon vers les coachs : ils le reçoivent à leur prochaine synchronisation. */
+  @Post('field-templates/:id/deployer')
+  @RequirePermissions('field_templates:manage')
+  async deploy(@Param('id') id: string, @Req() req: any) {
+    if (!/^[0-9a-f-]{36}$/.test(id)) throw new BadRequestException('Identifiant invalide');
+    const row = await this.db.tx(req.org.id, async (c) => (await c.query(
+      `UPDATE field_templates SET deployed_definition = definition, deployed_at = now(), version = version + 1, active = true
+        WHERE id = $1 RETURNING id, kind, category, version`, [id])).rows[0]);
+    if (!row) throw new NotFoundException('Modèle introuvable');
+    await this.audit.log({ organizationId: req.org.id, actorUserId: req.user.id, action: 'field_template.deploy', entityType: 'field_template', entityId: id, details: { version: row.version } });
+    return row;
+  }
+
+  /** Retire un modèle : il disparaît chez les coachs (les enregistrements déjà faits sont conservés). */
+  @Post('field-templates/:id/retirer')
+  @RequirePermissions('field_templates:manage')
+  async retireTemplate(@Param('id') id: string, @Req() req: any) {
+    if (!/^[0-9a-f-]{36}$/.test(id)) throw new BadRequestException('Identifiant invalide');
+    const r = await this.db.tx(req.org.id, (c) => c.query(`UPDATE field_templates SET active = false, updated_at = now() WHERE id = $1`, [id]));
+    if (!r.rowCount) throw new NotFoundException('Modèle introuvable');
+    await this.audit.log({ organizationId: req.org.id, actorUserId: req.user.id, action: 'field_template.retire', entityType: 'field_template', entityId: id });
+    return { ok: true };
+  }
+
+  /** Charge les modèles de départ (École, thèmes de formation) en brouillon, sans toucher à ce qui existe déjà. */
+  @Post('field-templates/defaults')
+  @RequirePermissions('field_templates:manage')
+  async defaults(@Req() req: any) {
+    let added = 0;
+    await this.db.tx(req.org.id, async (c) => {
+      for (const [cat, questions] of Object.entries(DEFAULT_INFRASTRUCTURES)) {
+        added += (await c.query(`INSERT INTO field_templates(organization_id, kind, category, definition, updated_by) VALUES ($1,'infrastructure',$2,$3,$4) ON CONFLICT DO NOTHING`, [req.org.id, cat, JSON.stringify({ questions }), req.user.id])).rowCount ?? 0;
+      }
+      for (const [cat, modules] of Object.entries(DEFAULT_TRAINING_THEMES)) {
+        added += (await c.query(`INSERT INTO field_templates(organization_id, kind, category, definition, updated_by) VALUES ($1,'training_theme',$2,$3,$4) ON CONFLICT DO NOTHING`, [req.org.id, cat, JSON.stringify({ modules }), req.user.id])).rowCount ?? 0;
+      }
+    });
+    return { added };
   }
 }

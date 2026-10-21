@@ -50,7 +50,7 @@ const NAV: { to: string; label: string; icon: string; perm: string[]; any?: bool
   { to: '/equipe', label: 'Équipe', icon: '⚙', perm: ['users:read'] },
   { to: '/declarations', label: 'Déclarations d\'achat', icon: '✎', perm: ['declarations:read'], notFor: 'collector' },
   { to: '/missions', label: 'Missions', icon: '⚑', perm: ['tasks:read'] },
-  { to: '/terrain', label: 'Données de terrain', icon: '❖', perm: ['field_records:read', 'field_records:manage'], any: true },
+  { to: '/terrain', label: 'Données de terrain', icon: '❖', perm: ['field_records:read', 'field_records:manage', 'field_templates:manage'], any: true },
   { to: '/stocks', label: 'Stocks et lots', icon: '▤', perm: ['warehouses:read'] },
   { to: '/rapports', label: 'Rapports', icon: '▥', perm: ['reports:read'] },
   { to: '/finances', label: 'Finances', icon: '₣', perm: ['finance:read'] },

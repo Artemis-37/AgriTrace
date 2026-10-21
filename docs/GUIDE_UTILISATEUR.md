@@ -171,3 +171,15 @@ Consultation des missions et des parcelles (mêmes écrans que le coach, selon l
 ### Données de terrain (portail web)
 
 Le menu **Données de terrain** (droit `field_records:read`) liste les distributions, formations et infrastructures sociales saisies par les coachs ; un clic ouvre le détail (articles et quantités, participants et scores, réponses) avec les photos et signatures jointes. L'onglet **Catalogue des articles** permet à l'administrateur (droit `field_records:manage`) d'ajouter ou de retirer les articles que les coachs peuvent distribuer ; un article retiré reste visible dans les distributions déjà enregistrées.
+
+### Modèles de saisie : l'ADG adapte, puis déploie (portail web › Données de terrain › Modèles de saisie)
+
+L'outil sert plusieurs coopératives : ce que les coachs doivent renseigner ne doit pas être figé. L'**ADG** (droit `field_templates:manage`) rédige pour sa coopérative :
+
+- les **catégories d'infrastructure** (École, Centre de santé, Point d'eau…) avec leur questionnaire : intitulé, type de réponse (texte, nombre, liste de choix), caractère obligatoire, ordre ;
+- les **thèmes de formation** et leurs modules ;
+- le **catalogue des articles** (catégories, groupes et articles distribuables, ajoutés librement).
+
+Un modèle enregistré reste un **brouillon** : rien ne change pour les coachs. Le bouton **Déployer** le publie (numéro de version) ; les coachs le reçoivent dès qu'ils ouvrent l'écran concerné avec du réseau, puis il reste disponible hors connexion. Le portail signale « Modifié, à redéployer » quand le brouillon diffère de la version déployée. **Retirer** masque le modèle aux coachs sans toucher aux enregistrements déjà faits. « Charger les modèles de départ » insère en brouillon le modèle École et les 15 thèmes de formation, à adapter.
+
+Tant qu'aucun modèle n'est déployé, l'application utilise ses modèles intégrés (École et thèmes de formation), pour que les coachs ne soient jamais bloqués.

@@ -1,38 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../data/field_templates.dart';
 import '../main.dart';
 import 'field_widgets.dart';
-
-enum _T { text, number, select }
-
-class _Q {
-  final String key, label;
-  final _T type;
-  final bool required;
-  final List<String> options;
-  const _Q(this.key, this.label, this.type, {this.required = true, this.options = const []});
-}
-
-const _yesNo = ['Oui', 'Non'];
-const _school = <_Q>[
-  _Q('nom', "Nom de l'école", _T.text),
-  _Q('niveau', 'Niveau académique', _T.select, options: ['Maternelle', 'Primaire', 'Collège', 'Lycée']),
-  _Q('type', "Type d'école", _T.select, options: ['Publique', 'Privée', 'Communautaire']),
-  _Q('capacite', 'Capacité totale', _T.number),
-  _Q('genre', 'Genre', _T.select, options: ['Mixte', 'Filles', 'Garçons']),
-  _Q('classes', 'Nombre de classes', _T.number),
-  _Q('inscrits_garcons', "Nombre d'étudiants inscrits", _T.number),
-  _Q('inscrites_filles', "Nombre d'étudiantes inscrites", _T.number),
-  _Q('enseignants', "Nombre d'enseignants", _T.number),
-  _Q('frais', 'Frais de scolarité par an', _T.number),
-  _Q('cantine', "L'école dispose-t-elle d'une cantine opérationnelle ?", _T.select, options: _yesNo),
-  _Q('latrines', "L'école dispose-t-elle des latrines fonctionnelles ?", _T.select, options: _yesNo),
-  _Q('pct_classe_suivante', "Pourcentage d'élèves ayant passé à la classe suivante (au cours de la dernière année scolaire)", _T.number),
-  _Q('pct_examen', "Pourcentage d'élèves ayant passé l'examen CM2 ou ayant passé au lycée (au cours de la dernière année scolaire)", _T.number),
-  _Q('finance_partenaire', 'Financé par un partenaire ?', _T.select, required: false, options: _yesNo),
-  _Q('annee_ouverture', "Année d'ouverture", _T.number),
-  _Q('finance_prime', 'Financé par la prime au cacao ?', _T.select, required: false, options: _yesNo),
-];
 
 /// Ajouter une infrastructure sociale (école) avec sa position GPS. Conservée sur l'appareil puis envoyée à la synchronisation.
 class SocialInfraScreen extends StatefulWidget {
@@ -43,8 +13,10 @@ class SocialInfraScreen extends StatefulWidget {
 
 class _SocialInfraScreenState extends State<SocialInfraScreen> {
   final _name = TextEditingController(), _region = TextEditingController(), _village = TextEditingController(), _section = TextEditingController();
-  final Map<String, TextEditingController> _ctl = {for (final q in _school) q.key: TextEditingController()};
+  final Map<String, TextEditingController> _ctl = {};
   final Map<String, String?> _sel = {};
+  FieldTemplateSet? _tpl;
+  InfraTemplate? _cat;
   double? _lat, _lon;
   bool _locating = false, _busy = false;
   String? _msg, _org;
@@ -53,8 +25,18 @@ class _SocialInfraScreenState extends State<SocialInfraScreen> {
   void initState() {
     super.initState();
     services.repo.identity().then((i) { if (mounted) setState(() => _org = i.org); });
+    FieldTemplates.load().then((t) { if (mounted) setState(() { _tpl = t; if (t.infrastructures.length == 1) _choose(t.infrastructures.first); }); });
     _locate();
   }
+
+  void _choose(InfraTemplate? c) {
+    for (final x in _ctl.values) { x.dispose(); }
+    _ctl.clear(); _sel.clear();
+    _cat = c;
+    if (c != null) { for (final q in c.questions) { _ctl[q.key] = TextEditingController(); } }
+  }
+
+  List<TemplateQuestion> get _qs => _cat?.questions ?? const [];
 
   @override
   void dispose() {
@@ -71,11 +53,12 @@ class _SocialInfraScreenState extends State<SocialInfraScreen> {
   }
 
   String? get _problem {
-    for (final q in _school) {
+    if (_cat == null) return "Choisissez le type d'infrastructure.";
+    for (final q in _qs) {
       if (!q.required) continue;
-      final v = q.type == _T.select ? _sel[q.key] : _ctl[q.key]!.text.trim();
+      final v = q.type == 'select' ? _sel[q.key] : _ctl[q.key]!.text.trim();
       if (v == null || v.isEmpty) return 'Réponse obligatoire : ${q.label}';
-      if (q.type == _T.number && double.tryParse(v.replaceAll(',', '.')) == null) return 'Nombre invalide : ${q.label}';
+      if (q.type == 'number' && double.tryParse(v.replaceAll(',', '.')) == null) return 'Nombre invalide : ${q.label}';
     }
     if (_lat == null || _lon == null) return "La position GPS de l'infrastructure est obligatoire.";
     return null;
@@ -85,13 +68,14 @@ class _SocialInfraScreenState extends State<SocialInfraScreen> {
     final p = _problem;
     if (p != null) { setState(() => _msg = p); return; }
     setState(() => _busy = true);
-    final data = <String, Object?>{'type': 'Ecole', 'region': _region.text.trim(), 'section': _section.text.trim(), 'village': _village.text.trim()};
-    for (final q in _school) {
-      final v = q.type == _T.select ? _sel[q.key] : _ctl[q.key]!.text.trim();
+    final data = <String, Object?>{'type': _cat!.category, 'category': _cat!.category, 'region': _region.text.trim(), 'section': _section.text.trim(), 'village': _village.text.trim()};
+    for (final q in _qs) {
+      final v = q.type == 'select' ? _sel[q.key] : _ctl[q.key]!.text.trim();
       if (v == null || v.isEmpty) continue;
-      data[q.key] = q.type == _T.number ? num.parse(v.replaceAll(',', '.')) : v;
+      data[q.key] = q.type == 'number' ? num.parse(v.replaceAll(',', '.')) : v;
     }
-    final title = _name.text.trim().isEmpty ? _ctl['nom']!.text.trim() : _name.text.trim();
+    final nom = (_ctl['nom']?.text ?? '').trim();
+    final title = _name.text.trim().isNotEmpty ? _name.text.trim() : nom.isNotEmpty ? nom : _cat!.category;
     await services.repo.queueFieldRecord(kind: 'social_infrastructure', title: title, latitude: _lat, longitude: _lon, data: data);
     services.sync.run();
     if (mounted) Navigator.of(context).pop(true);
@@ -104,7 +88,8 @@ class _SocialInfraScreenState extends State<SocialInfraScreen> {
       appBar: AppBar(title: const Text('Ajouter une infrastructure sociale')),
       body: ListView(padding: const EdgeInsets.only(bottom: 24), children: [
         FieldBand('Ajouter une infrastructure sociale', children: [
-          const FieldDropdown(value: 'Ecole', hint: 'Type', items: ['Ecole'], onChanged: null),
+          FieldDropdown(value: _cat?.category, hint: 'Type', items: [for (final c in _tpl?.infrastructures ?? const <InfraTemplate>[]) c.category],
+              onChanged: (v) => setState(() => _choose(_tpl?.infrastructures.where((c) => c.category == v).firstOrNull))),
           const SizedBox(height: 8),
           TextField(controller: _name, decoration: fieldDeco('Nom').copyWith(filled: true, fillColor: Colors.white)),
           const SizedBox(height: 8),
@@ -116,7 +101,8 @@ class _SocialInfraScreenState extends State<SocialInfraScreen> {
                 icon: _locating ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.my_location)),
           ]),
         ]),
-        for (var i = 0; i < _school.length; i++) FieldCard(child: _question(i + 1, _school[i])),
+        if (_cat == null) const Padding(padding: EdgeInsets.all(20), child: Text("Choisissez le type d'infrastructure pour afficher son questionnaire.", style: TextStyle(color: Colors.black54))),
+        for (var i = 0; i < _qs.length; i++) FieldCard(child: _question(i + 1, _qs[i])),
         FieldCard(title: 'Localité et coopérative', child: Column(children: [
           TextField(controller: _region, decoration: fieldDeco('Région')),
           const SizedBox(height: 8),
@@ -133,12 +119,12 @@ class _SocialInfraScreenState extends State<SocialInfraScreen> {
     );
   }
 
-  Widget _question(int n, _Q q) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+  Widget _question(int n, TemplateQuestion q) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text.rich(TextSpan(text: '$n. ${q.label}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15), children: [if (q.required) const TextSpan(text: ' *', style: TextStyle(color: Colors.red))])),
         const SizedBox(height: 8),
-        if (q.type == _T.select)
+        if (q.type == 'select')
           FieldDropdown(value: _sel[q.key], hint: 'Réponse', items: q.options, onChanged: (v) => setState(() => _sel[q.key] = v))
         else
-          TextField(controller: _ctl[q.key], keyboardType: q.type == _T.number ? const TextInputType.numberWithOptions(decimal: true) : TextInputType.text, decoration: fieldDeco('Réponse')),
+          TextField(controller: _ctl[q.key], keyboardType: q.type == 'number' ? const TextInputType.numberWithOptions(decimal: true) : TextInputType.text, decoration: fieldDeco('Réponse')),
       ]);
 }

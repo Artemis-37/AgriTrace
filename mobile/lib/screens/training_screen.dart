@@ -1,24 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../data/field_templates.dart';
 import '../main.dart';
 import 'field_widgets.dart';
 import 'photo_capture.dart';
-
-const trainingThemes = [
-  'Agriculture régénératrice', 'Alimentation saine et nutrition', 'Collecte de documents et tenue de registres', 'Culture commerciale et financière',
-  'Diversification', 'Eau, assainissement, et hygiène', "Entreprise responsable et droits de l'homme", 'Genre, jeunesse, et inclusion',
-  'Gestion des récoltes et des produits', 'Gouvernance coopérative', 'Maladies transmissibles et non transmissibles', 'Normes et réglementations de certification',
-  'Santé et sécurité au travail', 'Santé générale', 'Santé maternelle et reproductive',
-];
-
-/// Modules proposés par thème (seul le thème « Agriculture régénératrice » est renseigné ; pour les autres, saisie libre).
-const trainingModules = <String, List<String>>{
-  'Agriculture régénératrice': [
-    'Actions paysagères', 'Agroforesterie et arbres à la ferme', "Conservation de l'eau après la récolte", "Conservation de l'eau avant la récolte",
-    "Contrôle de l'érosion des sols", 'Correction du sol', 'Couverture permanente du sol', 'Cultures intercalaires et rotations des cultures',
-    'Gestion des eaux usées', 'Gestion des résidus de récolte et des déchets',
-  ],
-};
 
 /// « Dossiers de formation » : formations enregistrées (en attente d'envoi sur l'appareil, puis confirmées par le serveur).
 class TrainingListScreen extends StatefulWidget {
@@ -98,6 +83,7 @@ class TrainingFormScreen extends StatefulWidget {
 
 class _TrainingFormScreenState extends State<TrainingFormScreen> {
   String? _theme;
+  Map<String, List<String>> _themes = const {};
   final _module = TextEditingController();
   final Set<String> _modules = {};
   final List<_Participant> _people = [];
@@ -105,10 +91,13 @@ class _TrainingFormScreenState extends State<TrainingFormScreen> {
   bool _openPrincipal = true, _openStake = false, _busy = false;
 
   @override
+  void initState() { super.initState(); FieldTemplates.load().then((t) { if (mounted) setState(() => _themes = t.themes); }); }
+
+  @override
   void dispose() { _module.dispose(); super.dispose(); }
 
   Future<void> _pickModules() async {
-    final all = trainingModules[_theme] ?? const <String>[];
+    final all = _themes[_theme] ?? const <String>[];
     final chosen = {..._modules};
     var q = '';
     final ok = await showDialog<bool>(context: context, builder: (c) => StatefulBuilder(builder: (c, set) => AlertDialog(
@@ -156,7 +145,7 @@ class _TrainingFormScreenState extends State<TrainingFormScreen> {
     if (_theme == null) { setState(() => _msg = 'Choisissez le thème de la formation.'); return; }
     if (_people.isEmpty) { setState(() => _msg = 'Ajoutez au moins un participant.'); return; }
     setState(() { _busy = true; _msg = null; });
-    final id = await services.repo.queueFieldRecord(kind: 'training', title: _theme!, data: {'theme': _theme, 'module': trainingModules.containsKey(_theme) ? _modules.join(', ') : _module.text.trim(), 'modules': _modules.toList(), 'participants': [for (final p in _people) p.toJson()]});
+    final id = await services.repo.queueFieldRecord(kind: 'training', title: _theme!, data: {'theme': _theme, 'module': (_themes[_theme] ?? const []).isNotEmpty ? _modules.join(', ') : _module.text.trim(), 'modules': _modules.toList(), 'participants': [for (final p in _people) p.toJson()]});
     if (_photo != null) await services.repo.queuePhoto(subjectType: 'field_record', subjectId: id, kind: 'Photo de la formation', sourcePath: _photo!);
     services.sync.run();
     if (mounted) Navigator.of(context).pop(true);
@@ -175,11 +164,11 @@ class _TrainingFormScreenState extends State<TrainingFormScreen> {
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               const Text('THÈME DE FORMATION', style: TextStyle(fontWeight: FontWeight.w800)),
               const SizedBox(height: 6),
-              FieldDropdown(value: _theme, hint: 'Sélectionner', items: trainingThemes, onChanged: (v) => setState(() { _theme = v; _modules.clear(); })),
+              FieldDropdown(value: _theme, hint: 'Sélectionner', items: _themes.keys.toList(), onChanged: (v) => setState(() { _theme = v; _modules.clear(); })),
               const SizedBox(height: 10),
               const Text('MODULE DE FORMATION', style: TextStyle(fontWeight: FontWeight.w800)),
               const SizedBox(height: 6),
-              if (trainingModules.containsKey(_theme))
+              if ((_themes[_theme] ?? const []).isNotEmpty)
                 InkWell(onTap: _pickModules, child: Container(
                   width: double.infinity, constraints: const BoxConstraints(minHeight: 56), padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade400), borderRadius: BorderRadius.circular(8)),
