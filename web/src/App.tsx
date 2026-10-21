@@ -25,6 +25,7 @@ import CentralConsole from './pages/CentralConsole';
 import Missions from './pages/Missions';
 import OrgLogo from './OrgLogo';
 import Terrain from './pages/Terrain';
+import Operations from './pages/Operations';
 import Parcels from './pages/Parcels';
 import Producers from './pages/Producers';
 import Quality from './pages/Quality';
@@ -51,6 +52,7 @@ const NAV: { to: string; label: string; icon: string; perm: string[]; any?: bool
   { to: '/equipe', label: 'Équipe', icon: '⚙', perm: ['users:read'] },
   { to: '/declarations', label: 'Déclarations d\'achat', icon: '✎', perm: ['declarations:read'], notFor: 'collector' },
   { to: '/missions', label: 'Missions', icon: '⚑', perm: ['tasks:read'] },
+  { to: '/operations', label: 'Mes opérations', icon: '🧾', perm: ['cancellations:request'] },
   { to: '/terrain', label: 'Données de terrain', icon: '❖', perm: ['field_records:read', 'field_records:manage', 'field_templates:manage'], any: true },
   { to: '/stocks', label: 'Stocks et lots', icon: '▤', perm: ['warehouses:read'] },
   { to: '/rapports', label: 'Rapports', icon: '▥', perm: ['reports:read'] },
@@ -127,6 +129,7 @@ export default function App() {
           <Route path="/declarations" element={<Declarations />} />
           <Route path="/missions" element={<Missions />} />
           <Route path="/terrain" element={<Terrain />} />
+          <Route path="/operations" element={<Operations />} />
           <Route path="/stocks" element={<Stocks />} />
           <Route path="/finances" element={<Finance />} />
           <Route path="/qualite" element={<Quality />} />

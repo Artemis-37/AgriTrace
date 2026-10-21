@@ -183,3 +183,20 @@ dl.kv dd { margin: 0; }
 
 .org-logo-box:empty { display: none; }
 .org-logo-box { margin-top: .75rem; background: #fff; border-radius: 10px; padding: .4rem .6rem; display: flex; justify-content: center; }
+
+/* Reçus imprimables : seule la feuille sort à l'impression */
+.receipt-sheet { display: none; }
+.receipt-sheet header { display: flex; align-items: center; gap: 1rem; border-bottom: 2px solid #000; padding-bottom: .5rem; }
+.receipt-sheet h1 { font-size: 1.2rem; margin: 0; }
+.receipt-sheet h2 { margin: 1rem 0 .3rem; font-size: 1.1rem; }
+.receipt-sheet .receipt-no { font-weight: 400; margin-left: .5rem; }
+.receipt-sheet table { width: 100%; border-collapse: collapse; margin: .6rem 0; }
+.receipt-sheet th, .receipt-sheet td { border: 1px solid #444; padding: .3rem .5rem; text-align: left; }
+.receipt-sheet th { width: 40%; background: #f0f0f0; }
+.receipt-sheet footer { display: flex; gap: 2rem; margin: 2.5rem 0 1rem; }
+.receipt-sheet footer div { flex: 1; border-top: 1px solid #000; padding-top: .3rem; text-align: center; }
+.receipt-dup { font-weight: 700; border: 2px solid #000; display: inline-block; padding: .1rem .6rem; }
+@media print {
+  body.printing-receipt #root, body.printing-receipt .modal-backdrop { display: none !important; }
+  body.printing-receipt .receipt-sheet { display: block; color: #000; background: #fff; padding: 1cm; }
+}
