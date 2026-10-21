@@ -1,5 +1,5 @@
 // Navigateur : premier démarrage d'un serveur local vierge (création de la coopérative), puis page Synchronisation.
-//   WEB=http://127.0.0.1:3150 node e2e/parcours-premier-demarrage.mjs   (serveur local vierge, mode « local »)
+//   WEB=http://127.0.0.1:3151 node e2e/parcours-premier-demarrage.mjs   (serveur local vierge, port HTTP du poste = port + 1, mode « local »)
 import { chromium } from 'playwright-core';
 import { WEB, must } from './lib.mjs';
 

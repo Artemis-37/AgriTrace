@@ -29,11 +29,18 @@ const pw = 'MotDePasseSolide2026!';
   check('rôles créés', !!(rMag.id && rCai.id && rCol.id));
   check('création idempotente', (await mk('magasinier')).id === rMag.id);
   check('rôle type inconnu refusé', (await call('POST', '/roles/standard', { ...J(t0), body: { code: 'pirate' } })).status === 400);
+  const rAdg = await mk('adg'); const rCoach = await mk('coach');
+  check('rôles ADG et coach créés', !!(rAdg.id && rCoach.id));
   check('rôle marqué « créé »', (await call('GET', '/roles/templates', J(t0))).body.every((t) => t.created));
 
   const mkUser = async (tag, r) => { const email = `${tag}.${run}@t.test`; await call('POST', '/users', { ...J(t0), body: { email, full_name: tag, password: pw, role_id: r.id } }); return login(email, pw); };
   const mag = await mkUser('magasinier', rMag), cai = await mkUser('caissier', rCai), col = await mkUser('collecteur', rCol);
 
+  const adgMe = (await call('GET', '/me', J(await mkUser('adg', rAdg)))).body, coachMe = (await call('GET', '/me', J(await mkUser('coach', rCoach)))).body;
+  const adgP = adgMe.permissions ?? [];
+  check('ADG : certification, qualité, contrôle des parcelles et décision sur les demandes des coachs', ['certificates:manage', 'quality:manage', 'parcels:verify', 'tasks:assign', 'tasks:decide_requests'].every((p) => adgP.includes(p)), adgP);
+  check('ADG : ni caisse, ni comptabilité, ni stock', !['cash:operate', 'accounting:post', 'convoys:settle', 'stock:move', 'finance:read'].some((p) => adgP.includes(p)), adgP);
+  check('ADG : compte du personnel (pas un coach) ; coach : compte coach', adgMe.account_kind === 'staff' && coachMe.account_kind === 'coach', [adgMe.account_kind, coachMe.account_kind]);
   const me = await call('GET', '/me', J(mag));
   const perms = me.body.permissions ?? [];
   const bad = perms.filter((p) => /^(geo|parcels|inspections|quality|finance|accounting|cash|tasks|users|roles|prefinancing|loans|convoys:settle|invoices|buyers|logistics|replication)/.test(p));

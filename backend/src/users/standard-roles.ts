@@ -19,4 +19,21 @@ export const STANDARD_ROLES: Record<string, { name: string; description: string;
     permissions: ['declarations:create', 'declarations:read', 'producers:read', 'convoys:create', 'convoys:read', 'collector:stock', 'documents:upload', 'messages:use', 'sync:use'],
     hidden: ['Tout ce qui concerne les autres collecteurs', 'Caisse', 'Comptabilité', 'Équipe'],
   },
+  adg: {
+    name: 'Administrateur de groupe (ADG)',
+    description: 'Responsable de la conformité et de la certification : suit les certificats, les inspections et la qualité, contrôle et vérifie les parcelles, met en place les missions des coachs et décide de leurs demandes.',
+    permissions: [
+      'certificates:read', 'certificates:manage', 'inspections:read', 'inspections:perform', 'quality:read', 'quality:manage', 'alerts:read', 'notifications:scan',
+      'parcels:read', 'parcels:control', 'parcels:verify', 'geo:anomalies', 'geo:export', 'documents:read', 'documents:upload', 'documents:sensitive',
+      'tasks:read', 'tasks:read_all', 'tasks:create', 'tasks:update', 'tasks:assign', 'tasks:review', 'tasks:close', 'tasks:decide_requests',
+      'producers:read', 'collectors:read', 'value_chains:read', 'campaigns:read', 'reports:read', 'messages:use', 'sync:use',
+    ],
+    hidden: ['Caisse et comptabilité', 'Finances', 'Convois (réception et règlement)', 'Stocks', 'Préfinancement'],
+  },
+  coach: {
+    name: 'Coach',
+    description: 'Agent de terrain suivi par l\'ADG : exécute ses missions, relève des parcelles, joint des photos et demande de nouvelles missions.',
+    permissions: ['tasks:read', 'tasks:execute', 'tasks:request', 'parcels:create', 'parcels:read', 'producers:read', 'inspections:perform', 'documents:upload', 'messages:use', 'sync:use'],
+    hidden: ['Caisse et comptabilité', 'Finances', 'Convois', 'Stocks', 'Équipe'],
+  },
 };
