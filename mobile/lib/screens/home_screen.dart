@@ -161,14 +161,14 @@ class _HomeScreenState extends State<HomeScreen> {
   /// Profil terrain (coach) : pas d'achats ni de convoi, mais des relevés de parcelles et des missions.
   bool get _coachMode => !_canCreate && !_canConvoy && (_canSurvey || _canMissions || _canProducer || _canField);
 
-  Widget _tile(IconData icon, String label, VoidCallback onTap, {double height = 120, double fontSize = 13}) => Material(
+  Widget _tile(IconData icon, String label, VoidCallback onTap, {double height = 120, double fontSize = 13, Widget? iconWidget}) => Material(
         color: const Color(0xFF3F9B2E), elevation: 2, borderRadius: BorderRadius.circular(6),
         child: InkWell(
           borderRadius: BorderRadius.circular(6), onTap: onTap,
           child: SizedBox(height: height, child: Padding(
             padding: const EdgeInsets.all(10),
             child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-              Icon(icon, color: Colors.white, size: 44),
+              iconWidget ?? Icon(icon, color: Colors.white, size: 44),
               const SizedBox(height: 8),
               Text(label.toUpperCase(), textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontSize: fontSize, fontWeight: FontWeight.w700)),
             ]),
@@ -180,7 +180,7 @@ class _HomeScreenState extends State<HomeScreen> {
     // Même organisation que le terminal de terrain : les parcelles et les tâches se consultent depuis la fiche du producteur.
     final r1 = <Widget>[
       if (_canProducer) _tile(Icons.person_add, 'Ajouter un nouveau producteur et une exploitation agricole', () => _open(const AddProducerScreen(), sync: true), height: 150),
-      _tile(Icons.assignment_turned_in, 'Producteurs et enquêtes', () => _open(const ProducersScreen()), height: 150),
+      _tile(Icons.groups, 'Producteurs et enquêtes', () => _open(const ProducersScreen()), height: 150, iconWidget: const _GroupCheckIcon()),
     ];
     final r2 = <Widget>[
       if (_canField) _tile(Icons.add_location_alt, 'Ajouter une infrastructure sociale', () => _open(const SocialInfraScreen(), sync: true), height: 150, fontSize: 11),
@@ -370,4 +370,16 @@ class _SyncBanner extends StatelessWidget {
       child: Text(extra.isEmpty ? text : '$text\n$extra', style: TextStyle(color: color, fontWeight: FontWeight.w600)),
     );
   }
+}
+
+/// Groupe de personnes avec un petit formulaire coché dans le coin : « Producteurs et enquêtes ».
+class _GroupCheckIcon extends StatelessWidget {
+  const _GroupCheckIcon();
+  @override
+  Widget build(BuildContext context) => SizedBox(width: 64, height: 50, child: Stack(clipBehavior: Clip.none, children: [
+        const Positioned(left: 0, top: 0, child: Icon(Icons.groups, color: Colors.white, size: 48)),
+        Positioned(right: -2, bottom: -6, child: Container(
+          padding: const EdgeInsets.all(1), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(5), border: Border.all(color: const Color(0xFF3F9B2E), width: 2)),
+          child: const Icon(Icons.fact_check, color: Color(0xFF2F7D32), size: 24))),
+      ]));
 }

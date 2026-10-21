@@ -116,7 +116,7 @@
 
 ## Interface coach alignée sur le terminal de terrain (octobre 2026)
 - Les parcelles se consultent dans les « Informations sur le producteur » et les missions sont la « Liste des tâches » de la fiche du producteur ; pour relever une parcelle il faut d'abord choisir le producteur ; le fond de carte s'affiche depuis la fiche (« Ouvrir la carte ») et pendant le relevé. L'accueil ne propose plus « Mes parcelles », « Mes missions » ni « Fond de carte ».
-- Nouveaux écrans : « Télécharger les données » (synchronisation et fond de carte hors ligne), « Capturer mon emplacement » (lecture GPS, sans enregistrement).
+- Nouveaux écrans : « Télécharger les données » (synchronisation et fond de carte hors ligne), (l'écran « Capturer mon emplacement » a été retiré ensuite).
 - Non repris du terminal : ajout d'un nouveau producteur et de son exploitation, infrastructure sociale, distribution et services, enregistrement d'une formation, demande de désactivation d'un producteur (fonctions absentes du cahier des charges ou à définir).
 - Les tâches du producteur demandent le réseau (inchangé). Les notifications de missions ouvrent la liste des producteurs.
 
