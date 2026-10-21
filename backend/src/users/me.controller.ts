@@ -30,6 +30,7 @@ export class MeController {
     const kind = isCollector ? 'collector' : p.has('tasks:execute') && !p.has('tasks:decide_requests') ? 'coach' : 'staff';
     return {
       user: { id: req.user.id, email: req.user.email, full_name: req.user.full_name },
+      must_change_password: !!req.user.must_change_password,
       organization_id: req.org.id,
       permissions: [...p].sort(),
       account_kind: kind,

@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as argon2 from 'argon2';
 import { createHash, randomBytes } from 'crypto';
@@ -95,6 +95,22 @@ export class AuthService {
     const next = randomBytes(48).toString('base64url');
     await this.db.query(`UPDATE user_sessions SET refresh_token_hash = $2 WHERE id = $1`, [sid, sha256(next)]);
     return this.issue(s.user_id, sid, next);
+  }
+
+  /** Changement de mot de passe par l'utilisateur : l'ancien est exigé, les autres sessions sont fermées. */
+  async changePassword(userId: string, sessionId: string, current: string, next: string) {
+    const [u] = await this.db.query(`SELECT password_hash FROM users WHERE id = $1`, [userId]);
+    if (!u || String(u.password_hash).startsWith('!') || !(await argon2.verify(u.password_hash, current))) throw new UnauthorizedException('Mot de passe actuel incorrect');
+    if (await argon2.verify(u.password_hash, next)) throw new BadRequestException("Le nouveau mot de passe doit être différent de l'actuel");
+    await this.db.query(`UPDATE users SET password_hash = $2, must_change_password = false, failed_logins = 0, locked_until = NULL WHERE id = $1`, [userId, await this.hashPassword(next)]);
+    await this.db.query(`UPDATE user_sessions SET revoked_at = now() WHERE user_id = $1 AND id <> $2 AND revoked_at IS NULL`, [userId, sessionId]);
+    await this.audit.log({ actorUserId: userId, action: 'auth.password_changed' });
+  }
+
+  /** Mot de passe temporaire posé par un administrateur : le titulaire devra le changer à la prochaine connexion. */
+  async setTemporaryPassword(userId: string, temp: string) {
+    await this.db.query(`UPDATE users SET password_hash = $2, must_change_password = true, failed_logins = 0, locked_until = NULL WHERE id = $1`, [userId, await this.hashPassword(temp)]);
+    await this.db.query(`UPDATE user_sessions SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL`, [userId]);
   }
 
   async logout(sessionId: string, userId: string) {

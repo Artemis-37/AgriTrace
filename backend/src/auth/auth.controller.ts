@@ -9,6 +9,10 @@ class LoginDto {
   @IsString() @MinLength(1) password: string;
   @IsOptional() @IsString() device_label?: string;
 }
+class ChangePasswordDto {
+  @IsString() current_password: string;
+  @IsString() @MinLength(10) new_password: string;
+}
 class RefreshDto {
   @IsString() refresh_token: string;
 }
@@ -38,5 +42,13 @@ export class AuthController {
   @HttpCode(204)
   async logout(@Req() req: any) {
     await this.auth.logout(req.user.sessionId, req.user.id);
+  }
+
+  @NoOrg()
+  @ApiBearerAuth()
+  @Post('change-password')
+  @HttpCode(204)
+  async changePassword(@Body() b: ChangePasswordDto, @Req() req: any) {
+    await this.auth.changePassword(req.user.id, req.user.sessionId, b.current_password, b.new_password);
   }
 }

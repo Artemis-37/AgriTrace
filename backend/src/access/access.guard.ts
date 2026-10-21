@@ -42,7 +42,7 @@ export class AccessGuard implements CanActivate {
     }
 
     const rows = await this.db.query(
-      `SELECT u.id, u.email, u.full_name, u.is_platform_admin
+      `SELECT u.id, u.email, u.full_name, u.is_platform_admin, u.must_change_password
          FROM user_sessions s JOIN users u ON u.id = s.user_id
         WHERE s.id = $1 AND s.user_id = $2 AND s.revoked_at IS NULL
           AND s.expires_at > now() AND u.status = 'active'`,
@@ -50,6 +50,9 @@ export class AccessGuard implements CanActivate {
     );
     if (!rows.length) throw new UnauthorizedException('Session révoquée ou expirée');
     req.user = { ...rows[0], sessionId: payload.sid };
+    // Mot de passe temporaire : seules les routes de changement de mot de passe, de déconnexion et « me » restent ouvertes.
+    if (rows[0].must_change_password && !/\/(auth\/change-password|auth\/logout|me)\/?(\?.*)?$/.test(String(req.originalUrl ?? req.url)))
+      throw new ForbiddenException({ message: 'Vous devez changer votre mot de passe temporaire avant de continuer', code: 'PASSWORD_CHANGE_REQUIRED' });
 
     if (this.reflector.getAllAndOverride<boolean>(PLATFORM_ADMIN, targets)) {
       if (!req.user.is_platform_admin) throw new ForbiddenException('Réservé aux administrateurs de plateforme');

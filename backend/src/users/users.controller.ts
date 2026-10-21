@@ -1,4 +1,5 @@
-import { BadRequestException, Body, ConflictException, Controller, ForbiddenException, Get, Post, Req } from '@nestjs/common';
+import { BadRequestException, Body, ConflictException, Controller, ForbiddenException, Get, NotFoundException, Param, ParseUUIDPipe, Post, Req } from '@nestjs/common';
+import { randomBytes } from 'crypto';
 import { ApiBearerAuth, ApiHeader, ApiTags } from '@nestjs/swagger';
 import { ArrayMaxSize, ArrayNotEmpty, IsArray, IsEmail, IsOptional, IsString, IsUUID, Length, Matches, MinLength } from 'class-validator';
 import { RequirePermissions } from '../access/decorators';
@@ -144,5 +145,22 @@ export class UsersController {
       details: { role_id: b.role_id },
     });
     return user;
+  }
+
+  /** Réinitialisation par un administrateur : génère un mot de passe temporaire, montré une seule fois, à changer à la première connexion. */
+  @Post('users/:id/reset-password')
+  @RequirePermissions('users:manage')
+  async resetPassword(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
+    if (id === req.user.id) throw new BadRequestException('Utilisez « Changer mon mot de passe » pour votre propre compte');
+    const member = await this.db.tx(req.org.id, async (c) => (await c.query(
+      `SELECT u.id, u.email, u.is_platform_admin, (SELECT count(*) FROM user_organizations x WHERE x.user_id = u.id AND x.status = 'active' AND x.organization_id <> $2) AS others
+         FROM users u JOIN user_organizations uo ON uo.user_id = u.id WHERE u.id = $1 AND uo.organization_id = $2`, [id, req.org.id])).rows[0]);
+    if (!member) throw new NotFoundException('Utilisateur introuvable dans cette coopérative');
+    if (member.is_platform_admin) throw new ForbiddenException("Le compte d'un administrateur de plateforme ne se réinitialise pas ici");
+    if (Number(member.others) > 0) throw new ConflictException('Ce compte appartient aussi à une autre coopérative : sa réinitialisation doit être demandée à l\'administrateur de la plateforme');
+    const temp = randomBytes(9).toString('base64url') + 'a1';
+    await this.auth.setTemporaryPassword(id, temp);
+    await this.audit.log({ organizationId: req.org.id, actorUserId: req.user.id, action: 'user.reset_password', entityType: 'user', entityId: id });
+    return { email: member.email, temporary_password: temp, must_change_password: true };
   }
 }
