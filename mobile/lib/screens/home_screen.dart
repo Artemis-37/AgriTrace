@@ -316,13 +316,12 @@ class _HomeHeader extends StatelessWidget {
         const SizedBox(height: 6),
         Text(now, style: const TextStyle(color: white, fontSize: 13)),
         if (name.isNotEmpty) Text('Bonjour, ${name.toUpperCase()}', style: const TextStyle(color: white, fontSize: 18, fontWeight: FontWeight.w700)),
-        if (org.isNotEmpty || logo != null) Row(children: [
-          if (logo != null) Container(
-            height: 40, margin: const EdgeInsets.only(right: 10), padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-            decoration: BoxDecoration(color: white, borderRadius: BorderRadius.circular(8)),
-            child: Image.memory(logo!, fit: BoxFit.contain, errorBuilder: (_, __, ___) => const SizedBox.shrink())),
-          if (org.isNotEmpty) Expanded(child: Text(org, style: const TextStyle(color: white, fontSize: 15))),
-        ]),
+        if (logo != null) Container(
+          height: 40, margin: const EdgeInsets.only(top: 4, bottom: 4), padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+          decoration: BoxDecoration(color: white, borderRadius: BorderRadius.circular(8)),
+          child: Image.memory(logo!, fit: BoxFit.contain, errorBuilder: (_, __, ___) => const SizedBox.shrink())),
+        // Nom complet de la coopérative, sur toute la largeur et sur autant de lignes que nécessaire
+        if (org.isNotEmpty) Text(org, softWrap: true, style: const TextStyle(color: white, fontSize: 15, fontWeight: FontWeight.w600)),
         if (zone.isNotEmpty) Text('Zone : $zone', style: const TextStyle(color: white, fontSize: 14, fontWeight: FontWeight.w600)),
         if (count != null) ...[
           const SizedBox(height: 10),

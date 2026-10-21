@@ -155,7 +155,7 @@ class _AddProducerScreenState extends State<AddProducerScreen> {
             InputDecorator(decoration: fieldDeco('').copyWith(filled: true, fillColor: const Color(0xFFEEEEEE)), child: const Text('Agriculteur principal')),
           ])),
           FieldCard(title: 'Coopérative', child: Row(children: [
-            Expanded(child: InputDecorator(decoration: fieldDeco('').copyWith(filled: true, fillColor: const Color(0xFFEEEEEE)), child: Text(_org.isEmpty ? 'Ma coopérative' : _org, overflow: TextOverflow.ellipsis))),
+            Expanded(child: InputDecorator(decoration: fieldDeco('').copyWith(filled: true, fillColor: const Color(0xFFEEEEEE)), child: Text(_org.isEmpty ? 'Ma coopérative' : _org))),
             const SizedBox(width: 8),
             Expanded(child: TextField(controller: _section, decoration: fieldDeco('Section'))),
           ])),

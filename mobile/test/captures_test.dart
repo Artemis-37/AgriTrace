@@ -81,7 +81,7 @@ class _Repo extends Repository {
   @override
   Future<List<Map<String, Object?>>> parcels() async => parcs;
   @override
-  Future<({String name, String org, String zone})> identity() async => (name: 'Koffi Yao Serge', org: 'Coopérative Démo', zone: 'Section Est');
+  Future<({String name, String org, String zone})> identity() async => (name: 'Koffi Yao Serge', org: 'Société Coopérative Agricole Démo du Haut-Sassandra', zone: 'Section Est');
   @override
   Future<List<Map<String, Object?>>> searchProducers(String q) async => [
         {'id': 'pr1', 'internal_code': 'P00112', 'last_name': 'KONÉ', 'first_names': 'Awa', 'phone': '07 00 00 00 01', 'village': 'Hiré', 'section': 'Section Est'},
