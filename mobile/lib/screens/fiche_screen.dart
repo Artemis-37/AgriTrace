@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../main.dart';
 
-/// Fiche de suivi du compte du collecteur (modèle papier SOCAHI) : report, financements, livraisons et solde courant. Nécessite le réseau.
+/// Fiche de suivi du compte du collecteur (modèle papier de la coopérative) : report, financements, livraisons et solde courant. Nécessite le réseau.
 class FicheScreen extends StatefulWidget {
   const FicheScreen({super.key});
   @override

@@ -75,8 +75,8 @@ const num = (x) => Number(x);
   check('conducteur créé', !!drv.id);
 
   console.log('Acheteurs, contrats, commandes');
-  check('fiche acheteur : code unique', (await call('POST', '/buyers', { ...J(A, com.t), body: { code: 'CEMOI', name: 'Cemoi Négoce', country: 'FR', currency: 'XOF', payment_terms_days: 30 } })).status === 201
-    && (await call('POST', '/buyers', { ...J(A, com.t), body: { code: 'CEMOI', name: 'Doublon' } })).status === 409);
+  check('fiche acheteur : code unique', (await call('POST', '/buyers', { ...J(A, com.t), body: { code: 'ACHETEUR1', name: 'Acheteur Démo', country: 'FR', currency: 'XOF', payment_terms_days: 30 } })).status === 201
+    && (await call('POST', '/buyers', { ...J(A, com.t), body: { code: 'ACHETEUR1', name: 'Doublon' } })).status === 409);
   const buyer = (await call('GET', '/buyers', J(A, com.t))).body[0];
   check('lecteur ne voit pas les acheteurs', (await call('GET', '/buyers', J(A, lec.t))).status === 403);
   const ct = await call('POST', '/sales-contracts', { ...J(A, com.t), body: { number: 'CT-001', buyer_id: buyer.id, value_chain_id: vc.id, starts_on: '2026-01-01', ends_on: '2026-12-31', quantity_kg: '600', unit_price: '1500' } });
@@ -231,7 +231,7 @@ const num = (x) => Number(x);
 
   console.log('Traçabilité descendante');
   const fw = (await call('GET', `/traceability/forward?producer_id=${prod.id}`, J(A))).body;
-  check('producteur → lot → expéditions → commande → factures → acheteur', fw.lots.some((l) => l.id === lotId) && fw.shipments.length === 2 && fw.orders.length === 1 && fw.invoices.length === 2 && fw.buyers[0]?.code === 'CEMOI', fw);
+  check('producteur → lot → expéditions → commande → factures → acheteur', fw.lots.some((l) => l.id === lotId) && fw.shipments.length === 2 && fw.orders.length === 1 && fw.invoices.length === 2 && fw.buyers[0]?.code === 'ACHETEUR1', fw);
   const fwd = (await call('GET', `/traceability/forward?declaration_id=${decl.id}`, J(A))).body;
   check('déclaration d\'achat → mêmes acheteurs', fwd.buyers.length === 1 && fwd.shipments.length === 2);
   const par = (await call('POST', '/parcels', { ...J(A), body: { idempotency_key: key('p'), producer_id: prod.id, value_chain_id: vc.id, declared_area_ha: '2', latitude: 6.8, longitude: -6 } })).body;

@@ -50,13 +50,13 @@ async function quitElectron() {
 (async () => {
   srv = new LocalServer({ dataDir: path.join(work, 'data'), appDir: app, port, pgPort, log: (m) => logs.push(m), tls: true });   // comme en production : HTTPS auto-signé sur le réseau local
   await srv.start();
-  const b = await api('POST', '/bootstrap/local', { body: { admin_name: 'Directrice Test', admin_email: 'dir@socahi.test', admin_password: PW, organization_code: 'SOCAHI', organization_name: 'SOCAHI Test' } });
+  const b = await api('POST', '/bootstrap/local', { body: { admin_name: 'Directrice Test', admin_email: 'dir@demo.test', admin_password: PW, organization_code: 'DEMO', organization_name: 'DEMO Test' } });
   check('serveur local prêt', b.status === 201, b.body);
   const orgId = b.body.organization_id;
-  const adm = (await api('POST', '/auth/login', { body: { email: 'dir@socahi.test', password: PW } })).body.access_token;
+  const adm = (await api('POST', '/auth/login', { body: { email: 'dir@demo.test', password: PW } })).body.access_token;
   const role = (await api('POST', '/roles', { token: adm, org: orgId, body: { code: 'compta', name: 'Comptabilité', permissions: ['messages:use', 'sync:use'] } })).body;
-  const u2 = (await api('POST', '/users', { token: adm, org: orgId, body: { email: 'compta@socahi.test', full_name: 'Aminata Comptable', password: PW, role_id: role.id } })).body;
-  const t2 = (await api('POST', '/auth/login', { body: { email: 'compta@socahi.test', password: PW } })).body.access_token;
+  const u2 = (await api('POST', '/users', { token: adm, org: orgId, body: { email: 'compta@demo.test', full_name: 'Aminata Comptable', password: PW, role_id: role.id } })).body;
+  const t2 = (await api('POST', '/auth/login', { body: { email: 'compta@demo.test', password: PW } })).body.access_token;
   check('deuxième utilisateur (autre poste)', !!u2.id && !!t2);
 
   const userData = path.join(work, 'electron-data'); fs.mkdirSync(userData);
@@ -67,7 +67,7 @@ async function quitElectron() {
   let page = await attach();
   await page.waitForSelector('input[type=email]', { timeout: 20000 });
   check('le portail se charge depuis l\'application (agritrace://)', page.url().startsWith('agritrace://app'));
-  await page.fill('input[type=email]', 'dir@socahi.test'); await page.fill('input[type=password]', PW); await page.click('button[type=submit]');
+  await page.fill('input[type=email]', 'dir@demo.test'); await page.fill('input[type=password]', PW); await page.click('button[type=submit]');
   await page.waitForSelector('text=Bonjour', { timeout: 20000 });
   check('connexion via le serveur relayé', true);
   await page.getByRole('link', { name: /Messages/ }).first().click(); await page.waitForTimeout(1500);

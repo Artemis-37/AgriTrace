@@ -187,7 +187,7 @@ const today = new Date().toISOString().slice(0, 10);
   console.log('Préfinancement reçu');
   const bank = (await call('POST', '/financial-accounts', { ...J(), body: { owner_type: 'other', name: 'Banque — préfinancement' } })).body;
   check('préfinancement sans compte refusé', (await call('POST', '/prefinancings', { ...J(), body: { idempotency_key: key('pf'), funder: 'X Négoce', amount: '1000', currency: 'XOF', received_on: '2026-01-10' } })).status === 400);
-  const pf = await call('POST', '/prefinancings', { ...J(), body: { idempotency_key: key('pf'), account_id: bank.id, funder: 'Cemoi Négoce', amount: '5000000', currency: 'XOF', received_on: '2026-01-10', conditions: 'Remboursement en cacao avant juin', due_date: '2026-06-30', campaign_id: camp.id } });
+  const pf = await call('POST', '/prefinancings', { ...J(), body: { idempotency_key: key('pf'), account_id: bank.id, funder: 'Acheteur Démo', amount: '5000000', currency: 'XOF', received_on: '2026-01-10', conditions: 'Remboursement en cacao avant juin', due_date: '2026-06-30', campaign_id: camp.id } });
   check('préfinancement enregistré', pf.status === 201 && /^PF-\d{4}-\d{4}$/.test(pf.body.number), pf.body);
   const pid = pf.body.id;
   const acctBal = async () => Number((await call('GET', `/financial-accounts`, J())).body.find((a) => a.id === bank.id).balance);

@@ -17,8 +17,8 @@ await step('un serveur vierge propose la création de la coopérative', async ()
   must(await page.getByRole('heading', { name: 'Premier démarrage' }).count(), 'écran de premier démarrage absent');
 });
 await step('un mot de passe trop court est refusé par le formulaire', async () => {
-  await page.getByLabel('Code de la coopérative').fill('SOCAHI'); await page.getByLabel('Nom de la coopérative').fill('SOCAHI Hiré');
-  await page.getByLabel("Nom de l'administrateur").fill('Dominique N\'Guessan'); await page.getByLabel('Adresse e-mail').fill('dominique@socahi.test');
+  await page.getByLabel('Code de la coopérative').fill('DEMO'); await page.getByLabel('Nom de la coopérative').fill('Coopérative Démo');
+  await page.getByLabel("Nom de l'administrateur").fill('Admin Démo'); await page.getByLabel('Adresse e-mail').fill('admin@demo.test');
   await page.getByLabel(/^Mot de passe/).fill('court');
   await page.getByRole('button', { name: 'Créer la coopérative' }).click(); await page.waitForTimeout(500);
   must(await page.getByRole('heading', { name: 'Premier démarrage' }).count(), 'formulaire validé malgré le mot de passe court');
@@ -26,7 +26,7 @@ await step('un mot de passe trop court est refusé par le formulaire', async () 
 await step('création de la coopérative puis connexion automatique', async () => {
   await page.getByLabel(/^Mot de passe/).fill('MotDePasseSolide2026!');
   await page.getByRole('button', { name: 'Créer la coopérative' }).click(); await page.waitForTimeout(2500);
-  must(await page.getByText('Bonjour Dominique').count(), 'tableau de bord absent');
+  must(await page.getByText('Bonjour Admin').count(), 'tableau de bord absent');
 });
 await step('le tableau de bord indique que la synchronisation n\'est pas reliée', async () => {
   const t = await page.locator('main').innerText();
@@ -35,7 +35,7 @@ await step('le tableau de bord indique que la synchronisation n\'est pas reliée
 await step('la page Synchronisation donne l\'identifiant à communiquer au central', async () => {
   await page.getByRole('link', { name: /Synchronisation/ }).click(); await page.waitForTimeout(900);
   const t = await page.locator('main').innerText();
-  must(t.includes('SOCAHI Hiré') && /[0-9a-f]{8}-[0-9a-f]{4}-/.test(t) && t.includes('Relier au serveur central'), 'page incomplète');
+  must(t.includes('Coopérative Démo') && /[0-9a-f]{8}-[0-9a-f]{4}-/.test(t) && t.includes('Relier au serveur central'), 'page incomplète');
 });
 await step('un code de jumelage invalide est refusé avec un message clair', async () => {
   await page.getByLabel('Code de jumelage').fill('AGT1-nimportequoi');
