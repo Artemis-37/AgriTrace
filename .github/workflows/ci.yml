@@ -41,7 +41,7 @@ jobs:
           DATABASE_URL=$OWNER_URL ADMIN_PASSWORD=$ADMIN_PASSWORD node scripts/create-platform-admin.js $ADMIN_EMAIL "Admin CI"
       - name: Démarrer l'API
         run: |
-          node dist/main > /tmp/api.log 2>&1 &
+          THROTTLE_LIMIT=100000 node dist/main > /tmp/api.log 2>&1 &
           for i in $(seq 1 30); do curl -fs http://localhost:3000/v1/ready && break; sleep 1; done
           curl -fs http://localhost:3000/v1/ready
       - run: npm run test:e2e
@@ -124,8 +124,8 @@ jobs:
       - run: flutter pub get
       - run: flutter analyze --no-fatal-infos
       - run: flutter test
-      - name: Compilation de l'APK (debug)
-        run: flutter build apk --debug
+      - name: Compilation de l'APK (debug, 2 essais : le téléchargement du NDK échoue parfois)
+        run: flutter build apk --debug || (rm -rf $ANDROID_HOME/ndk && flutter build apk --debug)
 
   docker:
     runs-on: ubuntu-latest

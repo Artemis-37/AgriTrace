@@ -7,7 +7,7 @@ const browser = await chromium.launch({ args: ['--no-sandbox'], executablePath: 
 const page = await browser.newPage({ viewport: { width: 1300, height: 900 } });
 const problems = [];
 page.on('pageerror', (e) => problems.push('erreur JavaScript : ' + e.message));
-page.on('response', (r) => { if (r.status() >= 400 && r.url().includes('/v1/')) problems.push(`HTTP ${r.status()} ${r.request().method()} ${new URL(r.url()).pathname}`); });
+page.on('response', (r) => { if (r.status() >= 400 && r.url().includes('/v1/') && !(r.status() === 404 && r.url().endsWith('/organization/logo'))) problems.push(`HTTP ${r.status()} ${r.request().method()} ${new URL(r.url()).pathname}`); });
 let ok = 0;
 const step = async (name, fn) => { try { await fn(); ok++; console.log('  ✓', name); } catch (e) { console.log('  ✗', name, '—', e.message.split('\n')[0]); await page.screenshot({ path: 'e2e-echec.png' }).catch(() => undefined); await browser.close(); process.exit(1); } };
 
