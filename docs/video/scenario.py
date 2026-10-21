@@ -36,7 +36,7 @@ Si un compte est suspendu, la session est coupée, et le téléphone efface les 
 
 scene('profils', 'Qui utilise quoi', """
 Chaque utilisateur a un profil, et le menu s'adapte à ses droits. L'administrateur de la coopérative crée les comptes en un clic à partir de dix-huit rôles types :
-direction, responsables de traçabilité, de cartographie, de magasin, financier, qualité et logistique, magasinier, caissier, comptable, cartographe, ADG, auditeur, acheteur, exportateur,
+direction, responsables de traçabilité, de cartographie, de magasin, financier, qualité et logistique, magasinier, caissier, comptable, cartographe, Administrateur de groupe, auditeur, acheteur, exportateur,
 et les trois profils de terrain : collecteur, agent de terrain et coach, qui se connectent uniquement par l'application mobile.""",
   card('profils'))
 
@@ -131,9 +131,9 @@ Voici la vue d'un acheteur partenaire : uniquement ses commandes et ses document
   live('acheteur', [{'goto': '/commerce', 'w': 3}, {'scroll': 300, 'w': 2}]))
 
 scene('missions', 'Missions et tâches de terrain', """
-L'ADG, administrateur de groupe, met en place les missions des coachs : titre, catégorie, priorité, échéance, producteur, coach assigné, instructions et critères de validation.
-Le coach exécute et joint ses preuves ; l'ADG relit puis valide, ou demande une correction. Une fois la tâche terminée et validée, elle est grisée et n'est plus cliquable,
-puis elle disparaît de la liste après le délai fixé par l'ADG, sept jours par défaut. Une case permet de revoir les tâches masquées.""",
+L'Administrateur de groupe met en place les missions des coachs : titre, catégorie, priorité, échéance, producteur, coach assigné, instructions et critères de validation.
+Le coach exécute et joint ses preuves ; l'Administrateur de groupe relit puis valide, ou demande une correction. Une fois la tâche terminée et validée, elle est grisée et n'est plus cliquable,
+puis elle disparaît de la liste après le délai fixé par l'Administrateur de groupe, sept jours par défaut. Une case permet de revoir les tâches masquées.""",
   live('adg', [{'goto': '/missions', 'w': 3}, {'scroll': 350, 'w': 3}, {'click': 'text=Afficher aussi les missions terminées masquées', 'w': 3}, {'scroll': 300, 'w': 2}]))
 
 scene('coach', 'Le coach sur le terrain', """
@@ -144,13 +144,13 @@ Il enregistre un nouveau producteur, relève une parcelle, et ajoute des photos.
 
 scene('releves', 'Relevés : formations, infrastructures, distributions', """
 Le coach saisit des relevés de terrain : un registre de formation, avec thème, module, photo, participants et scores de zéro à cent ; une infrastructure sociale avec sa position ;
-et une distribution de biens et services, où l'on choisit la catégorie, le groupe et les articles du catalogue, puis les bénéficiaires. L'A D G adapte les modèles de saisie, puis les déploie.""",
+et une distribution de biens et services, où l'on choisit la catégorie, le groupe et les articles du catalogue, puis les bénéficiaires. L'Administrateur de groupe adapte les modèles de saisie, puis les déploie.""",
   phones('coach-formation', 'coach-infrastructure', 'coach-distribution-articles', 'coach-distribution-verifier',
          captions=['Registre de formation', 'Infrastructure sociale', 'Distribution : articles', 'Distribution : vérification']))
 
 scene('modules', 'Bibliothèque de modules de formation', """
 Une bibliothèque de modules de formation agricole est préchargée, liée aux certifications, avec le cacao en priorité, puis le café : vingt-six modules.
-Les coachs la lisent sur leur téléphone, avec une copie gardée pour travailler sans réseau. L'A D G relit chaque module et choisit : conserver tel quel, modifier, ou supprimer.
+Les coachs la lisent sur leur téléphone, avec une copie gardée pour travailler sans réseau. L'Administrateur de groupe relit chaque module et choisit : conserver tel quel, modifier, ou supprimer.
 Le contenu fourni est un socle général : il doit être adapté au cahier des charges de la certification visée.""",
   live('adg', [{'goto': '/modules-formation', 'w': 3}, {'scroll': 500, 'w': 3}, {'type': ['input[type=search]', 'fermentation'], 'w': 3}, {'wait': True, 'w': 1}]))
 
@@ -159,38 +159,61 @@ Sur le téléphone, le coach filtre les modules par culture ou par thème, puis 
   phones('coach-modules-formation', 'coach-module-exportateur', captions=['Bibliothèque de modules', 'Lecture d\'un module']))
 
 scene('circuit', 'Le circuit exportateur', """
-Les exportateurs peuvent eux aussi proposer des modules de formation. Voici le circuit. L'exportateur propose un module à l'A D G. L'A D G le transmet aux coachs, d'un simple clic, sans le modifier.
-Les coachs dispensent la formation et saisissent leurs résultats. Les résultats arrivent d'abord à l'A D G, qui les transmet à l'exportateur, toujours d'un clic, sans aucune modification.""",
-  card('flow', title='Le circuit des modules d\'exportateur', nodes=['Exportateur\npropose un module', 'ADG\ntransmet (1 clic)', 'Coachs\ndispensent + saisissent', 'ADG\ntransmet (1 clic)', 'Exportateur\nreçoit les résultats'],
-       foot='Contenu et résultats figés par la base de données · l\'ADG ne peut rien modifier · chaque étape notifie et est tracée'))
+Les exportateurs peuvent eux aussi proposer des modules de formation. Voici le circuit. L'exportateur propose un module à l'Administrateur de groupe. L'Administrateur de groupe le transmet aux coachs, d'un simple clic, sans le modifier.
+Les coachs dispensent la formation et saisissent leurs résultats. Les résultats arrivent d'abord à l'Administrateur de groupe, qui les transmet à l'exportateur, toujours d'un clic, sans aucune modification.""",
+  card('flow', title='Le circuit des modules d\'exportateur', nodes=['Exportateur\npropose un module', 'ADG\nnature + cible, 1 clic', 'Coachs\ndispensent + saisissent', 'ADG\ntransmet (1 clic)', 'Exportateur\nreçoit les résultats'],
+       foot='Contenu et résultats figés par la base de données · l\'Administrateur de groupe (ADG) ne peut rien modifier · chaque étape notifie et est tracée'))
 
 scene('exp-propose', 'L\'exportateur propose un module', """
 Voici l'espace de l'exportateur. À l'accueil, il retrouve ses indicateurs : propositions en attente, transmises aux coachs, non retenues, et résultats reçus.
-Il ne voit que ses propres propositions et les résultats que l'A D G lui a transmis. Il clique sur proposer un module : titre, thème, résumé, objectifs, sections avec leurs points.
-Une fois envoyé, le module n'est plus modifiable. L'A D G est aussitôt notifié.""",
+Il ne voit que ses propres propositions et les résultats que l'Administrateur de groupe lui a transmis. Il clique sur proposer un module : titre, thème, résumé, objectifs, sections avec leurs points.
+Une fois envoyé, le module n'est plus modifiable. L'Administrateur de groupe est aussitôt notifié.""",
   live('exportateur', [{'goto': '/', 'w': 3}, {'goto': '/modules-exportateurs', 'w': 2}, {'click': 'text=Proposer un module', 'w': 2},
         {'type': ['.modal input[maxlength="200"]', 'Taille et entretien du cacaoyer'], 'w': 3}, {'type': ['.modal textarea >> nth=0', 'Module proposé par l\'exportateur de démonstration (fictif).'], 'w': 2},
         {'type': ['.modal textarea >> nth=1', 'Réaliser une taille de formation\nReconnaître les gourmands'], 'w': 3},
         {'type': ['input[aria-label="Titre de la section 1"]', 'La taille de formation'], 'w': 2}, {'type': ['textarea[aria-label="Points de la section 1"]', 'Choisir trois à quatre branches charpentières\nCouper net, sans déchirer l\'écorce'], 'w': 3},
         {'click': '.modal button:has-text("Envoyer"), .modal button:has-text("Enregistrer")', 'w': 2}, {'wait': True, 'w': 2}]))
 
-scene('exp-adg', 'L\'A D G transmet aux coachs', """
-Du côté de l'A D G, la proposition apparaît dans l'onglet propositions, avec le nom de l'exportateur. L'A D G lit le module, puis clique sur transmettre aux coachs.
-Il peut aussi décliner, avec un motif facultatif. Le contenu est copié tel que proposé, et les coachs sont prévenus. Dans la bibliothèque, ce module est marqué proposé par l'exportateur, et il n'est ni modifiable ni supprimable.""",
-  live('adg', [{'goto': '/modules-exportateurs', 'w': 3}, {'click': 'tr:has-text("Taille et entretien du cacaoyer") button:has-text("Transmettre aux coachs")', 'w': 3}, {'wait': True, 'w': 2}, {'goto': '/modules-formation', 'w': 2}, {'type': ['input[type=search]', 'exportateur'], 'w': 3}]))
+scene('exp-adg', 'L\'Administrateur de groupe transmet aux coachs', """
+Du côté de l'Administrateur de groupe, la proposition apparaît dans l'onglet propositions, avec le nom de l'exportateur. L'Administrateur de groupe lit le module, puis clique sur transmettre aux coachs.
+Une fenêtre lui demande alors deux choses. D'abord la nature de l'élément : module de formation, distribution ou tâche. Ensuite la cible : tous les producteurs, ou certains seulement, qu'il retrouve par nom, par code ou par section.
+Il peut ajouter une échéance et une consigne. L'élément s'ajoute au profil de chaque producteur concerné, et les coachs sont prévenus. Le contenu du module reste exactement celui de l'exportateur, il n'est ni modifiable ni supprimable.
+Il peut aussi décliner la proposition, avec un motif facultatif.""",
+  live('adg', [{'goto': '/modules-exportateurs', 'w': 3}, {'click': 'tr:has-text("Taille et entretien du cacaoyer") button:has-text("Transmettre aux coachs")', 'w': 3},
+               {'select': ['select[aria-label="Nature"]', 'Module de formation'], 'w': 3}, {'select': ['select[aria-label="Cible"]', 'Certains producteurs'], 'w': 3},
+               {'click': '.modal input[type=checkbox] >> nth=0', 'w': 2}, {'click': '.modal input[type=checkbox] >> nth=1', 'w': 2}, {'click': '.modal input[type=checkbox] >> nth=2', 'w': 2},
+               {'type': ['.modal textarea', 'À dispenser avant la récolte principale.'], 'w': 4}, {'click': '.modal .modal-foot button:has-text("Transmettre aux coachs")', 'w': 3}, {'wait': True, 'w': 2},
+               {'goto': '/modules-formation', 'w': 2}, {'type': ['input[type=search]', 'exportateur'], 'w': 3}]))
+
+scene('exp-affectations', 'Affecter un modèle aux producteurs', """
+L'Administrateur de groupe peut aussi implémenter lui-même un modèle. Dans l'onglet affectations aux producteurs, il clique sur affecter un modèle, choisit la nature, ici une distribution,
+donne un intitulé, et cible tous les producteurs. Le tableau indique ensuite, pour chaque affectation, la nature, la cible, l'échéance et l'avancement : combien de producteurs l'ont fait, sur combien.""",
+  live('adg', [{'goto': '/modules-exportateurs', 'w': 2}, {'tab': 'Affectations aux producteurs', 'w': 3}, {'click': 'button:has-text("Affecter un modèle")', 'w': 3},
+               {'select': ['select[aria-label="Nature"]', 'Distribution'], 'w': 3}, {'type': ['.modal input[placeholder^="Ex. Distribution"]', 'Distribution de sacs de jute'], 'w': 4},
+               {'click': '.modal .modal-foot button:has-text("Affecter")', 'w': 3}, {'wait': True, 'w': 3}]))
+
+scene('exp-profil', 'Dans le profil du producteur', """
+Dans la liste des producteurs, un clic sur le nom ouvre son profil. On y trouve, sous formations, distributions et tâches, tout ce que l'Administrateur de groupe a ajouté : la nature, l'intitulé, la consigne, l'échéance et l'état.
+Le coach peut marquer un élément comme fait.""",
+  live('adg', [{'goto': '/producteurs', 'w': 3}, {'click': 'table tbody tr:first-child td:nth-child(2) button', 'w': 4}, {'scroll': 200, 'w': 4}]))
+
+scene('affect-coach', 'Sur le téléphone du coach', """
+Sur l'application, la fiche du producteur affiche, dans la liste des tâches, les formations, distributions et tâches ajoutées par l'Administrateur de groupe, avec la consigne et l'échéance.
+Une fois la séance ou la distribution réalisée, le coach touche fait, avec du réseau, et l'élément est grisé.""",
+  phones('coach-producteur-taches', captions=['Éléments ajoutés au profil du producteur']))
 
 scene('exp-coach', 'Le coach saisit les résultats', """
 Le coach dispense la formation. Ensuite, sur le module marqué proposé par l'exportateur, il touche saisir les résultats : date de la séance, village, nombre de participants, score moyen et observations.
-L'envoi demande une connexion. Les résultats vont à l'A D G et ne sont plus modifiables ; le coach voit, dans la liste, s'ils ont été transmis à l'exportateur.""",
+L'envoi demande une connexion. Les résultats vont à l'Administrateur de groupe et ne sont plus modifiables ; le coach voit, dans la liste, s'ils ont été transmis à l'exportateur.""",
   phones('coach-module-exportateur', 'coach-module-resultats', captions=['Module d\'exportateur et résultats saisis', 'Saisie des résultats']))
 
-scene('exp-resultats', 'L\'A D G transmet les résultats', """
-Les résultats arrivent dans l'onglet résultats de l'A D G : coach, module, exportateur, village, participants, score moyen, observations. L'A D G clique sur transmettre à l'exportateur,
+scene('exp-resultats', 'L\'Administrateur de groupe transmet les résultats', """
+Les résultats arrivent dans l'onglet résultats de l'Administrateur de groupe : coach, module, exportateur, village, participants, score moyen, observations. L'Administrateur de groupe clique sur transmettre à l'exportateur,
 et les résultats partent tels que le coach les a saisis.""",
   live('adg', [{'goto': '/modules-exportateurs', 'w': 2}, {'tab': 'Résultats', 'w': 3}, {'click': 'tr:has-text("Zégban") button:has-text("Transmettre à l\'exportateur")', 'w': 3}, {'wait': True, 'w': 2}]))
 
 scene('exp-recoit', 'L\'exportateur reçoit les résultats', """
-L'exportateur est notifié, par la cloche en haut à droite, et voit les résultats de ses propres modules, uniquement ceux que l'A D G a transmis. Il ne voit jamais le reste des données de la coopérative.""",
+L'exportateur est notifié, par la cloche en haut à droite, et voit les résultats de ses propres modules, uniquement ceux que l'Administrateur de groupe a transmis. Il ne voit jamais le reste des données de la coopérative.""",
   live('exportateur', [{'goto': '/modules-exportateurs', 'w': 3}, {'scroll': 300, 'w': 3}, {'click': 'button[aria-label^="Notifications"]', 'w': 3}]))
 
 scene('rapports', 'Rapports et envoi automatique', """

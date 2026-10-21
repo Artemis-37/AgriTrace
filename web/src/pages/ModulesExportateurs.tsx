@@ -3,6 +3,7 @@ import { get, post } from '../api';
 import { useAuth } from '../auth';
 import { Badge, Card, ErrorBox, Loading, PageHeader, Table, Tabs, useAction, useAsync } from '../ui';
 import { Editor, Mod, Reader } from './ModulesFormation';
+import { AssignDialog, AssignmentsTab } from './Affectations';
 
 type Sub = { id: string; title: string; theme: string; summary: string; crops: string[]; certifications: string[]; level: string; duration_min: number; content: Mod['content']; status: 'submitted' | 'forwarded' | 'declined'; submitted_by_name: string; decided_by_name: string | null; decided_at: string | null; decline_reason: string | null; created_at: string; results_count: number; results_forwarded: number };
 type Res = { id: string; submission_id: string; module_title: string | null; submission_title: string; coach_name: string; exporter_name: string; session_date: string; village: string; participants: number; avg_score: string | null; notes: string; status: 'submitted' | 'forwarded'; created_at: string; forwarded_at: string | null };
@@ -19,7 +20,8 @@ export default function ModulesExportateurs() {
   const { can } = useAuth();
   const adg = can('training:forward');
   const propose = can('training:propose');
-  const [tab, setTab] = useState<'subs' | 'results'>('subs');
+  const [tab, setTab] = useState<'subs' | 'results' | 'assign'>('subs');
+  const [fwd, setFwd] = useState<Sub | null>(null);
   const [edit, setEdit] = useState(false);
   const [view, setView] = useState<Sub | null>(null);
   const act = useAction();
@@ -36,9 +38,10 @@ export default function ModulesExportateurs() {
         subtitle={adg ? 'Les modules proposés par les exportateurs sont transmis aux coachs, et leurs résultats aux exportateurs, par un simple clic : l\'ADG ne modifie rien.' : 'Proposez un module à l\'ADG ; il le transmet aux coachs et vous fait parvenir les résultats.'}
         actions={propose && <button className="btn" onClick={() => setEdit(true)}>Proposer un module</button>} />
       {adg && (
-        <Tabs tabs={[['subs', `Propositions${pending ? ` (${pending})` : ''}`], ['results', `Résultats${toForward ? ` (${toForward})` : ''}`]]} value={tab} onChange={setTab} />
+        <Tabs tabs={[['subs', `Propositions${pending ? ` (${pending})` : ''}`], ['results', `Résultats${toForward ? ` (${toForward})` : ''}`], ['assign', 'Affectations aux producteurs']]} value={tab} onChange={setTab} />
       )}
       {act.error && <ErrorBox message={act.error} />}
+      {adg && tab === 'assign' && <AssignmentsTab />}
       {(!adg || tab === 'subs') && (
         <Card>
           {subs.loading ? <Loading /> : subs.error ? <ErrorBox message={subs.error} onRetry={subs.reload} /> : (
@@ -50,7 +53,7 @@ export default function ModulesExportateurs() {
               { header: 'Résultats', render: (s: Sub) => s.status === 'forwarded' ? (adg ? `${s.results_count} reçu(s), ${s.results_forwarded} transmis` : `${s.results_forwarded} reçu(s)`) : '—' },
               ...(adg ? [{ header: '', render: (s: Sub) => s.status === 'submitted' ? (
                 <span className="row-actions">
-                  <button className="btn btn-small" disabled={act.busy} onClick={() => { if (confirm(`Transmettre « ${s.title} » aux coachs, tel que proposé ?`)) run(() => post(`/training-submissions/${s.id}/forward`)); }}>Transmettre aux coachs</button>
+                  <button className="btn btn-small" disabled={act.busy} onClick={() => setFwd(s)}>Transmettre aux coachs</button>
                   <button className="btn btn-small btn-secondary" disabled={act.busy} onClick={() => { const reason = prompt('Motif du refus (facultatif) :'); if (reason !== null) run(() => post(`/training-submissions/${s.id}/decline`, { reason })); }}>Décliner</button>
                 </span>) : null }] : []),
             ]} />
@@ -75,6 +78,7 @@ export default function ModulesExportateurs() {
           )}
         </Card>
       )}
+      {fwd && <AssignDialog title={`Transmettre « ${fwd.title} » aux coachs`} forwardUrl={`/training-submissions/${fwd.id}/forward`} onClose={() => setFwd(null)} onDone={() => { setFwd(null); reload(); }} />}
       {view && <Reader m={{ ...view, id: view.id, code: null, review_state: 'exporter', version: 1, reviewed_at: null, updated_at: view.created_at } as unknown as Mod} onClose={() => setView(null)} />}
       {edit && <Editor m={null} themes={THEMES} saveUrl="/training-submissions" title="Proposer un module à l'ADG" onClose={() => setEdit(false)} onDone={() => { setEdit(false); reload(); }} />}
     </>

@@ -26,6 +26,8 @@ class ProducerDetailScreen extends StatefulWidget {
 class _ProducerDetailScreenState extends State<ProducerDetailScreen> {
   List<Map<String, Object?>> _parcels = [];
   List<dynamic>? _tasks;
+  List<dynamic> _assigned = [];
+  bool _canDone = false;
   bool _canSurvey = false, _canEdit = false, _canRequest = false, _canMissions = false;
   String? _taskError, _msg;
 
@@ -42,7 +44,7 @@ class _ProducerDetailScreenState extends State<ProducerDetailScreen> {
     final code = widget.producer['internal_code'];
     if (mounted) setState(() {
       _parcels = all.where((r) => r['producer_code'] == code).toList();
-      _canSurvey = canSurveyParcel(perms); _canEdit = canUpdateParcel(perms); _canRequest = canRequestMission(perms); _canMissions = canSeeMissions(perms);
+      _canSurvey = canSurveyParcel(perms); _canEdit = canUpdateParcel(perms); _canRequest = canRequestMission(perms); _canMissions = canSeeMissions(perms); _canDone = perms.contains('training:report');
     });
   }
 
@@ -52,6 +54,11 @@ class _ProducerDetailScreenState extends State<ProducerDetailScreen> {
       final r = await services.api.get('/tasks?producer_id=${widget.producer['id']}') as List<dynamic>;
       if (!mounted) return;
       setState(() { _tasks = r.where((t) => !['closed', 'cancelled'].contains(t['status'])).toList(); _taskError = null; });
+      // Formations, distributions et tâches ajoutées au profil par l'Administrateur de groupe (facultatif : ignoré si le droit manque).
+      try {
+        final a = await services.api.get('/producer-assignments?producer_id=${widget.producer['id']}') as List<dynamic>;
+        if (mounted) setState(() => _assigned = a);
+      } catch (_) {}
     } catch (_) {
       if (mounted) setState(() => _taskError = 'Les tâches demandent le réseau. Réessayez en ligne.');
     }
@@ -151,6 +158,22 @@ class _ProducerDetailScreenState extends State<ProducerDetailScreen> {
               _loadTasks();
             } : null,
           ))),
+        if (_assigned.isNotEmpty) ...[
+          Container(color: const Color(0xFFEDEDED), margin: const EdgeInsets.only(top: 12, bottom: 8), padding: const EdgeInsets.all(12),
+              child: const Row(children: [Icon(Icons.assignment_turned_in_outlined, size: 18), SizedBox(width: 10), Expanded(child: Text('Formations, distributions et tâches', style: TextStyle(fontSize: 18)))])),
+          for (final a in _assigned)
+            Opacity(opacity: a['status'] == 'done' ? 0.45 : 1, child: Card(elevation: 0, shape: RoundedRectangleBorder(side: const BorderSide(color: Color(0xFFDDDDDD)), borderRadius: BorderRadius.circular(18)), child: ListTile(
+              leading: Icon(a['kind'] == 'formation' ? Icons.menu_book : a['kind'] == 'distribution' ? Icons.inventory_2_outlined : Icons.task_alt),
+              title: Text('${a['title']}', maxLines: 2, overflow: TextOverflow.ellipsis),
+              subtitle: Text('${a['kind'] == 'formation' ? 'Module de formation' : a['kind'] == 'distribution' ? 'Distribution' : 'Tâche'}${a['due_date'] != null ? ' • échéance ${a['due_date'].toString().substring(0, 10)}' : ''}${(a['instructions'] ?? '').toString().isNotEmpty ? '\n${a['instructions']}' : ''}'),
+              isThreeLine: (a['instructions'] ?? '').toString().isNotEmpty,
+              trailing: a['status'] == 'done' ? const Icon(Icons.check_circle_outline, size: 28)
+                  : (_canDone ? TextButton(onPressed: () async {
+                      try { await services.api.post('/producer-assignments/targets/${a['target_id']}/done', {}); } catch (_) { if (mounted) setState(() => _msg = 'Action disponible en ligne uniquement. Réessayez avec du réseau.'); }
+                      _loadTasks();
+                    }, child: const Text('Fait')) : null),
+            ))),
+        ],
         if (_canRequest)
           Padding(padding: const EdgeInsets.only(top: 8), child: OutlinedButton.icon(
             onPressed: () async { final m = await askMission(context, producerId: widget.producer['id'] as String); if (m != null && mounted) { setState(() => _msg = m); _loadTasks(); } },

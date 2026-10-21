@@ -1,8 +1,6 @@
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
-import '../data/org_logo.dart';
 
 import '../config.dart';
 import '../main.dart';
@@ -47,16 +45,8 @@ class _HomeScreenState extends State<HomeScreen> {
     services.sync.status.addListener(_reload);
     services.sync.revoked.addListener(_onRevoked);
     _reload();
-    _loadLogo();
   }
 
-  Uint8List? _logo;
-
-  Future<void> _loadLogo() async {
-    final c = await OrgLogo.cached();
-    if (mounted && c != null) setState(() => _logo = c);
-    if (await OrgLogo.refresh()) { final n = await OrgLogo.cached(); if (mounted) setState(() => _logo = n); }
-  }
 
   @override
   void dispose() {
@@ -146,7 +136,7 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: const Color(0xFFF7FAF2),
       body: Column(children: [
         _HomeHeader(
-          logo: _logo, now: _now, name: _identity.name, org: _identity.org, zone: _identity.zone,
+          now: _now, name: _identity.name, org: _identity.org, zone: _identity.zone,
           count: _coachMode ? null : t.count, unread: _unreadNotes, onNotes: () => _open(const NotificationsScreen()),
           onSync: () => services.sync.run(),
           onSignOut: _signOut,
@@ -276,11 +266,10 @@ class _HomeScreenState extends State<HomeScreen> {
 /// En-tête de l'accueil : date, salutation, coopérative, zone, total du jour.
 class _HomeHeader extends StatelessWidget {
   final String now, name, org, zone;
-  final Uint8List? logo;
   final int? count;
   final int unread;
   final VoidCallback onSync, onSignOut, onNotes;
-  const _HomeHeader({this.logo, required this.now, required this.name, required this.org, required this.zone, required this.count, required this.unread, required this.onNotes, required this.onSync, required this.onSignOut});
+  const _HomeHeader({required this.now, required this.name, required this.org, required this.zone, required this.count, required this.unread, required this.onNotes, required this.onSync, required this.onSignOut});
 
   @override
   Widget build(BuildContext context) {
@@ -318,10 +307,6 @@ class _HomeHeader extends StatelessWidget {
         const SizedBox(height: 6),
         Text(now, style: const TextStyle(color: white, fontSize: 13)),
         if (name.isNotEmpty) Text('Bonjour, ${name.toUpperCase()}', style: const TextStyle(color: white, fontSize: 18, fontWeight: FontWeight.w700)),
-        if (logo != null) Container(
-          height: 40, margin: const EdgeInsets.only(top: 4, bottom: 4), padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-          decoration: BoxDecoration(color: white, borderRadius: BorderRadius.circular(8)),
-          child: Image.memory(logo!, fit: BoxFit.contain, errorBuilder: (_, __, ___) => const SizedBox.shrink())),
         // Nom complet de la coopérative, sur toute la largeur et sur autant de lignes que nécessaire
         if (org.isNotEmpty) Text(org, softWrap: true, style: const TextStyle(color: white, fontSize: 15, fontWeight: FontWeight.w600)),
         if (zone.isNotEmpty) Text('Zone : $zone', style: const TextStyle(color: white, fontSize: 14, fontWeight: FontWeight.w600)),

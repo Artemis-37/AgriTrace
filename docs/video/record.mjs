@@ -48,6 +48,7 @@ async function act(page, s) {
   else if (s.tab) { const l = page.locator(`[role=tab]:has-text("${s.tab}")`).first(); await l.waitFor({ timeout: 9000 }); await moveTo(page, l); await l.click(); }
   else if (s.click) { const l = page.locator(s.click).first(); await l.waitFor({ timeout: 9000 }); await l.scrollIntoViewIfNeeded(); await moveTo(page, l); await sleep(250); await l.click(); }
   else if (s.type) { const [sel, text] = s.type; const l = page.locator(sel).first(); await l.waitFor({ timeout: 9000 }); await l.scrollIntoViewIfNeeded(); await moveTo(page, l); await l.click(); await page.keyboard.type(text, { delay: 32 }); }
+  else if (s.select) { const [sel, label] = s.select; const l = page.locator(sel).first(); await l.waitFor({ timeout: 9000 }); await moveTo(page, l); await sleep(300); await l.selectOption({ label }); }
   else if (s.scroll) { await page.mouse.move(VIEW.width / 2 + 120, VIEW.height / 2, { steps: 8 }); const n = 14; for (let i = 0; i < n; i++) { await page.mouse.wheel(0, s.scroll / n); await sleep(45); } }
 }
 

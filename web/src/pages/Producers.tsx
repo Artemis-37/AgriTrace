@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import { get, post } from '../api';
 import { useAuth } from '../auth';
 import { PRODUCER_STATUS } from '../format';
+import { ProducerProfile } from './Affectations';
 import { Card, Empty, ErrorBox, Field, Loading, Modal, PageHeader, StatusBadge, Table, useAction, useAsync } from '../ui';
 
 export default function Producers() {
@@ -14,6 +15,7 @@ export default function Producers() {
   const sections = useAsync(() => get<{ section: string; producers: number }[]>('/producers/sections').catch(() => []), []);
   const [creating, setCreating] = useState(false);
   const [chg, setChg] = useState<any | null>(null);
+  const [prof, setProf] = useState<any | null>(null);
   // Recherche et filtre par section faits par le serveur (toute la liste, pas seulement les premiers producteurs).
   const { data, loading, error, reload } = useAsync(
     () => get<any[]>(`/producers?limit=${limit}${qd ? `&q=${encodeURIComponent(qd)}` : ''}${section ? `&section=${encodeURIComponent(section)}` : ''}`), [qd, section, limit]);
@@ -35,7 +37,7 @@ export default function Producers() {
         {loading ? <Loading /> : (
           <Table rows={rows} empty="Aucun producteur trouvé." columns={[
             { header: 'Code', render: (p) => p.internal_code },
-            { header: 'Nom', render: (p) => <strong>{p.last_name} {p.first_names}</strong> },
+            { header: 'Nom', render: (p) => <button className="btn btn-ghost" style={{ fontWeight: 700, textAlign: 'left' }} onClick={() => setProf(p)}>{p.last_name} {p.first_names}</button> },
             { header: 'Village', render: (p) => p.village ?? '—' },
             { header: 'Section', render: (p) => p.section ?? '—' },
             { header: 'Téléphone', render: (p) => p.phone ?? '—' },
@@ -45,6 +47,7 @@ export default function Producers() {
         )}
         {!loading && rows.length >= limit && <div className="toolbar"><button className="btn btn-secondary" onClick={() => setLimit(limit + 100)}>Afficher plus de producteurs</button></div>}
       </Card>
+      {prof && <ProducerProfile p={prof} onClose={() => setProf(null)} />}
       {chg && <ChangeStatus p={chg} onClose={() => setChg(null)} onDone={() => { setChg(null); reload(); }} />}
       {creating && <NewProducer onClose={() => setCreating(false)} onDone={() => { setCreating(false); reload(); }} />}
     </>

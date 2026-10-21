@@ -86,7 +86,7 @@ def bullets_card(s):
 
 def profils_card(s):
     im, d = base(); center(d, 'Qui utilise quoi', 60, font(58, 'Bold'), LIGHT)
-    cols = [('Portail web / Windows', LIME, ['Administrateur de coopérative', 'Magasinier · Caissier · Comptable', 'Direction · Responsable financier', 'Responsables : traçabilité, cartographie,', '   magasin, qualité, logistique', 'Cartographe · Auditeur (lecture)', 'ADG : missions, modules, conformité', 'Acheteur et Exportateur (partenaires)']),
+    cols = [('Portail web / Windows', LIME, ['Administrateur de coopérative', 'Magasinier · Caissier · Comptable', 'Direction · Responsable financier', 'Responsables : traçabilité, cartographie,', '   magasin, qualité, logistique', 'Cartographe · Auditeur (lecture)', 'Administrateur de groupe : missions, modules', 'Acheteur et Exportateur (partenaires)']),
             ('Téléphone Android uniquement', (240, 200, 140), ['Collecteur : achats, convois, stock', 'Agent de terrain : producteurs, missions', 'Coach : producteurs par section, missions,', '   relevés, modules de formation'])]
     bx = [140, 1000]; bw = 780
     for (t, col, items), x in zip(cols, bx):

@@ -477,6 +477,27 @@
       "visible": true
     },
     {
+      "name": "transmission-nature-cible",
+      "route": "/modules-exportateurs",
+      "tab": null,
+      "file": "adg-transmission-nature-cible.png",
+      "visible": true
+    },
+    {
+      "name": "affectations",
+      "route": "/modules-exportateurs",
+      "tab": "Affectations aux producteurs",
+      "file": "adg-affectations.png",
+      "visible": true
+    },
+    {
+      "name": "producteurs",
+      "route": "/producteurs",
+      "tab": null,
+      "file": "adg-producteurs.png",
+      "visible": true
+    },
+    {
       "name": "missions",
       "route": "/missions",
       "tab": null,

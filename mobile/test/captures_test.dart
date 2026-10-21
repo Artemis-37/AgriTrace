@@ -164,6 +164,9 @@ final _routes = <String, dynamic>{
     {'id': 'a3', 'category': 'Finance', 'group_name': 'Primes', 'name': 'Prime en espèces', 'unit': null},
     {'id': 'a4', 'category': 'Finance', 'group_name': 'Primes', 'name': 'Prime générique', 'unit': null}],
   '/field-records?kind=training': [],
+  '/producer-assignments?producer_id=pr1': [
+    {'target_id': 'x1', 'status': 'pending', 'id': 'a1', 'kind': 'formation', 'title': 'Carnet de récolte et traçabilité', 'instructions': 'À dispenser avant la fin de la campagne.', 'due_date': '2026-11-30'},
+    {'target_id': 'x2', 'status': 'pending', 'id': 'a2', 'kind': 'distribution', 'title': 'Distribution de plants de cacaoyers', 'instructions': '', 'due_date': '2026-11-10'}],
   '/tasks?producer_id=pr1': [
     {'id': 't1', 'title': 'Relever le contour de la parcelle P00112-01', 'description': 'Tracé GPS complet et photo du coin nord.', 'category': 'mapping', 'status': 'open', 'due_date': '2026-10-24', 'section': 'Section Est', 'overdue': false, 'latitude': null, 'longitude': null, 'content': null, 'decision_note': null},
     {'id': 't2', 'title': 'Visite de contrôle — KONÉ Awa', 'description': 'Vérifier les ombrages et prendre deux photos.', 'category': 'visit', 'status': 'in_progress', 'due_date': '2026-10-19', 'section': 'Section Est', 'overdue': true, 'latitude': null, 'longitude': null, 'content': null, 'decision_note': null}],

@@ -9,4 +9,4 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode><BrowserRouter><AuthProvider><App /></AuthProvider></BrowserRouter></StrictMode>,
 );
 
-try { const t = localStorage.getItem('agritrace.theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'night' : 'doux'); document.documentElement.dataset.theme = t; } catch { /* thème par défaut */ }
+try { const t = 'doux'; document.documentElement.dataset.theme = t; } catch { /* thème par défaut */ }

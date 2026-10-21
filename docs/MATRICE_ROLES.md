@@ -2,7 +2,7 @@
 
 Fichier généré par `backend/scripts/gen-matrice-roles.js` à partir du code : ne pas le modifier à la main. Les menus du portail et les routes de l'API se règlent sur les **permissions**, jamais sur le nom du rôle. Une coopérative crée ses propres rôles en combinant ces permissions ; les cinq rôles ci-dessous sont des modèles proposés.
 
-131 permissions, 316 routes protégées. Les droits sensibles (paiements, ajustements, exports de noms) peuvent en plus exiger une seconde approbation, réglée par rôle.
+132 permissions, 317 routes protégées. Les droits sensibles (paiements, ajustements, exports de noms) peuvent en plus exiger une seconde approbation, réglée par rôle.
 
 ## Rôles types
 - **Magasinier** (`magasinier`) : Réceptionne et pèse les convois au magasin central, tient les stocks et l'inventaire.
@@ -319,6 +319,7 @@ Colonnes : ✓ = accordé par le rôle type. Les rôles Administrateur de coopé
 ### training
 | Permission | Rôle du droit | Magasinier | Caissier | Comptable | Direction | Responsable de traçabilité | Responsable cartographie | Cartographe | Agent de terrain | Responsable de magasin | Responsable financier | Responsable qualité | Responsable logistique | Auditeur | Acheteur / partenaire externe | Exportateur | Collecteur | Administrateur de groupe | Coach | Routes |
 |---|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|---|
+| `training:assign` | ADG : affecter un module, une distribution ou une tâche à tous les producteurs ou à certains (il s'ajoute à leur profil) |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | ✓ |  | `POST /producer-assignments` |
 | `training:forward` | ADG : transmettre en un clic les modules des exportateurs aux coachs et les résultats aux exportateurs (sans modification) |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | ✓ |  | `POST /training-submissions/:id/forward`<br>`POST /training-submissions/:id/decline`<br>`POST /training-results/:id/forward` |
 | `training:manage` | Conserver, modifier, créer et supprimer les modules de formation de la bibliothèque |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | ✓ |  | `POST /training-modules`<br>`PUT /training-modules/:id`<br>`POST /training-modules/:id/keep`<br>… +2 |
 | `training:propose` | Exportateur : proposer un module de formation et suivre ses propres propositions et résultats transmis |  |  |  |  |  |  |  |  |  |  |  |  |  |  | ✓ |  |  |  | `POST /training-submissions` |

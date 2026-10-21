@@ -29,7 +29,7 @@ const PAGES = {
   auditeur: [['accueil', '/'], ['finances', '/finances'], ['rapports', '/rapports']],
   acheteur: [['accueil', '/'], ['commerce', '/commerce']],
   exportateur: [['accueil', '/'], ['modules-exportateurs', '/modules-exportateurs']],
-  adg: [['accueil', '/'], ['modules-formation', '/modules-formation'], ['modules-exportateurs', '/modules-exportateurs'], ['resultats-exportateurs', '/modules-exportateurs', 'Résultats (1)'], ['missions', '/missions'], ['rapports', '/rapports'], ['operations', '/operations']],
+  adg: [['accueil', '/'], ['modules-formation', '/modules-formation'], ['modules-exportateurs', '/modules-exportateurs'], ['resultats-exportateurs', '/modules-exportateurs', 'Résultats (1)'], ['transmission-nature-cible', '/modules-exportateurs', null, 'tr:has-text("Séchage et stockage") button:has-text("Transmettre aux coachs")'], ['affectations', '/modules-exportateurs', 'Affectations aux producteurs'], ['producteurs', '/producteurs'], ['missions', '/missions'], ['rapports', '/rapports'], ['operations', '/operations']],
 };
 
 const browser = await chromium.launch({ args: ['--no-sandbox'], executablePath: process.env.CHROMIUM_PATH || undefined });
@@ -41,9 +41,10 @@ for (const a of demo.accounts) {
   await page.goto(WEB + '/'); await page.fill('input[type=email]', a.email); await page.fill('input[type=password]', demo.password); await page.click('button[type=submit]'); await page.waitForTimeout(1500);
   if (await page.locator('.org-list button').count()) { await page.locator('.org-list button').first().click(); await page.waitForTimeout(1200); }
   index[a.role] = [];
-  for (const [name, route, tab] of list) {
+  for (const [name, route, tab, click] of list) {
     await page.goto(WEB + route); await page.waitForTimeout(900);
     if (tab) { const t = page.getByText(tab, { exact: true }).first(); if (await t.count()) { await t.click(); await page.waitForTimeout(800); } }
+    if (click) { const b = page.locator(click).first(); if (await b.count()) { await b.click(); await page.waitForTimeout(900); } }
     const file = `${a.role}-${name}.png`;
     await page.screenshot({ path: path.join(OUT, file) });
     index[a.role].push({ name, route, tab: tab ?? null, file, visible: !(await page.locator('text=/Permission insuffisante|Accès refusé/').count()) });

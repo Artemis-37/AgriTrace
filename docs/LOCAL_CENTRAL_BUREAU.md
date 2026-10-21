@@ -48,7 +48,7 @@ Un poste client **continue de fonctionner quand le serveur local est injoignable
 
 **Messagerie** (page *Messages*, droit `messages:use`) : canal général et messages directs entre les postes d'une même coopérative, non lus, rafraîchissement toutes les 8 s. Les messages restent sur le serveur de la coopérative (non répliqués vers le central). Un message écrit hors connexion est marqué « écrit hors connexion » avec son heure de rédaction. Les postes passent par le serveur : si le serveur est éteint, les messages attendent son retour (pas de liaison poste à poste directe).
 
-**Affichage** : thème « doux » par défaut (fond crème, contrastes adoucis, pas de blanc pur) et thème « nuit » ; bouton dans le menu, choix mémorisé, thème nuit proposé d'office si le système est en mode sombre.
+**Affichage** : un seul thème, « doux » (fond crème, contrastes adoucis, pas de blanc pur) ; plus de bouton de changement de thème.
 
 **Rôle du poste** : choisi à l'installation (*serveur de la coopérative* ou *poste client*, avec le nom du poste, ex. « Comptabilité »), modifiable dans *Fichier → Changer de mode*.
 

@@ -103,7 +103,7 @@ export const STANDARD_ROLES: Record<string, { name: string; description: string;
     name: 'Administrateur de groupe (ADG)',
     description: 'Responsable de la conformité et de la certification : suit les certificats, les inspections et la qualité, contrôle et vérifie les parcelles, met en place les missions des coachs et décide de leurs demandes.',
     permissions: [
-      'training:read', 'training:manage', 'training:forward', 'certificates:read', 'certificates:manage', 'inspections:read', 'inspections:perform', 'quality:read', 'quality:manage', 'alerts:read', 'notifications:scan',
+      'training:read', 'training:manage', 'training:forward', 'training:assign', 'certificates:read', 'certificates:manage', 'inspections:read', 'inspections:perform', 'quality:read', 'quality:manage', 'alerts:read', 'notifications:scan',
       'parcels:read', 'parcels:control', 'parcels:verify', 'geo:anomalies', 'geo:layers', 'geo:export', 'documents:read', 'documents:upload', 'documents:sensitive',
       'tasks:read', 'tasks:read_all', 'tasks:create', 'tasks:update', 'tasks:assign', 'tasks:review', 'tasks:close', 'tasks:decide_requests',
       'producers:read', 'collectors:read', 'value_chains:read', 'campaigns:read', 'reports:read', 'field_records:read', 'field_records:manage', 'field_templates:manage', 'messages:use', 'sync:use',

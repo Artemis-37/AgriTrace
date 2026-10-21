@@ -98,9 +98,11 @@ Responsable de la conformité et de la certification.
 ### Sur ordinateur
 - **Missions** : créer les tâches des coachs, les assigner, relire les résultats, clôturer, décider des demandes. Une tâche terminée et validée est **grisée** (non cliquable pour les autres profils) puis **retirée de la liste** après le nombre de jours réglé en haut de la page (« Jours de visibilité des missions validées », 7 par défaut) ; la case « Afficher aussi les missions terminées masquées » permet de les revoir (droit de lecture de toutes les missions).
 - **Modules de formation** : bibliothèque préchargée (cacao puis café, liée aux certifications). Pour chaque module : *Conserver* (validé tel quel), *Modifier* ou *Supprimer* ; *Rétablir les modules par défaut* ne rajoute que ceux qui ont été supprimés. Le contenu fourni est un socle général, sans chiffres réglementaires précis : à adapter à votre cahier des charges de certification avant de s'en servir en formation.
-- **Modules des exportateurs** (l'exportateur arrive sur un tableau de bord à quatre indicateurs : propositions en attente, transmises, non retenues, résultats reçus ; l'ADG voit en plus le nombre de modules et de résultats à transmettre) : un exportateur partenaire propose des modules ; l'ADG les lit puis clique **Transmettre aux coachs** (ou **Décliner**). Les coachs dispensent la formation et saisissent leurs résultats sur l'application ; l'ADG clique **Transmettre à l'exportateur**. À aucun moment l'ADG ne modifie le contenu ou les résultats (ils sont figés à l'enregistrement), et un module d'exportateur n'est ni modifiable ni supprimable dans la bibliothèque. Chaque étape notifie le destinataire et est tracée dans le journal d'audit.
+- **Modules des exportateurs** (l'exportateur arrive sur un tableau de bord à quatre indicateurs : propositions en attente, transmises, non retenues, résultats reçus ; l'ADG voit en plus le nombre de modules et de résultats à transmettre) : un exportateur partenaire propose des modules ; l'ADG (Administrateur de groupe) les lit puis clique **Transmettre aux coachs** (ou **Décliner**) ; une fenêtre lui demande la **nature** de l'élément (module de formation, distribution ou tâche) et sa **cible** (tous les producteurs ou certains, par recherche et section) : il s'ajoute au profil de chacun, où le coach le voit et le marque *Fait*. L'onglet **Affectations aux producteurs** permet la même chose avec un modèle de la bibliothèque, une distribution ou une tâche libre, et affiche l'avancement. Les coachs dispensent la formation et saisissent leurs résultats sur l'application ; l'ADG clique **Transmettre à l'exportateur**. À aucun moment l'ADG ne modifie le contenu ou les résultats (ils sont figés à l'enregistrement), et un module d'exportateur n'est ni modifiable ni supprimable dans la bibliothèque. Chaque étape notifie le destinataire et est tracée dans le journal d'audit.
 
 ![Modules des exportateurs (ADG)](captures/formation/adg-modules-exportateurs.png)
+
+![Affectations aux producteurs (ADG)](captures/formation/adg-affectations.png)
 
 ![Résultats à transmettre (ADG)](captures/formation/adg-resultats-exportateurs.png)
 
@@ -205,9 +207,9 @@ Le menu **Données de terrain** (droit `field_records:read`) liste les distribut
 
 ### Logo de la coopérative
 
-![Logo en tête du portail et carte de réglage](captures/equipe.png)
+![Carte de réglage du logo](captures/equipe.png)
 
-Chaque coopérative peut ajouter son logo : **Équipe › Logo de la coopérative** (droit `org:branding`, donné à l'administrateur de coopérative). Image PNG ou JPEG de 1 Mo maximum. Le logo s'affiche en tête du portail et sur l'accueil de l'application mobile (les téléphones le reçoivent à leur prochaine ouverture avec du réseau, puis le gardent hors connexion). Les SVG sont refusés pour des raisons de sécurité. « Supprimer » retire le logo.
+Chaque coopérative peut ajouter son logo : **Équipe › Logo de la coopérative** (droit `org:branding`, donné à l'administrateur de coopérative). Image PNG ou JPEG de 1 Mo maximum. Le logo n'est plus affiché dans l'interface (menu du portail, accueil mobile) ; il reste enregistré pour les rapports et documents imprimés. Les SVG sont refusés pour des raisons de sécurité. « Supprimer » retire le logo.
 
 ### Modèles de saisie : l'ADG adapte, puis déploie (portail web › Données de terrain › Modèles de saisie)
 

@@ -23,7 +23,6 @@ import OfflineBar from './OfflineBar';
 import Synchronisation from './pages/Synchronisation';
 import CentralConsole from './pages/CentralConsole';
 import Missions from './pages/Missions';
-import OrgLogo from './OrgLogo';
 import Terrain from './pages/Terrain';
 import ModulesFormation from './pages/ModulesFormation';
 import ModulesExportateurs from './pages/ModulesExportateurs';
@@ -35,8 +34,6 @@ import Quality from './pages/Quality';
 import Stocks from './pages/Stocks';
 import { Loading } from './ui';
 
-const THEMES: [string, string][] = [['doux', 'Thème doux'], ['night', 'Thème nuit']];
-const readTheme = () => { try { return localStorage.getItem('agritrace.theme') ?? ''; } catch { return ''; } };
 
 const NAV: { to: string; label: string; icon: string; perm: string[]; any?: boolean; only?: 'collector'; notFor?: 'collector' }[] = [
   { to: '/', label: 'Tableau de bord', icon: '▦', perm: [] },
@@ -68,8 +65,7 @@ export default function App() {
   const { status, org, me, can, signOut } = useAuth();
   const loc = useLocation();
   const [open, setOpen] = useState(false);
-  const [theme, setTheme] = useState(readTheme() || (window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'night' : 'doux'));
-  useEffect(() => { document.documentElement.dataset.theme = theme; try { localStorage.setItem('agritrace.theme', theme); } catch { /* ignoré */ } }, [theme]);
+  useEffect(() => { document.documentElement.dataset.theme = 'doux'; }, []); // un seul thème
   const [unread, setUnread] = useState(0);
   const [needPair, setNeedPair] = useState(false);
   useEffect(() => { const f = () => setNeedPair(true); window.addEventListener('agritrace:workstation-required', f); return () => window.removeEventListener('agritrace:workstation-required', f); }, []);
@@ -97,7 +93,7 @@ export default function App() {
         <strong>AgriTrace</strong>
       </div>
       <aside className={`sidebar ${open ? 'open' : ''}`}>
-        <div className="brand"><strong>Agri<span>Trace</span></strong><small>La traçabilité agricole, de la parcelle au marché.</small><div className="org-logo-box"><OrgLogo /></div></div>
+        <div className="brand"><strong>Agri<span>Trace</span></strong><small>La traçabilité agricole, de la parcelle au marché.</small></div>
         <nav className="nav" aria-label="Navigation principale" onClick={() => setOpen(false)}>
           {NAV.filter((n) => (n.any ? n.perm.some((p) => can(p)) : can(...n.perm)) && (!n.only || me?.account_kind === n.only) && (!n.notFor || me?.account_kind !== n.notFor)).map((n) => (
             <NavLink key={n.to} to={n.to} end={n.to === '/'}><span aria-hidden="true">{n.icon}</span>{n.label}{n.to === '/messages' && msgUnread > 0 && <span className="badge badge-bad" style={{ marginLeft: 'auto' }} aria-label={`${msgUnread} message(s) non lu(s)`}>{msgUnread}</span>}</NavLink>
@@ -105,7 +101,7 @@ export default function App() {
         </nav>
         <div className="who">
           <strong>{org?.name}</strong><br />{me?.user.full_name}<br /><NavLink to="/compte" className="muted">Mon compte</NavLink>
-          <div><button className="btn btn-ghost btn-small" onClick={() => setTheme(theme === 'night' ? 'doux' : 'night')} aria-label="Changer de thème d'affichage">{THEMES.find(([k]) => k !== theme)?.[1]}</button>{' '}<button className="btn btn-ghost btn-small" onClick={signOut}>Se déconnecter</button></div>
+          <div><button className="btn btn-ghost btn-small" onClick={signOut}>Se déconnecter</button></div>
         </div>
       </aside>
       <main className="main">

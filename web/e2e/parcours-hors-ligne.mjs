@@ -81,13 +81,10 @@ await step('le message est au serveur (une seule fois) et affiché normalement',
   must(rows.filter((m) => m.body === MSG).length === 1, 'message absent ou en double', rows.length);
   must(!(await page.locator('.chat-thread').innerText()).includes("En attente d'envoi"), 'toujours en attente');
 });
-await step('thème nuit puis retour au thème doux', async () => {
-  await page.getByRole('button', { name: /thème d'affichage/ }).click(); await page.waitForTimeout(300);
-  must((await page.evaluate(() => document.documentElement.dataset.theme)) === 'night', 'thème nuit non appliqué');
-  await page.screenshot({ path: 'e2e-theme-nuit.png' });
-  await page.getByRole('button', { name: /thème d'affichage/ }).click();
-  must((await page.evaluate(() => document.documentElement.dataset.theme)) === 'doux', 'thème doux non rétabli');
-  await page.screenshot({ path: 'e2e-theme-doux.png' });
+await step('un seul thème, sans bouton de changement ni logo dans le menu', async () => {
+  must((await page.evaluate(() => document.documentElement.dataset.theme)) === 'doux', 'thème doux attendu');
+  must((await page.getByRole('button', { name: /thème d'affichage/ }).count()) === 0, 'bouton de thème encore présent');
+  must((await page.locator('.org-logo-box').count()) === 0, 'logo encore présent dans le menu');
 });
 await step('aucune erreur JavaScript', async () => { must(!problems.length, 'problèmes', problems); });
 console.log(`\n${ok} étapes réussies`);

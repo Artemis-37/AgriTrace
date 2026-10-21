@@ -185,10 +185,15 @@ const PROFILS = [
     const mod = (title, theme) => ({ theme, title, summary: 'Module proposé par l\'exportateur de démonstration (fictif).', crops: ['cacao'], certifications: ['EUDR'], level: 'base', duration_min: 60,
       content: { objectifs: ['Tenir un carnet de récolte à jour'], sections: [{ titre: 'Le carnet de récolte', points: ['Noter la date de chaque récolte', 'Noter le poids de fèves fraîches', 'Conserver le carnet à l\'abri'] }], a_eviter: ['Mélanger les récoltes de deux parcelles'], verifier: ['Que note-t-on à chaque récolte ?'] } });
     const s1 = await call('POST', '/training-submissions', { ...U('exportateur'), body: mod('Carnet de récolte et traçabilité (exportateur)', 'Collecte de documents et tenue de registres') });
-    const f1 = await call('POST', `/training-submissions/${s1.id}/forward`, U('adg'));
+    const f1 = await call('POST', `/training-submissions/${s1.id}/forward`, { ...U('adg'), body: { kind: 'formation', scope: 'selected', producer_ids: producers.slice(0, 4).map((x) => x.id), instructions: 'À dispenser avant la fin de la campagne.' } });
     const r1 = await call('POST', '/training-results', { ...U('coach'), body: { module_id: f1.module_id, session_date: days(-6), village: 'Hiré', participants: 22, avg_score: 78, notes: 'Séance suivie avec attention ; carnets distribués.' } });
     await call('POST', `/training-results/${r1.id}/forward`, U('adg'));
     await call('POST', '/training-results', { ...U('coach'), body: { module_id: f1.module_id, session_date: days(-2), village: 'Zégban', participants: 15, avg_score: 71, notes: 'À transmettre par l\'ADG.' } });
+    const lib = await call('GET', '/training-modules', U('adg'));
+    const m0 = lib.find((x) => x.review_state !== 'exporter');
+    if (m0) await call('POST', '/producer-assignments', { ...U('adg'), body: { kind: 'formation', scope: 'all', module_id: m0.id, instructions: 'Module de base pour toute la campagne.' } });
+    await call('POST', '/producer-assignments', { ...U('adg'), body: { kind: 'distribution', scope: 'selected', producer_ids: producers.slice(0, 6).map((x) => x.id), title: 'Distribution de plants de cacaoyers', due_date: days(20), instructions: 'Retrait au magasin de la section.' } });
+    await call('POST', '/producer-assignments', { ...U('adg'), body: { kind: 'tache', scope: 'selected', producer_ids: producers.slice(0, 2).map((x) => x.id), title: 'Mettre à jour le carnet de récolte', due_date: days(10) } });
     await call('POST', '/training-submissions', { ...U('exportateur'), body: mod('Séchage et stockage des fèves (exportateur)', 'Gestion des récoltes et des produits') });
   });
   await soft('relevés de terrain', () => call('POST', '/sync/batch', { ...U('agent_terrain'), body: { operations: [

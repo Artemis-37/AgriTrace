@@ -57,7 +57,7 @@
 - **Non vérifié** : l'installateur `.exe` et le comportement sous Windows (construit seulement par le workflow GitHub, jamais exécuté ici) ; signature de code absente.
 - Livré en plus : poste unique / serveur / client, recherche réseau automatique (balise UDP + balayage), icônes de connexion, association des postes par code (jeton révocable, règle obligatoire) — voir `CONVOIS.md`.
 - Non couvert : sens central → local, plusieurs serveurs locaux pour une même coopérative, rattachement d'une coopérative déjà peuplée au central.
-- Postes clients : fonctionnement hors connexion (achat et messages rejoués au retour du serveur, session conservée au redémarrage), messagerie interne, thèmes doux et nuit, nom et rôle du poste choisis à l'installation. Non couvert : validation, paiements et stocks hors connexion ; messages poste à poste sans serveur ; lecture hors connexion d'un écran jamais ouvert en ligne.
+- Postes clients : fonctionnement hors connexion (achat et messages rejoués au retour du serveur, session conservée au redémarrage), messagerie interne, thème unique (doux), nom et rôle du poste choisis à l'installation. Non couvert : validation, paiements et stocks hors connexion ; messages poste à poste sans serveur ; lecture hors connexion d'un écran jamais ouvert en ligne.
 
 ## Convois, connaissement et espaces par nature de compte
 - Livré : B/L obligatoire au départ ; convois, réception, caisse, compte du collecteur (écriture immuable, montant exact poids × prix) ; `/me` renvoie la nature du compte (collecteur, coach, personnel) ; le collecteur ne voit que ses convois, ses achats, ses producteurs (filières affectées) et son stock ; menus « Mes achats / Mon stock / Historique » du portail.
@@ -143,7 +143,7 @@
 - Limites : renommer ne change pas les distributions déjà enregistrées (elles gardent l'ancien nom) ; une catégorie vide ne peut pas exister (elle naît avec son premier article) ; non essayé dans un navigateur.
 
 ## Logo de la coopérative (migration 032)
-- Ajouté : table `organization_logos`, routes `GET/PUT/DELETE /organization/logo`, droit `org:branding`, carte « Logo de la coopérative » dans Équipe, affichage dans le portail et l'accueil mobile (cache hors connexion). Contrôles : type réel vérifié (PNG/JPEG), SVG refusé, 1 Mo maximum, isolation entre coopératives, audit. Test `e2e-terrain` : 58 contrôles.
+- Ajouté : table `organization_logos`, routes `GET/PUT/DELETE /organization/logo`, droit `org:branding`, carte « Logo de la coopérative » dans Équipe, logo conservé pour les rapports ; plus affiché dans le menu du portail ni sur l'accueil mobile (demande de l'utilisateur). Contrôles : type réel vérifié (PNG/JPEG), SVG refusé, 1 Mo maximum, isolation entre coopératives, audit. Test `e2e-terrain` : 58 contrôles.
 - Limites : le logo n'apparaît pas encore dans les PDF ni les exports, ni dans l'application Windows hors portail ; il n'est pas répliqué entre le poste local et le cloud ; non essayé dans un navigateur ni sur téléphone.
 
 ## Annulations, reçus, mot de passe, profil (migration 033, 21 octobre 2026)

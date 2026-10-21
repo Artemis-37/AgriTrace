@@ -6,6 +6,7 @@ import { AuditService } from '../audit/audit.service';
 import { DbService } from '../db/db.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { cleanContent } from './training.controller';
+import { AssignTargetDto, createAssignment } from './producer-assignments.controller';
 
 const CROPS = ['cacao', 'cafe'];
 const LEVELS = ['base', 'intermediaire', 'avance'];
@@ -78,7 +79,7 @@ export class TrainingExchangeController {
   /** Un clic : le module est copié tel quel dans la bibliothèque des coachs, qui sont prévenus. */
   @Post('training-submissions/:id/forward')
   @RequirePermissions('training:forward')
-  async forward(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
+  async forward(@Param('id', ParseUUIDPipe) id: string, @Body() b: AssignTargetDto, @Req() req: any) {
     const out = await this.db.tx(req.org.id, async (c) => {
       const s = (await c.query(`UPDATE training_submissions SET status = 'forwarded', decided_by = $2, decided_at = now() WHERE id = $1 AND status = 'submitted' RETURNING *`, [id, req.user.id])).rows[0];
       if (!s) {
@@ -91,11 +92,12 @@ export class TrainingExchangeController {
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,(SELECT coalesce(max(sort),0)+1 FROM training_modules),'exporter',$10,$11,$11,now()) RETURNING id`,
         [req.org.id, s.theme, s.title, s.summary, s.crops, s.certifications, s.level, s.duration_min, JSON.stringify(s.content), s.id, req.user.id])).rows[0];
       await c.query(`UPDATE training_submissions SET module_id = $2 WHERE id = $1`, [id, m.id]);
+      const asg = await createAssignment(c, req.org.id, req.user.id, this.notif, { ...b, title: s.title, module_id: m.id, submission_id: s.id });
       await this.notif.notifyPermission(c, req.org.id, 'training:report', { kind: 'training_module_assigned', title: 'Nouveau module de formation à dispenser', body: s.title, entityType: 'training_module', entityId: m.id }, req.user.id);
       await this.notif.notifyUsers(c, req.org.id, [s.submitted_by], { kind: 'training_submission_forwarded', title: 'Votre module a été transmis aux coachs', body: s.title, entityType: 'training_submission', entityId: id });
-      return { id, module_id: m.id, status: 'forwarded' };
+      return { id, module_id: m.id, status: 'forwarded', assignment_id: asg.id, targets: asg.targets };
     });
-    await this.log(req, 'training_submission.forward', 'training_submission', id, { module_id: out.module_id });
+    await this.log(req, 'training_submission.forward', 'training_submission', id, { module_id: out.module_id, kind: b.kind, scope: b.scope, targets: out.targets });
     return out;
   }
 
