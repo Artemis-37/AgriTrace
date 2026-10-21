@@ -1,0 +1,563 @@
+{
+  "coop_admin": [
+    {
+      "name": "accueil",
+      "route": "/",
+      "tab": null,
+      "file": "coop_admin-accueil.png",
+      "visible": true
+    },
+    {
+      "name": "producteurs",
+      "route": "/producteurs",
+      "tab": null,
+      "file": "coop_admin-producteurs.png",
+      "visible": true
+    },
+    {
+      "name": "parcelles",
+      "route": "/parcelles",
+      "tab": null,
+      "file": "coop_admin-parcelles.png",
+      "visible": true
+    },
+    {
+      "name": "convois",
+      "route": "/convois",
+      "tab": null,
+      "file": "coop_admin-convois.png",
+      "visible": true
+    },
+    {
+      "name": "finances",
+      "route": "/finances",
+      "tab": null,
+      "file": "coop_admin-finances.png",
+      "visible": true
+    },
+    {
+      "name": "equipe",
+      "route": "/equipe",
+      "tab": null,
+      "file": "coop_admin-equipe.png",
+      "visible": true
+    },
+    {
+      "name": "operations",
+      "route": "/operations",
+      "tab": null,
+      "file": "coop_admin-operations.png",
+      "visible": true
+    },
+    {
+      "name": "rapports",
+      "route": "/rapports",
+      "tab": null,
+      "file": "coop_admin-rapports.png",
+      "visible": true
+    },
+    {
+      "name": "rapprochement",
+      "route": "/finances",
+      "tab": "Rapprochement bancaire",
+      "file": "coop_admin-rapprochement.png",
+      "visible": true
+    },
+    {
+      "name": "envoi-auto",
+      "route": "/rapports",
+      "tab": "Envoi automatique",
+      "file": "coop_admin-envoi-auto.png",
+      "visible": true
+    },
+    {
+      "name": "compte",
+      "route": "/compte",
+      "tab": null,
+      "file": "coop_admin-compte.png",
+      "visible": true
+    }
+  ],
+  "magasinier": [
+    {
+      "name": "accueil",
+      "route": "/",
+      "tab": null,
+      "file": "magasinier-accueil.png",
+      "visible": true
+    },
+    {
+      "name": "convois",
+      "route": "/convois",
+      "tab": null,
+      "file": "magasinier-convois.png",
+      "visible": true
+    },
+    {
+      "name": "stocks",
+      "route": "/stocks",
+      "tab": null,
+      "file": "magasinier-stocks.png",
+      "visible": true
+    },
+    {
+      "name": "inventaire",
+      "route": "/inventaire",
+      "tab": null,
+      "file": "magasinier-inventaire.png",
+      "visible": true
+    },
+    {
+      "name": "operations",
+      "route": "/operations",
+      "tab": null,
+      "file": "magasinier-operations.png",
+      "visible": true
+    },
+    {
+      "name": "compte",
+      "route": "/compte",
+      "tab": null,
+      "file": "magasinier-compte.png",
+      "visible": true
+    }
+  ],
+  "caissier": [
+    {
+      "name": "accueil",
+      "route": "/",
+      "tab": null,
+      "file": "caissier-accueil.png",
+      "visible": true
+    },
+    {
+      "name": "convois",
+      "route": "/convois",
+      "tab": null,
+      "file": "caissier-convois.png",
+      "visible": true
+    },
+    {
+      "name": "finances",
+      "route": "/finances",
+      "tab": null,
+      "file": "caissier-finances.png",
+      "visible": true
+    },
+    {
+      "name": "operations",
+      "route": "/operations",
+      "tab": null,
+      "file": "caissier-operations.png",
+      "visible": true
+    }
+  ],
+  "comptable": [
+    {
+      "name": "accueil",
+      "route": "/",
+      "tab": null,
+      "file": "comptable-accueil.png",
+      "visible": true
+    },
+    {
+      "name": "finances",
+      "route": "/finances",
+      "tab": null,
+      "file": "comptable-finances.png",
+      "visible": true
+    },
+    {
+      "name": "rapprochement",
+      "route": "/finances",
+      "tab": "Rapprochement bancaire",
+      "file": "comptable-rapprochement.png",
+      "visible": true
+    },
+    {
+      "name": "rapports",
+      "route": "/rapports",
+      "tab": null,
+      "file": "comptable-rapports.png",
+      "visible": false
+    }
+  ],
+  "direction": [
+    {
+      "name": "accueil",
+      "route": "/",
+      "tab": null,
+      "file": "direction-accueil.png",
+      "visible": true
+    },
+    {
+      "name": "finances",
+      "route": "/finances",
+      "tab": null,
+      "file": "direction-finances.png",
+      "visible": true
+    },
+    {
+      "name": "prefinancement",
+      "route": "/prefinancement",
+      "tab": null,
+      "file": "direction-prefinancement.png",
+      "visible": false
+    },
+    {
+      "name": "rapports",
+      "route": "/rapports",
+      "tab": null,
+      "file": "direction-rapports.png",
+      "visible": true
+    },
+    {
+      "name": "operations",
+      "route": "/operations",
+      "tab": null,
+      "file": "direction-operations.png",
+      "visible": true
+    }
+  ],
+  "responsable_tracabilite": [
+    {
+      "name": "accueil",
+      "route": "/",
+      "tab": null,
+      "file": "responsable_tracabilite-accueil.png",
+      "visible": true
+    },
+    {
+      "name": "producteurs",
+      "route": "/producteurs",
+      "tab": null,
+      "file": "responsable_tracabilite-producteurs.png",
+      "visible": true
+    },
+    {
+      "name": "declarations",
+      "route": "/declarations",
+      "tab": null,
+      "file": "responsable_tracabilite-declarations.png",
+      "visible": true
+    },
+    {
+      "name": "missions",
+      "route": "/missions",
+      "tab": null,
+      "file": "responsable_tracabilite-missions.png",
+      "visible": false
+    },
+    {
+      "name": "stocks",
+      "route": "/stocks",
+      "tab": null,
+      "file": "responsable_tracabilite-stocks.png",
+      "visible": false
+    }
+  ],
+  "responsable_cartographie": [
+    {
+      "name": "accueil",
+      "route": "/",
+      "tab": null,
+      "file": "responsable_cartographie-accueil.png",
+      "visible": true
+    },
+    {
+      "name": "parcelles",
+      "route": "/parcelles",
+      "tab": null,
+      "file": "responsable_cartographie-parcelles.png",
+      "visible": true
+    },
+    {
+      "name": "cartographie",
+      "route": "/cartographie",
+      "tab": null,
+      "file": "responsable_cartographie-cartographie.png",
+      "visible": true
+    }
+  ],
+  "cartographe": [
+    {
+      "name": "accueil",
+      "route": "/",
+      "tab": null,
+      "file": "cartographe-accueil.png",
+      "visible": true
+    },
+    {
+      "name": "parcelles",
+      "route": "/parcelles",
+      "tab": null,
+      "file": "cartographe-parcelles.png",
+      "visible": true
+    },
+    {
+      "name": "cartographie",
+      "route": "/cartographie",
+      "tab": null,
+      "file": "cartographe-cartographie.png",
+      "visible": true
+    }
+  ],
+  "agent_terrain": [
+    {
+      "name": "accueil",
+      "route": "/",
+      "tab": null,
+      "file": "agent_terrain-accueil.png",
+      "visible": true
+    },
+    {
+      "name": "producteurs",
+      "route": "/producteurs",
+      "tab": null,
+      "file": "agent_terrain-producteurs.png",
+      "visible": true
+    },
+    {
+      "name": "missions",
+      "route": "/missions",
+      "tab": null,
+      "file": "agent_terrain-missions.png",
+      "visible": true
+    },
+    {
+      "name": "terrain",
+      "route": "/terrain",
+      "tab": null,
+      "file": "agent_terrain-terrain.png",
+      "visible": true
+    }
+  ],
+  "responsable_magasin": [
+    {
+      "name": "accueil",
+      "route": "/",
+      "tab": null,
+      "file": "responsable_magasin-accueil.png",
+      "visible": true
+    },
+    {
+      "name": "convois",
+      "route": "/convois",
+      "tab": null,
+      "file": "responsable_magasin-convois.png",
+      "visible": true
+    },
+    {
+      "name": "stocks",
+      "route": "/stocks",
+      "tab": null,
+      "file": "responsable_magasin-stocks.png",
+      "visible": true
+    },
+    {
+      "name": "inventaire",
+      "route": "/inventaire",
+      "tab": null,
+      "file": "responsable_magasin-inventaire.png",
+      "visible": true
+    }
+  ],
+  "responsable_financier": [
+    {
+      "name": "accueil",
+      "route": "/",
+      "tab": null,
+      "file": "responsable_financier-accueil.png",
+      "visible": true
+    },
+    {
+      "name": "finances",
+      "route": "/finances",
+      "tab": null,
+      "file": "responsable_financier-finances.png",
+      "visible": true
+    },
+    {
+      "name": "prefinancement",
+      "route": "/prefinancement",
+      "tab": null,
+      "file": "responsable_financier-prefinancement.png",
+      "visible": true
+    },
+    {
+      "name": "operations",
+      "route": "/operations",
+      "tab": null,
+      "file": "responsable_financier-operations.png",
+      "visible": true
+    }
+  ],
+  "responsable_qualite": [
+    {
+      "name": "accueil",
+      "route": "/",
+      "tab": null,
+      "file": "responsable_qualite-accueil.png",
+      "visible": true
+    },
+    {
+      "name": "qualite",
+      "route": "/qualite",
+      "tab": null,
+      "file": "responsable_qualite-qualite.png",
+      "visible": true
+    },
+    {
+      "name": "stocks",
+      "route": "/stocks",
+      "tab": null,
+      "file": "responsable_qualite-stocks.png",
+      "visible": false
+    }
+  ],
+  "responsable_logistique": [
+    {
+      "name": "accueil",
+      "route": "/",
+      "tab": null,
+      "file": "responsable_logistique-accueil.png",
+      "visible": true
+    },
+    {
+      "name": "convois",
+      "route": "/convois",
+      "tab": null,
+      "file": "responsable_logistique-convois.png",
+      "visible": false
+    },
+    {
+      "name": "stocks",
+      "route": "/stocks",
+      "tab": null,
+      "file": "responsable_logistique-stocks.png",
+      "visible": true
+    }
+  ],
+  "auditeur": [
+    {
+      "name": "accueil",
+      "route": "/",
+      "tab": null,
+      "file": "auditeur-accueil.png",
+      "visible": true
+    },
+    {
+      "name": "finances",
+      "route": "/finances",
+      "tab": null,
+      "file": "auditeur-finances.png",
+      "visible": true
+    },
+    {
+      "name": "rapports",
+      "route": "/rapports",
+      "tab": null,
+      "file": "auditeur-rapports.png",
+      "visible": true
+    }
+  ],
+  "acheteur": [
+    {
+      "name": "accueil",
+      "route": "/",
+      "tab": null,
+      "file": "acheteur-accueil.png",
+      "visible": true
+    },
+    {
+      "name": "commerce",
+      "route": "/commerce",
+      "tab": null,
+      "file": "acheteur-commerce.png",
+      "visible": true
+    }
+  ],
+  "collecteur": [
+    {
+      "name": "accueil",
+      "route": "/",
+      "tab": null,
+      "file": "collecteur-accueil.png",
+      "visible": true
+    },
+    {
+      "name": "mes-achats",
+      "route": "/mes-achats",
+      "tab": null,
+      "file": "collecteur-mes-achats.png",
+      "visible": true
+    },
+    {
+      "name": "mon-stock",
+      "route": "/mon-stock",
+      "tab": null,
+      "file": "collecteur-mon-stock.png",
+      "visible": true
+    },
+    {
+      "name": "historique",
+      "route": "/historique",
+      "tab": null,
+      "file": "collecteur-historique.png",
+      "visible": true
+    }
+  ],
+  "adg": [
+    {
+      "name": "accueil",
+      "route": "/",
+      "tab": null,
+      "file": "adg-accueil.png",
+      "visible": true
+    },
+    {
+      "name": "rapports",
+      "route": "/rapports",
+      "tab": null,
+      "file": "adg-rapports.png",
+      "visible": true
+    },
+    {
+      "name": "operations",
+      "route": "/operations",
+      "tab": null,
+      "file": "adg-operations.png",
+      "visible": false
+    }
+  ],
+  "coach": [
+    {
+      "name": "accueil",
+      "route": "/",
+      "tab": null,
+      "file": "coach-accueil.png",
+      "visible": true
+    },
+    {
+      "name": "producteurs",
+      "route": "/producteurs",
+      "tab": null,
+      "file": "coach-producteurs.png",
+      "visible": true
+    },
+    {
+      "name": "missions",
+      "route": "/missions",
+      "tab": null,
+      "file": "coach-missions.png",
+      "visible": true
+    },
+    {
+      "name": "terrain",
+      "route": "/terrain",
+      "tab": null,
+      "file": "coach-terrain.png",
+      "visible": true
+    }
+  ]
+}
