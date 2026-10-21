@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../data/notification_target.dart';
 import '../main.dart';
 import 'fiche_screen.dart';
-import 'missions_screen.dart';
+import 'producers_screen.dart';
 import 'my_stock_screen.dart';
 
 /// Notifications de l'utilisateur (le serveur ne renvoie que celles qui le concernent selon ses droits). Nécessite le réseau.
@@ -45,7 +45,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     if (mounted) setState(() => _items?.removeWhere((x) => x['id'] == n['id']));
     if (!mounted) return;
     final Widget? screen = switch (notificationTarget(n['kind'] as String?)) {
-      NotificationTarget.missions => const MissionsScreen(),
+      NotificationTarget.missions => const ProducersScreen(), // les tâches se consultent depuis la fiche du producteur
       NotificationTarget.fiche => const FicheScreen(),
       NotificationTarget.stock => const MyStockScreen(),
       NotificationTarget.none => null,

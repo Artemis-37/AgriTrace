@@ -7,15 +7,13 @@ import '../sync/sync_state.dart';
 import 'login_screen.dart';
 import 'fiche_screen.dart';
 import 'history_screen.dart';
-import 'missions_screen.dart';
 import 'my_stock_screen.dart';
 import 'notifications_screen.dart';
-import 'parcel_survey_screen.dart';
-import 'parcels_screen.dart';
 import 'producers_screen.dart';
+import 'download_screen.dart';
+import 'my_location_screen.dart';
 import 'new_convoy_screen.dart';
 import 'new_declaration_screen.dart';
-import 'map_pack_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -122,12 +120,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (_canConvoy) _HomeButton(Icons.local_shipping_outlined, 'Déclarer un convoi', () => _open(const NewConvoyScreen(), sync: true)),
       if (_canConvoy) _HomeButton(Icons.inventory_2_outlined, 'Mon stock', () => _open(const MyStockScreen())),
       if (_canFiche) _HomeButton(Icons.receipt_long_outlined, 'Ma fiche de compte', () => _open(const FicheScreen())),
-      if (_canMissions) _HomeButton(Icons.assignment_outlined, 'Mes missions', () => _open(const MissionsScreen())),
-      if (_canSurvey) _HomeButton(Icons.map_outlined, 'Relever une parcelle', () async {
-        final saved = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => const ParcelSurveyScreen()));
-        if (saved == true) services.sync.run();
-      }),
-      if (_canSurvey) _HomeButton(Icons.landscape_outlined, 'Mes parcelles', () => _open(const ParcelsScreen())),
+      if (_canSurvey || _canMissions) _HomeButton(Icons.fact_check_outlined, 'Producteurs et enquêtes', () => _open(const ProducersScreen())),
     ];
     return Scaffold(
       backgroundColor: const Color(0xFFF7FAF2),
@@ -137,7 +130,6 @@ class _HomeScreenState extends State<HomeScreen> {
           count: _coachMode ? null : t.count, unread: _unreadNotes, onNotes: () => _open(const NotificationsScreen()),
           onSync: () => services.sync.run(),
           onSignOut: _signOut,
-          onMap: _canSurvey ? () => _open(const MapPackScreen()) : null,
         ),
         ValueListenableBuilder<SyncStatus>(
           valueListenable: services.sync.status,
@@ -179,18 +171,13 @@ class _HomeScreenState extends State<HomeScreen> {
       );
 
   Widget _coachBody() {
+    // Même organisation que le terminal de terrain : les parcelles et les tâches se consultent depuis la fiche du producteur.
     final big = <Widget>[
-      if (_canSurvey) _tile(Icons.add_location_alt_outlined, 'Relever une nouvelle parcelle', () async {
-        final saved = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => const ParcelSurveyScreen()));
-        if (saved == true) services.sync.run();
-        _reload();
-      }, height: 150),
-      _tile(Icons.groups_outlined, 'Producteurs', () => _open(const ProducersScreen()), height: 150),
+      _tile(Icons.fact_check_outlined, 'Producteurs et enquêtes', () => _open(const ProducersScreen()), height: 150),
     ];
     final small = <Widget>[
-      if (_canSurvey) _tile(Icons.landscape_outlined, 'Mes parcelles', () => _open(const ParcelsScreen())),
-      if (_canMissions) _tile(Icons.assignment_outlined, 'Mes missions', () => _open(const MissionsScreen())),
-      if (_canSurvey) _tile(Icons.map_outlined, 'Fond de carte', () => _open(const MapPackScreen())),
+      _tile(Icons.download_for_offline_outlined, 'Télécharger les données', () => _open(const DownloadScreen())),
+      _tile(Icons.my_location, 'Capturer mon emplacement', () => _open(const MyLocationScreen())),
     ];
     Widget row(List<Widget> w) => Row(children: [for (var i = 0; i < w.length; i++) ...[if (i > 0) const SizedBox(width: 10), Expanded(child: w[i])]]);
     return RefreshIndicator(
@@ -250,8 +237,7 @@ class _HomeHeader extends StatelessWidget {
   final int? count;
   final int unread;
   final VoidCallback onSync, onSignOut, onNotes;
-  final VoidCallback? onMap;
-  const _HomeHeader({required this.now, required this.name, required this.org, required this.zone, required this.count, required this.unread, required this.onNotes, required this.onSync, required this.onSignOut, this.onMap});
+  const _HomeHeader({required this.now, required this.name, required this.org, required this.zone, required this.count, required this.unread, required this.onNotes, required this.onSync, required this.onSignOut});
 
   @override
   Widget build(BuildContext context) {
@@ -279,10 +265,9 @@ class _HomeHeader extends StatelessWidget {
           ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert, color: white), tooltip: 'Menu',
-            onSelected: (v) { if (v == 'sync') onSync(); if (v == 'map') onMap?.call(); if (v == 'out') onSignOut(); },
+            onSelected: (v) { if (v == 'sync') onSync(); if (v == 'out') onSignOut(); },
             itemBuilder: (_) => [
               const PopupMenuItem(value: 'sync', child: Text('Synchroniser')),
-              if (onMap != null) const PopupMenuItem(value: 'map', child: Text('Fond de carte')),
               const PopupMenuItem(value: 'out', child: Text('Se déconnecter')),
             ],
           ),

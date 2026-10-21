@@ -11,7 +11,9 @@ import 'map_pack_screen.dart';
 class ParcelSurveyScreen extends StatefulWidget {
   /// Parcelle déjà connue dont on reprend le tracé (null : nouvelle parcelle).
   final Map<String, Object?>? existing;
-  const ParcelSurveyScreen({super.key, this.existing});
+  /// Producteur déjà choisi (relevé lancé depuis sa fiche) : on ne le redemande pas.
+  final Map<String, Object?>? producer;
+  const ParcelSurveyScreen({super.key, this.existing, this.producer});
   @override
   State<ParcelSurveyScreen> createState() => _ParcelSurveyScreenState();
 }
@@ -41,6 +43,7 @@ class _ParcelSurveyScreenState extends State<ParcelSurveyScreen> {
       _declared.text = (e['declared_area_ha'] ?? '').toString();
     }
     _find('');
+    if (e == null && widget.producer != null) _pick(widget.producer!);
   }
 
   @override
@@ -135,7 +138,7 @@ class _ParcelSurveyScreenState extends State<ParcelSurveyScreen> {
         ] else ...[
           ListTile(
             contentPadding: EdgeInsets.zero, title: Text('${_producer!['last_name']} ${_producer!['first_names']}'), subtitle: Text('${_producer!['internal_code']}'),
-            trailing: widget.existing != null ? null : TextButton(onPressed: _points.isEmpty ? () => setState(() { _producer = null; _chainId = null; }) : null, child: const Text('Changer')),
+            trailing: widget.existing != null || widget.producer != null ? null : TextButton(onPressed: _points.isEmpty ? () => setState(() { _producer = null; _chainId = null; }) : null, child: const Text('Changer')),
           ),
           if (_chains.length > 1)
             DropdownButtonFormField<String>(

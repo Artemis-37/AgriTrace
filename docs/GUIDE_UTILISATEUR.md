@@ -63,15 +63,17 @@ Si l'administrateur suspend le compte, le **téléphone efface les données de l
 ## Coach (agent de terrain)
 
 ### Sur téléphone
-- **Accueil en tuiles** : « Relever une nouvelle parcelle », « Producteurs », « Mes parcelles », « Mes missions », « Fond de carte », puis la barre « Éléments à soumettre » (nombre d'opérations en attente ; toucher la barre lance l'envoi). La cloche est en haut.
-- **Producteurs** : recherche par nom, code ou téléphone (hors connexion). La fiche a deux onglets : « Parcelles » (relever ou reprendre un tracé) et « Informations » (matricule, contact, localité, section, nombre de parcelles et superficie mesurée).
-- **Missions** : liste des tâches données par l'ADG (en retard signalées en rouge) ; démarrer, saisir les résultats (texte, coordonnées, photos), soumettre. Le coach ne modifie pas les instructions : il peut **demander une nouvelle mission**, que l'ADG accepte ou refuse.
-- **Relevé de parcelle** : marcher autour de la parcelle avec le GPS ou poser les sommets sur la carte ; le téléphone calcule la superficie (distincte de la superficie déclarée). Un point GPS seul ne donne jamais de superficie. La liste « Mes parcelles » permet aussi d'ajouter une photo et signale un nouveau tracé en attente d'envoi.
-- **Fond de carte** : plan OpenStreetMap ou satellite quand le réseau est là ; fond hors ligne téléchargé en Wi-Fi depuis la page « Fond de carte ».
+- **Accueil en tuiles** (même organisation que le terminal de terrain) : « Producteurs et enquêtes », « Télécharger les données », « Capturer mon emplacement », puis la barre « Éléments à soumettre » (nombre d'opérations en attente ; toucher la barre lance l'envoi). La cloche est en haut.
+- **Producteurs et enquêtes** : on choisit d'abord le producteur (recherche par nom, code ou téléphone, hors connexion). Sa fiche a deux onglets :
+  - **Liste des tâches** : les missions de ce producteur (en retard signalées en rouge). On ouvre une tâche pour la démarrer, saisir les résultats (texte, coordonnées, photos) et la soumettre. Le coach ne modifie pas les instructions : il peut **demander une mission** pour ce producteur, que l'ADG accepte ou refuse. Les tâches demandent le réseau.
+  - **Informations sur le producteur** : téléphone, code, localité, section, **nombre de parcelles capturées** avec la taille de chacune, bouton **Relever une parcelle** (le producteur est déjà choisi) et bouton **Ouvrir la carte**. Chaque parcelle permet d'ajouter une photo et, avec le droit de modification, de reprendre le tracé ; un nouveau tracé en attente d'envoi est signalé.
+- **Relevé de parcelle** : marcher autour de la parcelle avec le GPS ; le téléphone calcule la superficie (distincte de la superficie déclarée). Un point GPS seul ne donne jamais de superficie.
+- **Fond de carte** : il s'affiche quand on consulte la carte depuis la fiche du producteur (« Ouvrir la carte ») et pendant le relevé : plan OpenStreetMap ou satellite quand le réseau est là, fond hors ligne téléchargé en Wi-Fi depuis « Télécharger les données ».
+- **Capturer mon emplacement** : affiche latitude, longitude et précision du GPS.
 
-<table class="phones"><tr><td><img src="captures/mobile/coach-accueil.png" alt="Accueil du coach"><br><em>Accueil du coach</em></td><td><img src="captures/mobile/coach-missions.png" alt="Mes missions"><br><em>Mes missions</em></td><td><img src="captures/mobile/coach-parcelles.png" alt="Mes parcelles"><br><em>Mes parcelles</em></td></tr></table>
+<table class="phones"><tr><td><img src="captures/mobile/coach-accueil.png" alt="Accueil du coach"><br><em>Accueil du coach</em></td><td><img src="captures/mobile/coach-producteurs.png" alt="Sélection du producteur"><br><em>Sélection du producteur</em></td><td><img src="captures/mobile/coach-telecharger.png" alt="Télécharger les données"><br><em>Télécharger les données</em></td></tr></table>
 
-<table class="phones"><tr><td><img src="captures/mobile/coach-producteurs.png" alt="Recherche de producteur"><br><em>Recherche de producteur</em></td><td><img src="captures/mobile/coach-producteur-fiche.png" alt="Fiche : parcelles"><br><em>Fiche : parcelles</em></td><td><img src="captures/mobile/coach-producteur-infos.png" alt="Fiche : informations"><br><em>Fiche : informations</em></td></tr></table>
+<table class="phones"><tr><td><img src="captures/mobile/coach-producteur-taches.png" alt="Fiche : liste des tâches"><br><em>Fiche : liste des tâches</em></td><td><img src="captures/mobile/coach-producteur-infos.png" alt="Fiche : informations sur le producteur"><br><em>Fiche : informations sur le producteur</em></td></tr></table>
 
 ### Sur ordinateur
 Consultation des missions et des parcelles dans le portail ; la saisie de terrain se fait sur le téléphone.

@@ -15,7 +15,9 @@ class BasemapView extends StatefulWidget {
   /// Position actuelle du technicien (point bleu), si connue.
   final GeoPoint? me;
   final double height;
-  const BasemapView({super.key, required this.tiles, required this.points, this.me, this.height = 260});
+  /// Autres tracés à afficher (par exemple toutes les parcelles d'un producteur), sans numérotation.
+  final List<List<GeoPoint>> shapes;
+  const BasemapView({super.key, required this.tiles, required this.points, this.me, this.height = 260, this.shapes = const []});
   @override
   State<BasemapView> createState() => _BasemapViewState();
 }
@@ -33,6 +35,7 @@ class _BasemapViewState extends State<BasemapView> {
     if (_size == Size.zero || (_placed && !force)) return;
     final pts = <({double lat, double lon})>[
       for (final g in widget.points) (lat: g.lat, lon: g.lon),
+      for (final sh in widget.shapes) for (final g in sh) (lat: g.lat, lon: g.lon),
       if (widget.points.isEmpty && widget.me != null) (lat: widget.me!.lat, lon: widget.me!.lon),
     ];
     final b = _layer == BaseLayer.pack ? widget.tiles.pack.bounds : null;
@@ -98,7 +101,7 @@ class _BasemapViewState extends State<BasemapView> {
                       builder: (_, s) => s.data == null ? const SizedBox.shrink() : Image.memory(s.data!, fit: BoxFit.fill, gaplessPlayback: true, filterQuality: FilterQuality.medium),
                     ),
                   ),
-                Positioned.fill(child: CustomPaint(painter: _OverlayPainter(widget.points, widget.me, _lat, _lon, _zoom))),
+                Positioned.fill(child: CustomPaint(painter: _OverlayPainter(widget.points, widget.me, _lat, _lon, _zoom, widget.shapes))),
               ])),
             )),
             Positioned(right: 8, top: 8, child: Column(children: [
@@ -153,7 +156,8 @@ class _OverlayPainter extends CustomPainter {
   final List<GeoPoint> pts;
   final GeoPoint? me;
   final double lat, lon, zoom;
-  _OverlayPainter(this.pts, this.me, this.lat, this.lon, this.zoom);
+  final List<List<GeoPoint>> shapes;
+  _OverlayPainter(this.pts, this.me, this.lat, this.lon, this.zoom, [this.shapes = const []]);
 
   Offset _at(GeoPoint g, Size size) {
     final c = project(lat, lon, zoom), p = project(g.lat, g.lon, zoom);
@@ -162,6 +166,15 @@ class _OverlayPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    for (final sh in shapes) {
+      if (sh.length < 3) continue;
+      final path = Path()..moveTo(_at(sh[0], size).dx, _at(sh[0], size).dy);
+      for (var i = 1; i < sh.length; i++) { final o = _at(sh[i], size); path.lineTo(o.dx, o.dy); }
+      path.close();
+      canvas.drawPath(path, Paint()..color = const Color(0x442E7D32));
+      canvas.drawPath(path, Paint()..color = const Color(0xFFFFEB3B)..style = PaintingStyle.stroke..strokeWidth = 4);
+      canvas.drawPath(path, Paint()..color = const Color(0xFF1B5E20)..style = PaintingStyle.stroke..strokeWidth = 2);
+    }
     if (pts.isNotEmpty) {
       final path = Path()..moveTo(_at(pts[0], size).dx, _at(pts[0], size).dy);
       for (var i = 1; i < pts.length; i++) {

@@ -16,13 +16,12 @@ import 'package:agritrace_mobile/screens/fiche_screen.dart';
 import 'package:agritrace_mobile/screens/history_screen.dart';
 import 'package:agritrace_mobile/screens/home_screen.dart';
 import 'package:agritrace_mobile/screens/login_screen.dart';
-import 'package:agritrace_mobile/screens/missions_screen.dart';
 import 'package:agritrace_mobile/screens/my_stock_screen.dart';
 import 'package:agritrace_mobile/screens/new_convoy_screen.dart';
 import 'package:agritrace_mobile/screens/new_declaration_screen.dart';
 import 'package:agritrace_mobile/screens/notifications_screen.dart';
-import 'package:agritrace_mobile/screens/parcels_screen.dart';
 import 'package:agritrace_mobile/screens/producers_screen.dart';
+import 'package:agritrace_mobile/screens/download_screen.dart';
 import 'package:agritrace_mobile/sync/sync_engine.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -105,7 +104,7 @@ final _decls = <Map<String, Object?>>[
   {'id': 'd4', 'producer_name': 'BAMBA Salif', 'operation_date': '2026-10-20', 'quantity': '8', 'unit': 'sac', 'amount': '520000', 'currency': 'XOF', 'purchase_receipt_no': 'A-004510', 'local_state': 'synced', 'status': 'accepted', 'receipt_conflict': 0},
 ];
 final _parcels = <Map<String, Object?>>[
-  {'id': 'p1', 'code': 'P00112-01', 'producer_name': 'KONÉ Awa', 'producer_code': 'P00112', 'declared_area_ha': '2.5', 'geometry_area_ha': '2.31', 'pending_updates': 0},
+  {'id': 'p1', 'code': 'P00112-01', 'producer_name': 'KONÉ Awa', 'producer_code': 'P00112', 'declared_area_ha': '2.5', 'geometry_area_ha': '2.31', 'pending_updates': 0, 'geometry': '{"type":"Polygon","coordinates":[[[-5.2910,6.1890],[-5.2895,6.1890],[-5.2895,6.1902],[-5.2910,6.1902],[-5.2910,6.1890]]]}'},
   {'id': 'p2', 'code': 'P00131-01', 'producer_name': 'YAO Marie', 'producer_code': 'P00131', 'declared_area_ha': '3.0', 'geometry_area_ha': null, 'pending_updates': 0},
   {'id': 'p3', 'code': 'P00044-02', 'producer_name': 'BAMBA Salif', 'producer_code': 'P00044', 'declared_area_ha': '1.8', 'geometry_area_ha': '1.74', 'pending_updates': 1},
 ];
@@ -127,6 +126,9 @@ final _routes = <String, dynamic>{
     {'id': 't1', 'title': 'Relever le contour de la parcelle P00131-01', 'description': 'Tracé GPS complet et photo du coin nord.', 'category': 'mapping', 'status': 'open', 'due_date': '2026-10-24', 'section': 'Section Est', 'overdue': false, 'latitude': null, 'longitude': null, 'content': null, 'decision_note': null},
     {'id': 't2', 'title': 'Visite de contrôle — KOFFI Adjoua', 'description': 'Vérifier les ombrages et prendre deux photos.', 'category': 'visit', 'status': 'in_progress', 'due_date': '2026-10-19', 'section': 'Section Nord', 'overdue': true, 'latitude': null, 'longitude': null, 'content': null, 'decision_note': null}],
   '/task-requests': [],
+  '/tasks?producer_id=pr1': [
+    {'id': 't1', 'title': 'Relever le contour de la parcelle P00112-01', 'description': 'Tracé GPS complet et photo du coin nord.', 'category': 'mapping', 'status': 'open', 'due_date': '2026-10-24', 'section': 'Section Est', 'overdue': false, 'latitude': null, 'longitude': null, 'content': null, 'decision_note': null},
+    {'id': 't2', 'title': 'Visite de contrôle — KONÉ Awa', 'description': 'Vérifier les ombrages et prendre deux photos.', 'category': 'visit', 'status': 'in_progress', 'due_date': '2026-10-19', 'section': 'Section Est', 'overdue': true, 'latitude': null, 'longitude': null, 'content': null, 'decision_note': null}],
 };
 
 void main() {
@@ -191,11 +193,10 @@ void main() {
   testWidgets('écrans du coach', (t) async {
     try {
     await shot(t, 'coach-accueil', const HomeScreen(), perms: _coach);
-    await shot(t, 'coach-missions', const MissionsScreen(), perms: _coach);
-    await shot(t, 'coach-parcelles', const ParcelsScreen(), perms: _coach);
     await shot(t, 'coach-producteurs', const ProducersScreen(), perms: _coach);
-    await shot(t, 'coach-producteur-fiche', const ProducersScreen(), perms: _coach, after: (t) async { await t.tap(find.textContaining('KONÉ')); await t.pumpAndSettle(); });
-    await shot(t, 'coach-producteur-infos', const ProducersScreen(), perms: _coach, after: (t) async { await t.tap(find.textContaining('KONÉ')); await t.pumpAndSettle(); await t.tap(find.text('Informations')); await t.pumpAndSettle(); });
+    await shot(t, 'coach-producteur-taches', const ProducersScreen(), perms: _coach, after: (t) async { await t.tap(find.textContaining('KONÉ')); await t.pump(const Duration(milliseconds: 300)); await t.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200))); await t.pump(const Duration(milliseconds: 300)); });
+    await shot(t, 'coach-producteur-infos', const ProducersScreen(), perms: _coach, after: (t) async { await t.tap(find.textContaining('KONÉ')); await t.pump(const Duration(milliseconds: 300)); await t.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200))); await t.pump(const Duration(milliseconds: 600)); await t.tap(find.text('Informations sur le producteur')); await t.pump(const Duration(milliseconds: 400)); });
+    await shot(t, 'coach-telecharger', const DownloadScreen(), perms: _coach);
     await shot(t, 'connexion', const LoginScreen());
     } finally { debugDisableShadows = true; }
   });
