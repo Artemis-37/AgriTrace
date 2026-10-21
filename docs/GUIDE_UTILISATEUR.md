@@ -174,6 +174,8 @@ Le menu **Données de terrain** (droit `field_records:read`) liste les distribut
 
 ### Logo de la coopérative
 
+![Logo en tête du portail et carte de réglage](captures/equipe.png)
+
 Chaque coopérative peut ajouter son logo : **Équipe › Logo de la coopérative** (droit `org:branding`, donné à l'administrateur de coopérative). Image PNG ou JPEG de 1 Mo maximum. Le logo s'affiche en tête du portail et sur l'accueil de l'application mobile (les téléphones le reçoivent à leur prochaine ouverture avec du réseau, puis le gardent hors connexion). Les SVG sont refusés pour des raisons de sécurité. « Supprimer » retire le logo.
 
 ### Modèles de saisie : l'ADG adapte, puis déploie (portail web › Données de terrain › Modèles de saisie)

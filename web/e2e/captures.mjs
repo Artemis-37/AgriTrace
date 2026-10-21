@@ -10,6 +10,9 @@ import { API, WEB, PW, call, seedBase } from './lib.mjs';
 const OUT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'docs', 'captures');
 fs.mkdirSync(OUT, { recursive: true });
 const { email, J, vc, prod, colEmail } = await seedBase();
+// Logo fictif de la coopérative de démonstration (visible en tête du portail)
+{ const f = new FormData(); f.append('file', new Blob([fs.readFileSync(path.join(OUT, '..', 'brand', 'logo-cooperative-demo.png'))]), 'logo.png');
+  const r = await fetch(API + '/organization/logo', { method: 'PUT', headers: { authorization: 'Bearer ' + J.token, 'x-organization-id': J.org }, body: f }); if (!r.ok) console.log('logo :', r.status); }
 
 // Données de démonstration : trois parcelles dont deux se chevauchent, une couche de zone protégée dont l'une des parcelles touche le bord
 const X = -5.7, Y = 6.8;

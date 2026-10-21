@@ -174,7 +174,7 @@ function LogoCard() {
   };
   return (
     <Card title="Logo de la coopérative">
-      <p className="muted">Image PNG ou JPEG de 1 Mo maximum (fond clair ou transparent de préférence). Elle s'affiche en tête du portail et sur l'accueil de l'application mobile ; les téléphones la reçoivent à leur prochaine synchronisation.</p>
+      <p className="muted">Image PNG ou JPEG de 1 Mo maximum (fond clair ou transparent de préférence). Elle s'affiche en tête du portail et sur l'accueil de l'application mobile ; les téléphones la reçoivent à l'ouverture de l'application avec du réseau.</p>
       <div style={{ minHeight: 60, marginBottom: 8 }}><OrgLogo height={80} /></div>
       <div className="toolbar">
         <input ref={file} type="file" accept="image/png,image/jpeg" aria-label="Choisir un logo" />

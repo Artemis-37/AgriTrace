@@ -1,3 +1,4 @@
+import 'dart:convert';
 // Rendu des vrais écrans de l'application avec des données fictives, pour les guides (docs/captures/mobile).
 // Ne fait rien sans CAPTURES_DIR : CAPTURES_DIR=../docs/captures/mobile flutter test test/captures_test.dart
 // Les écrans sont ceux de l'application (mêmes widgets, mêmes données de forme) ; ce n'est pas une capture d'un téléphone physique.
@@ -80,7 +81,7 @@ class _Repo extends Repository {
   @override
   Future<List<Map<String, Object?>>> parcels() async => parcs;
   @override
-  Future<({String name, String org, String zone})> identity() async => (name: 'Koffi Yao Serge', org: 'Société Coopérative Agricole de Hiré', zone: 'Section Est');
+  Future<({String name, String org, String zone})> identity() async => (name: 'Koffi Yao Serge', org: 'Coopérative Démo', zone: 'Section Est');
   @override
   Future<List<Map<String, Object?>>> searchProducers(String q) async => [
         {'id': 'pr1', 'internal_code': 'P00112', 'last_name': 'KONÉ', 'first_names': 'Awa', 'phone': '07 00 00 00 01', 'village': 'Hiré', 'section': 'Section Est'},
@@ -166,6 +167,7 @@ void main() {
   Future<void> shot(WidgetTester t, String name, Widget screen, {List<String> perms = _collector, int pending = 0, int problems = 0, Future<void> Function(WidgetTester)? after}) async {
     debugDisableShadows = false; // sinon les ombres des tests sont des aplats noirs (remis en place à la fin de chaque test)
     final db = _Db()..pending = pending..problems = problems;
+    db.kv['org_logo'] = base64Encode(File('../docs/brand/logo-cooperative-demo.png').readAsBytesSync());
     final api = _Api(_routes);
     final pack = MapPackStore(api);
     final repo = _Repo(db, perms, _decls, _parcels);
@@ -180,6 +182,7 @@ void main() {
     await t.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));
     await t.pump(const Duration(milliseconds: 100));
     if (after != null) { await after(t); await t.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200))); await t.pump(const Duration(milliseconds: 200)); }
+    await t.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 400))); await t.pump(const Duration(milliseconds: 100)); // décodage des images (logo)
     FocusManager.instance.primaryFocus?.unfocus();
     await t.pump(const Duration(milliseconds: 100)); await t.pump(const Duration(milliseconds: 400));
     await t.runAsync(() async {
