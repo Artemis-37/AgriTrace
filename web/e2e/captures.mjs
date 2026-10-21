@@ -9,7 +9,7 @@ import { API, WEB, PW, call, seedBase } from './lib.mjs';
 
 const OUT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'docs', 'captures');
 fs.mkdirSync(OUT, { recursive: true });
-const { email, J, vc, prod, colEmail } = await seedBase();
+const { email, J, vc, prod } = await seedBase(); // le collecteur n'a plus de portail : ses écrans sont les captures mobiles
 // Logo fictif de la coopérative de démonstration (visible en tête du portail)
 { const f = new FormData(); f.append('file', new Blob([fs.readFileSync(path.join(OUT, '..', 'brand', 'logo-cooperative-demo.png'))]), 'logo.png');
   const r = await fetch(API + '/organization/logo', { method: 'PUT', headers: { authorization: 'Bearer ' + J.token, 'x-organization-id': J.org }, body: f }); if (!r.ok) console.log('logo :', r.status); }
@@ -64,9 +64,5 @@ await shot('operations', '/operations');
 await shot('missions', '/missions');
 await shot('declarations', '/declarations');
 
-await login(colEmail);
-await shot('collecteur-mes-achats', '/mes-achats');
-await shot('collecteur-mon-stock', '/mon-stock');
-await shot('collecteur-historique', '/historique');
 await browser.close();
 console.log(fs.readdirSync(OUT).length + ' captures dans docs/captures');

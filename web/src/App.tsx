@@ -50,7 +50,6 @@ const NAV: { to: string; label: string; icon: string; perm: string[]; any?: bool
   { to: '/convois', label: 'Convois', icon: '⛟', perm: ['convoys:read', 'convoys:receive', 'convoys:settle'], any: true },
   { to: '/inventaire', label: 'Inventaire', icon: '☰', perm: ['stock:count'] },
   { to: '/prefinancement', label: 'Préfinancement', icon: '◈', perm: ['prefinancing:read'] },
-  { to: '/messages', label: 'Messages', icon: '✉', perm: ['messages:use'] },
   { to: '/synchronisation', label: 'Synchronisation', icon: '⇅', perm: ['replication:manage'] },
   { to: '/equipe', label: 'Équipe', icon: '⚙', perm: ['users:read'] },
   { to: '/declarations', label: 'Déclarations d\'achat', icon: '✎', perm: ['declarations:read'], notFor: 'collector' },
@@ -103,7 +102,6 @@ export default function App() {
           {NAV.filter((n) => (n.any ? n.perm.some((p) => can(p)) : can(...n.perm)) && (!n.only || me?.account_kind === n.only) && (!n.notFor || me?.account_kind !== n.notFor)).map((n) => (
             <NavLink key={n.to} to={n.to} end={n.to === '/'}><span aria-hidden="true">{n.icon}</span>{n.label}{n.to === '/messages' && msgUnread > 0 && <span className="badge badge-bad" style={{ marginLeft: 'auto' }} aria-label={`${msgUnread} message(s) non lu(s)`}>{msgUnread}</span>}</NavLink>
           ))}
-          <NavLink to="/notifications"><span aria-hidden="true">🔔</span>Notifications{unread > 0 && <span className="badge badge-bad" style={{ marginLeft: 'auto' }} aria-label={`${unread} non lue(s)`}>{unread}</span>}</NavLink>
         </nav>
         <div className="who">
           <strong>{org?.name}</strong><br />{me?.user.full_name}<br /><NavLink to="/compte" className="muted">Mon compte</NavLink>

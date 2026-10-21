@@ -95,15 +95,13 @@ const MOD = {
   },
   comptable: {
     niveau: 'Niveau 2 — Gestion', duree: '2 h',
-    objectifs: ['Passer des écritures comptables équilibrées', 'Importer un relevé bancaire et pointer', 'Demander l\'annulation d\'une écriture'],
+    objectifs: ['Passer des écritures comptables équilibrées', 'Consulter les comptes et les états', 'Demander l\'annulation d\'une écriture'],
     pas: [
       ['Passer une écriture', 'Menu **Finances** → onglet *Comptabilité* → nouvelle écriture : journal, date, libellé, lignes (compte, débit ou crédit). Elle doit être **équilibrée**.'],
-      ['Importer un relevé bancaire', 'Onglet *Rapprochement bancaire* : choisissez le compte, le fichier CSV et associez les colonnes (date, libellé, débit, crédit). Utilisez d\'abord la **simulation**.'],
-      ['Pointer', 'Les lignes évidentes sont pointées automatiquement (même sens, même montant, ±3 jours, un seul candidat). Pointez les autres à la main.'],
+      ['Consulter les comptes', 'Onglet *Comptes et caisses* : soldes et mouvements. Le **rapprochement bancaire** n\'est pas dans les droits du comptable : il est tenu par le responsable financier ou l\'administrateur.'],
     ],
     exos: [
       ['Passez une écriture « Cotisation » : 571 Caisse au débit, 758 Produits divers au crédit, 20 000 F.', 'L\'écriture apparaît au journal ; une écriture déséquilibrée est refusée.'],
-      ['Importez le relevé de démonstration en simulation puis pour de bon.', 'Les lignes sont pointées automatiquement ; les écarts restent « non rapprochés ».'],
     ],
   },
   direction: {
@@ -184,12 +182,15 @@ const MOD = {
     niveau: 'Niveau 3 — Pilotage', duree: '2 h',
     objectifs: ['Superviser caisse et comptes', 'Approuver et décaisser des prêts', 'Décider des annulations'],
     pas: [
-      ['Superviser la caisse', 'Menu **Finances** : soldes des caisses et comptes, comptabilité, rapprochement.'],
+      ['Superviser la caisse', 'Menu **Finances** : soldes des caisses et comptes, comptabilité.'],
+      ['Importer un relevé bancaire', 'Onglet *Rapprochement bancaire* : choisissez le compte, le fichier CSV et associez les colonnes (date, libellé, débit, crédit). Utilisez d\'abord la **simulation**.'],
+      ['Pointer', 'Les lignes évidentes sont pointées automatiquement (même sens, même montant, ±3 jours, un seul candidat). Pointez les autres à la main.'],
       ['Approuver puis décaisser un prêt', 'Menu **Préfinancement** : approbation avec échéancier, puis décaissement ; enregistrez les remboursements.'],
       ['Décider d\'une annulation', 'Menu **Mes opérations** → *Demandes d\'annulation*.'],
     ],
     exos: [
       ['Approuvez la demande de prêt de KONE Awa (90 000 F) avec deux échéances.', 'Le prêt passe à « approuvé » ; l\'échéancier est créé.'],
+      ['Importez le relevé de démonstration en simulation puis pour de bon.', 'Les lignes sont pointées automatiquement ; les écarts restent « non rapprochés ».'],
     ],
   },
   responsable_qualite: {
@@ -244,6 +245,7 @@ const MOD = {
     niveau: 'Niveau 1 — Opérateur', duree: '1 h',
     objectifs: ['Proposer un module de formation à l\'ADG', 'Suivre le sort de ses propositions', 'Consulter les résultats transmis par l\'ADG'],
     pas: [
+      ['Voir son accueil', 'Le **tableau de bord** affiche quatre indicateurs : propositions en attente de l\'ADG, transmises aux coachs, non retenues, résultats reçus (avec le total de participants). Les **messages** et les **notifications** s\'ouvrent par les icônes en haut à droite (enveloppe et cloche), pas par le menu.'],
       ['Proposer un module', 'Menu **Modules des exportateurs** → **Proposer un module** : titre, thème, résumé, cultures, certifications, objectifs, sections (titre et points), points à éviter, questions de vérification. Une fois envoyé, le module **n\'est plus modifiable** : en cas d\'erreur, proposez-en un nouveau.'],
       ['Suivre sa proposition', 'Le statut passe de « En attente de l\'ADG » à « Transmis aux coachs » ou « Non retenu » (avec le motif de l\'ADG). Vous êtes notifié à chaque étape.'],
       ['Lire les résultats', 'Une fois la séance faite, les coachs envoient leurs résultats à l\'ADG, qui vous les transmet **tels que saisis** : séance, village, participants, score moyen, observations. Vous ne voyez que les résultats de vos propres modules, jamais les autres données de la coopérative.'],

@@ -168,13 +168,6 @@
       "visible": true
     },
     {
-      "name": "rapprochement",
-      "route": "/finances",
-      "tab": "Rapprochement bancaire",
-      "file": "comptable-rapprochement.png",
-      "visible": true
-    },
-    {
       "name": "rapports",
       "route": "/rapports",
       "tab": null,
@@ -345,6 +338,13 @@
       "route": "/finances",
       "tab": null,
       "file": "responsable_financier-finances.png",
+      "visible": true
+    },
+    {
+      "name": "rapprochement",
+      "route": "/finances",
+      "tab": "Rapprochement bancaire",
+      "file": "responsable_financier-rapprochement.png",
       "visible": true
     },
     {

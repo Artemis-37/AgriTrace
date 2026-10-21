@@ -125,7 +125,7 @@ await step('le magasinier ne voit ni conformité, ni cartographie, ni caisse/com
   await call('POST', '/users', { ...J, body: { email: 'mag.' + colEmail, full_name: 'Magasinier', password: PW, role_id: r.id } });
   await login('mag.' + colEmail);
   const nav = await page.locator('nav').first().innerText();
-  for (const t of ['Convois', 'Stocks et lots', 'Messages']) must(nav.includes(t), `menu ${t} absent pour le magasinier : ${nav.replace(/\s+/g, ' ')}`);
+  for (const t of ['Convois', 'Stocks et lots']) must(nav.includes(t), `menu ${t} absent pour le magasinier : ${nav.replace(/\s+/g, ' ')}`);
   for (const t of ['Cartographie', 'Qualité et conformité', 'Finances', 'Équipe', 'Missions', 'Préfinancement', 'Parcelles', 'Commerce', 'Synchronisation']) must(!nav.includes(t), `le magasinier voit « ${t} »`);
   await page.getByRole('link', { name: /Convois/ }).click(); await page.waitForTimeout(900);
   must(!(await page.getByRole('tab', { name: 'Caisse' }).count()) && !(await page.getByRole('tab', { name: 'Comptes collecteurs' }).count()), 'le magasinier voit la caisse');

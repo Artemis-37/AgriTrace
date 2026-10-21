@@ -38,7 +38,7 @@ Ce guide présente chaque utilisateur **sur ordinateur** (portail web dans le na
 Si l'administrateur suspend le compte, le **téléphone efface les données de la coopérative** à la prochaine tentative de connexion ; seules les saisies jamais envoyées sont gardées. Sur ordinateur, la session est coupée et la connexion refusée.
 
 ### Notifications et messages
-- **Ordinateur** : en haut à droite, une enveloppe (messages) et une cloche (notifications) avec leur compteur ; elles se balancent quand un nouvel élément arrive.
+- **Ordinateur** : en haut à droite, une enveloppe (messages) et une cloche (notifications) avec leur compteur ; elles se balancent quand un nouvel élément arrive. Ces deux entrées ne figurent plus dans le menu de gauche : la cloche ouvre un aperçu avec le lien « Voir l'historique ».
 - **Téléphone** : la cloche de l'accueil affiche le nombre de notifications non lues. Pas de messagerie sur le téléphone.
 - Les notifications ne s'affichent qu'avec du réseau.
 
@@ -60,10 +60,7 @@ Si l'administrateur suspend le compte, le **téléphone efface les données de l
 <table class="phones"><tr><td><img src="captures/mobile/collecteur-mon-stock.png" alt="Mon stock"><br><em>Mon stock</em></td><td><img src="captures/mobile/collecteur-fiche.png" alt="Ma fiche de compte"><br><em>Ma fiche de compte</em></td><td><img src="captures/mobile/collecteur-convoi.png" alt="Déclarer un convoi"><br><em>Déclarer un convoi</em></td></tr></table>
 
 ### Sur ordinateur
-« Mes achats », « Mon stock » et « Historique » du portail montrent les mêmes informations. Un collecteur ne voit que ses propres opérations et ne peut pas exporter vers Excel.
-
-![Portail : Mes achats (vue collecteur)](captures/collecteur-mes-achats.png)
-*Portail : Mes achats (vue collecteur)*
+Aucun accès : le compte collecteur se connecte **uniquement par l'application mobile** (le portail refuse la connexion avec un message clair). Stock, historique et fiche de compte se consultent sur le téléphone.
 
 ## Coach (agent de terrain)
 
@@ -93,7 +90,7 @@ Si l'administrateur suspend le compte, le **téléphone efface les données de l
 <table class="phones"><tr><td><img src="captures/mobile/coach-producteur-taches.png" alt="Fiche : liste des tâches"><br><em>Fiche : liste des tâches</em></td><td><img src="captures/mobile/coach-producteur-infos.png" alt="Fiche : informations sur le producteur"><br><em>Fiche : informations sur le producteur</em></td></tr></table>
 
 ### Sur ordinateur
-Consultation des missions et des parcelles dans le portail ; la saisie de terrain se fait sur le téléphone.
+Aucun accès : le compte coach se connecte **uniquement par l'application mobile**. L'ADG suit son travail depuis le portail (missions, relevés de terrain, modules de formation).
 
 ## Administrateur de groupe (ADG)
 Responsable de la conformité et de la certification.
@@ -101,7 +98,7 @@ Responsable de la conformité et de la certification.
 ### Sur ordinateur
 - **Missions** : créer les tâches des coachs, les assigner, relire les résultats, clôturer, décider des demandes. Une tâche terminée et validée est **grisée** (non cliquable pour les autres profils) puis **retirée de la liste** après le nombre de jours réglé en haut de la page (« Jours de visibilité des missions validées », 7 par défaut) ; la case « Afficher aussi les missions terminées masquées » permet de les revoir (droit de lecture de toutes les missions).
 - **Modules de formation** : bibliothèque préchargée (cacao puis café, liée aux certifications). Pour chaque module : *Conserver* (validé tel quel), *Modifier* ou *Supprimer* ; *Rétablir les modules par défaut* ne rajoute que ceux qui ont été supprimés. Le contenu fourni est un socle général, sans chiffres réglementaires précis : à adapter à votre cahier des charges de certification avant de s'en servir en formation.
-- **Modules des exportateurs** : un exportateur partenaire propose des modules ; l'ADG les lit puis clique **Transmettre aux coachs** (ou **Décliner**). Les coachs dispensent la formation et saisissent leurs résultats sur l'application ; l'ADG clique **Transmettre à l'exportateur**. À aucun moment l'ADG ne modifie le contenu ou les résultats (ils sont figés à l'enregistrement), et un module d'exportateur n'est ni modifiable ni supprimable dans la bibliothèque. Chaque étape notifie le destinataire et est tracée dans le journal d'audit.
+- **Modules des exportateurs** (l'exportateur arrive sur un tableau de bord à quatre indicateurs : propositions en attente, transmises, non retenues, résultats reçus ; l'ADG voit en plus le nombre de modules et de résultats à transmettre) : un exportateur partenaire propose des modules ; l'ADG les lit puis clique **Transmettre aux coachs** (ou **Décliner**). Les coachs dispensent la formation et saisissent leurs résultats sur l'application ; l'ADG clique **Transmettre à l'exportateur**. À aucun moment l'ADG ne modifie le contenu ou les résultats (ils sont figés à l'enregistrement), et un module d'exportateur n'est ni modifiable ni supprimable dans la bibliothèque. Chaque étape notifie le destinataire et est tracée dans le journal d'audit.
 
 ![Modules des exportateurs (ADG)](captures/formation/adg-modules-exportateurs.png)
 

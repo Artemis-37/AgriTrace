@@ -257,7 +257,7 @@ Passe et consulte les écritures comptables, suit les comptes financiers ; peut 
 ### Objectifs
 
 - Passer des écritures comptables équilibrées
-- Importer un relevé bancaire et pointer
+- Consulter les comptes et les états
 - Demander l'annulation d'une écriture
 
 ### Ce que vous voyez
@@ -270,15 +270,10 @@ Passe et consulte les écritures comptables, suit les comptes financiers ; peut 
 
 *Comptes, caisses et comptabilité (écritures non modifiables, corrigées par écriture inverse).*
 
-![Rapprochement bancaire : import du relevé (CSV) et pointage des opérations.](captures/formation/comptable-rapprochement.png)
-
-*Rapprochement bancaire : import du relevé (CSV) et pointage des opérations.*
-
 ### Pas à pas
 
 1. **Passer une écriture.** Menu **Finances** → onglet *Comptabilité* → nouvelle écriture : journal, date, libellé, lignes (compte, débit ou crédit). Elle doit être **équilibrée**.
-2. **Importer un relevé bancaire.** Onglet *Rapprochement bancaire* : choisissez le compte, le fichier CSV et associez les colonnes (date, libellé, débit, crédit). Utilisez d'abord la **simulation**.
-3. **Pointer.** Les lignes évidentes sont pointées automatiquement (même sens, même montant, ±3 jours, un seul candidat). Pointez les autres à la main.
+2. **Consulter les comptes.** Onglet *Comptes et caisses* : soldes et mouvements. Le **rapprochement bancaire** n'est pas dans les droits du comptable : il est tenu par le responsable financier ou l'administrateur.
 
 ### Ce que ce profil ne voit pas
 
@@ -293,12 +288,11 @@ Passe et consulte les écritures comptables, suit les comptes financiers ; peut 
 | # | À faire | Résultat attendu |
 |---|---|---|
 | 1 | Passez une écriture « Cotisation » : 571 Caisse au débit, 758 Produits divers au crédit, 20 000 F. | L'écriture apparaît au journal ; une écriture déséquilibrée est refusée. |
-| 2 | Importez le relevé de démonstration en simulation puis pour de bon. | Les lignes sont pointées automatiquement ; les écarts restent « non rapprochés ». |
 
 ### Acquis (à cocher)
 
 - [ ] Passer des écritures comptables équilibrées
-- [ ] Importer un relevé bancaire et pointer
+- [ ] Consulter les comptes et les états
 - [ ] Demander l'annulation d'une écriture
 
 ---
@@ -380,19 +374,21 @@ Supervise la caisse, les comptes et les prêts ; approuve les paiements, les cor
 
 *Comptes, caisses et comptabilité (écritures non modifiables, corrigées par écriture inverse).*
 
+![Rapprochement bancaire : import du relevé (CSV) et pointage des opérations.](captures/formation/responsable_financier-rapprochement.png)
+
+*Rapprochement bancaire : import du relevé (CSV) et pointage des opérations.*
+
 ![Prêts et préfinancements : demande, approbation, décaissement, remboursements.](captures/formation/responsable_financier-prefinancement.png)
 
 *Prêts et préfinancements : demande, approbation, décaissement, remboursements.*
 
-![Mes opérations : reçus à imprimer et demandes d'annulation.](captures/formation/responsable_financier-operations.png)
-
-*Mes opérations : reçus à imprimer et demandes d'annulation.*
-
 ### Pas à pas
 
-1. **Superviser la caisse.** Menu **Finances** : soldes des caisses et comptes, comptabilité, rapprochement.
-2. **Approuver puis décaisser un prêt.** Menu **Préfinancement** : approbation avec échéancier, puis décaissement ; enregistrez les remboursements.
-3. **Décider d'une annulation.** Menu **Mes opérations** → *Demandes d'annulation*.
+1. **Superviser la caisse.** Menu **Finances** : soldes des caisses et comptes, comptabilité.
+2. **Importer un relevé bancaire.** Onglet *Rapprochement bancaire* : choisissez le compte, le fichier CSV et associez les colonnes (date, libellé, débit, crédit). Utilisez d'abord la **simulation**.
+3. **Pointer.** Les lignes évidentes sont pointées automatiquement (même sens, même montant, ±3 jours, un seul candidat). Pointez les autres à la main.
+4. **Approuver puis décaisser un prêt.** Menu **Préfinancement** : approbation avec échéancier, puis décaissement ; enregistrez les remboursements.
+5. **Décider d'une annulation.** Menu **Mes opérations** → *Demandes d'annulation*.
 
 ### Ce que ce profil ne voit pas
 
@@ -404,6 +400,7 @@ Supervise la caisse, les comptes et les prêts ; approuve les paiements, les cor
 | # | À faire | Résultat attendu |
 |---|---|---|
 | 1 | Approuvez la demande de prêt de KONE Awa (90 000 F) avec deux échéances. | Le prêt passe à « approuvé » ; l'échéancier est créé. |
+| 2 | Importez le relevé de démonstration en simulation puis pour de bon. | Les lignes sont pointées automatiquement ; les écarts restent « non rapprochés ». |
 
 ### Acquis (à cocher)
 
@@ -1025,9 +1022,10 @@ Partenaire exportateur : propose des modules de formation à l'ADG et reçoit, p
 
 ### Pas à pas
 
-1. **Proposer un module.** Menu **Modules des exportateurs** → **Proposer un module** : titre, thème, résumé, cultures, certifications, objectifs, sections (titre et points), points à éviter, questions de vérification. Une fois envoyé, le module **n'est plus modifiable** : en cas d'erreur, proposez-en un nouveau.
-2. **Suivre sa proposition.** Le statut passe de « En attente de l'ADG » à « Transmis aux coachs » ou « Non retenu » (avec le motif de l'ADG). Vous êtes notifié à chaque étape.
-3. **Lire les résultats.** Une fois la séance faite, les coachs envoient leurs résultats à l'ADG, qui vous les transmet **tels que saisis** : séance, village, participants, score moyen, observations. Vous ne voyez que les résultats de vos propres modules, jamais les autres données de la coopérative.
+1. **Voir son accueil.** Le **tableau de bord** affiche quatre indicateurs : propositions en attente de l'ADG, transmises aux coachs, non retenues, résultats reçus (avec le total de participants). Les **messages** et les **notifications** s'ouvrent par les icônes en haut à droite (enveloppe et cloche), pas par le menu.
+2. **Proposer un module.** Menu **Modules des exportateurs** → **Proposer un module** : titre, thème, résumé, cultures, certifications, objectifs, sections (titre et points), points à éviter, questions de vérification. Une fois envoyé, le module **n'est plus modifiable** : en cas d'erreur, proposez-en un nouveau.
+3. **Suivre sa proposition.** Le statut passe de « En attente de l'ADG » à « Transmis aux coachs » ou « Non retenu » (avec le motif de l'ADG). Vous êtes notifié à chaque étape.
+4. **Lire les résultats.** Une fois la séance faite, les coachs envoient leurs résultats à l'ADG, qui vous les transmet **tels que saisis** : séance, village, participants, score moyen, observations. Vous ne voyez que les résultats de vos propres modules, jamais les autres données de la coopérative.
 
 ### Ce que ce profil ne voit pas
 
