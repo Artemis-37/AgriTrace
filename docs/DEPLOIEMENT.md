@@ -31,3 +31,6 @@ Un serveur Linux avec Docker, un nom de domaine, et un reverse proxy HTTPS devan
 
 ## Points de santé
 `GET /v1/health` (vivacité) et `GET /v1/ready` (base joignable). L'arrêt est propre (`SIGTERM` : requêtes en cours terminées, pool fermé).
+
+## PostGIS
+Les fichiers `docker-compose*.yml` utilisent l'image `postgis/postgis:16-3.4` (PostgreSQL 16 + PostGIS). `node scripts/migrate.js` active l'extension et la colonne géométrique `parcels.geom` quand elle est disponible, et indique `PostGIS : actif` ou `PostGIS : inactif` dans sa sortie. Avec un PostgreSQL sans PostGIS, tout fonctionne : le calcul des chevauchements revient à l'application (voir `docs/ECARTS_CDC.md`). Pour une base existante dont l'utilisateur n'est pas super-utilisateur, faire exécuter une fois `CREATE EXTENSION postgis;` par un super-utilisateur, puis relancer `migrate`.

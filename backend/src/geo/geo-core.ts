@@ -49,24 +49,27 @@ export function bboxOf(g: Polygon): [number, number, number, number] {
 }
 export const bboxesOverlap = (a: number[], b: number[]) => a[0] <= b[2] && b[0] <= a[2] && a[1] <= b[3] && b[1] <= a[3];
 
+/** Mesures d'un couple de parcelles, quel que soit le moteur qui les a calculées (Node ou PostGIS). */
+export interface PairMetrics {
+  /** Mêmes sommets dans le même ordre. */
+  sameRaw: boolean;
+  /** Même tracé après normalisation (sens, point de départ, arrondi au centimètre). */
+  equivalent: boolean;
+  areaA_m2: number; areaB_m2: number; intersection_m2: number;
+}
+
 /**
- * Compare deux polygones. Une limite commune (intersection nulle ou sous les seuils) n'est jamais un chevauchement problématique.
- * Surfaces calculées sur l'ellipsoïde par @turf/area ; l'intersection par clipping de polygones (polygon-clipping).
+ * Règles de classement (CDC §10.4), identiques pour les deux moteurs : seules les mesures changent de provenance.
+ * Une limite commune (intersection nulle ou sous les seuils) n'est jamais un chevauchement problématique.
  */
-export function analysePair(a: Polygon, b: Polygon, s: GeoSettings): PairAnalysis {
+export function classifyPair(m: PairMetrics, s: GeoSettings): PairAnalysis {
   const none: PairAnalysis = { kind: null, intersection_m2: 0, pct_a: 0, pct_b: 0, iou: 0 };
-  if (!bboxesOverlap(bboxOf(a), bboxOf(b))) return none;
-  const ha = geometryHash(a), hb = geometryHash(b);
-  const aa = areaM2(a), ab = areaM2(b);
-  if (ha === hb) {
-    return { kind: sameRawGeometry(a, b) ? 'duplicate_identical' : 'duplicate_equivalent', intersection_m2: Math.min(aa, ab), pct_a: 100, pct_b: 100, iou: 1 };
+  const aa = m.areaA_m2, ab = m.areaB_m2;
+  if (m.equivalent) {
+    return { kind: m.sameRaw ? 'duplicate_identical' : 'duplicate_equivalent', intersection_m2: Math.min(aa, ab), pct_a: 100, pct_b: 100, iou: 1 };
   }
-  let inter = 0;
-  try {
-    const x = intersect(featureCollection([turfPolygon(a.coordinates), turfPolygon(b.coordinates)]));
-    inter = x ? area(x) : 0;
-  } catch { inter = 0; }
-  if (inter <= 0) return none;
+  const inter = m.intersection_m2;
+  if (!(inter > 0) || !(aa > 0) || !(ab > 0)) return none;
   const pctA = (inter / aa) * 100, pctB = (inter / ab) * 100;
   const iou = inter / (aa + ab - inter);
   const base = { intersection_m2: Number(inter.toFixed(2)), pct_a: Number(pctA.toFixed(3)), pct_b: Number(pctB.toFixed(3)), iou: Number(iou.toFixed(5)) };
@@ -74,6 +77,25 @@ export function analysePair(a: Polygon, b: Polygon, s: GeoSettings): PairAnalysi
   const smallerPct = Math.max(pctA, pctB); // part de la plus petite parcelle couverte par l'intersection
   if (inter < s.overlap_min_m2 || smallerPct < s.overlap_min_pct) return { ...none, ...base, kind: null };
   return { kind: smallerPct >= 99 ? 'overlap_inclusion' : 'overlap_partial', ...base };
+}
+
+/**
+ * Compare deux polygones avec le moteur Node (repli quand PostGIS n'est pas disponible).
+ * Surfaces calculées sur la sphère par @turf/area ; l'intersection par clipping de polygones (polygon-clipping).
+ */
+export function analysePair(a: Polygon, b: Polygon, s: GeoSettings): PairAnalysis {
+  const none: PairAnalysis = { kind: null, intersection_m2: 0, pct_a: 0, pct_b: 0, iou: 0 };
+  if (!bboxesOverlap(bboxOf(a), bboxOf(b))) return none;
+  const equivalent = geometryHash(a) === geometryHash(b);
+  const aa = areaM2(a), ab = areaM2(b);
+  let inter = 0;
+  if (!equivalent) {
+    try {
+      const x = intersect(featureCollection([turfPolygon(a.coordinates), turfPolygon(b.coordinates)]));
+      inter = x ? area(x) : 0;
+    } catch { inter = 0; }
+  }
+  return classifyPair({ sameRaw: sameRawGeometry(a, b), equivalent, areaA_m2: aa, areaB_m2: ab, intersection_m2: inter }, s);
 }
 
 export const isBlocking = (kind: AnomalyKind, s: GeoSettings) => kind.startsWith('duplicate') || s.overlap_policy === 'block';

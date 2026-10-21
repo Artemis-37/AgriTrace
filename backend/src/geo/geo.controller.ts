@@ -9,7 +9,7 @@ import { IsBoolean, IsIn, IsNumber, IsOptional, IsString, IsUUID, Length, Max, M
 import { PoolClient } from 'pg';
 import { RequirePermissions } from '../access/decorators';
 import { centroid, polygonAreaHa } from '../parcels/geo';
-import { analysePair, geometryHash } from './geo-core';
+import { geometryHash } from './geo-core';
 import { detectFields, GeoImportService, ImportOptions, Item, Mode } from './geo-import.service';
 import {
   buildGeoJson, buildGpkg, buildKml, buildKmz, buildShapefile, ExportColumn, ExportRow, GeoFormat, GeoFormatError, parseGeoFile,
@@ -294,7 +294,7 @@ export class GeoController {
         const g = (await c.query(`SELECT id, geometry, status FROM parcels WHERE id = ANY($1)`, [[a.parcel_a, a.parcel_b]])).rows;
         const pa = g.find((x: any) => x.id === a.parcel_a), pb = g.find((x: any) => x.id === a.parcel_b);
         if (pa?.geometry && pb?.geometry && pa.status === 'active' && pb.status === 'active') {
-          const r = analysePair(pa.geometry, pb.geometry, s);
+          const r = await this.svc.analyseStored(c, pa.id, pb.id, s);
           if (r.kind === a.kind) throw new ConflictException(`L'anomalie est toujours présente (${r.intersection_m2} m²) : corriger un tracé, ou enregistrer une exception motivée`);
         }
       }
@@ -346,7 +346,7 @@ export class GeoController {
       if (keep.value_chain_id !== rep.value_chain_id) contradictions.push('filières différentes');
       if (keep.geometry && rep.geometry) {
         const s = await this.svc.settings(c);
-        const r = analysePair(keep.geometry, rep.geometry, s);
+        const r = await this.svc.analyseStored(c, keep.id, rep.id, s);
         if (!r.kind || r.kind === 'overlap_partial') contradictions.push(`les tracés ne représentent pas le même terrain (recouvrement ${r.pct_a} % / ${r.pct_b} %)`);
       }
       const summary = (p: any) => ({ id: p.id, code: p.code, producer_code: p.producer_code, declared_area_ha: p.declared_area_ha, measured_area_ha: p.geometry_area_ha, has_polygon: !!p.geometry, verification_status: p.verification_status, history_events: p.history_events, inspections: p.inspections, documents: p.documents, geometry: p.geometry });

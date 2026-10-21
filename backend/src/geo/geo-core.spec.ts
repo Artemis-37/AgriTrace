@@ -1,4 +1,4 @@
-import { analysePair, DEFAULT_GEO_SETTINGS as S, geometryHash, normalizeRing } from './geo-core';
+import { classifyPair, PairMetrics, analysePair, DEFAULT_GEO_SETTINGS as S, geometryHash, normalizeRing } from './geo-core';
 import { selfIntersects, validatePolygon } from '../parcels/geo';
 
 const sq = (lon: number, lat: number, size = 0.001): any => ({ type: 'Polygon', coordinates: [[[lon, lat], [lon + size, lat], [lon + size, lat + size], [lon, lat + size], [lon, lat]]] });
@@ -44,5 +44,34 @@ describe('géométrie : doublons et chevauchements', () => {
     expect(selfIntersects(bow)).toBe(true);
     expect(validatePolygon({ type: 'Polygon', coordinates: [bow] })).toMatch(/se croise/);
     expect(validatePolygon(sq(-6, 6.8))).toBeNull();
+  });
+});
+
+describe('classement des couples à partir de mesures (commun aux moteurs Node et PostGIS)', () => {
+  const m = (o: Partial<PairMetrics>): PairMetrics => ({ sameRaw: false, equivalent: false, areaA_m2: 10000, areaB_m2: 10000, intersection_m2: 0, ...o });
+  it('tracés équivalents : doublon identique ou équivalent selon les sommets', () => {
+    expect(classifyPair(m({ equivalent: true, sameRaw: true }), S).kind).toBe('duplicate_identical');
+    expect(classifyPair(m({ equivalent: true }), S).kind).toBe('duplicate_equivalent');
+  });
+  it('intersection nulle ou limite commune : aucune anomalie', () => {
+    expect(classifyPair(m({ intersection_m2: 0 }), S).kind).toBeNull();
+    expect(classifyPair(m({ intersection_m2: NaN }), S).kind).toBeNull();
+  });
+  it('IoU au-dessus du seuil : presque identiques', () => {
+    expect(classifyPair(m({ intersection_m2: 9800 }), S).kind).toBe('duplicate_near');
+  });
+  it('recouvrement partiel et inclusion', () => {
+    expect(classifyPair(m({ intersection_m2: 4000 }), S).kind).toBe('overlap_partial');
+    expect(classifyPair(m({ areaB_m2: 1000, intersection_m2: 1000 }), S).kind).toBe('overlap_inclusion');
+  });
+  it('sous les seuils (25 m² ou 1 %) : pas d\'anomalie', () => {
+    expect(classifyPair(m({ intersection_m2: 20 }), S).kind).toBeNull();
+    expect(classifyPair(m({ areaA_m2: 1e6, areaB_m2: 1e6, intersection_m2: 5000 }), S).kind).toBeNull();
+  });
+  it('le moteur Node donne le même classement que les mesures qu\'il calcule lui-même', () => {
+    const a = sq(-6, 6.8), b = sq(-5.9995, 6.8);
+    const r = analysePair(a, b, S);
+    expect(r.kind).toBe('overlap_partial');
+    expect(classifyPair({ sameRaw: false, equivalent: false, areaA_m2: 12300, areaB_m2: 12300, intersection_m2: r.intersection_m2 }, S).kind).toBe('overlap_partial');
   });
 });

@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:16
+        image: postgis/postgis:16-3.4   # PostGIS actif : le moteur géospatial SQL est exercé par tous les parcours
         env: { POSTGRES_USER: owner, POSTGRES_PASSWORD: owner, POSTGRES_DB: agritrace }
         ports: ["5432:5432"]
         options: >-
@@ -45,6 +45,12 @@ jobs:
           for i in $(seq 1 30); do curl -fs http://localhost:3000/v1/ready && break; sleep 1; done
           curl -fs http://localhost:3000/v1/ready
       - run: npm run test:e2e
+      - name: Moteur de repli sans PostGIS (GEO_ENGINE=js) — mêmes classements
+        run: |
+          PORT=3001 GEO_ENGINE=js node dist/main > /tmp/api-js.log 2>&1 &
+          for i in $(seq 1 30); do curl -fs http://localhost:3001/v1/ready && break; sleep 1; done
+          API=http://localhost:3001/v1 EXPECT_ENGINE=js node scripts/e2e-postgis.js
+          API=http://localhost:3001/v1 node scripts/e2e-geo.js
       - name: Portail web (build, aperçu relié à l'API) et navigateur
         working-directory: web
         run: |

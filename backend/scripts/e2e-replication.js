@@ -30,12 +30,12 @@ async function call(base, method, p, { token, org, body, form, headers: h } = {}
   return { status: res.status, body: json };
 }
 
-async function mkInstance(tag, mode, port) {
+async function mkInstance(tag, mode, port, { postgis = true } = {}) {
   const db = `agr_${tag}_${run}`;
   const admin = new Client({ connectionString: OWNER_URL }); await admin.connect();
   await admin.query(`CREATE DATABASE ${db}`); await admin.end();
   const ownerUrl = withDb(OWNER_URL, db), appUrl = withDb(APP_URL, db);
-  const m = spawnSync('node', ['scripts/migrate.js'], { env: { ...process.env, DATABASE_URL: ownerUrl }, encoding: 'utf8' });
+  const m = spawnSync('node', ['scripts/migrate.js'], { env: { ...process.env, DATABASE_URL: ownerUrl, ...(postgis ? {} : { POSTGIS: 'off' }) }, encoding: 'utf8' });
   if (m.status !== 0) throw new Error('migration : ' + m.stderr);
   const o = new Client({ connectionString: ownerUrl }); o.on('error', () => {}); await o.connect();
   await o.query(`GRANT USAGE ON SCHEMA public TO agritrace_app; GRANT ALL ON ALL TABLES IN SCHEMA public TO agritrace_app; GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO agritrace_app; GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO agritrace_app`);
@@ -51,8 +51,8 @@ async function mkInstance(tag, mode, port) {
 
 (async () => {
   const C = await mkInstance('c', 'central', 3121);
-  const L1 = await mkInstance('l1', 'local', 3122);
-  const L2 = await mkInstance('l2', 'local', 3123);
+  const L1 = await mkInstance('l1', 'local', 3122, { postgis: false });
+  const L2 = await mkInstance('l2', 'local', 3123, { postgis: false });
   await new Promise((r) => { const s = spawn('node', ['scripts/create-platform-admin.js', 'admin@central.test', 'Admin'], { env: { ...process.env, DATABASE_URL: C.ownerUrl, ADMIN_PASSWORD: ADMIN_PW } }); s.on('close', r); });
 
   console.log('Modes');
@@ -83,6 +83,13 @@ async function mkInstance(tag, mode, port) {
   const doc = await call(L1.base, 'POST', '/documents', { ...J1, form: fd });
   check('pièce jointe locale', doc.status === 201, doc.body);
   check('changement de statut local (historique)', (await call(L1.base, 'POST', `/producers/${prods[1].id}/status`, { ...J1, body: { status: 'to_verify', reason: 'Contrôle de routine' } })).status === 201);
+
+  // Parcelle avec tracé créée sur un serveur local SANS PostGIS : elle doit arriver sur le central, qui peut avoir PostGIS.
+  const poly = { type: 'Polygon', coordinates: [[[-5.5, 7.2], [-5.4991, 7.2], [-5.4991, 7.2009], [-5.5, 7.2009], [-5.5, 7.2]]] };
+  const parc = await call(L1.base, 'POST', '/parcels', { ...J1, body: { idempotency_key: 'repl-' + run, producer_id: prods[0].id, value_chain_id: vc.id, declared_area_ha: '1', geometry: poly, confirm_not_duplicate: true } });
+  check('parcelle avec tracé créée sur le serveur local (sans PostGIS)', parc.status === 201, parc.body);
+  const localHasGeom = (await L1.owner.query(`SELECT 1 FROM pg_attribute WHERE attrelid='parcels'::regclass AND attname='geom' AND NOT attisdropped`)).rowCount;
+  check('le serveur local n\'a pas de colonne PostGIS', localHasGeom === 0);
 
   console.log('Central : création du site et sécurité du jeton');
   const bad = await call(C.base, 'POST', '/replication/sites', { token: cadm, body: { organization_code: 'S1' + run.toUpperCase(), organization_name: 'Coopérative Un', organization_id: org1 } });
@@ -115,6 +122,13 @@ async function mkInstance(tag, mode, port) {
   const cp = (await C.owner.query(`SELECT id, last_name, status, version FROM producers WHERE organization_id=$1 ORDER BY last_name`, [org1])).rows;
   const lp = (await L1.owner.query(`SELECT id, last_name, status, version FROM producers WHERE organization_id=$1 ORDER BY last_name`, [org1])).rows;
   check('producteurs identiques (identifiants et statuts)', JSON.stringify(cp) === JSON.stringify(lp), { cp, lp });
+  const cpar = (await C.owner.query(`SELECT id, geometry, bbox IS NOT NULL AS has_bbox FROM parcels WHERE organization_id=$1`, [org1])).rows;
+  check('parcelle et tracé arrivés sur le central', cpar.length === 1 && JSON.stringify(cpar[0].geometry.coordinates) === JSON.stringify(poly.coordinates) && cpar[0].has_bbox, cpar);
+  const centralGeom = (await C.owner.query(`SELECT 1 FROM pg_attribute WHERE attrelid='parcels'::regclass AND attname='geom' AND NOT attisdropped`)).rowCount;
+  if (centralGeom) {
+    const g = (await C.owner.query(`SELECT ST_Area(geom::geography) AS a FROM parcels WHERE organization_id=$1`, [org1])).rows[0];
+    check('central avec PostGIS : colonne géométrique calculée à la réception (≈ 1 ha)', g && Number(g.a) > 9500 && Number(g.a) < 10500, g);
+  } else console.log('  (central sans PostGIS : vérification de la colonne géométrique ignorée)');
   const cdoc = (await C.owner.query(`SELECT storage_key, sha256 FROM documents WHERE organization_id=$1`, [org1])).rows[0];
   const blob = cdoc && path.join(C.docs, org1, cdoc.storage_key);
   check('pièce jointe copiée sur le central, empreinte exacte', blob && fs.existsSync(blob) && crypto.createHash('sha256').update(fs.readFileSync(blob)).digest('hex') === cdoc.sha256);

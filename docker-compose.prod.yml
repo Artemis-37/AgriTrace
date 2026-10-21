@@ -1,7 +1,7 @@
 # Déploiement type. HTTPS à terminer devant (Caddy, Traefik, équilibreur du cloud) : ce fichier n'expose que le portail en HTTP.
 services:
   db:
-    image: postgres:16
+    image: postgis/postgis:16-3.4   # PostgreSQL 16 + PostGIS (moteur géospatial ; le calcul par l'application reste le repli)
     restart: unless-stopped
     environment:
       POSTGRES_USER: agritrace_owner

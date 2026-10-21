@@ -43,7 +43,7 @@ function Anomalies() {
           <option value="">Tous</option>{Object.entries(ANOMALY_STATUS).map(([k, [l]]) => <option key={k} value={k}>{l}</option>)}
         </select>
         <button className="btn btn-secondary" disabled={check.busy} onClick={() => check.run(async () => {
-          const r = await post('/geo/checks/run'); setReport(`${r.parcels_examined} parcelle(s) examinée(s), ${r.new_anomalies} nouvelle(s) anomalie(s), ${r.open_anomalies} ouverte(s).`); reload();
+          const r = await post('/geo/checks/run'); setReport(`${r.parcels_examined} parcelle(s) examinée(s), ${r.new_anomalies} nouvelle(s) anomalie(s), ${r.open_anomalies} ouverte(s). Calcul : ${r.engine === 'postgis' ? 'PostGIS (index spatial)' : 'moteur de l’application'}.`); reload();
         })}>{check.busy ? 'Contrôle…' : 'Lancer le contrôle périodique'}</button>
       </div>
       {report && <p className="notice">{report}</p>}

@@ -6,7 +6,7 @@
 - Empreinte `geometry_hash` (SHA-256 de la géométrie normalisée : 7 décimales, sens horaire, départ au plus petit sommet).
 
 ## Chevauchements et doublons
-- Pas de PostGIS dans l'environnement : filtre par `bbox` (colonne `box`, index GiST), puis intersection exacte en Node (`@turf`).
+- Deux moteurs : **PostGIS** quand il est disponible (colonne générée `geom`, index GiST, voir `docs/ECARTS_CDC.md` § « Moteur géospatial PostGIS »), sinon repli par l'application : filtre par `bbox` (colonne `box`, index GiST), puis intersection exacte en Node (`@turf`). Mêmes règles de classement.
 - Seuils par coopérative (`/geo/settings`) : surface minimale (25 m²), pourcentage minimal (1 %), IoU doublon proche (0,95), politique `block` ou `warn`.
 - Types : `overlap_partial`, `overlap_inclusion` (≥ 99 % de la plus petite), `duplicate_identical`, `duplicate_near`. Une limite commune sans surface n'est pas un chevauchement.
 - Une anomalie bloquante empêche le contrôle et la vérification de la parcelle (422). Une exception exige la permission `geo:override` et un motif ; elle n'est pas rouverte par le contrôle périodique.
