@@ -106,8 +106,6 @@ class _HomeScreenState extends State<HomeScreen> {
     return (count: n, amount: sum);
   }
 
-  String _fcfa(double v) => v.round().toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => ' ');
-
   Future<void> _open(Widget screen, {bool sync = false}) async {
     await Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
     await _reload();
@@ -129,14 +127,13 @@ class _HomeScreenState extends State<HomeScreen> {
         if (saved == true) services.sync.run();
       }),
       if (_canSurvey) _HomeButton(Icons.landscape_outlined, 'Mes parcelles', () => _open(const ParcelsScreen())),
-      _HomeButton(Icons.notifications_outlined, 'Notifications', () => _open(const NotificationsScreen()), badge: _unreadNotes),
     ];
     return Scaffold(
       backgroundColor: const Color(0xFFF7FAF2),
       body: Column(children: [
         _HomeHeader(
           now: _now, name: _identity.name, org: _identity.org, zone: _identity.zone,
-          amount: _fcfa(t.amount), count: t.count,
+          count: t.count, unread: _unreadNotes, onNotes: () => _open(const NotificationsScreen()),
           onSync: () => services.sync.run(),
           onSignOut: _signOut,
           onMap: _canSurvey ? () => _open(const MapPackScreen()) : null,
@@ -189,11 +186,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
 /// En-tête de l'accueil, sur le modèle du terminal SNT : date, salutation, coopérative, zone, total du jour.
 class _HomeHeader extends StatelessWidget {
-  final String now, name, org, zone, amount;
-  final int count;
-  final VoidCallback onSync, onSignOut;
+  final String now, name, org, zone;
+  final int count, unread;
+  final VoidCallback onSync, onSignOut, onNotes;
   final VoidCallback? onMap;
-  const _HomeHeader({required this.now, required this.name, required this.org, required this.zone, required this.amount, required this.count, required this.onSync, required this.onSignOut, this.onMap});
+  const _HomeHeader({required this.now, required this.name, required this.org, required this.zone, required this.count, required this.unread, required this.onNotes, required this.onSync, required this.onSignOut, this.onMap});
 
   @override
   Widget build(BuildContext context) {
@@ -211,6 +208,10 @@ class _HomeHeader extends StatelessWidget {
           const SizedBox(width: 8),
           const Text('V ${Config.appVersion}', style: TextStyle(color: white, fontSize: 13)),
           const Spacer(),
+          IconButton(
+            tooltip: 'Notifications', onPressed: onNotes,
+            icon: Badge(isLabelVisible: unread > 0, label: Text('$unread'), child: const Icon(Icons.notifications_outlined, color: white, size: 26)),
+          ),
           ValueListenableBuilder<SyncStatus>(
             valueListenable: services.sync.status,
             builder: (_, s, __) => Icon(s.phase == SyncPhase.offline ? Icons.wifi_off : Icons.wifi, color: white, size: 22),
@@ -232,8 +233,7 @@ class _HomeHeader extends StatelessWidget {
         if (zone.isNotEmpty) Text('Zone : $zone', style: const TextStyle(color: white, fontSize: 14, fontWeight: FontWeight.w600)),
         const SizedBox(height: 10),
         Center(child: Column(children: [
-          Text('$amount FCFA', style: const TextStyle(color: white, fontSize: 26, fontWeight: FontWeight.w800)),
-          Text("Achats d'aujourd'hui : $count", style: const TextStyle(color: white, fontSize: 13, fontWeight: FontWeight.w600)),
+          Text("Achats d'aujourd'hui : $count", style: const TextStyle(color: white, fontSize: 18, fontWeight: FontWeight.w800)),
         ])),
       ]),
     );
@@ -245,8 +245,7 @@ class _HomeButton extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
-  final int badge;
-  const _HomeButton(this.icon, this.label, this.onTap, {this.badge = 0});
+  const _HomeButton(this.icon, this.label, this.onTap);
 
   @override
   Widget build(BuildContext context) {
@@ -257,7 +256,7 @@ class _HomeButton extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           child: Row(children: [
-            Badge(isLabelVisible: badge > 0, label: Text('$badge'), child: Icon(icon, color: Colors.white, size: 34)),
+            Icon(icon, color: Colors.white, size: 34),
             const SizedBox(width: 16),
             Expanded(child: Text(label, style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w700))),
           ]),
