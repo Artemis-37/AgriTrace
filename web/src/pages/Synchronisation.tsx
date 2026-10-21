@@ -118,7 +118,7 @@ function MapPackCard() {
         : 'Aucun fond de carte déposé : sur les téléphones, le plan du tracé s\'affiche sans fond.'}</p>
       {manage && (
         <>
-          <p className="muted">Déposez un paquet de tuiles raster au format MBTiles (.mbtiles), préparé par exemple avec QGIS à partir d'une imagerie dont la licence autorise le stockage. Limitez la zone et le niveau de détail à ce dont les techniciens ont besoin : un paquet de quelques dizaines de Mo suffit pour une zone de coopérative.</p>
+          <p className="muted">Déposez un paquet de tuiles raster au format MBTiles (.mbtiles), préparé par exemple avec QGIS à partir d'une source dont la licence autorise le stockage (les serveurs publics d'OpenStreetMap interdisent le téléchargement en masse). Les téléphones disposent déjà, une fois connectés, des couches Plan (OpenStreetMap) et Satellite, gardées sur l'appareil au fil des consultations ; ce paquet sert à couvrir une zone à l'avance. Limitez la zone et le niveau de détail à ce dont les techniciens ont besoin : un paquet de quelques dizaines de Mo suffit pour une zone de coopérative.</p>
           {act.error && <ErrorBox message={act.error} />}
           {done && <p className="notice" role="status">{done}</p>}
           <Field label="Nom (facultatif)"><input value={name} onChange={(e) => setName(e.target.value)} maxLength={120} /></Field>

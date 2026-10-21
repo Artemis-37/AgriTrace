@@ -1,13 +1,17 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:agritrace_mobile/data/api_client.dart';
 import 'package:agritrace_mobile/data/map_pack.dart';
+import 'package:agritrace_mobile/data/map_tiles.dart';
 import 'package:agritrace_mobile/data/session_store.dart';
 import 'package:agritrace_mobile/geo/polygon.dart';
 import 'package:agritrace_mobile/screens/basemap_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 
 class FakeStore extends SessionStore {
   @override
@@ -61,18 +65,11 @@ void main() {
     });
   });
 
-  testWidgets(
-      'la carte demande les tuiles du paquet, au zoom du tracé, et se déplace',
-      (t) async {
+  testWidgets('la carte demande les tuiles du paquet, au zoom du tracé, et se déplace', (t) async {
     final pack = FakePack();
-    final pts = [
-      const GeoPoint(6.0833, -5.2833),
-      const GeoPoint(6.0842, -5.2833),
-      const GeoPoint(6.0842, -5.2824)
-    ];
-    await t.pumpWidget(MaterialApp(
-        home:
-            Scaffold(body: BasemapView(pack: pack, points: pts, height: 240))));
+    final tiles = MapTiles(pack, cacheDir: () async => Directory.systemTemp.createTemp('tc'), client: MockClient((r) async => http.Response('', 404)));
+    final pts = [const GeoPoint(6.0833, -5.2833), const GeoPoint(6.0842, -5.2833), const GeoPoint(6.0842, -5.2824)];
+    await t.pumpWidget(MaterialApp(home: Scaffold(body: BasemapView(tiles: tiles, points: pts, height: 240))));
     await t.pump();
     expect(find.byType(Image), findsWidgets);
     expect(pack.requested, isNotEmpty);
@@ -83,13 +80,50 @@ void main() {
     final before = pack.requested.length;
     await t.drag(find.byType(BasemapView), const Offset(-300, 0));
     await t.pump();
-    expect(pack.requested.length, greaterThan(before),
-        reason: 'déplacement : de nouvelles tuiles sont demandées');
+    expect(pack.requested.length, greaterThan(before), reason: 'déplacement : de nouvelles tuiles sont demandées');
     await t.tap(find.byTooltip('Agrandir'));
     await t.pump();
     await t.tap(find.byTooltip('Recentrer'));
     await t.pump();
-    expect(tester(t), isNull);
+    expect(t.takeException(), isNull);
+  });
+
+  testWidgets('choix de la couche : le plan OpenStreetMap et le satellite passent par le réseau, avec attribution', (t) async {
+    final urls = <String>[];
+    final agents = <String?>[];
+    final tiles = MapTiles(FakePack(), cacheDir: () async => Directory.systemTemp.createTemp('tc'), client: MockClient((r) async {
+      urls.add(r.url.toString());
+      agents.add(r.headers['user-agent']);
+      return http.Response.bytes(png, 200, headers: {'content-type': 'image/png'});
+    }));
+    final pts = [const GeoPoint(6.0833, -5.2833), const GeoPoint(6.0842, -5.2833), const GeoPoint(6.0842, -5.2824)];
+    await t.pumpWidget(MaterialApp(home: Scaffold(body: BasemapView(tiles: tiles, points: pts, height: 240))));
+    await t.pump();
+    expect(urls, isEmpty, reason: 'le paquet de la coopérative ne touche pas au réseau');
+    await t.tap(find.text('Coopérative'));
+    await t.pumpAndSettle();
+    // Les lectures de fichiers et les requêtes se font en temps réel : on laisse tourner la vraie boucle d'événements.
+    await t.runAsync(() async {
+      await t.tap(find.text('Plan').last);
+      await t.pump();
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+      await t.pump();
+    });
+    expect(urls, isNotEmpty);
+    expect(urls.every((u) => u.startsWith('https://tile.openstreetmap.org/')), isTrue);
+    expect(agents.every((a) => a != null && a.startsWith('AgriTrace/')), isTrue, reason: 'OpenStreetMap exige une identification de l\'application');
+    expect(find.textContaining('OpenStreetMap'), findsOneWidget);
+    await t.tap(find.byType(DropdownButton<BaseLayer>));
+    await t.pumpAndSettle();
+    await t.runAsync(() async {
+      await t.tap(find.text('Satellite').last);
+      await t.pump();
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+      await t.pump();
+    });
+    expect(urls.any((u) => u.contains('arcgisonline.com')), isTrue);
+    expect(find.textContaining('Esri'), findsOneWidget);
+    expect(t.takeException(), isNull);
   });
 }
 

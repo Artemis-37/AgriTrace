@@ -13,6 +13,7 @@ class MapPackScreen extends StatefulWidget {
 class _MapPackScreenState extends State<MapPackScreen> {
   MapPackInfo? _remote;
   bool _checked = false, _noNetwork = false;
+  int? _cacheBytes;
 
   MapPackStore get _store => services.mapPack;
 
@@ -20,6 +21,7 @@ class _MapPackScreenState extends State<MapPackScreen> {
   void initState() {
     super.initState();
     _check();
+    _loadCache();
   }
 
   Future<void> _check() async {
@@ -27,6 +29,11 @@ class _MapPackScreenState extends State<MapPackScreen> {
     final r = await _store.remote();
     if (!mounted) return;
     setState(() { _remote = r; _checked = true; _noNetwork = r == null; });
+  }
+
+  Future<void> _loadCache() async {
+    final n = await services.tiles.cacheSize();
+    if (mounted) setState(() => _cacheBytes = n);
   }
 
   Future<void> _download() async {
@@ -79,6 +86,17 @@ class _MapPackScreenState extends State<MapPackScreen> {
           const SizedBox(height: 12),
           const Text('Le fichier est de taille importante : préférez le Wi-Fi de la coopérative. Si la connexion se coupe, le téléchargement reprend où il s\'est arrêté. Il est vérifié avant utilisation.'),
         ],
+        const Divider(height: 32),
+        ListTile(
+          contentPadding: EdgeInsets.zero, leading: const Icon(Icons.history),
+          title: const Text('Cartes déjà consultées (Plan et Satellite)'),
+          subtitle: Text(_cacheBytes == null ? '…' : '${_mb(_cacheBytes!)} gardés sur ce téléphone : les zones déjà vues restent visibles sans connexion.'),
+          trailing: TextButton(
+            onPressed: (_cacheBytes ?? 0) == 0 ? null : () async { await services.tiles.clearCache(); await _loadCache(); },
+            child: const Text('Vider'),
+          ),
+        ),
+        const Text('Plan : © les contributeurs d\'OpenStreetMap. Le satellite demande une connexion pour les zones jamais consultées. Les cartes en ligne ne servent pas à préparer une zone à l\'avance : pour cela, utilisez le fond de la coopérative ci-dessus.'),
       ]),
     );
   }

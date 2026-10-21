@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 
@@ -152,9 +150,7 @@ class _ParcelSurveyScreenState extends State<ParcelSurveyScreen> {
           const SizedBox(height: 12),
           Container(
             height: 240, decoration: BoxDecoration(border: Border.all(color: Colors.black26), borderRadius: BorderRadius.circular(8)),
-            child: services.mapPack.ready
-                ? BasemapView(pack: services.mapPack, points: _points, me: _me, height: 240)
-                : ClipRRect(borderRadius: BorderRadius.circular(8), child: CustomPaint(painter: _TracePainter(_points), size: Size.infinite)),
+            child: BasemapView(tiles: services.tiles, points: _points, me: _me, height: 240),
           ),
           const SizedBox(height: 8),
           Wrap(spacing: 16, runSpacing: 4, children: [
@@ -185,44 +181,4 @@ class _ParcelSurveyScreenState extends State<ParcelSurveyScreen> {
       ]),
     );
   }
-}
-
-/// Plan de la parcelle sans fond de carte (utilisable hors connexion) : points numérotés, tracé fermé, nord en haut.
-class _TracePainter extends CustomPainter {
-  final List<GeoPoint> pts;
-  _TracePainter(this.pts);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    canvas.drawRect(Offset.zero & size, Paint()..color = const Color(0xFFF4F7F2));
-    if (pts.isEmpty) return;
-    final lat0 = pts.fold<double>(0, (s, p) => s + p.lat) / pts.length;
-    final kx = math.cos(lat0 * math.pi / 180);
-    final xs = pts.map((p) => p.lon * kx).toList(), ys = pts.map((p) => p.lat).toList();
-    final minX = xs.reduce(math.min), maxX = xs.reduce(math.max), minY = ys.reduce(math.min), maxY = ys.reduce(math.max);
-    final w = math.max(maxX - minX, 1e-9), h = math.max(maxY - minY, 1e-9);
-    const pad = 28.0;
-    final scale = math.min((size.width - 2 * pad) / w, (size.height - 2 * pad) / h);
-    final ox = (size.width - w * scale) / 2, oy = (size.height - h * scale) / 2;
-    Offset at(int i) => Offset(ox + (xs[i] - minX) * scale, size.height - (oy + (ys[i] - minY) * scale));
-    final path = Path()..moveTo(at(0).dx, at(0).dy);
-    for (var i = 1; i < pts.length; i++) {
-      path.lineTo(at(i).dx, at(i).dy);
-    }
-    if (pts.length >= 3) {
-      path.close();
-      canvas.drawPath(path, Paint()..color = const Color(0x332E7D32));
-    }
-    canvas.drawPath(path, Paint()..color = const Color(0xFF2E7D32)..style = PaintingStyle.stroke..strokeWidth = 2);
-    for (var i = 0; i < pts.length; i++) {
-      canvas.drawCircle(at(i), 6, Paint()..color = i == 0 ? const Color(0xFF1B5E20) : const Color(0xFF6D4C41));
-      final tp = TextPainter(text: TextSpan(text: '${i + 1}', style: const TextStyle(fontSize: 11, color: Colors.black87, fontWeight: FontWeight.w700)), textDirection: TextDirection.ltr)..layout();
-      tp.paint(canvas, at(i) + const Offset(8, -16));
-    }
-    final n = TextPainter(text: const TextSpan(text: 'N ↑', style: TextStyle(fontSize: 12, color: Colors.black54)), textDirection: TextDirection.ltr)..layout();
-    n.paint(canvas, Offset(size.width - n.width - 8, 6));
-  }
-
-  @override
-  bool shouldRepaint(covariant _TracePainter old) => true;
 }

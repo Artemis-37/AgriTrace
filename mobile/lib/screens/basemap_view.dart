@@ -3,19 +3,19 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
-import '../data/map_pack.dart';
+import '../data/map_tiles.dart';
 import '../geo/polygon.dart';
 import '../geo/tiles.dart';
 
 /// Carte hors ligne : tuiles du paquet installé sur le téléphone, tracé de la parcelle par-dessus, déplacement au doigt, zoom à deux doigts ou boutons.
 /// Aucune requête réseau : une tuile absente du paquet reste simplement vide.
 class BasemapView extends StatefulWidget {
-  final MapPackStore pack;
+  final MapTiles tiles;
   final List<GeoPoint> points;
   /// Position actuelle du technicien (point bleu), si connue.
   final GeoPoint? me;
   final double height;
-  const BasemapView({super.key, required this.pack, required this.points, this.me, this.height = 260});
+  const BasemapView({super.key, required this.tiles, required this.points, this.me, this.height = 260});
   @override
   State<BasemapView> createState() => _BasemapViewState();
 }
@@ -26,6 +26,7 @@ class _BasemapViewState extends State<BasemapView> {
   Size _size = Size.zero;
   double _startZoom = 15;
   final Map<String, Future<Uint8List?>> _cache = {};
+  late BaseLayer _layer = widget.tiles.available(BaseLayer.pack) ? BaseLayer.pack : BaseLayer.plan;
 
   /// Cadre la vue sur le tracé (ou la position, ou l'étendue du paquet) tant que l'utilisateur n'a pas touché à la carte.
   void _frame({bool force = false}) {
@@ -34,7 +35,7 @@ class _BasemapViewState extends State<BasemapView> {
       for (final g in widget.points) (lat: g.lat, lon: g.lon),
       if (widget.points.isEmpty && widget.me != null) (lat: widget.me!.lat, lon: widget.me!.lon),
     ];
-    final b = widget.pack.bounds;
+    final b = _layer == BaseLayer.pack ? widget.tiles.pack.bounds : null;
     if (pts.isEmpty && b != null) {
       pts.addAll([(lat: b.s, lon: b.w), (lat: b.n, lon: b.e)]);
     }
@@ -43,7 +44,7 @@ class _BasemapViewState extends State<BasemapView> {
     final minLon = pts.map((e) => e.lon).reduce(math.min), maxLon = pts.map((e) => e.lon).reduce(math.max);
     _lat = (minLat + maxLat) / 2;
     _lon = (minLon + maxLon) / 2;
-    _zoom = fitZoom(pts, _size.width, _size.height, minZoom: widget.pack.minZoom, maxZoom: math.min(widget.pack.maxZoom, 19)).toDouble();
+    _zoom = fitZoom(pts, _size.width, _size.height, minZoom: widget.tiles.minZoom(_layer), maxZoom: math.min(widget.tiles.maxZoom(_layer), 19)).toDouble();
     _placed = true;
   }
 
@@ -54,14 +55,14 @@ class _BasemapViewState extends State<BasemapView> {
     if (old.points.isEmpty && widget.points.isNotEmpty) { _placed = false; _frame(); }
   }
 
-  double get _minZ => widget.pack.minZoom.toDouble();
-  double get _maxZ => widget.pack.maxZoom + 1.5; // on autorise un peu de sur-agrandissement
+  double get _minZ => widget.tiles.minZoom(_layer).toDouble();
+  double get _maxZ => widget.tiles.maxZoom(_layer) + 1.5; // on autorise un peu de sur-agrandissement
 
   void _zoomBy(double dz) => setState(() { _zoom = (_zoom + dz).clamp(_minZ, _maxZ); _placed = true; });
 
   Future<Uint8List?> _tile(int z, int x, int y) {
     if (_cache.length > 300) _cache.clear();
-    return _cache.putIfAbsent('$z/$x/$y', () => widget.pack.tile(z, x, y));
+    return _cache.putIfAbsent('${_layer.name}/$z/$x/$y', () => widget.tiles.tile(_layer, z, x, y));
   }
 
   @override
@@ -73,7 +74,7 @@ class _BasemapViewState extends State<BasemapView> {
         child: LayoutBuilder(builder: (context, c) {
           _size = Size(c.maxWidth, c.maxHeight);
           _frame();
-          final tileZ = _zoom.round().clamp(widget.pack.minZoom, widget.pack.maxZoom);
+          final tileZ = _zoom.round().clamp(widget.tiles.minZoom(_layer), widget.tiles.maxZoom(_layer));
           final tiles = visibleTiles(lat: _lat, lon: _lon, zoom: _zoom, tileZ: tileZ, w: _size.width, h: _size.height);
           return Stack(children: [
             Positioned.fill(child: GestureDetector(
@@ -85,14 +86,14 @@ class _BasemapViewState extends State<BasemapView> {
                 final c0 = project(_lat, _lon, _zoom);
                 final moved = unproject(c0.x - d.focalPointDelta.dx, c0.y - d.focalPointDelta.dy, _zoom);
                 _lat = moved.lat; _lon = moved.lon;
-                if (oldZ != _zoom) _cache.removeWhere((k, _) => !k.startsWith('${_zoom.round()}/'));
+                if (oldZ != _zoom) _cache.removeWhere((k, _) => !k.startsWith('${_layer.name}/${_zoom.round()}/'));
               }),
               child: ColoredBox(color: const Color(0xFFE8ECE6), child: Stack(clipBehavior: Clip.hardEdge, children: [
                 for (final t in tiles)
                   Positioned(
                     left: t.left, top: t.top, width: t.size + 0.5, height: t.size + 0.5,
                     child: FutureBuilder<Uint8List?>(
-                      key: ValueKey('${t.z}/${t.x}/${t.y}'),
+                      key: ValueKey('${_layer.name}/${t.z}/${t.x}/${t.y}'),
                       future: _tile(t.z, t.x, t.y),
                       builder: (_, s) => s.data == null ? const SizedBox.shrink() : Image.memory(s.data!, fit: BoxFit.fill, gaplessPlayback: true, filterQuality: FilterQuality.medium),
                     ),
@@ -107,10 +108,26 @@ class _BasemapViewState extends State<BasemapView> {
               const SizedBox(height: 4),
               _MapButton(icon: Icons.center_focus_strong_outlined, tooltip: 'Recentrer', onTap: () => setState(() { _placed = false; _frame(force: true); })),
             ])),
-            Positioned(left: 8, bottom: 6, child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(color: Colors.white70, borderRadius: BorderRadius.circular(4)),
-              child: Text('Fond hors ligne : ${widget.pack.local?.name ?? ''}', style: const TextStyle(fontSize: 11, color: Colors.black87)),
+            Positioned(left: 8, top: 8, child: Material(
+              color: Colors.white, elevation: 2, borderRadius: BorderRadius.circular(6),
+              child: Padding(padding: const EdgeInsets.symmetric(horizontal: 4), child: DropdownButtonHideUnderline(child: DropdownButton<BaseLayer>(
+                value: _layer, isDense: true, style: const TextStyle(fontSize: 13, color: Colors.black87),
+                items: [for (final l in BaseLayer.values) if (widget.tiles.available(l)) DropdownMenuItem(value: l, child: Text(l.label))],
+                onChanged: (l) => setState(() { if (l != null) { _layer = l; _cache.clear(); _zoom = _zoom.clamp(_minZ, _maxZ); } }),
+              ))),
+            )),
+            Positioned(left: 8, right: 52, bottom: 6, child: ValueListenableBuilder<bool>(
+              valueListenable: widget.tiles.offline,
+              builder: (_, off, __) => Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(color: Colors.white70, borderRadius: BorderRadius.circular(4)),
+                child: Text(
+                  _layer == BaseLayer.pack
+                      ? 'Fond hors ligne : ${widget.tiles.pack.local?.name ?? ''}'
+                      : '${_layer.attribution}${off ? ' · hors connexion : zones déjà consultées seulement' : ''}',
+                  style: const TextStyle(fontSize: 10.5, color: Colors.black87),
+                ),
+              ),
             )),
           ]);
         }),

@@ -7,6 +7,7 @@ import 'config.dart';
 import 'data/api_client.dart';
 import 'data/app_database.dart';
 import 'data/map_pack.dart';
+import 'data/map_tiles.dart';
 import 'data/repository.dart';
 import 'data/session_store.dart';
 import 'screens/home_screen.dart';
@@ -21,7 +22,8 @@ class Services {
   final Repository repo;
   final SyncEngine sync;
   final MapPackStore mapPack;
-  Services(this.store, this.api, this.db, this.repo, this.sync, this.mapPack);
+  final MapTiles tiles;
+  Services(this.store, this.api, this.db, this.repo, this.sync, this.mapPack, this.tiles);
 }
 
 late Services services;
@@ -33,7 +35,9 @@ Future<void> main() async {
   final api = ApiClient(store);
   final mapPack = MapPackStore(api);
   await mapPack.load();
-  services = Services(store, api, db, Repository(db), SyncEngine(db, api), mapPack);
+  final tiles = MapTiles(mapPack);
+  unawaited(tiles.init());
+  services = Services(store, api, db, Repository(db), SyncEngine(db, api), mapPack, tiles);
   final loggedIn = await store.refreshToken != null && await store.orgId != null;
   runApp(AgriTraceApp(loggedIn: loggedIn));
 }
