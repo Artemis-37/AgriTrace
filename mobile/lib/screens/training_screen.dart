@@ -11,6 +11,15 @@ const trainingThemes = [
   'Santé et sécurité au travail', 'Santé générale', 'Santé maternelle et reproductive',
 ];
 
+/// Modules proposés par thème (seul le thème « Agriculture régénératrice » est renseigné ; pour les autres, saisie libre).
+const trainingModules = <String, List<String>>{
+  'Agriculture régénératrice': [
+    'Actions paysagères', 'Agroforesterie et arbres à la ferme', "Conservation de l'eau après la récolte", "Conservation de l'eau avant la récolte",
+    "Contrôle de l'érosion des sols", 'Correction du sol', 'Couverture permanente du sol', 'Cultures intercalaires et rotations des cultures',
+    'Gestion des eaux usées', 'Gestion des résidus de récolte et des déchets',
+  ],
+};
+
 /// « Dossiers de formation » : formations enregistrées (en attente d'envoi sur l'appareil, puis confirmées par le serveur).
 class TrainingListScreen extends StatefulWidget {
   const TrainingListScreen({super.key});
@@ -90,12 +99,30 @@ class TrainingFormScreen extends StatefulWidget {
 class _TrainingFormScreenState extends State<TrainingFormScreen> {
   String? _theme;
   final _module = TextEditingController();
+  final Set<String> _modules = {};
   final List<_Participant> _people = [];
   String? _photo, _msg;
   bool _openPrincipal = true, _openStake = false, _busy = false;
 
   @override
   void dispose() { _module.dispose(); super.dispose(); }
+
+  Future<void> _pickModules() async {
+    final all = trainingModules[_theme] ?? const <String>[];
+    final chosen = {..._modules};
+    var q = '';
+    final ok = await showDialog<bool>(context: context, builder: (c) => StatefulBuilder(builder: (c, set) => AlertDialog(
+      title: const Text('Sélectionner'),
+      content: SizedBox(width: double.maxFinite, child: Column(mainAxisSize: MainAxisSize.min, children: [
+        TextField(onChanged: (v) => set(() => q = v), decoration: const InputDecoration(hintText: 'Sélectionner')),
+        Flexible(child: ListView(shrinkWrap: true, children: [
+          for (final m in all.where((m) => m.toLowerCase().contains(q.toLowerCase())))
+            CheckboxListTile(controlAffinity: ListTileControlAffinity.leading, title: Text(m), value: chosen.contains(m), onChanged: (v) => set(() { if (v == true) { chosen.add(m); } else { chosen.remove(m); } })),
+        ])),
+      ])),
+      actions: [TextButton(onPressed: () => Navigator.pop(c, true), child: const Text('OK'))])));
+    if (ok == true) setState(() { _modules..clear()..addAll(chosen); });
+  }
 
   Future<void> _addFarmer() async {
     final p = await pickProducer(context);
@@ -129,7 +156,7 @@ class _TrainingFormScreenState extends State<TrainingFormScreen> {
     if (_theme == null) { setState(() => _msg = 'Choisissez le thème de la formation.'); return; }
     if (_people.isEmpty) { setState(() => _msg = 'Ajoutez au moins un participant.'); return; }
     setState(() { _busy = true; _msg = null; });
-    final id = await services.repo.queueFieldRecord(kind: 'training', title: _theme!, data: {'theme': _theme, 'module': _module.text.trim(), 'participants': [for (final p in _people) p.toJson()]});
+    final id = await services.repo.queueFieldRecord(kind: 'training', title: _theme!, data: {'theme': _theme, 'module': trainingModules.containsKey(_theme) ? _modules.join(', ') : _module.text.trim(), 'modules': _modules.toList(), 'participants': [for (final p in _people) p.toJson()]});
     if (_photo != null) await services.repo.queuePhoto(subjectType: 'field_record', subjectId: id, kind: 'Photo de la formation', sourcePath: _photo!);
     services.sync.run();
     if (mounted) Navigator.of(context).pop(true);
@@ -148,11 +175,16 @@ class _TrainingFormScreenState extends State<TrainingFormScreen> {
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               const Text('THÈME DE FORMATION', style: TextStyle(fontWeight: FontWeight.w800)),
               const SizedBox(height: 6),
-              FieldDropdown(value: _theme, hint: 'Sélectionner', items: trainingThemes, onChanged: (v) => setState(() => _theme = v)),
+              FieldDropdown(value: _theme, hint: 'Sélectionner', items: trainingThemes, onChanged: (v) => setState(() { _theme = v; _modules.clear(); })),
               const SizedBox(height: 10),
               const Text('MODULE DE FORMATION', style: TextStyle(fontWeight: FontWeight.w800)),
               const SizedBox(height: 6),
-              TextField(controller: _module, decoration: fieldDeco('Module')),
+              if (trainingModules.containsKey(_theme))
+                InkWell(onTap: _pickModules, child: Container(
+                  width: double.infinity, constraints: const BoxConstraints(minHeight: 56), padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade400), borderRadius: BorderRadius.circular(8)),
+                  child: Row(children: [Expanded(child: Text(_modules.isEmpty ? 'Sélectionner' : _modules.join(', '), style: TextStyle(color: _modules.isEmpty ? Colors.black54 : Colors.black87))), const Icon(Icons.expand_more)])))
+              else TextField(controller: _module, decoration: fieldDeco('Module')),
             ])),
             const SizedBox(width: 12),
             GestureDetector(

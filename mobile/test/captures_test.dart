@@ -145,8 +145,10 @@ final _routes = <String, dynamic>{
     {'id': 't2', 'title': 'Visite de contrôle — KOFFI Adjoua', 'description': 'Vérifier les ombrages et prendre deux photos.', 'category': 'visit', 'status': 'in_progress', 'due_date': '2026-10-19', 'section': 'Section Nord', 'overdue': true, 'latitude': null, 'longitude': null, 'content': null, 'decision_note': null}],
   '/task-requests': [],
   '/distribution-articles': [
-    {'id': 'a1', 'category': 'Intrants et Outils', 'group_name': 'Engrais', 'name': 'Engrais NPK 0-23-19', 'unit': 'sac de 50 kg'},
-    {'id': 'a2', 'category': 'Intrants et Outils', 'group_name': 'Engrais', 'name': 'Engrais foliaire', 'unit': 'litre'}],
+    {'id': 'a1', 'category': 'Finance', 'group_name': 'Primes', 'name': 'Prime de certification', 'unit': null},
+    {'id': 'a2', 'category': 'Finance', 'group_name': 'Primes', 'name': 'Prime de qualité', 'unit': null},
+    {'id': 'a3', 'category': 'Finance', 'group_name': 'Primes', 'name': 'Prime en espèces', 'unit': null},
+    {'id': 'a4', 'category': 'Finance', 'group_name': 'Primes', 'name': 'Prime générique', 'unit': null}],
   '/field-records?kind=training': [],
   '/tasks?producer_id=pr1': [
     {'id': 't1', 'title': 'Relever le contour de la parcelle P00112-01', 'description': 'Tracé GPS complet et photo du coin nord.', 'category': 'mapping', 'status': 'open', 'due_date': '2026-10-24', 'section': 'Section Est', 'overdue': false, 'latitude': null, 'longitude': null, 'content': null, 'decision_note': null},
@@ -220,13 +222,26 @@ void main() {
     await shot(t, 'coach-producteur-infos', const ProducersScreen(), perms: _coach, after: (t) async { await t.tap(find.textContaining('KONÉ')); await t.pump(const Duration(milliseconds: 300)); await t.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200))); await t.pump(const Duration(milliseconds: 600)); await t.tap(find.text('Informations sur le producteur')); await t.pump(const Duration(milliseconds: 400)); });
     await shot(t, 'coach-ajout-producteur', const AddProducerScreen(), perms: _coach);
     await shot(t, 'coach-infrastructure', const SocialInfraScreen(), perms: _coach);
-    await shot(t, 'coach-distribution', const DistributionScreen(), perms: _coach);
-    await shot(t, 'coach-distribution-articles', const DistributionScreen(), perms: _coach, after: (t) async {
-      await t.tap(find.byType(DropdownButtonFormField<String>).first); await t.pump(const Duration(milliseconds: 400));
-      await t.tap(find.text('Intrants et Outils').last); await t.pump(const Duration(milliseconds: 400));
-      await t.tap(find.byType(DropdownButtonFormField<String>).last); await t.pump(const Duration(milliseconds: 400));
-      await t.tap(find.text('Engrais').last); await t.pump(const Duration(milliseconds: 400));
-    });
+    Future<void> pickDropdown(WidgetTester t, int index, String text) async {
+      await t.tap(find.byType(DropdownButtonFormField<String>).at(index)); await t.pump(const Duration(milliseconds: 400));
+      await t.tap(find.text(text).last); await t.pump(const Duration(milliseconds: 400));
+    }
+    Future<void> browse(WidgetTester t) async { await pickDropdown(t, 0, 'Finance'); await pickDropdown(t, 1, 'Primes'); }
+    await shot(t, 'coach-distribution-articles', const DistributionScreen(), perms: _coach, after: (t) async { await browse(t); await t.tap(find.text('Prime de qualité')); await t.pump(const Duration(milliseconds: 300)); });
+    await shot(t, 'coach-distribution-verifier', const DistributionScreen(), perms: _coach, after: (t) async {
+      await browse(t); await t.tap(find.text('Prime de qualité')); await t.pump(const Duration(milliseconds: 300));
+      await t.tap(find.textContaining("VOIR L'ARTICLE")); await t.pump(); await t.pump(const Duration(milliseconds: 600)); await t.pump(const Duration(milliseconds: 600)); });
+    await shot(t, 'coach-distribution-beneficiaires', const DistributionScreen(), perms: _coach, after: (t) async {
+      await browse(t); await t.tap(find.text('Prime de qualité')); await t.pump(const Duration(milliseconds: 300));
+      await t.tap(find.textContaining("VOIR L'ARTICLE")); await t.pump(); await t.pump(const Duration(milliseconds: 600)); await t.pump(const Duration(milliseconds: 600));
+      await t.tap(find.text('CONTINUER VERS LES AGRICULTEURS')); await t.pump(); await t.pump(const Duration(milliseconds: 600)); await t.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200))); await t.pump(const Duration(milliseconds: 300));
+      await t.tap(find.textContaining('KONÉ')); await t.pump(const Duration(milliseconds: 300)); });
+    await shot(t, 'coach-distribution-configuration', const DistributionScreen(), perms: _coach, after: (t) async {
+      await browse(t); await t.tap(find.text('Prime de qualité')); await t.pump(const Duration(milliseconds: 300));
+      await t.tap(find.textContaining("VOIR L'ARTICLE")); await t.pump(); await t.pump(const Duration(milliseconds: 600)); await t.pump(const Duration(milliseconds: 600));
+      await t.tap(find.text('CONTINUER VERS LES AGRICULTEURS')); await t.pump(); await t.pump(const Duration(milliseconds: 600)); await t.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200))); await t.pump(const Duration(milliseconds: 300));
+      await t.tap(find.textContaining('KONÉ')); await t.pump(const Duration(milliseconds: 300));
+      await t.tap(find.textContaining('CONTINUER AVEC')); await t.pump(); await t.pump(const Duration(milliseconds: 600)); });
     await shot(t, 'coach-formations', const TrainingListScreen(), perms: _coach);
     await shot(t, 'coach-formation', const TrainingFormScreen(), perms: _coach);
     await shot(t, 'coach-telecharger', const DownloadScreen(), perms: _coach);
