@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Get, NotFoundException, Param, Post, Query, Req } from '@nestjs/common';
+import { BadRequestException, Body, ConflictException, Controller, Get, NotFoundException, Param, Post, Query, Req } from '@nestjs/common';
 import { ApiBearerAuth, ApiHeader, ApiTags } from '@nestjs/swagger';
 import { IsIn, IsNumber, IsObject, IsOptional, IsString, IsUUID, Length, Max, Min } from 'class-validator';
 import { RequirePermissions } from '../access/decorators';
@@ -23,6 +23,17 @@ export class SaveTemplateDto {
   @IsIn(['infrastructure', 'training_theme']) kind: string;
   @IsString() @Length(1, 120) category: string;
   @IsObject() definition: Record<string, unknown>;
+}
+
+export class RenameDto {
+  @IsString() @Length(1, 80) category: string;
+  @IsOptional() @IsString() @Length(1, 80) group_name?: string;
+  @IsString() @Length(1, 80) new_name: string;
+}
+
+export class GroupRefDto {
+  @IsString() @Length(1, 80) category: string;
+  @IsOptional() @IsString() @Length(1, 80) group_name?: string;
 }
 
 export class CreateArticleDto {
@@ -86,6 +97,33 @@ export class FieldRecordsController {
       `INSERT INTO distribution_articles(organization_id, category, group_name, name, unit) VALUES ($1,$2,$3,$4,$5)
        ON CONFLICT (organization_id, category, group_name, name) DO UPDATE SET active = true, unit = EXCLUDED.unit RETURNING *`,
       [req.org.id, b.category, b.group_name, b.name, b.unit ?? null])).rows[0]);
+  }
+
+  /** Renomme une catégorie (sans `group_name`) ou un groupe du catalogue, pour tous ses articles. */
+  @Post('distribution-articles/renommer')
+  @RequirePermissions('field_records:manage')
+  async renameGroup(@Body() b: RenameDto, @Req() req: any) {
+    const to = b.new_name.trim();
+    try {
+      const r = await this.db.tx(req.org.id, (c) => b.group_name
+        ? c.query(`UPDATE distribution_articles SET group_name = $3 WHERE category = $1 AND group_name = $2`, [b.category, b.group_name, to])
+        : c.query(`UPDATE distribution_articles SET category = $2 WHERE category = $1`, [b.category, to]));
+      if (!r.rowCount) throw new NotFoundException('Aucun article concerné');
+      return { updated: r.rowCount };
+    } catch (e: any) {
+      if (e?.code === '23505') throw new ConflictException('Ce nom existe déjà avec un article de même nom : fusion impossible');
+      throw e;
+    }
+  }
+
+  /** Retire tous les articles d'une catégorie ou d'un groupe. */
+  @Post('distribution-articles/retirer-groupe')
+  @RequirePermissions('field_records:manage')
+  async retireGroup(@Body() b: GroupRefDto, @Req() req: any) {
+    const r = await this.db.tx(req.org.id, (c) => c.query(
+      `UPDATE distribution_articles SET active = false WHERE active AND category = $1 AND ($2::text IS NULL OR group_name = $2)`, [b.category, b.group_name ?? null]));
+    if (!r.rowCount) throw new NotFoundException('Aucun article concerné');
+    return { retired: r.rowCount };
   }
 
   /** Retire un article du catalogue (il reste dans les distributions déjà enregistrées). */

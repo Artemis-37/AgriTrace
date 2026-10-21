@@ -33,12 +33,13 @@ export default function Terrain() {
       {tab !== 'modeles' && <Card>
         {error && <ErrorBox message={error} onRetry={reload} />}
         {act.error && <ErrorBox message={act.error} />}
-        {loading ? <Loading /> : tab === 'catalogue' ? (
+        {loading ? <Loading /> : tab === 'catalogue' ? (<>
+          {manage && (data ?? []).length > 0 && <CatalogueGroups rows={data ?? []} act={act} reload={reload} />}
           <Table rows={data ?? []} empty="Le catalogue est vide : ajoutez les articles que les coachs pourront distribuer." columns={[
             { header: 'Catégorie', render: (a) => a.category }, { header: 'Groupe', render: (a) => a.group_name }, { header: 'Article', render: (a) => <strong>{a.name}</strong> },
             { header: 'Unité', render: (a) => a.unit ?? '—' },
             ...(manage ? [{ header: '', render: (a: any) => <button className="btn btn-ghost btn-small" disabled={act.busy} onClick={async () => { if (confirm(`Retirer « ${a.name} » du catalogue ?`)) { if (await act.run(() => post(`/distribution-articles/${a.id}/retirer`))) reload(); } }}>Retirer</button> }] : []),
-          ]} />
+          ]} /></>
         ) : (
           <Table rows={data ?? []} empty="Aucun enregistrement." columns={[
             { header: 'Date', render: (r) => dateTime(r.created_at) },
@@ -185,5 +186,37 @@ function TemplateEditor({ kind, row, onClose, onDone }: { kind: 'infrastructure'
         <small className="muted">L'enregistrement ne change rien pour les coachs : utilisez ensuite « Déployer ».</small>
       </form>
     </Modal>
+  );
+}
+
+/** Catégories et groupes du catalogue : renommer ou retirer en une fois (les coachs les voient à l'ouverture de l'écran Distribution). */
+function CatalogueGroups({ rows, act, reload }: { rows: any[]; act: ReturnType<typeof useAction>; reload: () => void }) {
+  const groups = new Map<string, Map<string, number>>();
+  for (const a of rows) { const g = groups.get(a.category) ?? new Map<string, number>(); g.set(a.group_name, (g.get(a.group_name) ?? 0) + 1); groups.set(a.category, g); }
+  const rename = async (category: string, group?: string) => {
+    const to = prompt(group ? `Nouveau nom du groupe « ${group} »` : `Nouveau nom de la catégorie « ${category} »`, group ?? category)?.trim();
+    if (to && to !== (group ?? category) && (await act.run(() => post('/distribution-articles/renommer', { category, ...(group ? { group_name: group } : {}), new_name: to })))) reload();
+  };
+  const retire = async (category: string, group?: string) => {
+    if (confirm(group ? `Retirer le groupe « ${group} » et ses articles ?` : `Retirer la catégorie « ${category} » et tous ses articles ?`) && (await act.run(() => post('/distribution-articles/retirer-groupe', { category, ...(group ? { group_name: group } : {}) })))) reload();
+  };
+  return (
+    <div style={{ marginBottom: 12 }}>
+      {[...groups].map(([cat, gs]) => (
+        <div key={cat} style={{ marginBottom: 6 }}>
+          <strong>{cat}</strong>
+          <button className="btn btn-ghost btn-small" disabled={act.busy} onClick={() => rename(cat)}>Renommer</button>
+          <button className="btn btn-ghost btn-small" disabled={act.busy} onClick={() => retire(cat)}>Retirer</button>
+          <div className="muted" style={{ paddingLeft: 12 }}>
+            {[...gs].map(([g, n]) => (
+              <span key={g} style={{ marginRight: 14 }}>{g} ({n})
+                <button className="btn btn-ghost btn-small" disabled={act.busy} onClick={() => rename(cat, g)}>Renommer</button>
+                <button className="btn btn-ghost btn-small" disabled={act.busy} onClick={() => retire(cat, g)}>Retirer</button>
+              </span>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }

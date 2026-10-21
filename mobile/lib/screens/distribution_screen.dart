@@ -72,8 +72,9 @@ class _DistributionScreenState extends State<DistributionScreen> {
     }
   }
 
-  List<String> get _categories => {..._defaultGroups.keys, ..._articles.map((a) => '${a['category']}')}.toList();
-  List<String> get _groups => _category == null ? [] : {...?_defaultGroups[_category], ..._articles.where((a) => a['category'] == _category).map((a) => '${a['group_name']}')}.toList();
+  // Les catégories et groupes viennent du catalogue de la coopérative (tenu par l'ADG) ; les valeurs de départ ne servent que si le catalogue est vide.
+  List<String> get _categories => _articles.isEmpty ? _defaultGroups.keys.toList() : {..._articles.map((a) => '${a['category']}')}.toList();
+  List<String> get _groups => _category == null ? [] : _articles.isEmpty ? [...?_defaultGroups[_category]] : {..._articles.where((a) => a['category'] == _category).map((a) => '${a['group_name']}')}.toList();
   List<Map<String, dynamic>> get _list => _articles.where((a) => a['category'] == _category && a['group_name'] == _group && (_q.isEmpty || '${a['name']}'.toLowerCase().contains(_q.toLowerCase()))).toList();
 
   Future<void> _next() async {

@@ -85,6 +85,18 @@ const uuid = () => crypto.randomUUID();
   const lst = await call('GET', '/field-records', { ...J(A) });
   check("la liste indique l'auteur", lst.body.length > 0 && lst.body.every((r) => 'created_by_name' in r), lst.body[0]);
 
+  console.log('Catégories et groupes du catalogue');
+  const mkArt = (cat, grp, name) => call('POST', '/distribution-articles', { ...J(A), body: { category: cat, group_name: grp, name } });
+  await mkArt('Équipements', 'Pulvérisateurs', 'Pulvérisateur 16 L'); await mkArt('Équipements', 'Pulvérisateurs', 'Pulvérisateur 20 L'); await mkArt('Équipements', 'Machettes', 'Machette');
+  check('le coach ne renomme pas', (await call('POST', '/distribution-articles/renommer', { ...J(A, coach.t), body: { category: 'Équipements', new_name: 'X' } })).status === 403);
+  check('renommer un groupe', (await call('POST', '/distribution-articles/renommer', { ...J(A), body: { category: 'Équipements', group_name: 'Pulvérisateurs', new_name: 'Matériel de traitement' } })).body.updated === 2);
+  check('renommer une catégorie', (await call('POST', '/distribution-articles/renommer', { ...J(A), body: { category: 'Équipements', new_name: 'Matériel agricole' } })).body.updated === 3);
+  check('le coach voit les nouveaux noms', (await call('GET', '/distribution-articles?category=Mat%C3%A9riel%20agricole&group=Mat%C3%A9riel%20de%20traitement', { ...J(A, coach.t) })).body.length === 2);
+  check('renommer un inconnu : 404', (await call('POST', '/distribution-articles/renommer', { ...J(A), body: { category: 'Inexistante', new_name: 'Y' } })).status === 404);
+  check('retirer un groupe', (await call('POST', '/distribution-articles/retirer-groupe', { ...J(A), body: { category: 'Matériel agricole', group_name: 'Machettes' } })).body.retired === 1);
+  check('retirer une catégorie', (await call('POST', '/distribution-articles/retirer-groupe', { ...J(A), body: { category: 'Matériel agricole' } })).body.retired === 2);
+  check('catégorie retirée absente du catalogue', (await call('GET', '/distribution-articles?category=Mat%C3%A9riel%20agricole', { ...J(A, coach.t) })).body.length === 0);
+
   console.log('Modèles de saisie (ADG)');
   const Q = (k, t = 'text', o = []) => ({ key: k, label: 'Question ' + k, type: t, required: true, options: o });
   check('le coach ne rédige pas de modèle', (await call('POST', '/field-templates', { ...J(A, coach.t), body: { kind: 'infrastructure', category: 'Centre de santé', definition: { questions: [Q('nom')] } } })).status === 403);

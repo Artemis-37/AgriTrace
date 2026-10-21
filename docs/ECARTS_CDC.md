@@ -139,3 +139,7 @@
 - Ajouté : table `field_templates` (brouillon / version déployée par coopérative), droit `field_templates:manage` (ADG et administrateur de coopérative), routes `GET/POST /field-templates`, `POST /field-templates/:id/deployer`, `/retirer`, `/defaults` ; éditeur dans le portail ; l'application des coachs lit les modèles déployés (cache hors connexion, modèles intégrés à défaut). Test `e2e-terrain` : 39 contrôles.
 - Les enregistrements d'infrastructure portent désormais `category` ; ceux déjà saisis avec « Ecole » restent lisibles.
 - Limites : les questions ne gèrent que texte, nombre et liste de choix (pas de conditions « si… alors », pas de date ni de photo par question) ; les modèles se mettent à jour à l'ouverture de l'écran avec réseau (pas de poussée) ; l'ADG des rôles déjà créés reçoit les droits par la migration, mais les rôles personnalisés doivent recevoir `field_templates:manage` dans Équipe ; la liste des devises et le contenu des catégories de distribution restent à valider ; non essayé dans un navigateur ni sur téléphone.
+
+## Catégories et groupes de distribution modifiables
+- Ajouté : `POST /distribution-articles/renommer` (catégorie ou groupe) et `/retirer-groupe` ; l'application des coachs déduit catégories et groupes du catalogue (valeurs de départ seulement si le catalogue est vide). Test `e2e-terrain` : 47 contrôles.
+- Limites : renommer ne change pas les distributions déjà enregistrées (elles gardent l'ancien nom) ; une catégorie vide ne peut pas exister (elle naît avec son premier article) ; non essayé dans un navigateur.
