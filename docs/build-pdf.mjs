@@ -14,7 +14,7 @@ const DOCS = [
   ['DEFAUTS_CONNUS_ET_RECETTE.md', 'AgriTrace - Defauts connus et plan de recette', 'Défauts connus et plan de recette', false],
 ];
 const css = `
-@page { size: A4; margin: 16mm 14mm 18mm; }
+@page { size: A4; margin: 31mm 14mm 18mm; }
 body { font: 10.5pt/1.5 "Poppins","Segoe UI",Helvetica,Arial,sans-serif; color: #26332b; }
 h1 { color: #2f5d46; font-size: 22pt; border-bottom: 3px solid #b6cf8e; padding-bottom: 6px; }
 h2 { color: #2f5d46; font-size: 15pt; margin-top: 22px; break-after: avoid; }
@@ -28,22 +28,27 @@ th, td { border: 1px solid #cfd5c8; padding: 4px 6px; vertical-align: top; }
 tr { break-inside: avoid; }
 code { font-size: 8.5pt; background: #f1f3ec; padding: 0 3px; border-radius: 3px; }
 blockquote { border-left: 4px solid #b6cf8e; margin-left: 0; padding-left: 12px; color: #55625a; }
-.cover { text-align: center; padding: 60mm 0 0; break-after: page; }
+.cover { text-align: center; padding: 45mm 0 0; break-after: page; }
 .cover .logo { font-size: 40pt; font-weight: 700; color: #2f5d46; } .cover .logo span { color: #8fb15a; }
+.cover .coverlogo { width: 110mm; border: 0; margin: 0 auto 14mm; }
 .cover p { color: #55625a; font-size: 13pt; }
 `;
+const b64 = (f) => 'data:image/png;base64,' + fs.readFileSync(path.join(dir, 'brand', f)).toString('base64');
+const logo = b64('logo-nom.png'), logoFull = b64('logo-horizontal.png');
 const browser = await chromium.launch({ args: ['--no-sandbox'], executablePath: process.env.CHROMIUM_PATH || undefined });
 for (const [file, title, heading, landscape] of DOCS) {
   const body = execFileSync('pandoc', ['-f', 'gfm', '-t', 'html5', path.join(dir, file)], { cwd: dir, maxBuffer: 1 << 28 }).toString();
   const date = new Date().toISOString().slice(0, 10);
   const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>${title}</title><base href="file://${dir}/"><style>${css}${landscape ? '@page { size: A4 landscape; }' : ''}</style></head><body>
-<div class="cover"><div class="logo">Agri<span>Trace</span></div><h1 style="border:0">${heading}</h1><p>La traçabilité agricole, de la parcelle au marché</p><p>Version du ${date}</p></div>${body}</body></html>`;
+<div class="cover"><img class="coverlogo" src="${logoFull}"><h1 style="border:0">${heading}</h1><p>La traçabilité agricole, de la parcelle au marché.</p><p>Version du ${date}</p></div>${body}</body></html>`;
   const tmp = path.join(out, '_tmp.html'); fs.writeFileSync(tmp, html);
   const page = await browser.newPage();
   await page.goto('file://' + tmp); await page.waitForLoadState('load');
   const name = file.replace(/\.md$/, '').split('_').map((w) => w[0] + w.slice(1).toLowerCase()).join('_');
   await page.pdf({ path: path.join(out, `AgriTrace_${name}.pdf`), format: 'A4', landscape, printBackground: true, displayHeaderFooter: true,
-    headerTemplate: '<div></div>', footerTemplate: '<div style="font-size:8px;width:100%;text-align:center;color:#777">AgriTrace — page <span class="pageNumber"></span> / <span class="totalPages"></span></div>' });
+    margin: { top: '30mm', bottom: '18mm', left: '14mm', right: '14mm' },
+    headerTemplate: `<div style="width:100%;padding:0 14mm;box-sizing:border-box;display:flex;align-items:center;gap:10px;border-bottom:1px solid #c9d6b8;padding-bottom:4px;font-family:Helvetica,Arial,sans-serif"><img src="${logo}" style="height:13mm"><span style="font-size:10px;color:#0B5E3B;font-style:italic;flex:1">La traçabilité agricole, de la parcelle au marché.</span><span style="font-size:8px;color:#55625a">${heading}</span></div>`,
+    footerTemplate: '<div style="font-size:8px;width:100%;text-align:center;color:#777">AgriTrace — page <span class="pageNumber"></span> / <span class="totalPages"></span></div>' });
   await page.close(); fs.unlinkSync(tmp); console.log('  ✓', file);
 }
 await browser.close();
