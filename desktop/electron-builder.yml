@@ -14,6 +14,7 @@ files:
 extraResources:
   - { from: payload, to: app-payload }
 win:
+  icon: build/icon.ico
   target: [{ target: nsis, arch: [x64] }]
   artifactName: AgriTrace-Setup-${version}.${ext}
 nsis:
@@ -23,3 +24,9 @@ nsis:
   language: "1036"
   createDesktopShortcut: true
   include: build/installer.nsh
+  # Contrat de licence (EULA) affiché pendant l'installation : « J'accepte » est obligatoire pour continuer.
+  license: build/license_fr.txt
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
+  installerHeaderIcon: build/icon.ico
+  shortcutName: AgriTrace

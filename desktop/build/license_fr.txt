@@ -1,0 +1,52 @@
+﻿CONTRAT DE LICENCE UTILISATEUR FINAL (CLUF / EULA) — AGRITRACE POUR WINDOWS
+
+Veuillez lire attentivement ce contrat avant d'installer ou d'utiliser le logiciel. En cliquant sur « J'accepte » ou en installant le logiciel, vous acceptez d'être lié par ses termes. Si vous les refusez, cliquez sur « Annuler » : le logiciel ne sera pas installé.
+
+[À COMPLÉTER AVANT DIFFUSION : nom de l'éditeur, forme juridique, adresse, adresse électronique de contact et tribunal compétent. Ce modèle doit être relu par un juriste avant toute diffusion.]
+
+1. DÉFINITIONS
+« Logiciel » : l'application AgriTrace pour Windows (serveur local de coopérative ou poste client), ses composants embarqués, ses mises à jour et sa documentation.
+« Éditeur » : [NOM DE L'ÉDITEUR], [adresse].
+« Utilisateur » : la coopérative, l'organisation ou la personne qui installe le Logiciel, et les personnes qu'elle autorise à l'utiliser.
+« Données » : toutes les informations saisies, importées ou générées dans le Logiciel (producteurs, parcelles, achats, stocks, finances, documents, etc.).
+
+2. LICENCE
+2.1. L'Éditeur concède à l'Utilisateur une licence personnelle, non exclusive, non cessible et non sous-licenciable d'installer et d'utiliser le Logiciel pour les besoins propres de son organisation, dans la limite des postes et des utilisateurs prévus par l'accord commercial conclu avec l'Éditeur.
+2.2. Le Logiciel est concédé sous licence, il n'est pas vendu. L'Éditeur conserve tous les droits de propriété intellectuelle sur le Logiciel, son code, sa marque, son logo et sa documentation.
+
+3. RESTRICTIONS
+Sauf autorisation écrite de l'Éditeur ou disposition légale impérative, l'Utilisateur s'interdit de : (a) copier, modifier, traduire ou créer des œuvres dérivées du Logiciel ; (b) décompiler, désassembler ou tenter d'extraire le code source, dans la mesure où la loi le permet ; (c) louer, prêter, revendre, concéder en sous-licence ou héberger le Logiciel au profit de tiers ; (d) retirer les mentions de propriété ou de marque ; (e) contourner les mesures de sécurité, d'isolation entre coopératives ou de contrôle d'accès ; (f) utiliser le Logiciel pour un usage illicite ou pour porter atteinte aux droits de tiers.
+
+4. VOS DONNÉES
+4.1. L'Utilisateur reste seul propriétaire de ses Données. L'Éditeur n'acquiert aucun droit sur elles.
+4.2. Le serveur local conserve les Données sur l'ordinateur de l'Utilisateur ; elles ne sont transmises à un serveur central que si l'Utilisateur active la synchronisation et choisit ce serveur.
+4.3. L'Utilisateur est responsable du traitement des données personnelles qu'il saisit (producteurs, collecteurs, employés : identité, coordonnées, positions GPS, données financières). Il s'engage à respecter la réglementation applicable, notamment en matière de protection des données à caractère personnel (en Côte d'Ivoire, la loi n° 2013-450 du 19 juin 2013 et les règles de l'autorité de protection compétente), à informer les personnes concernées et à ne collecter que les données nécessaires.
+4.4. L'Utilisateur est responsable de la gestion des comptes, des mots de passe et des droits d'accès de ses utilisateurs.
+
+5. SAUVEGARDES
+Le Logiciel permet de sauvegarder les Données. L'Utilisateur est responsable de réaliser des sauvegardes régulières, de les conserver sur un support distinct de l'ordinateur et de vérifier qu'elles peuvent être restaurées. L'Éditeur ne peut être tenu responsable d'une perte de données résultant de l'absence de sauvegarde, d'une panne matérielle, d'une coupure d'électricité ou d'une mauvaise manipulation.
+
+6. MISES À JOUR
+L'Éditeur peut mettre à disposition des mises à jour correctives ou évolutives. L'installation d'une mise à jour est décidée par l'administrateur de l'Utilisateur. Une mise à jour peut modifier la structure des Données ; une sauvegarde préalable est recommandée.
+
+7. COMPOSANTS TIERS ET LOGICIELS LIBRES
+Le Logiciel intègre des composants de tiers, notamment PostgreSQL, Electron, Node.js et d'autres bibliothèques, régis par leurs propres licences. Rien dans le présent contrat ne limite les droits que ces licences vous accordent sur ces composants. La liste et les textes de ces licences sont disponibles auprès de l'Éditeur sur demande.
+
+8. GARANTIE ET RESPONSABILITÉ
+8.1. Le Logiciel est fourni « en l'état ». L'Éditeur s'efforce de livrer un logiciel fiable mais ne garantit pas qu'il soit exempt d'erreurs, ni qu'il fonctionne sans interruption, ni qu'il convienne à un usage particulier.
+8.2. Les calculs (superficies, montants, soldes, écarts) et les documents produits (reçus, états, rapports) doivent être contrôlés par l'Utilisateur. Le Logiciel n'est pas un conseil comptable, fiscal, juridique ou de certification ; la comptabilité produite doit être validée par un professionnel qualifié.
+8.3. Dans la mesure permise par la loi, la responsabilité de l'Éditeur est limitée aux dommages directs et ne peut excéder le montant des sommes effectivement payées par l'Utilisateur pour le Logiciel au cours des douze derniers mois. L'Éditeur n'est pas responsable des dommages indirects (perte de bénéfices, d'exploitation, de clientèle ou de données). Aucune clause du présent contrat n'exclut une responsabilité qui ne peut être exclue par la loi.
+
+9. DURÉE ET RÉSILIATION
+Le contrat prend effet à l'installation. Il prend fin si l'Utilisateur désinstalle le Logiciel ou s'il manque à l'une de ses obligations et n'y remédie pas dans un délai raisonnable après mise en demeure. À la fin du contrat, l'Utilisateur cesse d'utiliser le Logiciel ; il conserve ses Données et peut les exporter avant la désinstallation.
+
+10. CONFIDENTIALITÉ ET SUPPORT
+L'Éditeur ne consulte pas les Données de l'Utilisateur, sauf demande expresse de celui-ci dans le cadre d'une assistance. Les conditions de support et de maintenance sont celles de l'accord commercial conclu avec l'Éditeur.
+
+11. DROIT APPLICABLE ET LITIGES
+Le présent contrat est régi par le droit de [PAYS À COMPLÉTER]. À défaut d'accord amiable, tout litige relève des tribunaux compétents de [VILLE À COMPLÉTER], sous réserve des dispositions impératives applicables.
+
+12. DISPOSITIONS GÉNÉRALES
+Si une clause du présent contrat est déclarée nulle, les autres clauses restent applicables. Le présent contrat constitue l'accord complet entre les parties au sujet de la licence du Logiciel et remplace tout accord antérieur sur ce sujet. Toute modification doit être faite par écrit.
+
+Contact : [ADRESSE ÉLECTRONIQUE DE L'ÉDITEUR]

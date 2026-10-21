@@ -135,7 +135,7 @@ function page(name) { return path.join(__dirname, name); }
 
 function mainWindow(url) {
   if (win) { win.loadURL(url); win.show(); return; }
-  win = new BrowserWindow({ width: 1366, height: 860, minWidth: 900, minHeight: 600, title: cfg?.stationName ? `AgriTrace — ${cfg.stationName}` : 'AgriTrace', backgroundColor: '#efebe1', webPreferences: { contextIsolation: true, sandbox: true, preload: page('preload.js') } });
+  win = new BrowserWindow({ width: 1366, height: 860, minWidth: 900, minHeight: 600, icon: path.join(__dirname, '..', 'build', 'icon.png'), title: cfg?.stationName ? `AgriTrace — ${cfg.stationName}` : 'AgriTrace', backgroundColor: '#efebe1', webPreferences: { contextIsolation: true, sandbox: true, preload: page('preload.js') } });
   win.loadURL(url);
   win.webContents.setWindowOpenHandler(({ url: u }) => { shell.openExternal(u); return { action: 'deny' }; });
   win.webContents.on('did-fail-load', (_e, code, desc, failed, isMain) => {
