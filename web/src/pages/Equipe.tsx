@@ -184,6 +184,7 @@ function ProfileCard() {
         <Field label="Adresse"><input value={v.address ?? ''} maxLength={300} onChange={set('address')} /></Field>
         <Field label="Téléphone"><input value={v.phone ?? ''} maxLength={40} onChange={set('phone')} /></Field>
         <Field label="E-mail"><input type="email" value={v.email ?? ''} onChange={set('email')} /></Field>
+        <Field label="Code CCC de la coopérative" hint="Préfixe du numéro de connaissement des convois : CODE-année-3 lettres du collecteur-n° (ex. SC000000-2026-OUM-1). Sans code, le numéro se saisit à la main."><input value={v.ccc_code ?? ''} maxLength={20} onChange={(e) => setF({ ...(f ?? data), ccc_code: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '') })} /></Field>
         <Field label="Devise (code ISO)"><input value={v.currency ?? 'XOF'} maxLength={3} onChange={(e) => setF({ ...(f ?? data), currency: e.target.value.toUpperCase() })} /></Field>
         <Field label="Langue par défaut"><select value={v.default_language ?? 'fr'} onChange={set('default_language')}><option value="fr">Français</option><option value="en">English</option></select></Field>
       </div>}

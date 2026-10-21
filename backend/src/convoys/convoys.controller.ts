@@ -7,11 +7,12 @@ import { accountingCodeOf, postEntry, today } from '../accounting/accounting.hel
 import { NotificationsService } from '../notifications/notifications.service';
 import { Dec } from '../common/dto';
 import { DbService } from '../db/db.service';
+import { nextConvoyNo } from './convoy-number';
 
 export class CreateConvoyDto {
   @IsString() @Length(8, 100) idempotency_key: string;
-  /** Numéro de connaissement intérieur du convoi : saisi par le collecteur. */
-  @IsString() @Length(2, 60) convoy_no: string;
+  /** Numéro de connaissement : généré par le logiciel dès que la coopérative a un code CCC (toute valeur envoyée est alors ignorée) ; saisi sinon. */
+  @IsOptional() @IsString() @Length(2, 60) convoy_no?: string;
   @IsOptional() @IsUUID() collector_id?: string;
   @IsString() @Length(2, 120) driver_name: string;
   @IsString() @Length(2, 40) truck_no: string;
@@ -92,8 +93,11 @@ export class ConvoysController {
       if (!collectorId) throw new BadRequestException('Collecteur requis (le compte connecté n\'est pas un collecteur)');
       if (own && b.collector_id && b.collector_id !== own.id) throw new BadRequestException('Un collecteur ne peut déclarer que ses propres convois');
       if (!(await c.query(`SELECT 1 FROM collectors WHERE id = $1 AND status = 'active'`, [collectorId])).rowCount) throw new BadRequestException('Collecteur inconnu ou désactivé');
-      if ((await c.query(`SELECT 1 FROM convoys WHERE convoy_no = $1`, [b.convoy_no.trim()])).rowCount)
-        throw new ConflictException(`Le numéro de convoi « ${b.convoy_no.trim()} » existe déjà`);
+      const auto = await nextConvoyNo(c, req.org.id, collectorId, true);
+      const convoyNo = auto ? auto.convoy_no : b.convoy_no?.trim();
+      if (!convoyNo || convoyNo.length < 2) throw new BadRequestException('Numéro de connaissement requis (renseignez le code CCC de la coopérative pour le générer automatiquement)');
+      if ((await c.query(`SELECT 1 FROM convoys WHERE convoy_no = $1`, [convoyNo])).rowCount)
+        throw new ConflictException(`Le numéro de convoi « ${convoyNo} » existe déjà`);
       const ids = [...new Set(b.declaration_ids ?? [])];
       let linked: any[] = [];
       if (ids.length) {
@@ -110,7 +114,7 @@ export class ConvoysController {
       const ins = await c.query(
         `INSERT INTO convoys(organization_id, idempotency_key, convoy_no, collector_id, driver_name, truck_no, declared_bags, declared_kg, notes, created_by)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
-        [req.org.id, b.idempotency_key, b.convoy_no.trim(), collectorId, b.driver_name.trim(), b.truck_no.trim().toUpperCase(),
+        [req.org.id, b.idempotency_key, convoyNo, collectorId, b.driver_name.trim(), b.truck_no.trim().toUpperCase(),
          b.declared_bags ?? (linked.length ? linkedBags : null), b.declared_kg ?? (linked.length ? linkedKg.toFixed(3) : null), b.notes ?? null, req.user.id]);
       for (const d of linked) await c.query(`INSERT INTO convoy_declarations(organization_id, convoy_id, declaration_id, kg, bags) VALUES ($1,$2,$3,$4,$5)`, [req.org.id, ins.rows[0].id, d.id, d.kg, d.bags ?? 0]);
       const who = (await c.query(`SELECT u.full_name FROM collectors k JOIN users u ON u.id = k.user_id WHERE k.id = $1`, [collectorId])).rows[0];
@@ -120,6 +124,19 @@ export class ConvoysController {
     });
     if (!replay) await this.log(req, 'convoy.create', row.id, { convoy_no: row.convoy_no, truck_no: row.truck_no });
     return { ...row, replayed: replay };
+  }
+
+  /** Prochain numéro de connaissement (aperçu, rien n'est réservé). `auto: false` : la coopérative n'a pas de code CCC, le numéro se saisit. `pending` : convois déjà en file d'attente sur l'appareil. */
+  @Get('convoys/next-number')
+  @RequirePermissions('convoys:create')
+  nextNumber(@Req() req: any, @Query('collector_id') collectorId?: string, @Query('pending') pending?: string) {
+    return this.db.tx(req.org.id, async (c) => {
+      const own = (await c.query(`SELECT id FROM collectors WHERE user_id = $1 AND status = 'active'`, [req.user.id])).rows[0];
+      const id = own?.id ?? collectorId;
+      if (!id) throw new BadRequestException('Collecteur requis');
+      const r = await nextConvoyNo(c, req.org.id, id, false, Math.max(0, Math.min(50, parseInt(pending ?? '0', 10) || 0)));
+      return r ? { auto: true, ...r } : { auto: false, convoy_no: null, ccc_code: null };
+    });
   }
 
   /** Achats du collecteur pas encore chargés dans un convoi (reçus, en revue ou acceptés). */

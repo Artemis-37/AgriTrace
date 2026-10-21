@@ -12,13 +12,13 @@ Coopérative **fictive** avec des données d'exemple et **un compte par profil**
 | Filière / campagne | Cacao, campagne 2026-2027, prix de 1 000 F/kg, conversion 1 sac = 65 kg |
 | Producteurs / parcelles | 15 producteurs (3 villages), 10 parcelles tracées, 1 parcelle sans tracé |
 | Achats | 12 déclarations (9 réceptionnées avec reçu et lot, 3 à valider) |
-| Convois | CV-DEMO-001 réglé, CV-DEMO-002 reçu en caisse, CV-DEMO-003 en route |
+| Convois | 3 convois numérotés automatiquement (code CCC fictif `SC000000`, ex. `SC000000-2026-BRA-1`) : le 1er réglé, le 2e reçu en caisse, le 3e en route |
 | Caisse / comptabilité | Caisse principale ouverte, entrées/sorties, 2 écritures manuelles, relevé bancaire CSV importé |
 | Prêts | 1 demande en attente, 1 prêt approuvé avec échéancier |
 | Qualité | Règle d'humidité, inspection conforme, certificat expirant sous 30 jours |
 | Ventes | 1 acheteur fictif, 1 contrat, 1 commande |
 | Terrain | 3 missions publiées, 2 relevés (formation, infrastructure sociale) |
-| Contrôle | 1 demande d'annulation en attente (réception CV-DEMO-002) |
+| Contrôle | 1 demande d'annulation en attente (réception du 2e convoi) |
 | Automatisation | 1 rapport Finances programmé chaque lundi |
 
 ## Installation

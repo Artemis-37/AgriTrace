@@ -12,6 +12,8 @@ class ProfileDto {
   @IsOptional() @IsEmail() email?: string | '';
   @IsOptional() @Matches(/^[A-Z]{3}$/) currency?: string;
   @IsOptional() @IsIn(['fr', 'en']) default_language?: string;
+  /** Code CCC de la coopérative (lettres et chiffres) : préfixe du numéro de connaissement des convois. */
+  @IsOptional() @Matches(/^([A-Za-z0-9]{3,20})?$/, { message: 'Code CCC : 3 à 20 lettres ou chiffres' }) ccc_code?: string;
 }
 
 /** Profil de la coopérative (nom commercial, coordonnées, devise, langue) : repris en en-tête des reçus imprimés. */
@@ -25,7 +27,7 @@ export class ProfileController {
   @Get()
   async get(@Req() req: any) {
     return this.db.tx(req.org.id, async (c) => (await c.query(
-      `SELECT o.name, o.code, p.commercial_name, p.address, p.phone, p.email, coalesce(p.currency, 'XOF') AS currency, coalesce(p.default_language, 'fr') AS default_language
+      `SELECT o.name, o.code, p.commercial_name, p.address, p.phone, p.email, p.ccc_code, coalesce(p.currency, 'XOF') AS currency, coalesce(p.default_language, 'fr') AS default_language
          FROM organizations o LEFT JOIN organization_profile p ON p.organization_id = o.id WHERE o.id = $1`, [req.org.id])).rows[0]);
   }
 
@@ -34,11 +36,12 @@ export class ProfileController {
   async put(@Body() b: ProfileDto, @Req() req: any) {
     const v = (x?: string) => (x == null || x.trim() === '' ? null : x.trim());
     await this.db.tx(req.org.id, (c) => c.query(
-      `INSERT INTO organization_profile(organization_id, commercial_name, address, phone, email, currency, default_language, updated_by)
-       VALUES ($1,$2,$3,$4,$5,coalesce($6,'XOF'),coalesce($7,'fr'),$8)
+      `INSERT INTO organization_profile(organization_id, commercial_name, address, phone, email, currency, default_language, updated_by, ccc_code)
+       VALUES ($1,$2,$3,$4,$5,coalesce($6,'XOF'),coalesce($7,'fr'),$8,$9)
        ON CONFLICT (organization_id) DO UPDATE SET commercial_name = $2, address = $3, phone = $4, email = $5,
-         currency = coalesce($6, organization_profile.currency), default_language = coalesce($7, organization_profile.default_language), updated_by = $8, updated_at = now()`,
-      [req.org.id, v(b.commercial_name), v(b.address), v(b.phone), v(b.email), b.currency ?? null, b.default_language ?? null, req.user.id]));
+         currency = coalesce($6, organization_profile.currency), default_language = coalesce($7, organization_profile.default_language), updated_by = $8,
+         ccc_code = CASE WHEN $10 THEN $9 ELSE organization_profile.ccc_code END, updated_at = now()`,
+      [req.org.id, v(b.commercial_name), v(b.address), v(b.phone), v(b.email), b.currency ?? null, b.default_language ?? null, req.user.id, v(b.ccc_code)?.toUpperCase() ?? null, b.ccc_code !== undefined]));
     await this.audit.log({ organizationId: req.org.id, actorUserId: req.user.id, action: 'org.profile_update', entityType: 'organization', entityId: req.org.id });
     return this.get(req);
   }

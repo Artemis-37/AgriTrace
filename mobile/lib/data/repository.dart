@@ -132,15 +132,18 @@ class Repository {
   Future<int> pendingPhotos() async => Sqflite.firstIntValue(await db.raw.rawQuery("SELECT count(*) FROM pending_uploads WHERE status = 'pending'")) ?? 0;
 
   /// Convoi vers le magasin central : mis en file d'envoi, envoyé dès que le réseau revient (idempotent).
-  Future<void> queueConvoy({required String convoyNo, required String driverName, required String truckNo, int? declaredBags, String? declaredKg, List<String> declarationIds = const []}) async {
+  Future<void> queueConvoy({String? convoyNo, required String driverName, required String truckNo, int? declaredBags, String? declaredKg, List<String> declarationIds = const []}) async {
     final key = 'convoy-${_uuid.v4()}';
     final payload = {
-      'idempotency_key': key, 'convoy_no': convoyNo.trim(), 'driver_name': driverName.trim(), 'truck_no': truckNo.trim(),
+      'idempotency_key': key, if (convoyNo != null && convoyNo.trim().isNotEmpty) 'convoy_no': convoyNo.trim(), 'driver_name': driverName.trim(), 'truck_no': truckNo.trim(),
       if (declaredBags != null) 'declared_bags': declaredBags, if (declaredKg != null && declaredKg.isNotEmpty) 'declared_kg': declaredKg,
       if (declarationIds.isNotEmpty) 'declaration_ids': declarationIds,
     };
     await db.raw.insert('outbox', {'idempotency_key': key, 'op_type': 'convoy.create', 'payload': jsonEncode(payload), 'entity_id': key, 'created_at': DateTime.now().toIso8601String()});
   }
+
+  /// Convois créés sur l'appareil et pas encore envoyés : sert à prévoir le prochain numéro automatique hors connexion.
+  Future<int> pendingConvoys() async => Sqflite.firstIntValue(await db.raw.rawQuery("SELECT count(*) FROM outbox WHERE op_type = 'convoy.create'")) ?? 0;
 
   /// Achats que le collecteur peut charger dans un convoi : envoyés (ou en attente d'envoi) et pas déjà chargés dans un convoi de cet appareil.
   /// [serverAvailableIds] : achats que le serveur déclare libres (null hors connexion) ; un achat déjà parti sur le serveur absent de la liste est écarté.

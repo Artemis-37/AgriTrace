@@ -69,11 +69,17 @@ function CreateConvoy({ onClose, onDone }: { onClose: () => void; onDone: () => 
   const list = avail.data ?? [];
   const pickKg = list.filter((d) => picked.includes(d.id)).reduce((a, d) => a + Number(d.kg), 0), pickBags = list.filter((d) => picked.includes(d.id)).reduce((a, d) => a + Number(d.bags ?? 0), 0);
   const toggle = (id: string) => setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
-  const valid = f.convoy_no.trim().length >= 2 && f.driver_name.trim().length >= 2 && f.truck_no.trim().length >= 2 && (!f.declared_kg || /^\d+(\.\d{1,3})?$/.test(f.declared_kg));
+  // Numéro automatique (coopérative avec code CCC) : aperçu fourni par le serveur ; inconnu hors connexion ou pour un compte sans collecteur.
+  const next = useAsync(() => (off.offline || !can('convoys:create') ? Promise.resolve(null) : get<{ auto: boolean; convoy_no: string | null }>('/convoys/next-number').catch(() => null)), []);
+  const auto = next.data?.auto === true;
+  const noKnown = next.data?.auto === false;
+  const valid = (auto || !noKnown || f.convoy_no.trim().length >= 2) && (f.convoy_no.trim() === '' || f.convoy_no.trim().length >= 2) && f.driver_name.trim().length >= 2 && f.truck_no.trim().length >= 2 && (!f.declared_kg || /^\d+(\.\d{1,3})?$/.test(f.declared_kg));
   return (
     <Modal title="Déclarer un convoi" onClose={onClose}>
       {off.offline && <p className="notice" role="status">Hors connexion : le convoi sera enregistré sur ce poste puis envoyé dès que le serveur sera joignable.</p>}
-      <Field label="Numéro de connaissement du convoi" hint="Saisi par le collecteur ; il accompagne le convoi jusqu'au magasin."><input value={f.convoy_no} onChange={set('convoy_no')} maxLength={60} /></Field>
+      {auto
+        ? <Field label="Numéro de connaissement du convoi" hint="Attribué automatiquement par le logiciel (code CCC de la coopérative, année, 3 lettres de votre nom, n° d'ordre). Il accompagne le convoi jusqu'au magasin."><input value={next.data!.convoy_no ?? ''} readOnly aria-readonly="true" /></Field>
+        : <Field label="Numéro de connaissement du convoi" hint={noKnown ? 'Saisi par le collecteur ; il accompagne le convoi jusqu\'au magasin.' : 'Laissez vide si la coopérative a renseigné son code CCC : le numéro est alors attribué automatiquement à l\'envoi.'}><input value={f.convoy_no} onChange={set('convoy_no')} maxLength={60} /></Field>}
       <Field label="Nom du chauffeur"><input value={f.driver_name} onChange={set('driver_name')} maxLength={120} /></Field>
       <Field label="N° du camion"><input value={f.truck_no} onChange={set('truck_no')} maxLength={40} /></Field>
       {list.length > 0 && (
@@ -94,9 +100,9 @@ function CreateConvoy({ onClose, onDone }: { onClose: () => void; onDone: () => 
         <button className="btn btn-secondary" onClick={onClose}>Annuler</button>
         <button className="btn" disabled={act.busy || !valid || !org} onClick={() => act.run(async () => {
           await enqueue(org!.id, 'convoy.create', {
-            idempotency_key: idem(), convoy_no: f.convoy_no.trim(), driver_name: f.driver_name.trim(), truck_no: f.truck_no.trim(),
+            idempotency_key: idem(), ...(!auto && f.convoy_no.trim() && { convoy_no: f.convoy_no.trim() }), driver_name: f.driver_name.trim(), truck_no: f.truck_no.trim(),
             ...(f.declared_bags && { declared_bags: Number(f.declared_bags) }), ...(f.declared_kg && { declared_kg: f.declared_kg }), ...(picked.length && { declaration_ids: picked }),
-          }, `Convoi ${f.convoy_no.trim()}`);
+          }, `Convoi ${auto ? next.data!.convoy_no : f.convoy_no.trim() || 'à numéroter'}`);
           onDone();
         })}>{off.offline ? 'Enregistrer sur ce poste' : 'Enregistrer'}</button>
       </div>

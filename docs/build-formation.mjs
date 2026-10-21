@@ -13,6 +13,7 @@ const caps = JSON.parse(fs.readFileSync(path.join(dir, 'captures', 'formation', 
 const demo = JSON.parse(fs.readFileSync(process.env.DEMO_JSON ?? '/tmp/demo-accounts.json', 'utf8'));
 const emailOf = Object.fromEntries(demo.accounts.map((a) => [a.role, a]));
 const PASS = demo.password;
+const [CV1, CV2, CV3] = demo.convoys ?? ['SC000000-2026-BRA-1', 'SC000000-2026-BRA-2', 'SC000000-2026-BRA-3'];
 
 const LEGENDE = {
   accueil: 'Tableau de bord : les indicateurs affichés dépendent de vos droits.',
@@ -55,7 +56,7 @@ const MOD = {
     ],
     exos: [
       ['Créez un compte « Magasinier » pour un collègue fictif, connectez-vous avec, puis vérifiez les menus visibles.', 'Le menu ne contient ni Finances ni Équipe ; la première connexion impose le changement de mot de passe uniquement après une réinitialisation.'],
-      ['Approuvez la demande d\'annulation de la réception CV-DEMO-002 (compte direction ou administrateur).', 'La réception passe en « annulée » ; une contre-passation apparaît dans le stock, l\'original reste visible.'],
+      ['Approuvez la demande d\'annulation de la réception {{CV2}} (compte direction ou administrateur).', 'La réception passe en « annulée » ; une contre-passation apparaît dans le stock, l\'original reste visible.'],
       ['Programmez le rapport Finances chaque lundi pour le compte Direction.', 'La programmation apparaît dans la liste ; Direction reçoit une notification à chaque exécution.'],
     ],
   },
@@ -69,7 +70,7 @@ const MOD = {
       ['Demander une annulation', 'Dans **Mes opérations**, sur une opération erronée : demandez l\'annulation en précisant le motif. Un responsable décidera ; vous suivez l\'avancement dans l\'onglet *Mes demandes*.'],
     ],
     exos: [
-      ['Réceptionnez le convoi CV-DEMO-003 (poids : 2 080 kg, 32 sacs).', 'Le convoi passe à « Reçu — en caisse » et le stock du lot augmente de 2 080 kg.'],
+      ['Réceptionnez le convoi {{CV3}} (poids : 2 080 kg, 32 sacs).', 'Le convoi passe à « Reçu — en caisse » et le stock du lot augmente de 2 080 kg.'],
       ['Imprimez le reçu de cette réception, puis réimprimez-le.', 'La seconde impression porte « duplicata ».'],
       ['Demandez l\'annulation de cette réception (motif : poids saisi par erreur).', 'La demande apparaît « en attente » ; l\'opération reste valable tant qu\'elle n\'est pas approuvée.'],
     ],
@@ -84,7 +85,7 @@ const MOD = {
       ['Suivre les comptes collecteurs', 'Onglet *Comptes collecteurs* : soldes, avances et retenues.'],
     ],
     exos: [
-      ['Réglez le convoi CV-DEMO-003 (réceptionné par le magasinier à son exercice) au prix de 1 000 F/kg.', 'Montant = poids reçu × 1 000 (ex. 2 080 kg → 2 080 000 F) ; le convoi passe à « Réglé ».'],
+      ['Réglez le convoi {{CV3}} (réceptionné par le magasinier à son exercice) au prix de 1 000 F/kg.', 'Montant = poids reçu × 1 000 (ex. 2 080 kg → 2 080 000 F) ; le convoi passe à « Réglé ».'],
       ['Enregistrez une sortie de caisse de 15 000 F « Achat de papier ».', 'Le solde de la caisse diminue de 15 000 F ; l\'opération est datée et attribuée à votre compte.'],
       ['Imprimez le reçu de règlement.', 'Le reçu porte l\'en-tête de la coopérative (nom, logo, adresse).'],
     ],
@@ -111,7 +112,7 @@ const MOD = {
       ['Approuver un prêt', 'Menu **Préfinancement** (ou Finances) : ouvrez la demande, vérifiez l\'échéancier, approuvez. Le demandeur ne peut pas approuver son propre prêt.'],
     ],
     exos: [
-      ['Approuvez la demande d\'annulation en attente de la réception CV-DEMO-002.', 'Statut « approuvée » ; le demandeur est notifié.'],
+      ['Approuvez la demande d\'annulation en attente de la réception {{CV2}}.', 'Statut « approuvée » ; le demandeur est notifié.'],
       ['Ouvrez le rapport Finances et exportez-le vers Excel.', 'Un fichier .xlsx est téléchargé.'],
     ],
   },
@@ -226,12 +227,12 @@ const MOD = {
     objectifs: ['Déclarer un achat chez un producteur', 'Créer un convoi', 'Consulter son stock et sa fiche de compte'],
     pas: [
       ['Déclarer un achat', 'Sur le téléphone : **Nouvel achat** → choisir le producteur → quantité, unité, sacs. L\'achat se synchronise dès que le réseau est disponible.'],
-      ['Créer un convoi', 'Sur le téléphone : **Convoi** → n° de convoi, chauffeur, camion, sacs et poids déclarés.'],
+      ['Créer un convoi', 'Sur le téléphone : **Convoi** → chauffeur, camion, sacs et poids annoncés. Le **numéro de connaissement est attribué par le logiciel** : `code CCC de la coopérative` - `année` - `3 premières lettres du nom du collecteur` - `n° d\'ordre` (ex. `{{CV1}}`). Hors connexion, le numéro définitif est attribué à l\'envoi.'],
       ['Suivre son stock et son compte', 'Portail ou téléphone : *Mon stock*, *Historique* et *Fiche de compte*.'],
     ],
     exos: [
       ['Déclarez un achat de 3 sacs chez TRAORE Moussa.', 'L\'achat apparaît « Soumis » dans Mes achats.'],
-      ['Créez un convoi CV-TEST-001 (28 sacs, 1 800 kg déclarés).', 'Il apparaît « En route » côté magasin.'],
+      ['Créez un convoi (28 sacs, 1 800 kg annoncés) sans saisir de numéro.', 'Le logiciel attribue le numéro : code CCC, année, 3 premières lettres de votre nom, n° d\'ordre (ex. {{CV1}} pour le 1er convoi de Brahima). Le convoi apparaît « En route » côté magasin.'],
     ],
   },
   adg: {
@@ -331,6 +332,7 @@ for (const role of ORDER) {
   md += `### Acquis (à cocher)\n\n${m.objectifs.map((o) => `- [ ] ${o}`).join('\n')}\n`;
 }
 
-md += `\n---\n\n## ${n}. Évaluation finale (30 min)\n\nScénario commun, à dérouler à plusieurs comptes :\n\n1. **Collecteur** : déclare un achat et crée le convoi CV-EVAL-001.\n2. **Magasinier** : réceptionne le convoi (poids différent du déclaré) et imprime le reçu.\n3. **Caissier** : règle le convoi au prix du jour.\n4. **Comptable** : passe l'écriture correspondante et pointe le relevé.\n5. **Magasinier** : constate une erreur de poids et demande l'annulation.\n6. **Direction ou administrateur** : décide de la demande.\n7. **Auditeur** : retrouve l'ensemble des traces (reçus, demande, décision).\n\nCritères : respect du circuit, aucune suppression, motifs renseignés, reçus imprimés, demandeur ≠ approbateur.\n`;
+md += `\n---\n\n## ${n}. Évaluation finale (30 min)\n\nScénario commun, à dérouler à plusieurs comptes :\n\n1. **Collecteur** : déclare un achat et crée un convoi (numéro attribué automatiquement).\n2. **Magasinier** : réceptionne le convoi (poids différent du déclaré) et imprime le reçu.\n3. **Caissier** : règle le convoi au prix du jour.\n4. **Comptable** : passe l'écriture correspondante et pointe le relevé.\n5. **Magasinier** : constate une erreur de poids et demande l'annulation.\n6. **Direction ou administrateur** : décide de la demande.\n7. **Auditeur** : retrouve l'ensemble des traces (reçus, demande, décision).\n\nCritères : respect du circuit, aucune suppression, motifs renseignés, reçus imprimés, demandeur ≠ approbateur.\n`;
+md = md.replaceAll('{{CV1}}', CV1).replaceAll('{{CV2}}', CV2).replaceAll('{{CV3}}', CV3);
 fs.writeFileSync(path.join(dir, 'GUIDE_FORMATION.md'), md);
 console.log('GUIDE_FORMATION.md :', md.length, 'caractères');

@@ -106,7 +106,7 @@ Responsable de la coopérative : crée les comptes, attribue les rôles, décide
 | # | À faire | Résultat attendu |
 |---|---|---|
 | 1 | Créez un compte « Magasinier » pour un collègue fictif, connectez-vous avec, puis vérifiez les menus visibles. | Le menu ne contient ni Finances ni Équipe ; la première connexion impose le changement de mot de passe uniquement après une réinitialisation. |
-| 2 | Approuvez la demande d'annulation de la réception CV-DEMO-002 (compte direction ou administrateur). | La réception passe en « annulée » ; une contre-passation apparaît dans le stock, l'original reste visible. |
+| 2 | Approuvez la demande d'annulation de la réception SC000000-2026-BRA-2 (compte direction ou administrateur). | La réception passe en « annulée » ; une contre-passation apparaît dans le stock, l'original reste visible. |
 | 3 | Programmez le rapport Finances chaque lundi pour le compte Direction. | La programmation apparaît dans la liste ; Direction reçoit une notification à chaque exécution. |
 
 ### Acquis (à cocher)
@@ -171,7 +171,7 @@ Réceptionne et pèse les convois au magasin central, tient les stocks et l'inve
 
 | # | À faire | Résultat attendu |
 |---|---|---|
-| 1 | Réceptionnez le convoi CV-DEMO-003 (poids : 2 080 kg, 32 sacs). | Le convoi passe à « Reçu — en caisse » et le stock du lot augmente de 2 080 kg. |
+| 1 | Réceptionnez le convoi SC000000-2026-BRA-3 (poids : 2 080 kg, 32 sacs). | Le convoi passe à « Reçu — en caisse » et le stock du lot augmente de 2 080 kg. |
 | 2 | Imprimez le reçu de cette réception, puis réimprimez-le. | La seconde impression porte « duplicata ». |
 | 3 | Demandez l'annulation de cette réception (motif : poids saisi par erreur). | La demande apparaît « en attente » ; l'opération reste valable tant qu'elle n'est pas approuvée. |
 
@@ -234,7 +234,7 @@ Traite les convois reçus, règle les collecteurs, tient la caisse et les compte
 
 | # | À faire | Résultat attendu |
 |---|---|---|
-| 1 | Réglez le convoi CV-DEMO-003 (réceptionné par le magasinier à son exercice) au prix de 1 000 F/kg. | Montant = poids reçu × 1 000 (ex. 2 080 kg → 2 080 000 F) ; le convoi passe à « Réglé ». |
+| 1 | Réglez le convoi SC000000-2026-BRA-3 (réceptionné par le magasinier à son exercice) au prix de 1 000 F/kg. | Montant = poids reçu × 1 000 (ex. 2 080 kg → 2 080 000 F) ; le convoi passe à « Réglé ». |
 | 2 | Enregistrez une sortie de caisse de 15 000 F « Achat de papier ». | Le solde de la caisse diminue de 15 000 F ; l'opération est datée et attribuée à votre compte. |
 | 3 | Imprimez le reçu de règlement. | Le reçu porte l'en-tête de la coopérative (nom, logo, adresse). |
 
@@ -346,7 +346,7 @@ Suit l'ensemble de l'activité (lecture) et approuve les demandes d'annulation, 
 
 | # | À faire | Résultat attendu |
 |---|---|---|
-| 1 | Approuvez la demande d'annulation en attente de la réception CV-DEMO-002. | Statut « approuvée » ; le demandeur est notifié. |
+| 1 | Approuvez la demande d'annulation en attente de la réception SC000000-2026-BRA-2. | Statut « approuvée » ; le demandeur est notifié. |
 | 2 | Ouvrez le rapport Finances et exportez-le vers Excel. | Un fichier .xlsx est téléchargé. |
 
 ### Acquis (à cocher)
@@ -896,7 +896,7 @@ Déclare ses achats chez les producteurs et ses convois, voit son stock, son his
 ### Pas à pas
 
 1. **Déclarer un achat.** Sur le téléphone : **Nouvel achat** → choisir le producteur → quantité, unité, sacs. L'achat se synchronise dès que le réseau est disponible.
-2. **Créer un convoi.** Sur le téléphone : **Convoi** → n° de convoi, chauffeur, camion, sacs et poids déclarés.
+2. **Créer un convoi.** Sur le téléphone : **Convoi** → chauffeur, camion, sacs et poids annoncés. Le **numéro de connaissement est attribué par le logiciel** : `code CCC de la coopérative` - `année` - `3 premières lettres du nom du collecteur` - `n° d'ordre` (ex. `SC000000-2026-BRA-1`). Hors connexion, le numéro définitif est attribué à l'envoi.
 3. **Suivre son stock et son compte.** Portail ou téléphone : *Mon stock*, *Historique* et *Fiche de compte*.
 
 ### Ce que ce profil ne voit pas
@@ -911,7 +911,7 @@ Déclare ses achats chez les producteurs et ses convois, voit son stock, son his
 | # | À faire | Résultat attendu |
 |---|---|---|
 | 1 | Déclarez un achat de 3 sacs chez TRAORE Moussa. | L'achat apparaît « Soumis » dans Mes achats. |
-| 2 | Créez un convoi CV-TEST-001 (28 sacs, 1 800 kg déclarés). | Il apparaît « En route » côté magasin. |
+| 2 | Créez un convoi (28 sacs, 1 800 kg annoncés) sans saisir de numéro. | Le logiciel attribue le numéro : code CCC, année, 3 premières lettres de votre nom, n° d'ordre (ex. SC000000-2026-BRA-1 pour le 1er convoi de Brahima). Le convoi apparaît « En route » côté magasin. |
 
 ### Acquis (à cocher)
 
@@ -1036,7 +1036,7 @@ Agent de terrain suivi par l'ADG : exécute ses missions, enregistre des product
 
 Scénario commun, à dérouler à plusieurs comptes :
 
-1. **Collecteur** : déclare un achat et crée le convoi CV-EVAL-001.
+1. **Collecteur** : déclare un achat et crée un convoi (numéro attribué automatiquement).
 2. **Magasinier** : réceptionne le convoi (poids différent du déclaré) et imprime le reçu.
 3. **Caissier** : règle le convoi au prix du jour.
 4. **Comptable** : passe l'écriture correspondante et pointe le relevé.

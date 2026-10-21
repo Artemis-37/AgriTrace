@@ -16,6 +16,9 @@ class _NewConvoyScreenState extends State<NewConvoyScreen> {
   final _bags = TextEditingController();
   final _kg = TextEditingController();
   bool _busy = false;
+  /// null : inconnu (hors connexion) ; true : numéro automatique (code CCC renseigné) ; false : saisie manuelle.
+  bool? _auto;
+  String? _autoNo;
   List<Map<String, Object?>> _linkable = [];
   final Set<String> _picked = {};
 
@@ -23,6 +26,16 @@ class _NewConvoyScreenState extends State<NewConvoyScreen> {
   void initState() {
     super.initState();
     _loadLinkable();
+    _loadNumber();
+  }
+
+  /// Aperçu du prochain numéro de connaissement (le serveur l'attribue définitivement à l'envoi).
+  Future<void> _loadNumber() async {
+    try {
+      final pending = await services.repo.pendingConvoys();
+      final r = await services.api.get('/convoys/next-number', query: {'pending': '$pending'}) as Map;
+      if (mounted) setState(() { _auto = r['auto'] == true; _autoNo = r['convoy_no'] as String?; });
+    } catch (_) { /* hors connexion : numéro attribué à l'envoi si la coopérative a un code CCC */ }
   }
 
   /// Achats à charger : ceux de l'appareil, recoupés avec la liste du serveur quand la connexion le permet.
@@ -36,7 +49,7 @@ class _NewConvoyScreenState extends State<NewConvoyScreen> {
     if (mounted) setState(() => _linkable = rows);
   }
 
-  bool get _valid => _no.text.trim().length >= 2 && _driver.text.trim().length >= 2 && _truck.text.trim().length >= 2;
+  bool get _valid => (_auto != false || _no.text.trim().length >= 2) && _driver.text.trim().length >= 2 && _truck.text.trim().length >= 2;
 
   @override
   void dispose() {
@@ -47,7 +60,7 @@ class _NewConvoyScreenState extends State<NewConvoyScreen> {
   Future<void> _save() async {
     setState(() => _busy = true);
     await services.repo.queueConvoy(
-      convoyNo: _no.text, driverName: _driver.text, truckNo: _truck.text,
+      convoyNo: _auto == true ? null : _no.text, driverName: _driver.text, truckNo: _truck.text,
       declaredBags: int.tryParse(_bags.text.trim()), declaredKg: _kg.text.trim().replaceAll(',', '.'), declarationIds: _picked.toList(),
     );
     if (!mounted) return;
@@ -59,7 +72,17 @@ class _NewConvoyScreenState extends State<NewConvoyScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Déclarer un convoi')),
       body: ListView(padding: const EdgeInsets.all(16), children: [
-        TextField(controller: _no, decoration: const InputDecoration(labelText: 'N° de connaissement du convoi'), onChanged: (_) => setState(() {})),
+        if (_auto == true)
+          InputDecorator(
+            decoration: const InputDecoration(labelText: 'N° de connaissement (automatique)', helperText: 'Attribué par le logiciel : code CCC, année, 3 lettres de votre nom, n° d\'ordre. Définitif à l\'envoi.'),
+            child: Text(_autoNo ?? '', style: const TextStyle(fontWeight: FontWeight.w600)),
+          )
+        else
+          TextField(
+            controller: _no,
+            decoration: InputDecoration(labelText: 'N° de connaissement du convoi', helperText: _auto == null ? 'Laissez vide si la coopérative a un code CCC : le numéro est alors attribué à l\'envoi.' : null),
+            onChanged: (_) => setState(() {}),
+          ),
         const SizedBox(height: 12),
         TextField(controller: _driver, decoration: const InputDecoration(labelText: 'Nom du chauffeur'), onChanged: (_) => setState(() {})),
         const SizedBox(height: 12),

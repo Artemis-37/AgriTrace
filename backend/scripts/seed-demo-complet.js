@@ -62,7 +62,7 @@ const PROFILS = [
   const A = { token: t0, org: org.id };
 
   // ── Profil de la coopérative
-  await soft('profil', () => call('PUT', '/organization/profile', { ...A, body: { phone: '+225 27 00 00 00 00', email: `contact@${DOMAIN}`, address: 'Zone industrielle, Hiré (fictif)', currency: 'XOF' } }));
+  await soft('profil', () => call('PUT', '/organization/profile', { ...A, body: { phone: '+225 27 00 00 00 00', email: `contact@${DOMAIN}`, address: 'Zone industrielle, Hiré (fictif)', currency: 'XOF', ccc_code: 'SC000000' } }));
 
   await soft('logo', async () => {
     const f = fs.readFileSync(path.join(__dirname, '..', '..', 'docs', 'brand', 'logo-cooperative-demo.png'));
@@ -131,15 +131,15 @@ const PROFILS = [
   }
 
   // ── Convois : l'un réceptionné et réglé, l'autre seulement en route
-  const cv = (no, kg) => call('POST', '/convoys', { ...U('collecteur'), body: { idempotency_key: key('cv'), convoy_no: no, driver_name: 'Traoré Moussa', truck_no: 'AB 1234 CI', declared_bags: 40, declared_kg: kg } });
-  await cv('CV-DEMO-001', '2600');
-  const rec = await call('POST', '/convoys/receive', { ...U('magasinier'), body: { idempotency_key: key('rc'), collector_id: col.id, convoy_no: 'CV-DEMO-001', warehouse_id: wh.id, total_kg: '2587.500', bags: 40 } });
+  const cv = (kg) => call('POST', '/convoys', { ...U('collecteur'), body: { idempotency_key: key('cv'), driver_name: 'Traoré Moussa', truck_no: 'AB 1234 CI', declared_bags: 40, declared_kg: kg } });
+  const cv1 = (await cv('2600')).convoy_no; // numéro généré : SC000000-<année>-BRA-1
+  const rec = await call('POST', '/convoys/receive', { ...U('magasinier'), body: { idempotency_key: key('rc'), collector_id: col.id, convoy_no: cv1, warehouse_id: wh.id, total_kg: '2587.500', bags: 40 } });
   const reg = await call('POST', '/cash-registers', { ...A, body: { name: 'Caisse principale' } });
   const sess = await call('POST', `/cash-registers/${reg.id}/sessions`, { ...U('caissier'), body: { opening_amount: '5000000' } });
   await soft('règlement du convoi', () => call('POST', `/convoy-receptions/${rec.id}/settle`, { ...U('caissier'), body: { idempotency_key: key('st'), unit_price: '1000' } }));
-  await cv('CV-DEMO-002', '1800');
-  const rec2 = await soft('2e réception', () => call('POST', '/convoys/receive', { ...U('magasinier'), body: { idempotency_key: key('rc'), collector_id: col.id, convoy_no: 'CV-DEMO-002', warehouse_id: wh.id, total_kg: '1795', bags: 28 } }));
-  await cv('CV-DEMO-003', '2100'); // reste « en route » : visible dans les convois attendus du magasin
+  const cv2 = (await cv('1800')).convoy_no;
+  const rec2 = await soft('2e réception', () => call('POST', '/convoys/receive', { ...U('magasinier'), body: { idempotency_key: key('rc'), collector_id: col.id, convoy_no: cv2, warehouse_id: wh.id, total_kg: '1795', bags: 28 } }));
+  const cv3 = (await cv('2100')).convoy_no; // reste « en route » : visible dans les convois attendus du magasin
 
   // ── Caisse, comptabilité
   const tx = (direction, amount, reason) => call('POST', '/financial-transactions', { ...U('caissier'), body: { idempotency_key: key('tx'), account_id: reg.account_id, cash_session_id: sess.id, direction, amount, reason } });
@@ -205,7 +205,7 @@ const PROFILS = [
     const out = path.join(__dirname, '..', '..', 'docs', 'COMPTES_DEMO.md');
     fs.writeFileSync(out, doc);
   }
-  fs.writeFileSync(process.env.DEMO_JSON || '/tmp/demo-accounts.json', JSON.stringify({ org: org.id, password: PASSWORD, accounts }, null, 2));
+  fs.writeFileSync(process.env.DEMO_JSON || '/tmp/demo-accounts.json', JSON.stringify({ org: org.id, password: PASSWORD, accounts, convoys: [cv1, cv2, cv3] }, null, 2));
   console.log(`\nCoopérative de démonstration prête : ${org.name}\n  ${accounts.length} comptes (mot de passe : ${PASSWORD})`);
   if (warnings.length) console.log(`\n${warnings.length} étape(s) facultative(s) ignorée(s) :\n - ` + warnings.join('\n - '));
 })().catch((e) => { console.error(e.message); process.exit(1); });
