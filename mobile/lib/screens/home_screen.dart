@@ -15,7 +15,6 @@ import 'distribution_screen.dart';
 import 'download_screen.dart';
 import 'social_infra_screen.dart';
 import 'training_screen.dart';
-import 'my_location_screen.dart';
 import 'new_convoy_screen.dart';
 import 'new_declaration_screen.dart';
 
@@ -180,17 +179,16 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _coachBody() {
     // Même organisation que le terminal de terrain : les parcelles et les tâches se consultent depuis la fiche du producteur.
     final r1 = <Widget>[
-      if (_canProducer) _tile(Icons.person_add_alt_1, 'Ajouter un nouveau producteur et une exploitation agricole', () => _open(const AddProducerScreen(), sync: true), height: 150),
-      _tile(Icons.fact_check_outlined, 'Producteurs et enquêtes', () => _open(const ProducersScreen()), height: 150),
+      if (_canProducer) _tile(Icons.person_add, 'Ajouter un nouveau producteur et une exploitation agricole', () => _open(const AddProducerScreen(), sync: true), height: 150),
+      _tile(Icons.assignment_turned_in, 'Producteurs et enquêtes', () => _open(const ProducersScreen()), height: 150),
     ];
     final r2 = <Widget>[
-      if (_canField) _tile(Icons.location_on, 'Ajouter une infrastructure sociale', () => _open(const SocialInfraScreen(), sync: true), height: 150, fontSize: 11),
-      _tile(Icons.assignment_outlined, 'Télécharger les données', () => _open(const DownloadScreen()), height: 150, fontSize: 11),
-      if (_canField) _tile(Icons.volunteer_activism_outlined, 'Distribution et services', () => _open(const DistributionScreen(), sync: true), height: 150, fontSize: 11),
+      if (_canField) _tile(Icons.add_location_alt, 'Ajouter une infrastructure sociale', () => _open(const SocialInfraScreen(), sync: true), height: 150, fontSize: 11),
+      _tile(Icons.cloud_download, 'Télécharger les données', () => _open(const DownloadScreen()), height: 150, fontSize: 11),
+      if (_canField) _tile(Icons.volunteer_activism, 'Distribution et services', () => _open(const DistributionScreen(), sync: true), height: 150, fontSize: 11),
     ];
     final r3 = <Widget>[
       if (_canField) _tile(Icons.school, 'Enregistrer une formation', () => _open(const TrainingListScreen(), sync: true), height: 130),
-      _tile(Icons.pin_drop_outlined, 'Capturer mon emplacement', () => _open(const MyLocationScreen()), height: 130),
     ];
     Widget row(List<Widget> w) => Row(children: [for (var i = 0; i < w.length; i++) ...[if (i > 0) const SizedBox(width: 10), Expanded(child: w[i])]]);
     return RefreshIndicator(
