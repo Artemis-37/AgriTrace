@@ -22,12 +22,16 @@ class LocalServer {
     this.dataDir = o.dataDir; this.appDir = o.appDir;
     this.port = o.port ?? 3000; this.pgPort = o.pgPort ?? 54329;
     this.localOnly = !!o.localOnly;   // poste unique : l'API n'écoute que sur ce poste
+    // Serveur du réseau local : HTTPS (certificat auto-signé épinglé par les postes) sur `port`, et HTTP réservé à ce poste sur port + 1.
+    this.tls = !!o.tls && !this.localOnly;
+    this.loopbackPort = this.tls ? this.port + 1 : this.port;
+    this.fingerprint = null;
     this.nodeBin = o.nodeBin ?? process.execPath;
     this.log = o.log ?? (() => {});
     this.pg = null; this.api = null; this.state = 'stopped';
   }
 
-  get url() { return `http://127.0.0.1:${this.port}`; }
+  get url() { return `http://127.0.0.1:${this.loopbackPort}`; }
   get secretsFile() { return path.join(this.dataDir, 'server.json'); }
 
   /** Secrets générés au premier démarrage et conservés (jamais saisis par l'utilisateur). */
@@ -114,6 +118,7 @@ class LocalServer {
       cwd: backend, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'],
       env: this.backendEnv({
         AGRITRACE_MODE: 'local', DATABASE_URL: this.appUrl(), JWT_SECRET: this.secrets().jwtSecret, PORT: String(this.port), ...(this.localOnly ? { HOST: '127.0.0.1' } : {}),
+        ...(this.tls ? { TLS_DIR: path.join(this.dataDir, 'tls'), HTTP_LOOPBACK_PORT: String(this.loopbackPort) } : {}),
         DOCUMENTS_DIR: docs, WEB_DIR: path.join(this.appDir, 'web'), APP_VERSION: this.version ?? '0.1.0', THROTTLE_LIMIT: '600',
       }),
     });
@@ -123,7 +128,12 @@ class LocalServer {
     this.api.on('exit', (code) => { exited = code; if (this.state === 'running') this.state = 'error'; });
     for (let i = 0; i < 120; i++) {
       if (exited !== null) throw new Error(`L'API s'est arrêtée au démarrage (code ${exited})`);
-      try { if ((await fetch(`${this.url}/v1/ready`)).ok) return; } catch { /* pas encore prête */ }
+      try {
+        if ((await fetch(`${this.url}/v1/ready`)).ok) {
+          if (this.tls) this.fingerprint = (await (await fetch(`${this.url}/v1/mode`)).json()).tls_fingerprint ?? null;
+          return;
+        }
+      } catch { /* pas encore prête */ }
       await sleep(500);
     }
     throw new Error("L'API ne répond pas");
@@ -147,7 +157,7 @@ class LocalServer {
     await this.stop();
     try {
       fs.mkdirSync(target, { recursive: true });
-      for (const part of ['pgdata', 'documents', 'server.json']) {
+      for (const part of ['pgdata', 'documents', 'server.json', 'tls']) {
         const from = path.join(this.dataDir, part);
         if (fs.existsSync(from)) fs.cpSync(from, path.join(target, part), { recursive: true });
       }

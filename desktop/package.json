@@ -8,7 +8,7 @@
   "private": true,
   "scripts": {
     "start": "electron .",
-    "test": "node test/orchestration.js && node test/discovery.js",
+    "test": "node test/orchestration.js && node test/discovery.js && node test/tls.js",
     "dist": "electron-builder --win nsis --x64 --publish never",
     "prepare-payload": "node scripts/prepare-payload.js"
   },

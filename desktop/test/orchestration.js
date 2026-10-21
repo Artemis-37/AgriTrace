@@ -17,9 +17,10 @@ const check = (name, cond, extra) => { if (cond) { ok++; console.log('  ✓', na
 const logs = [];
 const port = Number(process.env.TEST_PORT ?? 3150), pgPort = Number(process.env.TEST_PG_PORT ?? 54350);
 const J = (r) => r.json().catch(() => ({}));
+const { probe } = require('../src/discovery');
 
 (async () => {
-  const srv = new LocalServer({ dataDir: data, appDir: app, port, pgPort, log: (m) => logs.push(m) });
+  const srv = new LocalServer({ dataDir: data, appDir: app, port, pgPort, log: (m) => logs.push(m), tls: true });
   const t0 = Date.now();
   await srv.start();
   console.log(`Démarrage à froid : ${((Date.now() - t0) / 1000).toFixed(1)} s`);
@@ -27,6 +28,15 @@ const J = (r) => r.json().catch(() => ({}));
   if (process.env.ONLY_START) { console.log('Serveur vierge laissé actif sur', srv.url); await new Promise(() => {}); }
   const mode = await J(await fetch(srv.url + '/v1/mode'));
   check('mode local, non initialisé', mode.mode === 'local' && mode.initialized === false, mode);
+  console.log('HTTPS sur le réseau local (certificat auto-signé épinglé)');
+  check('empreinte du certificat connue du gestionnaire', /^[0-9a-f]{64}$/.test(srv.fingerprint ?? ''), srv.fingerprint);
+  check('le poste lui-même parle en HTTP sur 127.0.0.1 (port + 1)', srv.url === `http://127.0.0.1:${port + 1}`, srv.url);
+  const lan = await probe(`https://127.0.0.1:${port}`, 5000);
+  check('le port du réseau local répond en HTTPS avec la même empreinte', lan && lan.fp === srv.fingerprint && lan.mode === 'local', lan);
+  check('empreinte attendue différente : serveur refusé', (await probe(`https://127.0.0.1:${port}`, 5000, '00'.repeat(32))) === null);
+  check('HTTP en clair refusé sur le port du réseau local', (await probe(`http://127.0.0.1:${port}`, 3000)) === null);
+  const crt = await fetch(srv.url + '/v1/tls/certificate');
+  check('certificat public téléchargeable (sans clé privée)', crt.ok && (await crt.text()).includes('BEGIN CERTIFICATE'));
   const home = await fetch(srv.url + '/');
   check('le portail est servi par l\'API', home.ok && (await home.text()).includes('<div id="root">'));
   const deep = await fetch(srv.url + '/producteurs');
@@ -48,15 +58,16 @@ const J = (r) => r.json().catch(() => ({}));
 
   console.log('Sauvegarde puis redémarrage');
   const bk = await srv.backup(work);
-  check('sauvegarde créée (base + secrets)', fs.existsSync(path.join(bk, 'pgdata', 'PG_VERSION')) && fs.existsSync(path.join(bk, 'server.json')), bk);
+  check('sauvegarde créée (base + secrets + certificat)', fs.existsSync(path.join(bk, 'pgdata', 'PG_VERSION')) && fs.existsSync(path.join(bk, 'server.json')) && fs.existsSync(path.join(bk, 'tls', 'cert.pem')), bk);
   check('serveur relancé après sauvegarde', srv.state === 'running' && (await fetch(srv.url + '/v1/ready')).ok);
   await srv.stop();
   check('arrêt propre', srv.state === 'stopped' && !(await fetch(srv.url + '/v1/ready').then(() => true).catch(() => false)));
-  const srv2 = new LocalServer({ dataDir: data, appDir: app, port, pgPort, log: (m) => logs.push(m) });
+  const srv2 = new LocalServer({ dataDir: data, appDir: app, port, pgPort, log: (m) => logs.push(m), tls: true });
   const t1 = Date.now();
   await srv2.start();
   console.log(`Redémarrage : ${((Date.now() - t1) / 1000).toFixed(1)} s`);
   const again = await J(await fetch(srv2.url + '/v1/mode'));
+  check('après redémarrage : même certificat (les postes restent associés)', srv2.fingerprint === srv.fingerprint, [srv.fingerprint, srv2.fingerprint]);
   check('après redémarrage : toujours initialisé', again.initialized === true, again);
   const login2 = await J(await fetch(srv2.url + '/v1/auth/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: 'admin@socahi.test', password: 'MotDePasseSolide2026!' }) }));
   const vcs = await J(await fetch(srv2.url + '/v1/value-chains', { headers: { authorization: 'Bearer ' + login2.access_token, 'x-organization-id': orgId } }));

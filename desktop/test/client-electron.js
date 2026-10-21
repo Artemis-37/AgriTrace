@@ -48,7 +48,7 @@ async function quitElectron() {
 }
 
 (async () => {
-  srv = new LocalServer({ dataDir: path.join(work, 'data'), appDir: app, port, pgPort, log: (m) => logs.push(m) });
+  srv = new LocalServer({ dataDir: path.join(work, 'data'), appDir: app, port, pgPort, log: (m) => logs.push(m), tls: true });   // comme en production : HTTPS auto-signé sur le réseau local
   await srv.start();
   const b = await api('POST', '/bootstrap/local', { body: { admin_name: 'Directrice Test', admin_email: 'dir@socahi.test', admin_password: PW, organization_code: 'SOCAHI', organization_name: 'SOCAHI Test' } });
   check('serveur local prêt', b.status === 201, b.body);
@@ -60,7 +60,7 @@ async function quitElectron() {
   check('deuxième utilisateur (autre poste)', !!u2.id && !!t2);
 
   const userData = path.join(work, 'electron-data'); fs.mkdirSync(userData);
-  fs.writeFileSync(path.join(userData, 'config.json'), JSON.stringify({ role: 'client', serverUrl: srv.url, stationName: 'Bureau directrice' }));
+  fs.writeFileSync(path.join(userData, 'config.json'), JSON.stringify({ role: 'client', serverUrl: `https://127.0.0.1:${port}`, serverFp: srv.fingerprint, stationName: 'Bureau directrice' }));
 
   console.log('Poste client : ouverture et connexion (serveur allumé)');
   launch(userData);
@@ -106,6 +106,15 @@ async function quitElectron() {
   check('l\'autre poste voit le message non lu de la directrice', fromDir?.unread === 1, direct.body);
   const dthread = await api('GET', `/messages?with=${fromDir.id}`, { token: t2, org: orgId });
   check('contenu lisible par son destinataire', dthread.body.some((m) => m.body === MSG), dthread.body);
+
+  console.log('Empreinte mémorisée différente (serveur imposteur) : la connexion est refusée');
+  await quitElectron();
+  fs.writeFileSync(path.join(userData, 'config.json'), JSON.stringify({ role: 'client', serverUrl: `https://127.0.0.1:${port}`, serverFp: '00'.repeat(32), stationName: 'Bureau directrice' }));
+  launch(userData);
+  page = await attach();
+  await page.waitForTimeout(5000);
+  const seen = await page.evaluate(async () => { try { const r = await fetch('/v1/mode'); return { status: r.status, offline: r.headers.get('x-agritrace-offline') }; } catch (e) { return { error: String(e) }; } });
+  check('avec une mauvaise empreinte, le serveur n\'est pas joint (503 hors connexion)', seen.status === 503 && seen.offline === '1', seen);
 
   await quitElectron();
   await srv.stop();

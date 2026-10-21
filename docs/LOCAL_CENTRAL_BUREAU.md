@@ -74,6 +74,14 @@ Vérifié automatiquement (CI) : le poste client Electron réel face à un vrai 
 
 **Non vérifié** : l'installateur `.exe` lui-même, le pare-feu Windows, le comportement de PostgreSQL embarqué sous Windows, l'icône (provisoire) et l'absence de signature de code (Windows SmartScreen affichera un avertissement tant que l'installateur n'est pas signé). À essayer sur un vrai poste avant de déployer.
 
+## Chiffrement du réseau local (HTTPS)
+Le poste serveur crée seul un certificat auto-signé (dossier `server/tls`, sauvegardé avec les données) et n'accepte que HTTPS sur le réseau du bureau.
+- Les postes clients se connectent seuls : à la découverte ils retiennent l'**empreinte** du certificat, et refusent ensuite tout serveur d'empreinte différente (même sur le même réseau).
+- « Fichier → Poste et réseau » affiche un **code de sécurité** identique sur le serveur et sur chaque client ; s'ils sont identiques, le poste parle bien à ce serveur. À vérifier une fois, à l'installation, si le réseau n'est pas de confiance.
+- Si le serveur est réinstallé sans restaurer sa sauvegarde, le certificat change : choisir « Changer de rôle » sur chaque poste client pour le réassocier.
+- Navigateur d'un autre ordinateur (déconseillé) : l'adresse https du serveur affiche un avertissement ; télécharger le certificat sur `/v1/tls/certificate` et l'installer comme autorité de confiance pour le supprimer.
+- Poste unique : le serveur n'écoute que sur 127.0.0.1, en HTTP, sans exposition au réseau.
+
 ## Limites connues
 
 * Un seul sens : local → central. Pas de diffusion du central vers les locaux (référentiels communs, par exemple).

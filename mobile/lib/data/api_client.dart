@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 
 import '../config.dart';
+import 'pinned_client.dart';
 import 'session_store.dart';
 
 /// Réponse d'erreur du serveur (HTTP >= 400).
@@ -27,7 +28,7 @@ class NetworkException implements Exception {
 class ApiClient {
   final SessionStore store;
   final http.Client _http;
-  ApiClient(this.store, {http.Client? client}) : _http = client ?? http.Client();
+  ApiClient(this.store, {http.Client? client}) : _http = client ?? createHttpClient();
 
   Uri _uri(String path, [Map<String, String>? q]) => Uri.parse('${Config.apiBase}$path').replace(queryParameters: q);
 

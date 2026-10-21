@@ -35,10 +35,10 @@
   $('go').disabled=true;$('msg').className='msg';$('msg').textContent='Recherche du serveur de la coopérative…';
   let r=await window.agritrace.discover();
   const manual=$('url').value.trim();
-  if(!r.ok&&manual){let u=manual;if(!/^https?:\/\//.test(u))u='http://'+u;if(!/:\d+$/.test(u))u+=':3000';r=await window.agritrace.check(u)}
+  if(!r.ok&&manual){r=await window.agritrace.check(manual)}
   $('go').disabled=false;
   if(!r.ok){$('msg').className='msg bad';$('msg').textContent='Aucun serveur trouvé. Vérifiez que le poste serveur est allumé avec AgriTrace ouvert et que vous êtes sur le même réseau (câble ou Wi-Fi du bureau), puis réessayez.';$('urlbox').querySelector('details').open=false;return}
   $('msg').className='msg good';$('msg').textContent='Serveur de la coopérative trouvé. Connexion…';
-  await window.agritrace.choose({role:'client',serverUrl:r.origin,stationName:station});
+  await window.agritrace.choose({role:'client',serverUrl:r.origin,serverFp:r.fp||undefined,stationName:station});
  };
 </script></body></html>

@@ -1,4 +1,4 @@
-import { BadRequestException, Body, ConflictException, Controller, ForbiddenException, Get, Headers, HttpCode, NotFoundException, Param, ParseUUIDPipe, Post, Req } from '@nestjs/common';
+import { BadRequestException, Body, ConflictException, Controller, ForbiddenException, Get, Headers, HttpCode, NotFoundException, Param, ParseUUIDPipe, Post, Req, Res } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { IsBoolean, IsIn, IsOptional, IsString, Length, Matches } from 'class-validator';
 import { Public, PlatformAdminOnly, RequirePermissions } from '../access/decorators';
@@ -7,6 +7,7 @@ import { AuthService } from '../auth/auth.service';
 import { DbService } from '../db/db.service';
 import { decodePairing, encodePairing, isCentral, isLocal, mode, newSecret, sha256 } from './replication.config';
 import { ReplicationService } from './replication.service';
+import { tlsInfo } from '../ops/tls';
 
 class CreateSiteDto {
   /** Pour rattacher une coopérative déjà installée en local : son identifiant, affiché dans ses réglages de synchronisation. */
@@ -43,7 +44,17 @@ export class ReplicationController {
   @Get('mode')
   async info() {
     const [u] = await this.db.query(`SELECT count(*)::int AS n FROM users WHERE NOT is_platform_admin`);
-    return { mode: mode(), initialized: u.n > 0, schema_version: await this.svc.schemaVersion(), version: process.env.APP_VERSION ?? '0.1.0' };
+    const t = tlsInfo();
+    return { mode: mode(), initialized: u.n > 0, schema_version: await this.svc.schemaVersion(), version: process.env.APP_VERSION ?? '0.1.0', ...(t && { tls: true, tls_fingerprint: t.fingerprint }) };
+  }
+
+  /** Certificat public du serveur (PEM) : pour l'installer sur un navigateur ou un poste qui ne l'épingle pas. Aucune clé privée. */
+  @Public()
+  @Get('tls/certificate')
+  certificate(@Res() res: any) {
+    const t = tlsInfo();
+    if (!t) throw new NotFoundException('Ce serveur n\'utilise pas de certificat local');
+    res.type('application/x-pem-file').set('Content-Disposition', 'attachment; filename="agritrace-serveur.crt"').send(t.cert);
   }
 
   // ---------- Indicateur de connexion (tous les utilisateurs de la coopérative) ----------

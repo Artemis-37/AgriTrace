@@ -2,6 +2,7 @@
 // Principe : le serveur répond sur /v1/mode ; on sonde les adresses du ou des sous-réseaux du poste (port du serveur) et on ne
 // retient que les serveurs AgriTrace. L'adresse trouvée est mémorisée ; si elle change (DHCP), le poste la retrouve seul.
 const os = require('os');
+const { getJson } = require('./secure-fetch');
 
 function localSubnets() {
   const out = [];
@@ -11,24 +12,30 @@ function localSubnets() {
   return out;
 }
 
-async function probe(origin, timeoutMs) {
+/** Sonde un serveur. `pin` : empreinte attendue pour un serveur en HTTPS (un serveur à l'empreinte différente est ignoré). */
+async function probe(origin, timeoutMs, pin = null) {
   try {
-    const r = await fetch(`${origin}/v1/mode`, { signal: AbortSignal.timeout(timeoutMs) });
-    const j = await r.json();
-    return r.ok && j.mode ? { origin, mode: j.mode, version: j.version } : null;
+    const r = await getJson(origin, '/v1/mode', { timeoutMs, pin });
+    const j = r.json;
+    return r.status === 200 && j.mode ? { origin, mode: j.mode, version: j.version, ...(r.fp && { tls: true, fp: r.fp }) } : null;
   } catch { return null; }
 }
 
+/** Sonde une adresse sans connaître le protocole : HTTPS d'abord (serveur de coopérative récent), HTTP ensuite. */
+async function probeHost(host, port, timeoutMs, pin = null) {
+  return (await probe(`https://${host}:${port}`, timeoutMs, pin)) ?? (pin ? null : await probe(`http://${host}:${port}`, timeoutMs));
+}
+
 /** Candidats : dernière adresse connue, ce poste lui-même, puis tout le sous-réseau. Renvoie les serveurs AgriTrace trouvés. */
-async function discover({ port = 3000, known, timeoutMs = 700, extraHosts = [], subnets = localSubnets() } = {}) {
-  if (known) { const k = await probe(known, 1500); if (k) return [k]; }
+async function discover({ port = 3000, known, pin = null, timeoutMs = 700, extraHosts = [], subnets = localSubnets() } = {}) {
+  if (known) { const k = await probe(known, 1500, pin); if (k) return [k]; }
   const hosts = new Set();
-  for (const h of extraHosts) hosts.add(`http://${h}:${port}`);
-  for (const s of subnets) for (let n = 1; n < 255; n++) hosts.add(`http://${s.base}.${n}:${port}`);
+  for (const h of extraHosts) hosts.add(h);
+  for (const s of subnets) for (let n = 1; n < 255; n++) hosts.add(`${s.base}.${n}`);
   const list = [...hosts], found = [];
   let next = 0;
   await Promise.all(Array.from({ length: 64 }, async () => {
-    while (next < list.length) { const r = await probe(list[next++], timeoutMs); if (r) found.push(r); }
+    while (next < list.length) { const r = await probeHost(list[next++], port, timeoutMs, pin); if (r) found.push(r); }
   }));
   return found;
 }
@@ -38,11 +45,11 @@ const dgram = require('dgram');
 const BEACON_PORT = 8099, ASK = 'AGRITRACE?';
 
 /** Côté serveur : répond aux demandes des postes clients avec son port. Renvoie une fonction d'arrêt. */
-function startBeacon({ port = 3000, name = 'Serveur', beaconPort = BEACON_PORT } = {}) {
+function startBeacon({ port = 3000, name = 'Serveur', beaconPort = BEACON_PORT, tls = false } = {}) {
   const sock = dgram.createSocket({ type: 'udp4', reuseAddr: true });
   sock.on('message', (msg, rinfo) => {
     if (msg.toString() !== ASK) return;
-    sock.send(Buffer.from(JSON.stringify({ app: 'agritrace', port, name })), rinfo.port, rinfo.address);
+    sock.send(Buffer.from(JSON.stringify({ app: 'agritrace', port, name, ...(tls && { tls: true }) })), rinfo.port, rinfo.address);
   });
   sock.on('error', () => { try { sock.close(); } catch { /* ignoré */ } });
   sock.bind(beaconPort);
@@ -56,7 +63,7 @@ function findByBeacon({ beaconPort = BEACON_PORT, waitMs = 1500, targets = ['255
     const sock = dgram.createSocket('udp4');
     sock.on('error', () => resolve([]));
     sock.on('message', (msg, rinfo) => {
-      try { const j = JSON.parse(msg.toString()); if (j.app === 'agritrace') found.set(`http://${rinfo.address}:${j.port}`, { origin: `http://${rinfo.address}:${j.port}`, name: j.name }); } catch { /* autre service */ }
+      try { const j = JSON.parse(msg.toString()); if (j.app === 'agritrace') { const origin = `${j.tls ? 'https' : 'http'}://${rinfo.address}:${j.port}`; found.set(origin, { origin, name: j.name }); } } catch { /* autre service */ }
     });
     sock.bind(0, () => {
       try { sock.setBroadcast(true); } catch { /* ignoré */ }
@@ -70,9 +77,9 @@ function findByBeacon({ beaconPort = BEACON_PORT, waitMs = 1500, targets = ['255
 async function findServer(opts = {}) {
   const viaBeacon = await findByBeacon(opts.beacon);
   const checked = [];
-  for (const b of viaBeacon) { const r = await probe(b.origin, 1500); if (r) checked.push(r); }
+  for (const b of viaBeacon) { const r = await probe(b.origin, 1500, opts.pin ?? null); if (r) checked.push(r); }
   if (checked.length) return checked;
   return discover(opts);
 }
 
-module.exports = { discover, probe, localSubnets, startBeacon, findByBeacon, findServer, BEACON_PORT };
+module.exports = { discover, probe, probeHost, localSubnets, startBeacon, findByBeacon, findServer, BEACON_PORT };

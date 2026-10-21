@@ -1,13 +1,14 @@
 // Application de bureau AgriTrace (Windows). Deux rôles, choisis au premier lancement :
 //   - « server » : ce poste héberge le serveur de la coopérative (PostgreSQL embarqué + API + portail), accessible aux autres postes du réseau local ;
 //   - « client » : ce poste affiche le portail d'un serveur déjà installé ailleurs (serveur local de la coopérative, ou serveur central).
-const { app, BrowserWindow, Menu, Tray, dialog, ipcMain, shell, nativeImage, protocol, net } = require('electron');
+const { app, BrowserWindow, Menu, Tray, dialog, ipcMain, shell, nativeImage, protocol, net, session } = require('electron');
 const { pathToFileURL } = require('url');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { LocalServer } = require('./server-manager');
-const { discover, findServer, startBeacon } = require('./discovery');
+const { discover, findServer, startBeacon, probe, probeHost } = require('./discovery');
+const { electronFingerprintToHex, securityCode } = require('./secure-fetch');
 
 const PORT = 3000;
 let stopBeacon = null, cfg = null, server = null, win = null, tray = null, quitting = false;
@@ -46,6 +47,20 @@ function registerClientProtocol() {
   });
 }
 
+// Serveur de coopérative en HTTPS (certificat auto-signé) : on ne valide pas une autorité mais l'EMPREINTE mémorisée à l'association.
+// Aucun autre certificat invalide n'est accepté, et un serveur à l'empreinte différente est refusé (cfg.serverFp).
+function installCertificatePinning() {
+  session.defaultSession.setCertificateVerifyProc((req, callback) => {
+    try {
+      if (cfg?.serverFp && cfg.serverUrl) {
+        const host = new URL(cfg.serverUrl).hostname;
+        if (req.hostname === host && electronFingerprintToHex(req.certificate.fingerprint) === cfg.serverFp) return callback(0);
+      }
+    } catch { /* on retombe sur la vérification normale */ }
+    callback(-3);   // décision de Chromium : un certificat auto-signé non épinglé est refusé
+  });
+}
+
 // Retrouve le serveur sur le réseau local et met à jour l'adresse mémorisée. Au plus une recherche à la fois, et une toutes les 20 s.
 let finding = null, lastFind = 0;
 async function refindServer() {
@@ -53,10 +68,13 @@ async function refindServer() {
   if (Date.now() - lastFind < 20000) return false;
   lastFind = Date.now();
   finding = (async () => {
-    const found = await findServer({ port: PORT, known: cfg?.serverUrl });
-    const best = found.find((f) => f.mode === 'local') ?? found[0];
-    if (!best) return false;
-    if (best.origin !== cfg.serverUrl) { log(`serveur retrouvé à une nouvelle adresse (${best.origin})`); saveCfg({ ...cfg, serverUrl: best.origin }); }
+    const found = await findServer({ port: PORT, known: cfg?.serverUrl, pin: cfg?.serverFp ?? null });
+    // Poste déjà associé à un serveur en HTTPS : seul le serveur à la même empreinte est accepté (jamais un autre, même sur le même réseau).
+    const ok = found.filter((f) => !cfg?.serverFp || f.fp === cfg.serverFp);
+    const best = ok.find((f) => f.mode === 'local') ?? ok[0];
+    if (!best) { if (found.length) log('un serveur répond mais son empreinte diffère de celle mémorisée : refusé'); return false; }
+    // Premier passage d'un serveur qui passe en HTTPS : on retient son empreinte (association automatique).
+    if (best.origin !== cfg.serverUrl || (best.fp && best.fp !== cfg.serverFp)) { log(`serveur retrouvé (${best.origin})`); saveCfg({ ...cfg, serverUrl: best.origin, ...(best.fp && { serverFp: best.fp }) }); }
     return true;
   })().finally(() => { finding = null; });
   return finding;
@@ -114,9 +132,11 @@ async function backupNow() {
 async function showNetwork() {
   const ROLE = { single: 'Poste unique — les données restent sur cet ordinateur, aucun autre poste ne peut s\'y connecter.', server: 'Serveur — héberge les données et accepte les postes clients du réseau du bureau.', client: 'Poste client — se connecte au serveur de la coopérative ; ne garde pas les données.' };
   let detail = '';
+  if (server?.fingerprint) detail = `Connexion chiffrée (HTTPS) active. Code de sécurité de ce serveur : ${securityCode(server.fingerprint)}\nIl s'affiche aussi sur chaque poste client ; s'ils sont identiques, le poste parle bien à ce serveur.\n`;
   if (cfg?.role === 'client') {
-    const r = await findServer({ port: PORT, known: cfg.serverUrl }).catch(() => []);
-    detail = r.length ? 'Serveur de la coopérative : trouvé et joignable.' : 'Serveur de la coopérative : introuvable pour le moment (le poste continue en mode hors connexion).';
+    if (cfg.serverFp) detail += `Connexion chiffrée (HTTPS). Code de sécurité du serveur mémorisé : ${securityCode(cfg.serverFp)}\n`;
+    const r = await findServer({ port: PORT, known: cfg.serverUrl, pin: cfg.serverFp ?? null }).catch(() => []);
+    detail += r.length ? 'Serveur de la coopérative : trouvé et joignable.' : 'Serveur de la coopérative : introuvable pour le moment (le poste continue en mode hors connexion).';
   }
   const choice = await dialog.showMessageBox({ title: 'Poste et réseau', message: `Poste « ${cfg?.stationName ?? ''} »`, detail: `${ROLE[cfg?.role] ?? ''}\n${detail}`, buttons: cfg?.role === 'client' ? ['Fermer', 'Rechercher le serveur'] : ['Fermer'], cancelId: 0 });
   if (choice.response === 1) { lastFind = 0; const ok = await refindServer(); dialog.showMessageBox({ message: ok ? 'Serveur trouvé et connecté.' : 'Aucun serveur trouvé sur le réseau.', detail: ok ? '' : 'Vérifiez que le poste serveur est allumé avec AgriTrace ouvert, sur le même réseau.' }); if (ok) win?.reload(); }
@@ -134,7 +154,7 @@ async function startServerRole() {
   const splash = new BrowserWindow({ width: 460, height: 260, frame: false, resizable: false, alwaysOnTop: true, webPreferences: { contextIsolation: true } });
   splash.loadFile(page('splash.html'));
   const single = cfg.role === 'single';
-  server = new LocalServer({ dataDir: path.join(app.getPath('userData'), 'server'), appDir: appDir(), port: PORT, nodeBin: process.execPath, log, localOnly: single });
+  server = new LocalServer({ dataDir: path.join(app.getPath('userData'), 'server'), appDir: appDir(), port: PORT, nodeBin: process.execPath, log, localOnly: single, tls: !single });
   server.version = app.getVersion();
   try {
     await server.start();
@@ -146,7 +166,7 @@ async function startServerRole() {
     app.exit(1); return;
   }
   splash.close();
-  if (!single) stopBeacon = startBeacon({ port: PORT, name: cfg.stationName ?? 'Serveur' });   // les postes clients trouvent ce serveur seuls
+  if (!single) stopBeacon = startBeacon({ port: PORT, name: cfg.stationName ?? 'Serveur', tls: !!server.fingerprint });   // les postes clients trouvent ce serveur seuls
   tray = new Tray(nativeImage.createFromPath(path.join(__dirname, '..', 'build', 'icon.png')).resize({ width: 16, height: 16 }));
   tray.setToolTip('AgriTrace — serveur actif');
   tray.setContextMenu(Menu.buildFromTemplate([
@@ -171,21 +191,23 @@ async function main() {
     buildMenu();
   }
   if (cfg.role === 'server' || cfg.role === 'single') await startServerRole();
-  else { registerClientProtocol(); mainWindow('agritrace://app/'); refindServer().catch(() => undefined); }
+  else { installCertificatePinning(); registerClientProtocol(); mainWindow('agritrace://app/'); refindServer().catch(() => undefined); }
 }
 
 ipcMain.handle('setup:check', async (_e, url) => {
   try {
-    const u = new URL(url);
-    const r = await fetch(`${u.origin}/v1/mode`, { signal: AbortSignal.timeout(6000) });
-    const j = await r.json();
-    return { ok: r.ok && !!j.mode, mode: j.mode, version: j.version, origin: u.origin };
+    // Adresse saisie à la main (cas rare) : avec ou sans protocole ; HTTPS d'abord, HTTP ensuite.
+    const raw = /^https?:\/\//.test(url) ? url : `//${url}`;
+    const u = new URL(raw, 'http://x');
+    const port = u.port || PORT;
+    const r = /^https?:\/\//.test(url) ? await probe(`${u.protocol}//${u.hostname}:${port}`, 6000) : await probeHost(u.hostname, port, 6000);
+    return r ? { ok: true, mode: r.mode, version: r.version, origin: r.origin, fp: r.fp } : { ok: false, error: 'Aucun serveur AgriTrace à cette adresse' };
   } catch (e) { return { ok: false, error: e.message }; }
 });
 ipcMain.handle('setup:discover', async () => {
   const found = await findServer({ port: PORT });
   const best = found.find((f) => f.mode === 'local') ?? found[0];
-  return best ? { ok: true, mode: best.mode, origin: best.origin, count: found.length } : { ok: false };
+  return best ? { ok: true, mode: best.mode, origin: best.origin, fp: best.fp, count: found.length } : { ok: false };
 });
 ipcMain.handle('app:retry', async (_e, url) => { await refindServer(); win?.loadURL(url); });
 ipcMain.on('app:station', (e) => { e.returnValue = cfg?.stationName ?? 'Poste'; });

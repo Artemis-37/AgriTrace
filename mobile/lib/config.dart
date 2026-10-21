@@ -3,6 +3,10 @@
 /// (10.0.2.2 = machine hôte vue depuis l'émulateur Android)
 class Config {
   static const apiBase = String.fromEnvironment('API_BASE', defaultValue: 'http://10.0.2.2:3000/v1');
+  /// Serveur de coopérative en HTTPS avec certificat auto-signé : empreinte SHA-256 du certificat (hexadécimal, 64 caractères), affichée par le
+  /// serveur (Poste et réseau). Vide = certificat classique vérifié par Android. Exemple :
+  ///   flutter build apk --dart-define=API_BASE=https://192.168.1.10:3000/v1 --dart-define=API_CERT_SHA256=ab12...
+  static const apiCertSha256 = String.fromEnvironment('API_CERT_SHA256', defaultValue: '');
   static const syncIntervalMinutes = 2;
   static const batchSize = 50;
 }

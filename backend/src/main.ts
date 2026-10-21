@@ -6,14 +6,19 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import * as path from 'path';
 import { AppModule } from './app.module';
+import * as http from 'http';
 import { requestMiddleware } from './ops/metrics';
+import { ensureCertificate } from './ops/tls';
 
 async function bootstrap() {
   if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 24)
     throw new Error('JWT_SECRET manquant ou trop court (24 caractères minimum)');
   if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL manquant');
 
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  // TLS sur le réseau local : TLS_DIR = dossier du certificat auto-signé (créé au premier démarrage). Les postes l'épinglent par son empreinte.
+  // HTTP_LOOPBACK_PORT : port HTTP réservé à ce poste (127.0.0.1) pour l'application elle-même, sa surveillance et ses tests.
+  const tls = process.env.TLS_DIR ? ensureCertificate(process.env.TLS_DIR) : null;
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, tls ? { httpsOptions: { key: tls.key, cert: tls.cert } } : {});
   // Derrière un reverse proxy (nginx, équilibreur) : TRUST_PROXY=1 pour que l'adresse IP réelle serve au limiteur de débit et à l'audit.
   if (process.env.TRUST_PROXY) (app.getHttpAdapter().getInstance() as any).set('trust proxy', Number(process.env.TRUST_PROXY) || process.env.TRUST_PROXY);
   // Le central reçoit des lots (lignes + pièces jointes) bien plus gros qu'une requête ordinaire.
@@ -47,6 +52,10 @@ async function bootstrap() {
     app.useStaticAssets(webDir, { index: false, maxAge: '1h' });
     // Toute adresse du portail (hors API) renvoie la page d'accueil : le routage se fait dans le navigateur.
     (app.getHttpAdapter().getInstance() as any).get(/^\/(?!v1(\/|$)).*/, (_req: any, res: any) => res.sendFile(path.join(webDir, 'index.html')));
+  }
+  if (tls && process.env.HTTP_LOOPBACK_PORT) {
+    await app.init();
+    http.createServer(app.getHttpAdapter().getInstance()).listen(Number(process.env.HTTP_LOOPBACK_PORT), '127.0.0.1');
   }
   // HOST=127.0.0.1 : poste unique, non joignable depuis le réseau. Sans HOST : accessible aux autres postes.
   if (process.env.HOST) await app.listen(Number(process.env.PORT ?? 3000), process.env.HOST);
