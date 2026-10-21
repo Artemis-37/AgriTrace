@@ -66,10 +66,16 @@ export class ProducerAssignmentsController {
 
   /** Éléments ajoutés au profil d'un producteur (ou liste des affectations avec leur avancement). */
   @Get()
-  async list(@Req() req: any, @Query('producer_id') producerId?: string) {
+  async list(@Req() req: any, @Query('producer_id') producerId?: string, @Query('mine') mine?: string) {
     const p = req.org.permissions;
     if (!['training:assign', 'training:report', 'training:read', 'producers:read'].some((x) => p.has(x))) throw new ForbiddenException('Droit insuffisant');
     if (producerId && !/^[0-9a-f-]{36}$/i.test(producerId)) throw new BadRequestException('producer_id invalide');
+    if (mine === '1') {
+      // Copie pour le travail hors connexion : tous les éléments ajoutés aux profils (à plat, avec le producteur).
+      return this.db.tx(req.org.id, async (c) => (await c.query(
+        `SELECT t.id AS target_id, t.producer_id, t.status, t.done_at, a.id, a.kind, a.title, a.instructions, a.due_date, a.created_at
+         FROM producer_assignment_targets t JOIN producer_assignments a ON a.id = t.assignment_id ORDER BY a.created_at DESC LIMIT 5000`)).rows);
+    }
     return this.db.tx(req.org.id, async (c) => producerId
       ? (await c.query(
         `SELECT t.id AS target_id, t.status, t.done_at, a.id, a.kind, a.scope, a.title, a.instructions, a.due_date, a.module_id, a.created_at

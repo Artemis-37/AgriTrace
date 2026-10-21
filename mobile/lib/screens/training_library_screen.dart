@@ -379,7 +379,7 @@ class _TrainingResultScreenState extends State<TrainingResultScreen> {
       _error = null;
     });
     try {
-      await services.api.post('/training-results', {
+      await services.repo.queueOp('training_result.create', {
         'module_id': widget.module['id'],
         'session_date': _iso(_date),
         'village': _village.text.trim(),
@@ -389,7 +389,8 @@ class _TrainingResultScreenState extends State<TrainingResultScreen> {
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Résultats envoyés à l\'ADG.')));
+            const SnackBar(content: Text('Résultats conservés sur l\'appareil, envoyés à l\'Administrateur de groupe à la synchronisation.')));
+        services.sync.run();
         Navigator.of(context).pop(true);
       }
     } on NetworkException {

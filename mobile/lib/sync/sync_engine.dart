@@ -137,10 +137,30 @@ class SyncEngine {
   Future<void> _pullTasks() async {
     try {
       final r = await api.get('/tasks');
-      await db.setKv('tasks_cache', jsonEncode(r));
+      await _keepLocalChanges('tasks_cache', 'id', r as List<dynamic>, {'task.start': 'in_progress', 'task.submit': 'submitted'}, 'status');
     } on ApiException catch (e) {
       if (e.status == 401) rethrow; // droit « tâches » absent (403) ou autre : sans effet sur le reste
     }
+    try {
+      final a = await api.get('/producer-assignments', query: {'mine': '1'});
+      await _keepLocalChanges('assignments_cache', 'target_id', a as List<dynamic>, {'producer_assignment.done': 'done'}, 'status');
+    } on ApiException catch (e) {
+      if (e.status == 401) rethrow;
+    }
+  }
+
+  /// Copie du serveur, en gardant l'effet des actions faites hors connexion et pas encore envoyées (elles ne disparaissent pas de l'écran).
+  Future<void> _keepLocalChanges(String kvKey, String idField, List<dynamic> rows, Map<String, String> opToValue, String field) async {
+    final ops = await db.raw.query('outbox', where: "status IN ('pending','pending_validation')");
+    for (final o in ops) {
+      final v = opToValue[o['op_type']];
+      if (v == null) continue;
+      Map<String, dynamic> p = {};
+      try { p = jsonDecode(o['payload'] as String) as Map<String, dynamic>; } catch (_) { continue; }
+      final id = p['id'];
+      for (final r in rows) { if (r is Map && r[idField] == id) r[field] = v; }
+    }
+    await db.setKv(kvKey, jsonEncode(rows));
   }
 
   Future<void> _pull() async {

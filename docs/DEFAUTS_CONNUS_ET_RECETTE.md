@@ -56,4 +56,4 @@ Méthode : relecture des 38 sections, puis tests rejoués (et non reportés de l
 - Remarque : les fonctions « infrastructures sociales, formations, distribution et services », modèles de saisie et logo de coopérative dépassent le cahier des charges (demandes ultérieures) ; elles n'ont pas de section dans le CDC.
 
 
-**Connexion mobile et synchronisation (21/10)** : logo AgriTrace sans fond sur les pages de connexion (portail, poste, mobile) ; synchronisation lancée à la connexion mobile avec icône animée. Limite : les tâches sont copiées en lecture seule hors connexion (changement d'état = réseau) ; non testé sur appareil réel.
+**Connexion mobile et synchronisation (21/10)** : logo AgriTrace sans fond sur les pages de connexion ; synchronisation lancée à la connexion mobile avec icône animée ; travail hors connexion sur missions (démarrer, saisie, photo, soumettre), éléments du profil (fait) et résultats de formation, envoyés à la synchronisation (testé côté serveur : 36 contrôles). Limites : le serveur peut refuser une action rejouée (ex. mission annulée entre-temps) ; non testé sur appareil réel ; les nouvelles tâches n'arrivent qu'à la synchronisation.

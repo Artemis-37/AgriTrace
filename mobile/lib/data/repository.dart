@@ -213,6 +213,28 @@ class Repository {
     return id;
   }
 
+  /// Opération simple conservée sur l'appareil et envoyée à la synchronisation (idempotente).
+  Future<void> queueOp(String type, Map<String, Object?> payload, {String? entityId}) async {
+    final key = 'op-${_uuid.v4()}';
+    await db.raw.insert('outbox', {'idempotency_key': key, 'op_type': type, 'payload': jsonEncode(payload), 'entity_id': entityId ?? key, 'created_at': DateTime.now().toIso8601String()});
+  }
+
+  /// Copies des tâches et des éléments ajoutés aux profils, mises à jour à chaque synchronisation.
+  Future<List<dynamic>> _cache(String k) async {
+    final raw = await db.getKv(k);
+    if (raw == null) return [];
+    try { return jsonDecode(raw) as List<dynamic>; } catch (_) { return []; }
+  }
+  Future<List<dynamic>> cachedTasks() => _cache('tasks_cache');
+  Future<List<dynamic>> cachedAssignments() => _cache('assignments_cache');
+  Future<void> _patch(String k, String idField, Object id, Map<String, Object?> changes) async {
+    final rows = await _cache(k);
+    for (final r in rows) { if (r is Map && r[idField] == id) r.addAll(changes); }
+    await db.setKv(k, jsonEncode(rows));
+  }
+  Future<void> patchCachedTask(Object id, Map<String, Object?> changes) => _patch('tasks_cache', 'id', id, changes);
+  Future<void> patchCachedAssignment(Object targetId, Map<String, Object?> changes) => _patch('assignments_cache', 'target_id', targetId, changes);
+
   /// Infrastructure sociale, formation ou distribution enregistrée sur le terrain (envoi idempotent). Renvoie l'identifiant du dossier.
   Future<String> queueFieldRecord({required String kind, required String title, double? latitude, double? longitude, required Map<String, Object?> data}) async {
     final id = _uuid.v4();
@@ -240,6 +262,11 @@ class Repository {
         case 'parcel.update': label = 'Nouveau tracé de parcelle'; break;
         case 'purchase_declaration.create': label = 'Achat'; break;
         case 'convoy.create': label = 'Convoi'; detail = '${p['convoy_no'] ?? ''}'; break;
+        case 'task.start': label = 'Mission démarrée'; break;
+        case 'task.submit': label = 'Mission soumise'; break;
+        case 'task.entry': label = 'Saisie de mission'; detail = '${p['content'] ?? p['kind'] ?? ''}'; break;
+        case 'producer_assignment.done': label = 'Élément du profil marqué fait'; break;
+        case 'training_result.create': label = 'Résultats de formation'; detail = '${p['village'] ?? ''}'; break;
         default: label = t;
       }
       out.add((label: label, detail: detail, state: o['status'] as String, error: o['error'] as String?));

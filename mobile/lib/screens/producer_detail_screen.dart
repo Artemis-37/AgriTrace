@@ -59,18 +59,26 @@ class _ProducerDetailScreenState extends State<ProducerDetailScreen> {
         final a = await services.api.get('/producer-assignments?producer_id=${widget.producer['id']}') as List<dynamic>;
         if (mounted) setState(() => _assigned = a);
       } catch (_) {}
+      await _applyLocalAssignments();
     } catch (_) {
       // Hors connexion : tâches copiées lors de la dernière synchronisation.
       try {
-        final raw = await services.db.getKv('tasks_cache');
-        if (raw != null) {
-          final all = (jsonDecode(raw) as List).where((t) => t['producer_id'] == widget.producer['id'] && !['closed', 'cancelled'].contains(t['status'])).toList();
+        {
+          final all = (await services.repo.cachedTasks()).where((t) => t['producer_id'] == widget.producer['id'] && !['closed', 'cancelled'].contains(t['status'])).toList();
+          await _applyLocalAssignments();
           if (mounted) setState(() { _tasks = all; _taskError = null; _msg = 'Hors connexion : tâches de la dernière synchronisation.'; });
           return;
         }
       } catch (_) {}
       if (mounted) setState(() => _taskError = 'Les tâches demandent le réseau. Réessayez en ligne.');
     }
+  }
+
+  /// Éléments du profil : copie de la dernière synchronisation (avec les « fait » encore en attente d'envoi).
+  Future<void> _applyLocalAssignments() async {
+    final all = await services.repo.cachedAssignments();
+    final mine = all.where((a) => a['producer_id'] == widget.producer['id']).toList();
+    if (mounted && (mine.isNotEmpty || _assigned.isEmpty)) setState(() => _assigned = mine);
   }
 
   Future<void> _survey([Map<String, Object?>? existing]) async {
@@ -178,8 +186,10 @@ class _ProducerDetailScreenState extends State<ProducerDetailScreen> {
               isThreeLine: (a['instructions'] ?? '').toString().isNotEmpty,
               trailing: a['status'] == 'done' ? const Icon(Icons.check_circle_outline, size: 28)
                   : (_canDone ? TextButton(onPressed: () async {
-                      try { await services.api.post('/producer-assignments/targets/${a['target_id']}/done', {}); } catch (_) { if (mounted) setState(() => _msg = 'Action disponible en ligne uniquement. Réessayez avec du réseau.'); }
-                      _loadTasks();
+                      await services.repo.queueOp('producer_assignment.done', {'id': a['target_id']});
+                      await services.repo.patchCachedAssignment(a['target_id'] as Object, {'status': 'done'});
+                      if (mounted) setState(() { a['status'] = 'done'; _msg = 'Marqué fait sur l\'appareil, envoyé à la synchronisation.'; });
+                      services.sync.run();
                     }, child: const Text('Fait')) : null),
             ))),
         ],

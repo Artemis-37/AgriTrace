@@ -67,13 +67,16 @@ class _MissionScreenState extends State<MissionScreen> {
     try { await fn(); } on ApiException catch (e) { setState(() => _msg = e.message); } on NetworkException { setState(() => _msg = 'Action impossible sans réseau.'); } finally { if (mounted) setState(() => _busy = false); }
   }
 
+  /// Tout est d'abord conservé sur l'appareil, puis envoyé à la synchronisation (avec ou sans réseau au moment de l'action).
   Future<void> _move(String to) => _run(() async {
-        final r = await services.api.post('/tasks/${_t['id']}/transition', {'to': to});
-        setState(() { _t = {..._t, ...Map<String, dynamic>.from(r as Map)}; _msg = 'Mission : ${_status[_t['status']] ?? _t['status']}.'; });
+        await services.repo.queueOp(to == 'in_progress' ? 'task.start' : 'task.submit', {'id': _t['id']});
+        await services.repo.patchCachedTask(_t['id'] as Object, {'status': to});
+        setState(() { _t = {..._t, 'status': to}; _msg = 'Mission : ${_status[to] ?? to}. Conservé sur l\'appareil, envoyé à la synchronisation.'; });
+        services.sync.run();
       });
 
   Future<void> _entry() => _run(() async {
-        final body = <String, Object>{'idempotency_key': const Uuid().v4(), 'kind': _kind};
+        final body = <String, Object>{'task_id': _t['id'] as String, 'idempotency_key': const Uuid().v4(), 'kind': _kind};
         if (_kind == 'gps') {
           final la = double.tryParse(_lat.text.replaceAll(',', '.')), lo = double.tryParse(_lon.text.replaceAll(',', '.'));
           if (la == null || lo == null) { setState(() => _msg = 'Latitude et longitude requises.'); return; }
@@ -82,19 +85,19 @@ class _MissionScreenState extends State<MissionScreen> {
           if (_text.text.trim().isEmpty) { setState(() => _msg = 'Saisissez un texte.'); return; }
           body['content'] = _text.text.trim();
         }
-        await services.api.post('/tasks/${_t['id']}/entries', body);
+        await services.repo.queueOp('task.entry', body);
         _text.clear(); _lat.clear(); _lon.clear();
-        setState(() => _msg = 'Saisie enregistrée.');
+        setState(() => _msg = 'Saisie conservée sur l\'appareil, envoyée à la synchronisation.');
+        services.sync.run();
       });
 
-  /// Photo d'une mission (preuve de réalisation) : envoyée tout de suite, comme le reste de la mission (réseau nécessaire).
+  /// Photo d'une mission (preuve de réalisation) : conservée sur l'appareil, envoyée dès que le réseau le permet.
   Future<void> _photo() => _run(() async {
         final path = await takePhotoPath();
         if (path == null) { setState(() => _msg = 'Aucune photo prise.'); return; }
-        await services.api.upload('/documents', filePath: path, filename: 'photo.jpg', fields: {
-          'subject_type': 'task', 'subject_id': _t['id'] as String, 'kind': 'Photo de la mission', 'client_key': 'photo-${const Uuid().v4()}',
-        });
-        setState(() => _msg = 'Photo envoyée.');
+        await services.repo.queuePhoto(subjectType: 'task', subjectId: _t['id'] as String, kind: 'Photo de la mission', sourcePath: path);
+        setState(() => _msg = 'Photo conservée sur l\'appareil, envoyée dès que le réseau le permet.');
+        services.sync.run();
       });
 
   @override
