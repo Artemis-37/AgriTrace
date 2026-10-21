@@ -316,7 +316,7 @@ export class ConvoysController {
       const tx = (await c.query(
         `INSERT INTO financial_transactions(organization_id, idempotency_key, account_id, direction, amount, currency, reason, reference_type, reference_id, created_by)
          VALUES ($1,$2,$3,'in',$4,$5,$6,'convoy_reception',$7,$8) RETURNING id`,
-        [req.org.id, 'convoy-' + b.idempotency_key, acc.id, amt, acc.currency, `Convoi ${v.convoy_no} : ${r.total_kg} kg × ${b.unit_price}`, r.id, req.user.id])).rows[0];
+        [req.org.id, 'convoy-' + b.idempotency_key + (r.settle_attempts ? ':' + r.settle_attempts : ''), acc.id, amt, acc.currency, `Convoi ${v.convoy_no} : ${r.total_kg} kg × ${b.unit_price}`, r.id, req.user.id])).rows[0];
       await c.query(`INSERT INTO accounting_accounts(organization_id, code, label) VALUES ($1,'4781','Retenues sur règlements des collecteurs') ON CONFLICT DO NOTHING`, [req.org.id]);
       const lines: any[] = [{ code: '601', debit: m.gross }];
       if (Number(m.transport) > 0) lines.push({ code: '605', debit: m.transport, label: 'Transport' });
@@ -324,13 +324,13 @@ export class ConvoysController {
       if (Number(m.retention) > 0) lines.push({ code: '4781', credit: m.retention, label: 'Retenue' });
       await postEntry(c, {
         orgId: req.org.id, userId: req.user.id, journal: 'ACH', date: today(), label: `Achat convoi ${v.convoy_no} — ${u.full_name}`,
-        lines, idempotencyKey: 'convoy-entry:' + r.id, referenceType: 'convoy_reception', referenceId: r.id,
+        lines, idempotencyKey: 'convoy-entry:' + r.id + (r.settle_attempts ? ':' + r.settle_attempts : ''), referenceType: 'convoy_reception', referenceId: r.id,
       });
       let nettingNo: string | null = null;
       if (netted > 0) nettingNo = (await postEntry(c, {
         orgId: req.org.id, userId: req.user.id, journal: 'OD', date: today(), label: `Netting avances / dettes — convoi ${v.convoy_no} — ${u.full_name}`,
         lines: [{ code: acc.accounting_code ?? '401', debit: String(netted), label: 'Dette compensée' }, { code: '409', credit: String(netted), label: 'Avance imputée' }],
-        idempotencyKey: 'convoy-netting:' + r.id, referenceType: 'convoy_reception', referenceId: r.id,
+        idempotencyKey: 'convoy-netting:' + r.id + (r.settle_attempts ? ':' + r.settle_attempts : ''), referenceType: 'convoy_reception', referenceId: r.id,
       })).number;
       const upd = (await c.query(
         `UPDATE convoy_receptions SET status = 'settled', unit_price = $2, amount = $3, tx_id = $4, settled_by = $5, settled_at = now(),

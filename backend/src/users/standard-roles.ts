@@ -4,13 +4,19 @@ export const STANDARD_ROLES: Record<string, { name: string; description: string;
   magasinier: {
     name: 'Magasinier',
     description: 'Réceptionne et pèse les convois au magasin central, tient les stocks et l\'inventaire.',
-    permissions: ['convoys:read', 'convoys:receive', 'warehouses:read', 'lots:read', 'receipts:create', 'stock:move', 'stock:count', 'messages:use', 'sync:use'],
+    permissions: ['convoys:read', 'convoys:receive', 'warehouses:read', 'lots:read', 'receipts:create', 'stock:move', 'stock:count', 'cancellations:request', 'messages:use', 'sync:use'],
     hidden: ['Conformité / qualité', 'Cartographie', 'Caisse et comptabilité', 'Finances', 'Équipe', 'Missions', 'Préfinancement'],
   },
   caissier: {
     name: 'Caissier',
     description: 'Traite les convois reçus, règle les collecteurs, tient la caisse et les comptes des collecteurs.',
-    permissions: ['convoys:read', 'convoys:settle', 'cash:operate', 'finance:read', 'accounting:read', 'messages:use', 'sync:use'],
+    permissions: ['convoys:read', 'convoys:settle', 'cash:operate', 'finance:read', 'accounting:read', 'cancellations:request', 'messages:use', 'sync:use'],
+    hidden: ['Cartographie', 'Conformité / qualité', 'Équipe', 'Missions', 'Stocks'],
+  },
+  comptable: {
+    name: 'Comptable',
+    description: 'Passe et consulte les écritures comptables, suit les comptes financiers ; peut demander l\'annulation de ses écritures.',
+    permissions: ['accounting:read', 'accounting:post', 'finance:read', 'convoys:read', 'cancellations:request', 'messages:use', 'sync:use'],
     hidden: ['Cartographie', 'Conformité / qualité', 'Équipe', 'Missions', 'Stocks'],
   },
   collecteur: {
