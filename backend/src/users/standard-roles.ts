@@ -86,6 +86,12 @@ export const STANDARD_ROLES: Record<string, { name: string; description: string;
     permissions: ['buyers:read', 'invoices:read', 'documents:read', 'certificates:read', 'messages:use'],
     hidden: ['Tout sauf ses commandes, expéditions et documents'],
   },
+  exportateur: {
+    name: 'Exportateur (partenaire)',
+    description: 'Partenaire exportateur : propose des modules de formation à l\'ADG et reçoit, par l\'ADG, les résultats obtenus par les coachs sur ces modules.',
+    permissions: ['training:propose', 'messages:use'],
+    hidden: ['Tout sauf ses propositions de modules et les résultats que l\'ADG lui a transmis'],
+  },
   collecteur: {
     mobileOnly: true,
     name: 'Collecteur (délégué)',
@@ -97,7 +103,7 @@ export const STANDARD_ROLES: Record<string, { name: string; description: string;
     name: 'Administrateur de groupe (ADG)',
     description: 'Responsable de la conformité et de la certification : suit les certificats, les inspections et la qualité, contrôle et vérifie les parcelles, met en place les missions des coachs et décide de leurs demandes.',
     permissions: [
-      'training:read', 'training:manage', 'certificates:read', 'certificates:manage', 'inspections:read', 'inspections:perform', 'quality:read', 'quality:manage', 'alerts:read', 'notifications:scan',
+      'training:read', 'training:manage', 'training:forward', 'certificates:read', 'certificates:manage', 'inspections:read', 'inspections:perform', 'quality:read', 'quality:manage', 'alerts:read', 'notifications:scan',
       'parcels:read', 'parcels:control', 'parcels:verify', 'geo:anomalies', 'geo:layers', 'geo:export', 'documents:read', 'documents:upload', 'documents:sensitive',
       'tasks:read', 'tasks:read_all', 'tasks:create', 'tasks:update', 'tasks:assign', 'tasks:review', 'tasks:close', 'tasks:decide_requests',
       'producers:read', 'collectors:read', 'value_chains:read', 'campaigns:read', 'reports:read', 'field_records:read', 'field_records:manage', 'field_templates:manage', 'messages:use', 'sync:use',
@@ -108,7 +114,7 @@ export const STANDARD_ROLES: Record<string, { name: string; description: string;
     mobileOnly: true,
     name: 'Coach',
     description: 'Agent de terrain suivi par l\'ADG : exécute ses missions, enregistre des producteurs, relève des parcelles, des infrastructures sociales, des formations et des distributions, joint des photos et demande de nouvelles missions.',
-    permissions: ['training:read', 'tasks:read', 'tasks:execute', 'tasks:request', 'parcels:create', 'parcels:read', 'producers:read', 'producers:create', 'field_records:create', 'field_records:read', 'inspections:perform', 'documents:upload', 'messages:use', 'sync:use'],
+    permissions: ['training:read', 'training:report', 'tasks:read', 'tasks:execute', 'tasks:request', 'parcels:create', 'parcels:read', 'producers:read', 'producers:create', 'field_records:create', 'field_records:read', 'inspections:perform', 'documents:upload', 'messages:use', 'sync:use'],
     hidden: ['Caisse et comptabilité', 'Finances', 'Convois', 'Stocks', 'Équipe'],
   },
 };

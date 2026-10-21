@@ -16,7 +16,7 @@ Les captures ont été prises sur la version de démonstration ; les libellés d
 
 | Niveau | Profils | Peut… | Ne peut pas… |
 |---|---|---|---|
-| **1 — Opérateur** | Magasinier, caissier, agent de terrain, cartographe, collecteur, coach, acheteur (partenaire) | Saisir dans son périmètre, imprimer ses reçus, **demander** une annulation | Approuver une annulation, voir hors de son périmètre |
+| **1 — Opérateur** | Magasinier, caissier, agent de terrain, cartographe, collecteur, coach, acheteur et exportateur (partenaires) | Saisir dans son périmètre, imprimer ses reçus, **demander** une annulation | Approuver une annulation, voir hors de son périmètre |
 | **2 — Gestion** | Comptable, responsable magasin, traçabilité, cartographie, qualité, logistique | Valider, ajuster, contrôler dans son domaine | Approuver les prêts et les annulations (sauf droit explicite) |
 | **3 — Pilotage / contrôle** | Direction, responsable financier, ADG, auditeur | Approuver (annulations, prêts, écarts), suivre toute l'activité ; l'auditeur lit seulement | Saisir au quotidien (hors responsable financier) |
 | **4 — Administration** | Administrateur de la coopérative | Tout dans sa coopérative : comptes, rôles, profil, annulations | Voir les autres coopératives |
@@ -51,6 +51,7 @@ Mot de passe commun : `Demo-AgriTrace-2026!` (à changer pour toute utilisation 
 | Collecteur (application téléphone) | Brahima Sylla | `collecteur@demo.agritrace.test` |
 | Assistant de direction générale | Mireille Ouattara | `adg@demo.agritrace.test` |
 | Coach / conseiller agricole | Gilbert Koffi | `coach@demo.agritrace.test` |
+| Exportateur (partenaire) | Karim Diallo | `exportateur@demo.agritrace.test` |
 
 ## 4. Parcours conseillés
 
@@ -635,7 +636,7 @@ Enregistre les producteurs et les données de terrain, exécute les missions qui
 
 ### Sur le téléphone
 
-<table class="phones"><tr><td><img src="captures/mobile/coach-accueil.png" alt="coach-accueil"></td><td><img src="captures/mobile/coach-formations.png" alt="coach-formations"></td><td><img src="captures/mobile/coach-infrastructure.png" alt="coach-infrastructure"></td><td><img src="captures/mobile/coach-producteurs.png" alt="coach-producteurs"></td></tr></table>
+<table class="phones"><tr><td><img src="captures/mobile/coach-accueil.png" alt="coach-accueil"></td><td><img src="captures/mobile/coach-modules-formation.png" alt="coach-modules-formation"></td><td><img src="captures/mobile/coach-module-exportateur.png" alt="coach-module-exportateur"></td><td><img src="captures/mobile/coach-module-resultats.png" alt="coach-module-resultats"></td></tr></table>
 
 ### Pas à pas
 
@@ -909,20 +910,22 @@ Responsable de la conformité et de la certification : suit les certificats, les
 
 *Modules de formation : bibliothèque préchargée (cacao puis café), à conserver, modifier ou supprimer.*
 
-![Missions (tâches de terrain) : création, suivi, validation.](captures/formation/adg-missions.png)
+![Modules des exportateurs : propositions à transmettre aux coachs, ou suivi de ses propres propositions.](captures/formation/adg-modules-exportateurs.png)
 
-*Missions (tâches de terrain) : création, suivi, validation.*
+*Modules des exportateurs : propositions à transmettre aux coachs, ou suivi de ses propres propositions.*
 
-![Rapports et exports Excel.](captures/formation/adg-rapports.png)
+![Résultats saisis par les coachs, à transmettre à l'exportateur.](captures/formation/adg-resultats-exportateurs.png)
 
-*Rapports et exports Excel.*
+*Résultats saisis par les coachs, à transmettre à l'exportateur.*
 
 ### Pas à pas
 
 1. **Suivre les certificats.** Rapports et alertes : le certificat de démonstration expire dans moins de 30 jours.
 2. **Créer et affecter une mission.** Menu **Missions** : titre, catégorie, priorité, échéance, producteur, coach assigné, critères de validation ; publiez.
 3. **Valider le résultat.** Revoyez les preuves transmises par le coach puis validez ou demandez une correction. Une tâche validée est grisée ; elle disparaît de la liste après le nombre de jours réglé en haut de la page *Missions* (« Jours de visibilité des missions validées », 7 par défaut).
-4. **Gérer les modules de formation.** Menu **Modules de formation** : une bibliothèque agricole (cacao en priorité, puis café) liée aux certifications est préchargée. Pour chaque module : *Conserver* (validé tel quel), *Modifier* ou *Supprimer*. *Rétablir les modules par défaut* ne rajoute que les modules supprimés. Le contenu fourni est un socle général : adaptez-le à votre cahier des charges de certification.
+4. **Transmettre les modules des exportateurs.** Menu **Modules des exportateurs** → onglet *Propositions* : lisez le module puis cliquez **Transmettre aux coachs** (ou **Décliner**, avec un motif facultatif). Le contenu est transmis **tel que proposé** : l'ADG ne peut pas le modifier. Le module apparaît alors dans la bibliothèque des coachs, marqué « Proposé par … ».
+5. **Transmettre les résultats à l'exportateur.** Onglet *Résultats* : les coachs envoient d'abord leurs résultats à l'ADG (date, village, participants, score moyen, observations). Cliquez **Transmettre à l'exportateur** : les résultats sont transmis **tels que saisis**, sans modification possible.
+6. **Gérer les modules de formation.** Menu **Modules de formation** : une bibliothèque agricole (cacao en priorité, puis café) liée aux certifications est préchargée. Pour chaque module : *Conserver* (validé tel quel), *Modifier* ou *Supprimer*. *Rétablir les modules par défaut* ne rajoute que les modules supprimés. Le contenu fourni est un socle général : adaptez-le à votre cahier des charges de certification.
 
 ### Ce que ce profil ne voit pas
 
@@ -937,7 +940,8 @@ Responsable de la conformité et de la certification : suit les certificats, les
 | # | À faire | Résultat attendu |
 |---|---|---|
 | 1 | Créez une mission de formation et assignez-la au coach. | Le coach la voit dans ses missions (application mobile). |
-| 2 | Dans **Modules de formation**, modifiez un module cacao puis supprimez un module café. | Le module modifié est marqué « Modifié » ; le coach ne voit plus le module supprimé après actualisation. |
+| 2 | Dans **Modules des exportateurs**, transmettez la proposition en attente aux coachs, puis transmettez à l'exportateur le résultat reçu du coach. | La proposition passe « Transmise aux coachs » ; le résultat est marqué « Transmis ». Aucun champ n'a été modifié. |
+| 3 | Dans **Modules de formation**, modifiez un module cacao puis supprimez un module café. | Le module modifié est marqué « Modifié » ; le coach ne voit plus le module supprimé après actualisation. |
 
 ### Acquis (à cocher)
 
@@ -962,15 +966,16 @@ Agent de terrain suivi par l'ADG : exécute ses missions, enregistre des product
 
 ### Sur le téléphone
 
-<table class="phones"><tr><td><img src="captures/mobile/coach-accueil.png" alt="coach-accueil"></td><td><img src="captures/mobile/coach-formations.png" alt="coach-formations"></td><td><img src="captures/mobile/coach-infrastructure.png" alt="coach-infrastructure"></td><td><img src="captures/mobile/coach-producteurs.png" alt="coach-producteurs"></td></tr></table>
+<table class="phones"><tr><td><img src="captures/mobile/coach-accueil.png" alt="coach-accueil"></td><td><img src="captures/mobile/coach-modules-formation.png" alt="coach-modules-formation"></td><td><img src="captures/mobile/coach-module-exportateur.png" alt="coach-module-exportateur"></td><td><img src="captures/mobile/coach-module-resultats.png" alt="coach-module-resultats"></td></tr></table>
 
 ### Pas à pas
 
 1. **Se connecter.** **Application mobile uniquement** : ce compte est refusé sur le portail web.
 2. **Trouver un producteur.** Application → **Producteurs** : tapez un nom, un code ou un village, et touchez une *section* pour ne voir que ses producteurs.
 3. **Lire un module de formation.** Application → **Modules de formation** : filtrez par culture (cacao, café) ou par thème, ouvrez un module (objectifs, points à enseigner, erreurs à éviter, questions de vérification). Les modules sont conservés sur le téléphone pour être lus sans réseau.
-4. **Lire ses missions.** Fiche du producteur → **Tâches** : instructions, échéance, résultat attendu. Les tâches terminées et validées sont grisées.
-5. **Saisir un relevé.** Formations, infrastructures sociales, distributions (liste de bénéficiaires, articles) avec photos.
+4. **Dispenser un module d'exportateur et saisir ses résultats.** Un module marqué « Proposé par … » vient d'un exportateur (transmis par l'ADG). Après la séance, ouvrez le module → **Saisir les résultats** : date, village, participants, score moyen (facultatif), observations. L'envoi demande une connexion ; les résultats vont à l'ADG et ne sont plus modifiables. *Mes résultats saisis* indique s'ils ont été transmis à l'exportateur.
+5. **Lire ses missions.** Fiche du producteur → **Tâches** : instructions, échéance, résultat attendu. Les tâches terminées et validées sont grisées.
+6. **Saisir un relevé.** Formations, infrastructures sociales, distributions (liste de bénéficiaires, articles) avec photos.
 
 ### Ce que ce profil ne voit pas
 
@@ -996,7 +1001,54 @@ Agent de terrain suivi par l'ADG : exécute ses missions, enregistre des product
 
 ---
 
-## 23. Évaluation finale (30 min)
+## 23. Exportateur (partenaire)
+
+**Niveau 1 — Opérateur** · durée indicative : 1 h · compte de démonstration : `exportateur@demo.agritrace.test`
+
+Partenaire exportateur : propose des modules de formation à l'ADG et reçoit, par l'ADG, les résultats obtenus par les coachs sur ces modules.
+
+### Objectifs
+
+- Proposer un module de formation à l'ADG
+- Suivre le sort de ses propositions
+- Consulter les résultats transmis par l'ADG
+
+### Ce que vous voyez
+
+![Tableau de bord : les indicateurs affichés dépendent de vos droits.](captures/formation/exportateur-accueil.png)
+
+*Tableau de bord : les indicateurs affichés dépendent de vos droits.*
+
+![Modules des exportateurs : propositions à transmettre aux coachs, ou suivi de ses propres propositions.](captures/formation/exportateur-modules-exportateurs.png)
+
+*Modules des exportateurs : propositions à transmettre aux coachs, ou suivi de ses propres propositions.*
+
+### Pas à pas
+
+1. **Proposer un module.** Menu **Modules des exportateurs** → **Proposer un module** : titre, thème, résumé, cultures, certifications, objectifs, sections (titre et points), points à éviter, questions de vérification. Une fois envoyé, le module **n'est plus modifiable** : en cas d'erreur, proposez-en un nouveau.
+2. **Suivre sa proposition.** Le statut passe de « En attente de l'ADG » à « Transmis aux coachs » ou « Non retenu » (avec le motif de l'ADG). Vous êtes notifié à chaque étape.
+3. **Lire les résultats.** Une fois la séance faite, les coachs envoient leurs résultats à l'ADG, qui vous les transmet **tels que saisis** : séance, village, participants, score moyen, observations. Vous ne voyez que les résultats de vos propres modules, jamais les autres données de la coopérative.
+
+### Ce que ce profil ne voit pas
+
+- Tout sauf ses propositions de modules et les résultats que l'ADG lui a transmis
+
+### Exercices
+
+| # | À faire | Résultat attendu |
+|---|---|---|
+| 1 | Proposez le module « Séchage des fèves » (un objectif, une section). | La proposition apparaît « En attente de l'ADG ». |
+| 2 | Ouvrez les résultats du module « Carnet de récolte et traçabilité ». | Vous voyez la séance de Hiré (22 participants, score 78) et non celle de Zégban, tant que l'ADG ne l'a pas transmise. |
+
+### Acquis (à cocher)
+
+- [ ] Proposer un module de formation à l'ADG
+- [ ] Suivre le sort de ses propositions
+- [ ] Consulter les résultats transmis par l'ADG
+
+---
+
+## 24. Évaluation finale (30 min)
 
 Scénario commun, à dérouler à plusieurs comptes :
 

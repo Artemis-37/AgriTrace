@@ -26,6 +26,7 @@ import Missions from './pages/Missions';
 import OrgLogo from './OrgLogo';
 import Terrain from './pages/Terrain';
 import ModulesFormation from './pages/ModulesFormation';
+import ModulesExportateurs from './pages/ModulesExportateurs';
 import Operations from './pages/Operations';
 import Compte, { ForcedPasswordChange } from './pages/Compte';
 import Parcels from './pages/Parcels';
@@ -57,6 +58,7 @@ const NAV: { to: string; label: string; icon: string; perm: string[]; any?: bool
   { to: '/operations', label: 'Mes opérations', icon: '🧾', perm: ['cancellations:request'] },
   { to: '/terrain', label: 'Données de terrain', icon: '❖', perm: ['field_records:read', 'field_records:manage', 'field_templates:manage'], any: true },
   { to: '/modules-formation', label: 'Modules de formation', icon: '🎓', perm: ['training:read'] },
+  { to: '/modules-exportateurs', label: 'Modules des exportateurs', icon: '🚢', perm: ['training:forward', 'training:propose'], any: true },
   { to: '/stocks', label: 'Stocks et lots', icon: '▤', perm: ['warehouses:read'] },
   { to: '/rapports', label: 'Rapports', icon: '▥', perm: ['reports:read'] },
   { to: '/finances', label: 'Finances', icon: '₣', perm: ['finance:read'] },
@@ -136,6 +138,7 @@ export default function App() {
           <Route path="/operations" element={<Operations />} />
           <Route path="/compte" element={<Compte />} />
           <Route path="/modules-formation" element={<ModulesFormation />} />
+          <Route path="/modules-exportateurs" element={<ModulesExportateurs />} />
           <Route path="/stocks" element={<Stocks />} />
           <Route path="/finances" element={<Finance />} />
           <Route path="/qualite" element={<Quality />} />

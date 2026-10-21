@@ -3,7 +3,7 @@
 > Données **entièrement fictives**. Ne jamais utiliser en production.
 
 - Mot de passe commun : `Demo-AgriTrace-2026!`
-- Coopérative : « Coopérative Agricole de Démonstration » (code DEMO7C29)
+- Coopérative : « Coopérative Agricole de Démonstration » (code DEMO07DA)
 
 | Profil | Utilisateur fictif | Identifiant |
 |---|---|---|
@@ -25,3 +25,4 @@
 | Collecteur (application téléphone) — **application mobile uniquement** | Brahima Sylla | `collecteur@demo.agritrace.test` |
 | Assistant de direction générale | Mireille Ouattara | `adg@demo.agritrace.test` |
 | Coach / conseiller agricole — **application mobile uniquement** | Gilbert Koffi | `coach@demo.agritrace.test` |
+| Exportateur (partenaire) | Karim Diallo | `exportateur@demo.agritrace.test` |

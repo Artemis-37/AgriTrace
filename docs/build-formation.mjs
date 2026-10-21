@@ -39,6 +39,8 @@ const LEGENDE = {
   'mes-achats': 'Mes achats : achats déclarés par le collecteur.',
   'mon-stock': 'Mon stock : stock du collecteur et solde de son compte.',
   historique: 'Historique du collecteur.',
+  'modules-exportateurs': 'Modules des exportateurs : propositions à transmettre aux coachs, ou suivi de ses propres propositions.',
+  'resultats-exportateurs': 'Résultats saisis par les coachs, à transmettre à l\'exportateur.',
   'modules-formation': 'Modules de formation : bibliothèque préchargée (cacao puis café), à conserver, modifier ou supprimer.',
 };
 
@@ -238,6 +240,16 @@ const MOD = {
       ['Créez un convoi (28 sacs, 1 800 kg annoncés) sans saisir de numéro.', 'Le logiciel attribue le numéro : code CCC, année, 3 premières lettres de votre nom, n° d\'ordre (ex. {{CV1}} pour le 1er convoi de Brahima). Le convoi apparaît « En route » côté magasin.'],
     ],
   },
+  exportateur: {
+    niveau: 'Niveau 1 — Opérateur', duree: '1 h',
+    objectifs: ['Proposer un module de formation à l\'ADG', 'Suivre le sort de ses propositions', 'Consulter les résultats transmis par l\'ADG'],
+    pas: [
+      ['Proposer un module', 'Menu **Modules des exportateurs** → **Proposer un module** : titre, thème, résumé, cultures, certifications, objectifs, sections (titre et points), points à éviter, questions de vérification. Une fois envoyé, le module **n\'est plus modifiable** : en cas d\'erreur, proposez-en un nouveau.'],
+      ['Suivre sa proposition', 'Le statut passe de « En attente de l\'ADG » à « Transmis aux coachs » ou « Non retenu » (avec le motif de l\'ADG). Vous êtes notifié à chaque étape.'],
+      ['Lire les résultats', 'Une fois la séance faite, les coachs envoient leurs résultats à l\'ADG, qui vous les transmet **tels que saisis** : séance, village, participants, score moyen, observations. Vous ne voyez que les résultats de vos propres modules, jamais les autres données de la coopérative.'],
+    ],
+    exos: [['Proposez le module « Séchage des fèves » (un objectif, une section).', 'La proposition apparaît « En attente de l\'ADG ».'], ['Ouvrez les résultats du module « Carnet de récolte et traçabilité ».', 'Vous voyez la séance de Hiré (22 participants, score 78) et non celle de Zégban, tant que l\'ADG ne l\'a pas transmise.']],
+  },
   adg: {
     niveau: 'Niveau 3 — Pilotage', duree: '2 h',
     objectifs: ['Suivre la conformité et les certificats', 'Mettre en place les missions des coachs', 'Décider de leurs demandes'],
@@ -245,9 +257,11 @@ const MOD = {
       ['Suivre les certificats', 'Rapports et alertes : le certificat de démonstration expire dans moins de 30 jours.'],
       ['Créer et affecter une mission', 'Menu **Missions** : titre, catégorie, priorité, échéance, producteur, coach assigné, critères de validation ; publiez.'],
       ['Valider le résultat', 'Revoyez les preuves transmises par le coach puis validez ou demandez une correction. Une tâche validée est grisée ; elle disparaît de la liste après le nombre de jours réglé en haut de la page *Missions* (« Jours de visibilité des missions validées », 7 par défaut).'],
+      ['Transmettre les modules des exportateurs', 'Menu **Modules des exportateurs** → onglet *Propositions* : lisez le module puis cliquez **Transmettre aux coachs** (ou **Décliner**, avec un motif facultatif). Le contenu est transmis **tel que proposé** : l\'ADG ne peut pas le modifier. Le module apparaît alors dans la bibliothèque des coachs, marqué « Proposé par … ».'],
+      ['Transmettre les résultats à l\'exportateur', 'Onglet *Résultats* : les coachs envoient d\'abord leurs résultats à l\'ADG (date, village, participants, score moyen, observations). Cliquez **Transmettre à l\'exportateur** : les résultats sont transmis **tels que saisis**, sans modification possible.'],
       ['Gérer les modules de formation', 'Menu **Modules de formation** : une bibliothèque agricole (cacao en priorité, puis café) liée aux certifications est préchargée. Pour chaque module : *Conserver* (validé tel quel), *Modifier* ou *Supprimer*. *Rétablir les modules par défaut* ne rajoute que les modules supprimés. Le contenu fourni est un socle général : adaptez-le à votre cahier des charges de certification.'],
     ],
-    exos: [['Créez une mission de formation et assignez-la au coach.', 'Le coach la voit dans ses missions (application mobile).'], ['Dans **Modules de formation**, modifiez un module cacao puis supprimez un module café.', 'Le module modifié est marqué « Modifié » ; le coach ne voit plus le module supprimé après actualisation.']],
+    exos: [['Créez une mission de formation et assignez-la au coach.', 'Le coach la voit dans ses missions (application mobile).'], ['Dans **Modules des exportateurs**, transmettez la proposition en attente aux coachs, puis transmettez à l\'exportateur le résultat reçu du coach.', 'La proposition passe « Transmise aux coachs » ; le résultat est marqué « Transmis ». Aucun champ n\'a été modifié.'], ['Dans **Modules de formation**, modifiez un module cacao puis supprimez un module café.', 'Le module modifié est marqué « Modifié » ; le coach ne voit plus le module supprimé après actualisation.']],
   },
   coach: {
     niveau: 'Niveau 1 — Opérateur', duree: '2 h', mobile: ['coach'],
@@ -256,6 +270,7 @@ const MOD = {
       ['Se connecter', '**Application mobile uniquement** : ce compte est refusé sur le portail web.'],
       ['Trouver un producteur', 'Application → **Producteurs** : tapez un nom, un code ou un village, et touchez une *section* pour ne voir que ses producteurs.'],
       ['Lire un module de formation', 'Application → **Modules de formation** : filtrez par culture (cacao, café) ou par thème, ouvrez un module (objectifs, points à enseigner, erreurs à éviter, questions de vérification). Les modules sont conservés sur le téléphone pour être lus sans réseau.'],
+      ['Dispenser un module d\'exportateur et saisir ses résultats', 'Un module marqué « Proposé par … » vient d\'un exportateur (transmis par l\'ADG). Après la séance, ouvrez le module → **Saisir les résultats** : date, village, participants, score moyen (facultatif), observations. L\'envoi demande une connexion ; les résultats vont à l\'ADG et ne sont plus modifiables. *Mes résultats saisis* indique s\'ils ont été transmis à l\'exportateur.'],
       ['Lire ses missions', 'Fiche du producteur → **Tâches** : instructions, échéance, résultat attendu. Les tâches terminées et validées sont grisées.'],
       ['Saisir un relevé', 'Formations, infrastructures sociales, distributions (liste de bénéficiaires, articles) avec photos.'],
     ],
@@ -263,7 +278,7 @@ const MOD = {
   },
 };
 
-const ORDER = ['coop_admin', 'magasinier', 'caissier', 'comptable', 'direction', 'responsable_financier', 'responsable_magasin', 'responsable_tracabilite', 'responsable_cartographie', 'cartographe', 'agent_terrain', 'responsable_qualite', 'responsable_logistique', 'auditeur', 'acheteur', 'collecteur', 'adg', 'coach'];
+const ORDER = ['coop_admin', 'magasinier', 'caissier', 'comptable', 'direction', 'responsable_financier', 'responsable_magasin', 'responsable_tracabilite', 'responsable_cartographie', 'cartographe', 'agent_terrain', 'responsable_qualite', 'responsable_logistique', 'auditeur', 'acheteur', 'collecteur', 'adg', 'coach', 'exportateur'];
 const rel = (f) => `captures/formation/${f}`;
 const mob = (f) => `captures/mobile/${f}`;
 const hasMobile = (f) => fs.existsSync(path.join(dir, 'captures', 'mobile', f));
@@ -286,7 +301,7 @@ Les captures ont été prises sur la version de démonstration ; les libellés d
 
 | Niveau | Profils | Peut… | Ne peut pas… |
 |---|---|---|---|
-| **1 — Opérateur** | Magasinier, caissier, agent de terrain, cartographe, collecteur, coach, acheteur (partenaire) | Saisir dans son périmètre, imprimer ses reçus, **demander** une annulation | Approuver une annulation, voir hors de son périmètre |
+| **1 — Opérateur** | Magasinier, caissier, agent de terrain, cartographe, collecteur, coach, acheteur et exportateur (partenaires) | Saisir dans son périmètre, imprimer ses reçus, **demander** une annulation | Approuver une annulation, voir hors de son périmètre |
 | **2 — Gestion** | Comptable, responsable magasin, traçabilité, cartographie, qualité, logistique | Valider, ajuster, contrôler dans son domaine | Approuver les prêts et les annulations (sauf droit explicite) |
 | **3 — Pilotage / contrôle** | Direction, responsable financier, ADG, auditeur | Approuver (annulations, prêts, écarts), suivre toute l'activité ; l'auditeur lit seulement | Saisir au quotidien (hors responsable financier) |
 | **4 — Administration** | Administrateur de la coopérative | Tout dans sa coopérative : comptes, rôles, profil, annulations | Voir les autres coopératives |
@@ -329,7 +344,7 @@ for (const role of ORDER) {
     md += `### Ce que vous voyez\n\n`;
     for (const s of shots.slice(0, 4)) md += `![${LEGENDE[s.name] ?? s.name}](${rel(s.file)})\n\n*${LEGENDE[s.name] ?? s.name}*\n\n`;
   }
-  const mobs = (m.mobile ?? []).flatMap((p) => ['accueil', ...(p === 'collecteur' ? ['nouvel-achat', 'convoi', 'fiche'] : ['formations', 'infrastructure', 'producteurs'])].map((x) => `${p}-${x}.png`)).filter(hasMobile);
+  const mobs = (m.mobile ?? []).flatMap((p) => ['accueil', ...(p === 'collecteur' ? ['nouvel-achat', 'convoi', 'fiche'] : ['modules-formation', 'module-exportateur', 'module-resultats', 'producteurs'])].map((x) => `${p}-${x}.png`)).filter(hasMobile);
   if (mobs.length) {
     md += `### Sur le téléphone\n\n<table class="phones"><tr>${mobs.slice(0, 4).map((f) => `<td><img src="${mob(f)}" alt="${f.replace('.png', '')}"></td>`).join('')}</tr></table>\n\n`;
   }

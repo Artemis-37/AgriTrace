@@ -9,6 +9,7 @@ Ce guide présente chaque utilisateur **sur ordinateur** (portail web dans le na
 |---|---|---|
 | Collecteur (délégué) | — (**mobile uniquement** : connexion refusée sur le portail) | **Outil principal** : achats, convois, stock, fiche de compte, hors connexion |
 | Coach / agent de terrain | — (**mobile uniquement** : connexion refusée sur le portail) | **Outil principal** : producteurs (recherche et filtre par section), missions, modules de formation, relevé de parcelle, photos |
+| Exportateur (partenaire) | **Outil principal** : proposer des modules, lire les résultats transmis | — |
 | Administrateur de groupe (ADG) | **Outil principal** : missions, cartographie, qualité, rapports | Consultation (missions, parcelles) |
 | Magasinier | **Outil principal** : convois, stocks, inventaire | — |
 | Caissier | **Outil principal** : convois, caisse, finances | — |
@@ -77,6 +78,7 @@ Si l'administrateur suspend le compte, le **téléphone efface les données de l
   - **Informations sur le producteur** : téléphone, code, localité, section, **nombre de parcelles capturées** avec la taille de chacune, bouton **Relever une parcelle** (le producteur est déjà choisi) et bouton **Ouvrir la carte**. Chaque parcelle permet d'ajouter une photo et, avec le droit de modification, de reprendre le tracé ; un nouveau tracé en attente d'envoi est signalé.
 - **Modules de formation** (tuile de l'accueil) : bibliothèque agricole préchargée (cacao en priorité, puis café) liée aux certifications. Filtrer par culture ou par thème, ouvrir un module (objectifs, points à enseigner, erreurs à éviter, questions de vérification). Lecture seule ; le contenu est géré par l'ADG. Une copie reste sur le téléphone pour la lecture sans réseau (ouvrir l'écran une première fois avec du réseau).
 - **Tâches terminées** : une tâche terminée et validée par l'ADG apparaît grisée et ne s'ouvre plus ; elle disparaît de la liste après le délai fixé par l'ADG.
+- **Module d'exportateur** : un module marqué « Proposé par … » affiche le bouton **Saisir les résultats** (date, village, participants, score moyen, observations). Les résultats sont envoyés à l'ADG (réseau requis), ne sont plus modifiables, et la liste *Mes résultats saisis* indique s'ils ont été transmis à l'exportateur.
 - **Relevé de parcelle** : marcher autour de la parcelle avec le GPS ; le téléphone calcule la superficie (distincte de la superficie déclarée). Un point GPS seul ne donne jamais de superficie.
 - **Fond de carte** : il s'affiche quand on consulte la carte depuis la fiche du producteur (« Ouvrir la carte ») et pendant le relevé : plan OpenStreetMap ou satellite quand le réseau est là, fond hors ligne téléchargé en Wi-Fi depuis « Télécharger les données ».
 
@@ -85,6 +87,8 @@ Si l'administrateur suspend le compte, le **téléphone efface les données de l
 <table class="phones"><tr><td><img src="captures/mobile/coach-ajout-producteur.png" alt="Ajouter un producteur"><br><em>Ajouter un producteur</em></td><td><img src="captures/mobile/coach-infrastructure.png" alt="Infrastructure sociale"><br><em>Infrastructure sociale</em></td><td><img src="captures/mobile/coach-distribution-articles.png" alt="Distribution et services"><br><em>Distribution et services</em></td></tr></table>
 
 <table class="phones"><tr><td><img src="captures/mobile/coach-formations.png" alt="Dossiers de formation"><br><em>Dossiers de formation</em></td><td><img src="captures/mobile/coach-formation.png" alt="Registre de formation"><br><em>Registre de formation</em></td></tr></table>
+
+<table class="phones"><tr><td><img src="captures/mobile/coach-modules-formation.png" alt="Bibliothèque de modules"><br><em>Bibliothèque de modules</em></td><td><img src="captures/mobile/coach-module-exportateur.png" alt="Module proposé par un exportateur"><br><em>Module d'exportateur et résultats saisis</em></td><td><img src="captures/mobile/coach-module-resultats.png" alt="Saisie des résultats"><br><em>Saisie des résultats</em></td></tr></table>
 
 <table class="phones"><tr><td><img src="captures/mobile/coach-producteur-taches.png" alt="Fiche : liste des tâches"><br><em>Fiche : liste des tâches</em></td><td><img src="captures/mobile/coach-producteur-infos.png" alt="Fiche : informations sur le producteur"><br><em>Fiche : informations sur le producteur</em></td></tr></table>
 
@@ -97,6 +101,13 @@ Responsable de la conformité et de la certification.
 ### Sur ordinateur
 - **Missions** : créer les tâches des coachs, les assigner, relire les résultats, clôturer, décider des demandes. Une tâche terminée et validée est **grisée** (non cliquable pour les autres profils) puis **retirée de la liste** après le nombre de jours réglé en haut de la page (« Jours de visibilité des missions validées », 7 par défaut) ; la case « Afficher aussi les missions terminées masquées » permet de les revoir (droit de lecture de toutes les missions).
 - **Modules de formation** : bibliothèque préchargée (cacao puis café, liée aux certifications). Pour chaque module : *Conserver* (validé tel quel), *Modifier* ou *Supprimer* ; *Rétablir les modules par défaut* ne rajoute que ceux qui ont été supprimés. Le contenu fourni est un socle général, sans chiffres réglementaires précis : à adapter à votre cahier des charges de certification avant de s'en servir en formation.
+- **Modules des exportateurs** : un exportateur partenaire propose des modules ; l'ADG les lit puis clique **Transmettre aux coachs** (ou **Décliner**). Les coachs dispensent la formation et saisissent leurs résultats sur l'application ; l'ADG clique **Transmettre à l'exportateur**. À aucun moment l'ADG ne modifie le contenu ou les résultats (ils sont figés à l'enregistrement), et un module d'exportateur n'est ni modifiable ni supprimable dans la bibliothèque. Chaque étape notifie le destinataire et est tracée dans le journal d'audit.
+
+![Modules des exportateurs (ADG)](captures/formation/adg-modules-exportateurs.png)
+
+![Résultats à transmettre (ADG)](captures/formation/adg-resultats-exportateurs.png)
+
+![Espace de l'exportateur](captures/formation/exportateur-modules-exportateurs.png)
 - **Comptes mobile uniquement** : les rôles standard *collecteur*, *agent de terrain* et *coach* (créés depuis *Équipe*) sont « mobile uniquement ». Leurs titulaires se connectent par l'application ; le portail refuse leur connexion avec un message clair. Ce réglage n'a pas encore d'écran pour les rôles personnalisés (il se pose à la création du rôle par l'API). C'est une règle d'usage de l'interface, pas une barrière de sécurité.
 - **Cartographie** : onglets Carte (fond neutre, plan ou satellite), Anomalies, Zones protégées, Importer, Exporter, Tolérances.
   - Une anomalie bloquante empêche la validation de la parcelle : la corriger, ou accepter une **exception motivée** (tracée). « Corrigée » est refusée tant que le problème existe.

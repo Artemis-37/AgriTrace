@@ -3,13 +3,13 @@ import { del, get, post, put } from '../api';
 import { useAuth } from '../auth';
 import { Badge, Card, ErrorBox, Field, Loading, Modal, PageHeader, useAction, useAsync } from '../ui';
 
-type Content = { objectifs: string[]; sections: { titre: string; points: string[] }[]; a_eviter: string[]; verifier: string[]; materiel: string[] };
-type Mod = { id: string; code: string | null; theme: string; title: string; summary: string; crops: string[]; certifications: string[]; level: string; duration_min: number; content: Content; review_state: string; version: number; reviewed_by_name: string | null; reviewed_at: string | null };
+export type Content = { objectifs: string[]; sections: { titre: string; points: string[] }[]; a_eviter: string[]; verifier: string[]; materiel: string[] };
+export type Mod = { submission_id?: string | null; proposed_by_name?: string | null; id: string; code: string | null; theme: string; title: string; summary: string; crops: string[]; certifications: string[]; level: string; duration_min: number; content: Content; review_state: string; version: number; reviewed_by_name: string | null; reviewed_at: string | null };
 
-const CROP: Record<string, string> = { cacao: 'Cacao', cafe: 'Café' };
-const LEVEL: Record<string, string> = { base: 'Base', intermediaire: 'Intermédiaire', avance: 'Avancé' };
-const STATE: Record<string, ['neutral' | 'ok' | 'warn' | 'info', string]> = { to_review: ['warn', 'À relire par l\'ADG'], kept: ['ok', 'Conservé'], edited: ['info', 'Modifié'], custom: ['info', 'Ajouté par la coopérative'] };
-const lines = (t: string) => t.split('\n').map((x) => x.trim()).filter(Boolean);
+export const CROP: Record<string, string> = { cacao: 'Cacao', cafe: 'Café' };
+export const LEVEL: Record<string, string> = { base: 'Base', intermediaire: 'Intermédiaire', avance: 'Avancé' };
+const STATE: Record<string, ['neutral' | 'ok' | 'warn' | 'info', string]> = { to_review: ['warn', 'À relire par l\'ADG'], kept: ['ok', 'Conservé'], edited: ['info', 'Modifié'], custom: ['info', 'Ajouté par la coopérative'], exporter: ['info', 'Proposé par un exportateur'] };
+export const lines = (t: string) => t.split('\n').map((x) => x.trim()).filter(Boolean);
 
 /** Bibliothèque de modules de formation agricole (cacao puis café) : consultée par les coachs, relue et adaptée par l'ADG. */
 export default function ModulesFormation() {
@@ -58,7 +58,8 @@ export default function ModulesFormation() {
                 </div>
                 <p className="muted" style={{ margin: '.2rem 0' }}>{m.summary}</p>
                 <p className="muted" style={{ margin: 0, fontSize: '.85rem' }}>{m.theme} · {m.crops.map((c) => CROP[c] ?? c).join(', ')} · {LEVEL[m.level]} · {m.duration_min} min{m.certifications.length ? ` · ${m.certifications.join(', ')}` : ''}</p>
-                {manage && (
+                {m.submission_id && <p className="muted" style={{ margin: '.3rem 0 0', fontSize: '.85rem' }}>Proposé par {m.proposed_by_name ?? 'un exportateur'} — transmis tel quel : non modifiable.</p>}
+                {manage && !m.submission_id && (
                   <div className="row-actions" style={{ marginTop: '.5rem' }}>
                     {m.review_state === 'to_review' && <button className="btn btn-small" disabled={act.busy} onClick={() => act.run(async () => { await post(`/training-modules/${m.id}/keep`); reload(); })}>Conserver</button>}
                     <button className="btn btn-small btn-secondary" onClick={() => setEdit(m)}>Modifier</button>
@@ -76,7 +77,7 @@ export default function ModulesFormation() {
   );
 }
 
-function Reader({ m, onClose }: { m: Mod; onClose: () => void }) {
+export function Reader({ m, onClose }: { m: Mod; onClose: () => void }) {
   const c = m.content;
   return (
     <Modal title={m.title} onClose={onClose}>
@@ -92,7 +93,7 @@ function Reader({ m, onClose }: { m: Mod; onClose: () => void }) {
   );
 }
 
-function Editor({ m, themes, onClose, onDone }: { m: Mod | null; themes: string[]; onClose: () => void; onDone: () => void }) {
+export function Editor({ m, themes, onClose, onDone, saveUrl, title }: { m: Mod | null; themes: string[]; onClose: () => void; onDone: () => void; saveUrl?: string; title?: string }) {
   const act = useAction();
   const [f, setF] = useState({
     title: m?.title ?? '', theme: m?.theme ?? themes[0] ?? '', summary: m?.summary ?? '', crops: m?.crops ?? ['cacao'], certs: (m?.certifications ?? []).join(', '),
@@ -107,9 +108,9 @@ function Editor({ m, themes, onClose, onDone }: { m: Mod | null; themes: string[
     content: { objectifs: lines(f.objectifs), sections: f.sections.map((s) => ({ titre: s.titre.trim(), points: s.points.map((p) => p.trim()).filter(Boolean) })).filter((s) => s.titre && s.points.length), a_eviter: lines(f.a_eviter), verifier: lines(f.verifier), materiel: lines(f.materiel) },
   });
   const valid = f.title.trim().length >= 3 && f.theme.trim() && f.crops.length > 0 && lines(f.objectifs).length > 0 && f.sections.some((s) => s.titre.trim() && s.points.some((p) => p.trim()));
-  const submit = (e: FormEvent) => { e.preventDefault(); act.run(async () => { if (m) await put(`/training-modules/${m.id}`, body()); else await post('/training-modules', body()); onDone(); }); };
+  const submit = (e: FormEvent) => { e.preventDefault(); act.run(async () => { if (saveUrl) await post(saveUrl, body()); else if (m) await put(`/training-modules/${m.id}`, body()); else await post('/training-modules', body()); onDone(); }); };
   return (
-    <Modal title={m ? 'Modifier le module' : 'Nouveau module'} onClose={onClose}>
+    <Modal title={title ?? (m ? 'Modifier le module' : 'Nouveau module')} onClose={onClose}>
       <form onSubmit={submit}>
         <Field label="Titre"><input value={f.title} onChange={set('title')} maxLength={200} /></Field>
         <Field label="Thème" hint="Un thème existant ou un nouveau."><input list="themes-formation" value={f.theme} onChange={set('theme')} maxLength={120} /></Field>

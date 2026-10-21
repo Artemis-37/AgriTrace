@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Delete, Get, NotFoundException, Param, ParseUUIDPipe, Post, Put, Query, Req } from '@nestjs/common';
+import { BadRequestException, Body, ConflictException, Controller, Delete, Get, NotFoundException, Param, ParseUUIDPipe, Post, Put, Query, Req } from '@nestjs/common';
 import { ApiBearerAuth, ApiHeader, ApiTags } from '@nestjs/swagger';
 import { IsArray, IsIn, IsInt, IsObject, IsOptional, IsString, Length, Max, Min } from 'class-validator';
 import { RequirePermissions } from '../access/decorators';
@@ -61,6 +61,12 @@ export class TrainingController {
     return n;
   }
 
+  /** Un module venu d'un exportateur est transmis tel quel : l'ADG ne le modifie ni ne le supprime. */
+  private async assertNotExporter(c: any, id: string) {
+    const r = (await c.query(`SELECT submission_id FROM training_modules WHERE id = $1`, [id])).rows[0];
+    if (r?.submission_id) throw new ConflictException('Module proposé par un exportateur : il est transmis tel quel et ne peut être ni modifié ni supprimé');
+  }
+
   @Get()
   @RequirePermissions('training:read')
   list(@Req() req: any, @Query('crop') crop?: string, @Query('theme') theme?: string, @Query('certification') cert?: string, @Query('q') q?: string) {
@@ -68,8 +74,8 @@ export class TrainingController {
     return this.db.tx(req.org.id, async (c) => {
       await this.ensureSeeded(c, req.org.id);
       return (await c.query(
-        `SELECT m.id, m.code, m.theme, m.title, m.summary, m.crops, m.certifications, m.level, m.duration_min, m.content, m.review_state, m.version, m.reviewed_at, m.updated_at,
-                u.full_name AS reviewed_by_name
+        `SELECT m.id, m.code, m.theme, m.title, m.summary, m.crops, m.certifications, m.level, m.duration_min, m.content, m.review_state, m.version, m.reviewed_at, m.updated_at, m.submission_id,
+                u.full_name AS reviewed_by_name, (SELECT x.full_name FROM training_submissions s JOIN users x ON x.id = s.submitted_by WHERE s.id = m.submission_id) AS proposed_by_name
            FROM training_modules m LEFT JOIN users u ON u.id = m.reviewed_by
           WHERE ($1::text IS NULL OR $1 = ANY(m.crops)) AND ($2::text IS NULL OR m.theme = $2) AND ($3::text IS NULL OR $3 = ANY(m.certifications))
             AND ($4::text IS NULL OR m.title ILIKE '%' || $4 || '%' OR m.summary ILIKE '%' || $4 || '%')
@@ -104,11 +110,11 @@ export class TrainingController {
   @RequirePermissions('training:manage')
   async update(@Param('id', ParseUUIDPipe) id: string, @Body() b: SaveModuleDto, @Req() req: any) {
     const cc = cleanContent(b.content); if (cc.error) throw new BadRequestException(cc.error);
-    const row = (await this.db.tx(req.org.id, (c) => c.query(
+    const row = (await this.db.tx(req.org.id, async (c) => { await this.assertNotExporter(c, id); return c.query(
       `UPDATE training_modules SET theme = $2, title = $3, summary = $4, crops = $5, certifications = $6, level = $7, duration_min = $8, content = $9,
               review_state = CASE WHEN review_state = 'custom' THEN 'custom' ELSE 'edited' END, version = version + 1, updated_by = $10, reviewed_by = $10, reviewed_at = now(), updated_at = now()
         WHERE id = $1 RETURNING *`,
-      [id, b.theme.trim(), b.title.trim(), (b.summary ?? '').trim(), b.crops?.length ? [...new Set(b.crops)] : ['cacao'], [...new Set((b.certifications ?? []).map((x) => x.trim()).filter(Boolean))], b.level ?? 'base', b.duration_min ?? 45, JSON.stringify(cc.value), req.user.id]))).rows[0];
+      [id, b.theme.trim(), b.title.trim(), (b.summary ?? '').trim(), b.crops?.length ? [...new Set(b.crops)] : ['cacao'], [...new Set((b.certifications ?? []).map((x) => x.trim()).filter(Boolean))], b.level ?? 'base', b.duration_min ?? 45, JSON.stringify(cc.value), req.user.id]); })).rows[0];
     if (!row) throw new NotFoundException('Module introuvable');
     await this.log(req, 'training_module.update', id, { title: row.title, version: row.version });
     return row;
@@ -128,7 +134,7 @@ export class TrainingController {
   @Delete(':id')
   @RequirePermissions('training:manage')
   async remove(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
-    const row = (await this.db.tx(req.org.id, (c) => c.query(`DELETE FROM training_modules WHERE id = $1 RETURNING id, title, code`, [id]))).rows[0];
+    const row = (await this.db.tx(req.org.id, async (c) => { await this.assertNotExporter(c, id); return c.query(`DELETE FROM training_modules WHERE id = $1 RETURNING id, title, code`, [id]); })).rows[0];
     if (!row) throw new NotFoundException('Module introuvable');
     await this.log(req, 'training_module.delete', id, { title: row.title, code: row.code });
     return { deleted: true };

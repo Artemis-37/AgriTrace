@@ -16,6 +16,7 @@ import 'package:agritrace_mobile/main.dart';
 import 'package:agritrace_mobile/screens/fiche_screen.dart';
 import 'package:agritrace_mobile/screens/history_screen.dart';
 import 'package:agritrace_mobile/screens/home_screen.dart';
+import 'package:agritrace_mobile/screens/training_library_screen.dart';
 import 'package:agritrace_mobile/screens/login_screen.dart';
 import 'package:agritrace_mobile/screens/my_stock_screen.dart';
 import 'package:agritrace_mobile/screens/new_convoy_screen.dart';
@@ -130,7 +131,7 @@ final _parcels = <Map<String, Object?>>[
   {'id': 'p3', 'code': 'P00044-02', 'producer_name': 'BAMBA Salif', 'producer_code': 'P00044', 'declared_area_ha': '1.8', 'geometry_area_ha': '1.74', 'pending_updates': 1},
 ];
 const _collector = ['declarations:create', 'declarations:read', 'producers:read', 'convoys:create', 'convoys:read', 'collector:stock', 'documents:upload', 'messages:use', 'sync:use'];
-const _coach = ['producers:create', 'field_records:create', 'field_records:read', 'tasks:read', 'tasks:execute', 'tasks:request', 'parcels:create', 'parcels:read', 'producers:read', 'inspections:perform', 'documents:upload', 'messages:use', 'sync:use', 'training:read'];
+const _coach = ['producers:create', 'field_records:create', 'field_records:read', 'tasks:read', 'tasks:execute', 'tasks:request', 'parcels:create', 'parcels:read', 'producers:read', 'inspections:perform', 'documents:upload', 'messages:use', 'sync:use', 'training:read', 'training:report'];
 
 final _routes = <String, dynamic>{
   '/notifications/unread-count': {'unread': 2},
@@ -146,6 +147,16 @@ final _routes = <String, dynamic>{
   '/tasks': [
     {'id': 't1', 'title': 'Relever le contour de la parcelle P00131-01', 'description': 'Tracé GPS complet et photo du coin nord.', 'category': 'mapping', 'status': 'open', 'due_date': '2026-10-24', 'section': 'Section Est', 'overdue': false, 'latitude': null, 'longitude': null, 'content': null, 'decision_note': null},
     {'id': 't2', 'title': 'Visite de contrôle — KOFFI Adjoua', 'description': 'Vérifier les ombrages et prendre deux photos.', 'category': 'visit', 'status': 'in_progress', 'due_date': '2026-10-19', 'section': 'Section Nord', 'overdue': true, 'latitude': null, 'longitude': null, 'content': null, 'decision_note': null}],
+  '/training-modules': [
+    {'id': 'm1', 'code': 'cacao-fermentation', 'theme': 'Gestion des récoltes et des produits', 'title': 'Fermentation du cacao', 'summary': 'Fermenter les fèves pour développer la qualité et la valeur du cacao.', 'crops': ['cacao'], 'certifications': ['Rainforest Alliance', 'Fairtrade'], 'level': 'intermediaire', 'duration_min': 90, 'submission_id': null,
+      'content': {'objectifs': ['Comprendre le rôle de la fermentation', 'Conduire une fermentation en caisse ou en tas'], 'sections': [{'titre': 'Préparer la fermentation', 'points': ['Écabosser dans les 24 heures', 'Utiliser un matériel propre', 'Couvrir de feuilles de bananier']}], 'a_eviter': ['Mélanger des fèves de récoltes différentes'], 'verifier': ['Pourquoi retourne-t-on les fèves ?'], 'materiel': []}},
+    {'id': 'm2', 'code': null, 'theme': 'Collecte de documents et tenue de registres', 'title': 'Carnet de récolte et traçabilité (exportateur)', 'summary': 'Module proposé par l\'exportateur de démonstration (fictif).', 'crops': ['cacao'], 'certifications': ['EUDR'], 'level': 'base', 'duration_min': 60, 'submission_id': 's1', 'proposed_by_name': 'Karim Diallo',
+      'content': {'objectifs': ['Tenir un carnet de récolte à jour'], 'sections': [{'titre': 'Le carnet de récolte', 'points': ['Noter la date de chaque récolte', 'Noter le poids de fèves fraîches', 'Conserver le carnet à l\'abri']}], 'a_eviter': ['Mélanger les récoltes de deux parcelles'], 'verifier': ['Que note-t-on à chaque récolte ?'], 'materiel': []}},
+    {'id': 'm3', 'code': 'cacao-sechage', 'theme': 'Gestion des récoltes et des produits', 'title': 'Séchage et stockage des fèves', 'summary': 'Sécher à environ 7 % d\'humidité et stocker sans moisissure.', 'crops': ['cacao'], 'certifications': ['Rainforest Alliance'], 'level': 'base', 'duration_min': 60, 'submission_id': null,
+      'content': {'objectifs': ['Reconnaître une fève bien séchée'], 'sections': [{'titre': 'Séchage', 'points': ['Étaler en couche mince']}], 'a_eviter': [], 'verifier': [], 'materiel': []}}],
+  '/training-results': [
+    {'id': 'r1', 'module_id': 'm2', 'session_date': '2026-10-15', 'village': 'Hiré', 'participants': 22, 'avg_score': '78.00', 'notes': 'Séance suivie avec attention', 'status': 'forwarded'},
+    {'id': 'r2', 'module_id': 'm2', 'session_date': '2026-10-19', 'village': 'Zégban', 'participants': 15, 'avg_score': '71.00', 'notes': '', 'status': 'submitted'}],
   '/task-requests': [],
   '/distribution-articles': [
     {'id': 'a1', 'category': 'Finance', 'group_name': 'Primes', 'name': 'Prime de certification', 'unit': null},
@@ -222,6 +233,11 @@ void main() {
   testWidgets('écrans du coach', (t) async {
     try {
     await shot(t, 'coach-accueil', const HomeScreen(), perms: _coach, pending: 2);
+    await shot(t, 'coach-modules-formation', const TrainingLibraryScreen(), perms: _coach);
+    await shot(t, 'coach-module-exportateur', TrainingModuleScreen(module: Map<String, dynamic>.from((_routes['/training-modules'] as List)[1] as Map)), perms: _coach);
+    await shot(t, 'coach-module-resultats', TrainingResultScreen(module: Map<String, dynamic>.from((_routes['/training-modules'] as List)[1] as Map)), perms: _coach, after: (t) async {
+      await t.enterText(find.byType(TextField).at(0), 'Hiré'); await t.enterText(find.byType(TextField).at(1), '22'); await t.enterText(find.byType(TextField).at(2), '78'); await t.enterText(find.byType(TextField).at(3), 'Séance suivie avec attention ; carnets distribués.');
+    });
     await shot(t, 'coach-producteurs', const ProducersScreen(), perms: _coach);
     await shot(t, 'coach-producteur-taches', const ProducersScreen(), perms: _coach, after: (t) async { await t.tap(find.textContaining('KONÉ')); await t.pump(const Duration(milliseconds: 300)); await t.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200))); await t.pump(const Duration(milliseconds: 300)); });
     await shot(t, 'coach-producteur-infos', const ProducersScreen(), perms: _coach, after: (t) async { await t.tap(find.textContaining('KONÉ')); await t.pump(const Duration(milliseconds: 300)); await t.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200))); await t.pump(const Duration(milliseconds: 600)); await t.tap(find.text('Informations sur le producteur')); await t.pump(const Duration(milliseconds: 400)); });

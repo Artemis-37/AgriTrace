@@ -28,7 +28,8 @@ const PAGES = {
   responsable_logistique: [['accueil', '/'], ['convois', '/convois'], ['stocks', '/stocks']],
   auditeur: [['accueil', '/'], ['finances', '/finances'], ['rapports', '/rapports']],
   acheteur: [['accueil', '/'], ['commerce', '/commerce']],
-  adg: [['accueil', '/'], ['modules-formation', '/modules-formation'], ['missions', '/missions'], ['rapports', '/rapports'], ['operations', '/operations']],
+  exportateur: [['accueil', '/'], ['modules-exportateurs', '/modules-exportateurs']],
+  adg: [['accueil', '/'], ['modules-formation', '/modules-formation'], ['modules-exportateurs', '/modules-exportateurs'], ['resultats-exportateurs', '/modules-exportateurs', 'Résultats (1)'], ['missions', '/missions'], ['rapports', '/rapports'], ['operations', '/operations']],
 };
 
 const browser = await chromium.launch({ args: ['--no-sandbox'], executablePath: process.env.CHROMIUM_PATH || undefined });

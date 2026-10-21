@@ -50,6 +50,7 @@ const PROFILS = [
   ['collecteur', 'Collecteur (application téléphone)', 'Brahima Sylla'],
   ['adg', 'Assistant de direction générale', 'Mireille Ouattara'],
   ['coach', 'Coach / conseiller agricole', 'Gilbert Koffi'],
+  ['exportateur', 'Exportateur (partenaire)', 'Karim Diallo'],
 ];
 
 (async () => {
@@ -177,6 +178,18 @@ const PROFILS = [
     for (const [titre, cat, prio, d, i] of [['Visite de la parcelle de Awa KONE', 'visit', 'normal', 3, 0], ['Séance de formation taille et entretien', 'training', 'high', 8, 2], ['Contrôle des limites de la parcelle de Yves KOFFI', 'control', 'normal', 5, 8]]) {
       await call('POST', '/tasks', { ...A, body: { idempotency_key: key('task'), title: titre, category: cat, priority: prio, due_date: days(d), producer_id: producers[i].id, assignee_id: users.agent_terrain.id, publish: true, expected_result: 'Compte rendu avec photos', validation_criteria: 'Rapport complet', instructions: 'Voir le guide de formation' } });
     }
+  });
+
+  // ── Circuit exportateur : un module transmis avec un résultat transmis, un module en attente, un résultat en attente
+  await soft('modules des exportateurs', async () => {
+    const mod = (title, theme) => ({ theme, title, summary: 'Module proposé par l\'exportateur de démonstration (fictif).', crops: ['cacao'], certifications: ['EUDR'], level: 'base', duration_min: 60,
+      content: { objectifs: ['Tenir un carnet de récolte à jour'], sections: [{ titre: 'Le carnet de récolte', points: ['Noter la date de chaque récolte', 'Noter le poids de fèves fraîches', 'Conserver le carnet à l\'abri'] }], a_eviter: ['Mélanger les récoltes de deux parcelles'], verifier: ['Que note-t-on à chaque récolte ?'] } });
+    const s1 = await call('POST', '/training-submissions', { ...U('exportateur'), body: mod('Carnet de récolte et traçabilité (exportateur)', 'Collecte de documents et tenue de registres') });
+    const f1 = await call('POST', `/training-submissions/${s1.id}/forward`, U('adg'));
+    const r1 = await call('POST', '/training-results', { ...U('coach'), body: { module_id: f1.module_id, session_date: days(-6), village: 'Hiré', participants: 22, avg_score: 78, notes: 'Séance suivie avec attention ; carnets distribués.' } });
+    await call('POST', `/training-results/${r1.id}/forward`, U('adg'));
+    await call('POST', '/training-results', { ...U('coach'), body: { module_id: f1.module_id, session_date: days(-2), village: 'Zégban', participants: 15, avg_score: 71, notes: 'À transmettre par l\'ADG.' } });
+    await call('POST', '/training-submissions', { ...U('exportateur'), body: mod('Séchage et stockage des fèves (exportateur)', 'Gestion des récoltes et des produits') });
   });
   await soft('relevés de terrain', () => call('POST', '/sync/batch', { ...U('agent_terrain'), body: { operations: [
     { idempotency_key: key('fr'), type: 'field_record.create', payload: { kind: 'training', title: 'Formation bonnes pratiques de séchage', held_on: days(-4), participants: 18, location: 'Hiré' } },

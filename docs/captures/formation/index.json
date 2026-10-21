@@ -463,6 +463,20 @@
       "visible": true
     },
     {
+      "name": "modules-exportateurs",
+      "route": "/modules-exportateurs",
+      "tab": null,
+      "file": "adg-modules-exportateurs.png",
+      "visible": true
+    },
+    {
+      "name": "resultats-exportateurs",
+      "route": "/modules-exportateurs",
+      "tab": "Résultats (1)",
+      "file": "adg-resultats-exportateurs.png",
+      "visible": true
+    },
+    {
       "name": "missions",
       "route": "/missions",
       "tab": null,
@@ -482,6 +496,22 @@
       "tab": null,
       "file": "adg-operations.png",
       "visible": false
+    }
+  ],
+  "exportateur": [
+    {
+      "name": "accueil",
+      "route": "/",
+      "tab": null,
+      "file": "exportateur-accueil.png",
+      "visible": true
+    },
+    {
+      "name": "modules-exportateurs",
+      "route": "/modules-exportateurs",
+      "tab": null,
+      "file": "exportateur-modules-exportateurs.png",
+      "visible": true
     }
   ]
 }

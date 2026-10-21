@@ -63,6 +63,7 @@ Pour repartir de zéro, recréez la base de démonstration (ou utilisez une base
 | Qualité et certificats | administrateur, responsable qualité, ADG, direction, auditeur |
 | Commerce | administrateur, responsable logistique, acheteur (ses commandes) |
 | Missions / Relevés de terrain | administrateur, ADG, direction — agent de terrain et coach : **application mobile** |
+| Modules des exportateurs | exportateur (ses propositions et résultats transmis) ; ADG et administrateur (transmettre aux coachs, transmettre les résultats) ; coach : saisie des résultats sur l'application |
 | Modules de formation | administrateur et ADG (conserver, modifier, supprimer) ; coach : lecture sur l'application mobile |
 | Rapports et envoi automatique | administrateur, direction, responsable financier, comptable, ADG, auditeur |
 | Équipe | administrateur |
