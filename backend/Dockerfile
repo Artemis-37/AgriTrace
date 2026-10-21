@@ -1,5 +1,5 @@
 # syntaxe : docker/dockerfile:1
-FROM node:22-slim AS build
+FROM node:25-slim AS build
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
@@ -7,7 +7,7 @@ COPY tsconfig*.json nest-cli.json* ./
 COPY src ./src
 RUN npm run build && npm prune --omit=dev
 
-FROM node:22-slim
+FROM node:25-slim
 ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=build /app/node_modules ./node_modules
