@@ -78,6 +78,12 @@ const uuid = () => crypto.randomUUID();
   check("l'administrateur ajoute un article", art.status === 201, art.body);
   const arts = await call('GET', '/distribution-articles?category=Intrants%20et%20Outils&group=Engrais', { ...J(A, coach.t) });
   check('le coach voit les articles du groupe', arts.body.length === 1 && arts.body[0].name === 'NPK 0-23-19', arts.body);
+  check('le coach ne retire pas un article', (await call('POST', `/distribution-articles/${art.body.id}/retirer`, { ...J(A, coach.t) })).status === 403);
+  check("l'administrateur retire l'article", (await call('POST', `/distribution-articles/${art.body.id}/retirer`, { ...J(A) })).status === 201);
+  check('article retiré absent du catalogue', (await call('GET', '/distribution-articles?category=Intrants%20et%20Outils&group=Engrais', { ...J(A, coach.t) })).body.length === 0);
+  check("identifiant d'article inconnu : 404", (await call('POST', '/distribution-articles/00000000-0000-0000-0000-000000000000/retirer', { ...J(A) })).status === 404);
+  const lst = await call('GET', '/field-records', { ...J(A) });
+  check("la liste indique l'auteur", lst.body.length > 0 && lst.body.every((r) => 'created_by_name' in r), lst.body[0]);
 
   console.log(`\n${ok} contrôles réussis, ${ko} en échec`);
   process.exit(ko ? 1 : 0);

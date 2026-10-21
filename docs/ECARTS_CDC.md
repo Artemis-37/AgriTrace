@@ -130,3 +130,7 @@
 - Parcours aligné sur le terminal de référence : articles (catégorie, groupe, recherche, pastilles) → vérification et devise → bénéficiaires → configuration (quantité, preuve photo, signature) → révision → enregistrement hors connexion.
 - Formation : le module est une liste à cocher avec recherche ; seuls les modules du thème « Agriculture régénératrice » sont renseignés (autres thèmes : saisie libre).
 - Limites : les listes de modules des autres thèmes et les devises sont à valider ; la page de révision finale est une conception propre (non visible sur les captures de référence) ; non testé sur appareil réel.
+
+## Données de terrain dans le portail web
+- Ajouté : page « Données de terrain » (distributions, formations, infrastructures sociales, détail avec pièces jointes) et gestion du catalogue des articles (ajout, retrait) ; route `POST /distribution-articles/:id/retirer`, test `e2e-terrain` (23 contrôles).
+- Limites : pas d'export ni de filtre par date ou par coach ; les enregistrements restent hors réplication poste local ↔ cloud ; une page validée seulement par la compilation et les tests API (non essayée dans un navigateur).

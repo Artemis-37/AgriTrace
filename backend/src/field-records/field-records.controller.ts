@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Get, Post, Query, Req } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, NotFoundException, Param, Post, Query, Req } from '@nestjs/common';
 import { ApiBearerAuth, ApiHeader, ApiTags } from '@nestjs/swagger';
 import { IsIn, IsNumber, IsObject, IsOptional, IsString, IsUUID, Length, Max, Min } from 'class-validator';
 import { RequirePermissions } from '../access/decorators';
@@ -57,9 +57,10 @@ export class FieldRecordsController {
     if (kind && !(FIELD_KINDS as readonly string[]).includes(kind)) throw new BadRequestException('Type inconnu');
     const all = req.org.permissions.has('field_records:manage');
     return this.db.tx(req.org.id, async (c) => (await c.query(
-      `SELECT id, kind, title, latitude, longitude, data, created_by, created_at FROM field_records
-        WHERE ($1::text IS NULL OR kind = $1) AND ($2::boolean OR created_by = $3)
-        ORDER BY created_at DESC LIMIT 200`, [kind ?? null, all, req.user.id])).rows);
+      `SELECT f.id, f.kind, f.title, f.latitude, f.longitude, f.data, f.created_by, u.full_name AS created_by_name, f.created_at
+         FROM field_records f LEFT JOIN users u ON u.id = f.created_by
+        WHERE ($1::text IS NULL OR f.kind = $1) AND ($2::boolean OR f.created_by = $3)
+        ORDER BY f.created_at DESC LIMIT 200`, [kind ?? null, all, req.user.id])).rows);
   }
 
   @Get('distribution-articles')
@@ -78,5 +79,15 @@ export class FieldRecordsController {
       `INSERT INTO distribution_articles(organization_id, category, group_name, name, unit) VALUES ($1,$2,$3,$4,$5)
        ON CONFLICT (organization_id, category, group_name, name) DO UPDATE SET active = true, unit = EXCLUDED.unit RETURNING *`,
       [req.org.id, b.category, b.group_name, b.name, b.unit ?? null])).rows[0]);
+  }
+
+  /** Retire un article du catalogue (il reste dans les distributions déjà enregistrées). */
+  @Post('distribution-articles/:id/retirer')
+  @RequirePermissions('field_records:manage')
+  async retireArticle(@Param('id') id: string, @Req() req: any) {
+    if (!/^[0-9a-f-]{36}$/.test(id)) throw new BadRequestException('Identifiant invalide');
+    const r = await this.db.tx(req.org.id, (c) => c.query(`UPDATE distribution_articles SET active = false WHERE id = $1`, [id]));
+    if (!r.rowCount) throw new NotFoundException('Article introuvable');
+    return { ok: true };
   }
 }

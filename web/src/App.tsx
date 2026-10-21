@@ -23,6 +23,7 @@ import OfflineBar from './OfflineBar';
 import Synchronisation from './pages/Synchronisation';
 import CentralConsole from './pages/CentralConsole';
 import Missions from './pages/Missions';
+import Terrain from './pages/Terrain';
 import Parcels from './pages/Parcels';
 import Producers from './pages/Producers';
 import Quality from './pages/Quality';
@@ -49,6 +50,7 @@ const NAV: { to: string; label: string; icon: string; perm: string[]; any?: bool
   { to: '/equipe', label: 'Équipe', icon: '⚙', perm: ['users:read'] },
   { to: '/declarations', label: 'Déclarations d\'achat', icon: '✎', perm: ['declarations:read'], notFor: 'collector' },
   { to: '/missions', label: 'Missions', icon: '⚑', perm: ['tasks:read'] },
+  { to: '/terrain', label: 'Données de terrain', icon: '❖', perm: ['field_records:read', 'field_records:manage'], any: true },
   { to: '/stocks', label: 'Stocks et lots', icon: '▤', perm: ['warehouses:read'] },
   { to: '/rapports', label: 'Rapports', icon: '▥', perm: ['reports:read'] },
   { to: '/finances', label: 'Finances', icon: '₣', perm: ['finance:read'] },
@@ -123,6 +125,7 @@ export default function App() {
           <Route path="/notifications" element={<Notifications onChange={refreshUnread} />} />
           <Route path="/declarations" element={<Declarations />} />
           <Route path="/missions" element={<Missions />} />
+          <Route path="/terrain" element={<Terrain />} />
           <Route path="/stocks" element={<Stocks />} />
           <Route path="/finances" element={<Finance />} />
           <Route path="/qualite" element={<Quality />} />
