@@ -51,7 +51,7 @@ export class AccessGuard implements CanActivate {
     if (!rows.length) throw new UnauthorizedException('Session révoquée ou expirée');
     req.user = { ...rows[0], sessionId: payload.sid };
     // Mot de passe temporaire : seules les routes de changement de mot de passe, de déconnexion, « me » et la liste des coopératives restent ouvertes.
-    if (rows[0].must_change_password && !/\/(auth\/change-password|auth\/logout|me|organizations)\/?(\?.*)?$/.test(String(req.originalUrl ?? req.url)) )
+    if (rows[0].must_change_password && !/^\/v1\/(auth\/change-password|auth\/logout|me|organizations)\/?(\?.*)?$/.test(String(req.originalUrl ?? req.url)) )
       throw new ForbiddenException({ message: 'Vous devez changer votre mot de passe temporaire avant de continuer', code: 'PASSWORD_CHANGE_REQUIRED' });
 
     if (this.reflector.getAllAndOverride<boolean>(PLATFORM_ADMIN, targets)) {

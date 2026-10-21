@@ -26,7 +26,15 @@ jobs:
       - run: flutter create --platforms=android --org ci.agritrace .
       - run: rm -f test/widget_test.dart
       - run: flutter pub get
-      - name: Compilation de l'APK (2 essais : le téléchargement du NDK échoue parfois)
+      - name: Clé de signature de production (secrets du dépôt ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD)
+        env: { KS: '${{ secrets.ANDROID_KEYSTORE_BASE64 }}' }
+        run: |
+          if [ -n "$KS" ]; then echo "$KS" | base64 -d > "$RUNNER_TEMP/release.jks"; echo "ANDROID_KEYSTORE_FILE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"; else echo "::warning::Pas de clé de production : APK signé avec la clé de débogage, à ne pas distribuer"; fi
+      - name: "Compilation de l'APK (2 essais, le téléchargement du NDK échoue parfois)"
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           B="--release --dart-define=API_BASE=${{ inputs.api_base }} --dart-define=APP_VERSION=${{ inputs.version }}"
           flutter build apk $B || (rm -rf $ANDROID_HOME/ndk && flutter build apk $B)

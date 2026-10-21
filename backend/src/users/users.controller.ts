@@ -1,4 +1,5 @@
 import { BadRequestException, Body, ConflictException, Controller, ForbiddenException, Get, NotFoundException, Param, ParseUUIDPipe, Post, Req } from '@nestjs/common';
+import { assertStrongPassword } from '../auth/password-policy';
 import { randomBytes } from 'crypto';
 import { ApiBearerAuth, ApiHeader, ApiTags } from '@nestjs/swagger';
 import { ArrayMaxSize, ArrayNotEmpty, IsArray, IsBoolean, IsEmail, IsOptional, IsString, IsUUID, Length, Matches, MinLength } from 'class-validator';
@@ -110,6 +111,7 @@ export class UsersController {
   @RequirePermissions('users:create')
   async create(@Body() b: CreateUserDto, @Req() req: any) {
     const email = b.email.toLowerCase();
+    assertStrongPassword(b.password, b.email);
     const hash = await this.auth.hashPassword(b.password);
     const user = await this.db.tx(req.org.id, async (c) => {
       // Le rôle doit appartenir à l'organisation courante (pas d'identifiant d'une autre coopérative).

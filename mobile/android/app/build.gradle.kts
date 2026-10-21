@@ -29,11 +29,23 @@ android {
         versionName = flutter.versionName
     }
 
+    // Signature de production : keystore fourni par l'environnement (ANDROID_KEYSTORE_FILE, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD).
+    // Sans keystore (poste de développement), la version « release » est signée avec la clé de débogage : NE PAS distribuer un tel APK.
+    val ksFile = System.getenv("ANDROID_KEYSTORE_FILE")
+    if (ksFile != null && file(ksFile).exists()) {
+        signingConfigs {
+            create("production") {
+                storeFile = file(ksFile)
+                storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("ANDROID_KEY_ALIAS")
+                keyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (ksFile != null && file(ksFile).exists()) signingConfigs.getByName("production") else signingConfigs.getByName("debug")
         }
     }
 }

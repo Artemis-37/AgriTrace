@@ -7,6 +7,7 @@ import helmet from 'helmet';
 import * as path from 'path';
 import { AppModule } from './app.module';
 import * as http from 'http';
+import * as express from 'express';
 import { requestMiddleware } from './ops/metrics';
 import { ensureCertificate } from './ops/tls';
 
@@ -17,12 +18,18 @@ async function bootstrap() {
 
   // TLS sur le réseau local : TLS_DIR = dossier du certificat auto-signé (créé au premier démarrage). Les postes l'épinglent par son empreinte.
   // HTTP_LOOPBACK_PORT : port HTTP réservé à ce poste (127.0.0.1) pour l'application elle-même, sa surveillance et ses tests.
-  const tls = process.env.TLS_DIR ? ensureCertificate(process.env.TLS_DIR) : null;
-  const app = await NestFactory.create<NestExpressApplication>(AppModule, tls ? { httpsOptions: { key: tls.key, cert: tls.cert } } : {});
+  const tls = process.env.TLS_DIR ? await ensureCertificate(process.env.TLS_DIR) : null;
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { bodyParser: false, ...(tls ? { httpsOptions: { key: tls.key, cert: tls.cert } } : {}) });
   // Derrière un reverse proxy (nginx, équilibreur) : TRUST_PROXY=1 pour que l'adresse IP réelle serve au limiteur de débit et à l'audit.
   if (process.env.TRUST_PROXY) (app.getHttpAdapter().getInstance() as any).set('trust proxy', Number(process.env.TRUST_PROXY) || process.env.TRUST_PROXY);
-  // Le central reçoit des lots (lignes + pièces jointes) bien plus gros qu'une requête ordinaire.
-  if (process.env.AGRITRACE_MODE !== 'local') app.useBodyParser('json', { limit: '40mb' });
+  // Taille des corps de requête : 2 Mo partout (une requête anonyme ne peut pas saturer la mémoire), plus pour les routes qui reçoivent des lots :
+  // synchronisation, réplication (lignes + pièces jointes) et import cartographique.
+  const BIG = process.env.AGRITRACE_MODE !== 'local' ? '40mb' : '10mb';
+  app.use(['/v1/replication', '/v1/sync', '/v1/geo'], express.json({ limit: BIG }));
+  app.use(express.json({ limit: '2mb' }));
+  app.use(express.urlencoded({ extended: false, limit: '1mb' }));
+  // Les réponses de l'API ne sont jamais mises en cache (navigateur partagé, proxy) : elles contiennent des données de la coopérative.
+  app.use('/v1', (_req: any, res: any, next: any) => { res.setHeader('Cache-Control', 'no-store'); next(); });
   // Serveur local (poste Windows de la coopérative) : le portail est servi par l'API elle-même, en HTTP sur le réseau local.
   // Le navigateur ne doit alors pas « améliorer » les requêtes en HTTPS (sinon les pages ne chargent plus).
   const webDir = process.env.WEB_DIR;
@@ -46,7 +53,8 @@ async function bootstrap() {
       .addBearerAuth()
       .build(),
   );
-  SwaggerModule.setup('v1/docs', app, doc);
+  // La documentation interactive de l'API n'est pas publiée en production (elle aide un attaquant à cartographier l'API) : ENABLE_API_DOCS=true pour l'activer.
+  if (process.env.NODE_ENV !== 'production' || process.env.ENABLE_API_DOCS === 'true') SwaggerModule.setup('v1/docs', app, doc);
 
   if (webDir) {
     app.useStaticAssets(webDir, { index: false, maxAge: '1h' });

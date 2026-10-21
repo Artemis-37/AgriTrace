@@ -135,9 +135,13 @@ function page(name) { return path.join(__dirname, name); }
 
 function mainWindow(url) {
   if (win) { win.loadURL(url); win.show(); return; }
+  session.defaultSession.setPermissionRequestHandler((_w, _perm, cb) => cb(false)); // caméra, micro, position, notifications… : jamais accordés à la page
   win = new BrowserWindow({ width: 1366, height: 860, minWidth: 900, minHeight: 600, icon: path.join(__dirname, '..', 'build', 'icon.png'), title: cfg?.stationName ? `AgriTrace — ${cfg.stationName}` : 'AgriTrace', backgroundColor: '#efebe1', webPreferences: { contextIsolation: true, sandbox: true, preload: page('preload.js') } });
   win.loadURL(url);
-  win.webContents.setWindowOpenHandler(({ url: u }) => { shell.openExternal(u); return { action: 'deny' }; });
+  // Liens externes : seulement http(s) ouverts dans le navigateur du système (jamais file:, smb:, ms-… qui lanceraient autre chose).
+  win.webContents.setWindowOpenHandler(({ url: u }) => { try { if (/^https?:$/.test(new URL(u).protocol)) shell.openExternal(u); } catch { /* adresse invalide : ignorée */ } return { action: 'deny' }; });
+  // La fenêtre ne peut pas être détournée vers un autre site : toute navigation hors du serveur de la coopérative / de l'application est bloquée.
+  win.webContents.on('will-navigate', (e, u) => { try { const t = new URL(u), a = new URL(url); if (t.origin !== a.origin) { e.preventDefault(); if (/^https?:$/.test(t.protocol)) shell.openExternal(u); } } catch { e.preventDefault(); } });
   win.webContents.on('did-fail-load', (_e, code, desc, failed, isMain) => {
     if (isMain && code !== -3) win.loadFile(page('error.html'), { query: { url: failed, reason: desc } });
   });

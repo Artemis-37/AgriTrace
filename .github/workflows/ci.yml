@@ -41,17 +41,22 @@ jobs:
           DATABASE_URL=$OWNER_URL ADMIN_PASSWORD=$ADMIN_PASSWORD node scripts/create-platform-admin.js $ADMIN_EMAIL "Admin CI"
       - name: Démarrer l'API
         run: |
-          THROTTLE_LIMIT=100000 node dist/main > /tmp/api.log 2>&1 &
+          THROTTLE_LIMIT=100000 LOGIN_THROTTLE_LIMIT=100000 node dist/main > /tmp/api.log 2>&1 &
           for i in $(seq 1 30); do curl -fs http://localhost:3000/v1/ready && break; sleep 1; done
           curl -fs http://localhost:3000/v1/ready
       - run: npm run test:e2e
       - name: Moteur de repli sans PostGIS (GEO_ENGINE=js) — mêmes classements
         run: |
-          PORT=3001 GEO_ENGINE=js node dist/main > /tmp/api-js.log 2>&1 &
+          PORT=3001 GEO_ENGINE=js THROTTLE_LIMIT=100000 LOGIN_THROTTLE_LIMIT=100000 node dist/main > /tmp/api-js.log 2>&1 &
           for i in $(seq 1 30); do curl -fs http://localhost:3001/v1/ready && break; sleep 1; done
           API=http://localhost:3001/v1 EXPECT_ENGINE=js node scripts/e2e-postgis.js
           API=http://localhost:3001/v1 EXPECT_ENGINE=js node scripts/e2e-zones-protegees.js
           API=http://localhost:3001/v1 node scripts/e2e-geo.js
+      - name: Sécurité (API en mode production, limites de connexion par défaut)
+        run: |
+          NODE_ENV=production PORT=3003 THROTTLE_LIMIT=100000 node dist/main > /tmp/api-sec.log 2>&1 &
+          for i in $(seq 1 30); do curl -fs http://localhost:3003/v1/ready && break; sleep 1; done
+          API=http://localhost:3003/v1 node scripts/e2e-securite.js
       - name: Portail web (build, aperçu relié à l'API) et navigateur
         working-directory: web
         run: |
@@ -124,7 +129,7 @@ jobs:
       - run: flutter pub get
       - run: flutter analyze --no-fatal-infos
       - run: flutter test
-      - name: Compilation de l'APK (debug, 2 essais : le téléchargement du NDK échoue parfois)
+      - name: "Compilation de l'APK (debug, 2 essais, le téléchargement du NDK échoue parfois)"
         run: flutter build apk --debug || (rm -rf $ANDROID_HOME/ndk && flutter build apk --debug)
 
   docker:

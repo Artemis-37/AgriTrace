@@ -79,7 +79,7 @@ export class ReportsController {
     const f = kind === 'purchases' ? await this.xlsx(req, q) : kind === 'finance' ? await this.financeXlsx(req, q) : kind === 'stock' ? await this.stockXlsx(req, q) : await this.qualityXlsx(req, q);
     const chunks: Buffer[] = [];
     for await (const ch of f.getStream()) chunks.push(Buffer.from(ch as any));
-    const name = /filename="([^"]+)"/.exec(f.getHeaders().disposition ?? '')?.[1] ?? `Rapport_${kind}.xlsx`;
+    const name = /filename="([^"]+)"/.exec(String(f.getHeaders().disposition ?? ''))?.[1] ?? `Rapport_${kind}.xlsx`;
     return { filename: name, buffer: Buffer.concat(chunks) };
   }
 

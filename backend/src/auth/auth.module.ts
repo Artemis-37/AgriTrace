@@ -9,7 +9,8 @@ import { AuthService } from './auth.service';
     JwtModule.register({
       global: true,
       secret: process.env.JWT_SECRET,
-      signOptions: { expiresIn: Number(process.env.JWT_ACCESS_TTL ?? 900) },
+      signOptions: { expiresIn: Number(process.env.JWT_ACCESS_TTL ?? 900), algorithm: 'HS256', issuer: 'agritrace' },
+      verifyOptions: { algorithms: ['HS256'], issuer: 'agritrace' },
     }),
   ],
   controllers: [AuthController],

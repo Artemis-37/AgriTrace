@@ -1,4 +1,5 @@
 import { BadRequestException, Body, ConflictException, Controller, ForbiddenException, Get, Headers, HttpCode, NotFoundException, Param, ParseUUIDPipe, Post, Req, Res } from '@nestjs/common';
+import { assertStrongPassword } from '../auth/password-policy';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { IsBoolean, IsIn, IsOptional, IsString, Length, Matches } from 'class-validator';
 import { Public, PlatformAdminOnly, RequirePermissions } from '../access/decorators';
@@ -90,6 +91,7 @@ export class ReplicationController {
   @Post('bootstrap/local')
   async bootstrap(@Body() b: BootstrapDto) {
     if (!isLocal()) throw new ForbiddenException('Réservé au mode serveur local');
+    assertStrongPassword(b.admin_password, b.admin_email);
     const hash = await this.auth.hashPassword(b.admin_password);
     let org: { id: string; code: string; name: string; country?: string };
     let pairing = b.pairing_code?.trim();

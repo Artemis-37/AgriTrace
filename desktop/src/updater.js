@@ -3,7 +3,19 @@
 // (celle enregistrée à l'envoi) puis l'installe. Aucune dépendance à Electron : le même code est testé sous Node.
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const { getJson, download } = require('./secure-fetch');
+
+// Clé publique de signature des versions (Ed25519). Le fichier est créé par `node scripts/sign-release.js keygen` et livré avec l'application.
+// Si elle est présente, TOUTE mise à jour doit porter une signature valide ; sinon (ancienne installation), seule l'empreinte du serveur est contrôlée.
+function loadPublicKey() {
+  try { return fs.readFileSync(process.env.AGRITRACE_RELEASE_PUBKEY_FILE || path.join(__dirname, 'release-public-key.pem'), 'utf8'); } catch { return null; }
+}
+/** Message signé : lie la version à l'empreinte du fichier (une signature ne peut pas être rejouée pour une autre version). */
+const releaseMessage = (version, sha256) => Buffer.from(`agritrace-release:${version}:${sha256}`);
+function verifySignature(publicKeyPem, version, sha256, signature) {
+  try { return crypto.verify(null, releaseMessage(version, sha256), crypto.createPublicKey(publicKeyPem), Buffer.from(String(signature), 'base64')); } catch { return false; }
+}
 
 const VERSION = /^\d{1,4}\.\d{1,4}\.\d{1,4}$/;
 const compareVersions = (a, b) => {
@@ -19,12 +31,15 @@ async function checkUpdate({ origin, pin = null, current }) {
     const j = r.json;
     if (r.status !== 200 || !j.available || !VERSION.test(j.version) || compareVersions(j.version, current) <= 0) return null;
     if (!/^[0-9a-f]{64}$/.test(j.sha256 ?? '')) return null;
-    return { version: j.version, size: j.size_bytes, sha256: j.sha256, notes: j.notes ?? null };
+    return { version: j.version, size: j.size_bytes, sha256: j.sha256, notes: j.notes ?? null, signature: typeof j.signature === 'string' ? j.signature : null };
   } catch { return null; }
 }
 
 /** Télécharge l'installateur annoncé et vérifie taille + empreinte. Un fichier qui ne correspond pas est supprimé, jamais lancé. */
-async function downloadInstaller({ origin, pin = null, update, destDir, onProgress }) {
+async function downloadInstaller({ origin, pin = null, update, destDir, onProgress, publicKey = loadPublicKey() }) {
+  // Signature contrôlée AVANT tout téléchargement : sans signature valide, rien n'est récupéré ni lancé.
+  if (publicKey && !verifySignature(publicKey, update.version, update.sha256, update.signature))
+    throw new Error("Mise à jour refusée : la signature de cette version est absente ou invalide (elle n'a pas été publiée par l'éditeur).");
   fs.mkdirSync(destDir, { recursive: true });
   const dest = path.join(destDir, `AgriTrace-Setup-${update.version}.exe`);
   const r = await download(origin, `/v1/app/installer/${update.version}`, dest, { pin, timeoutMs: 60000, onProgress });
@@ -49,4 +64,4 @@ function cleanOld(destDir, keepVersion) {
   try { for (const f of fs.readdirSync(destDir)) if (!f.includes(`-${keepVersion}.`)) fs.rmSync(path.join(destDir, f), { force: true }); } catch { /* ignoré */ }
 }
 
-module.exports = { checkUpdate, downloadInstaller, installCommand, compareVersions, cleanOld };
+module.exports = { checkUpdate, downloadInstaller, installCommand, compareVersions, cleanOld, verifySignature, releaseMessage, loadPublicKey };

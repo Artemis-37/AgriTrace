@@ -61,6 +61,17 @@ const form = (buf, version, name = 'AgriTrace-Setup.exe') => { const f = new For
   check('version plus récente déposée', up2.status === 201, up2.body);
   const c1 = await call('GET', `/app/update?current=${v1}`);
   check('les postes de la version précédente voient la nouvelle', c1.body.available === true && c1.body.version === v2, c1.body);
+  console.log('Signature de l\'installateur');
+  const sig = Buffer.alloc(64, 7).toString('base64');
+  const v3 = `${major}.2.0`;
+  const fs3 = form(exe('c'), v3); fs3.append('signature', sig);
+  const up3 = await call('POST', '/platform/app/releases', { token: adm, form: fs3 });
+  check('dépôt avec signature accepté', up3.status === 201 && up3.body.signed === true, up3.body);
+  const c3 = await call('GET', `/app/update?current=${v2}`);
+  check('la signature est transmise aux postes', c3.body.signature === sig, c3.body);
+  const v4 = `${major}.3.0`;
+  const fs4 = form(exe('d'), v4); fs4.append('signature', 'pas-une-signature');
+  check('signature mal formée refusée (400)', (await call('POST', '/platform/app/releases', { token: adm, form: fs4 })).status === 400);
   console.log(`\n${ok} contrôles réussis, ${ko} en échec`);
   process.exit(ko ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(1); });

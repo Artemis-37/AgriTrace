@@ -1,4 +1,5 @@
 import { Body, Controller, Get, NotFoundException, Param, ParseUUIDPipe, Post, Req } from '@nestjs/common';
+import { assertStrongPassword } from '../auth/password-policy';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { IsEmail, IsOptional, IsString, Length, Matches, MinLength } from 'class-validator';
 import { NoOrg, PlatformAdminOnly } from '../access/decorators';
@@ -45,6 +46,7 @@ export class OrganizationsController {
   @PlatformAdminOnly()
   @Post(':id/admins')
   async createFirstAdmin(@Param('id', ParseUUIDPipe) id: string, @Body() b: CreateOrgAdminDto, @Req() req: any) {
+    assertStrongPassword(b.password, b.email);
     const hash = await this.auth.hashPassword(b.password);
     const out = await this.db.tx(id, async (c) => {
       const role = await c.query(`SELECT id FROM roles WHERE organization_id = $1 AND code = 'coop_admin'`, [id]);

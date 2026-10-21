@@ -6,7 +6,7 @@ const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
 const { execFileSync } = require('child_process');
-const { checkUpdate, downloadInstaller, installCommand, compareVersions, cleanOld } = require('../src/updater');
+const { checkUpdate, downloadInstaller, installCommand, compareVersions, cleanOld, releaseMessage, verifySignature } = require('../src/updater');
 let ko = 0; const check = (n, c, x) => { console.log(`${c ? '✓' : '✗'} ${n}`); if (!c) { ko++; if (x !== undefined) console.log('   ', JSON.stringify(x)); } };
 
 const work = fs.mkdtempSync(path.join(os.tmpdir(), 'agritrace-upd-'));
@@ -62,6 +62,21 @@ const listen = (s) => new Promise((res) => s.listen(0, '127.0.0.1', () => res(s.
   for (const v of ['0.1.5', '0.2.0']) fs.writeFileSync(path.join(keep, `AgriTrace-Setup-${v}.exe`), 'x');
   cleanOld(keep, '0.2.0');
   check('anciens installateurs supprimés', fs.readdirSync(keep).join() === 'AgriTrace-Setup-0.2.0.exe');
+
+  // Signature des versions (Ed25519) : sans signature valide, rien n'est téléchargé.
+  const kp = crypto.generateKeyPairSync('ed25519'), other = crypto.generateKeyPairSync('ed25519');
+  const pub = kp.publicKey.export({ type: 'spki', format: 'pem' });
+  const sign = (v, h, key = kp.privateKey) => crypto.sign(null, releaseMessage(v, h), key).toString('base64');
+  const su = { ...u, signature: sign('0.2.0', sha) };
+  check('signature valide reconnue', verifySignature(pub, '0.2.0', sha, su.signature));
+  const fs1 = await downloadInstaller({ origin: O, update: su, destDir: path.join(work, 'sg1'), publicKey: pub }).then(() => true, (e) => e.message);
+  check('version signée : installée', fs1 === true, fs1);
+  const d2 = path.join(work, 'sg2');
+  check('version non signée refusée avant tout téléchargement', await downloadInstaller({ origin: O, update: { ...u, signature: null }, destDir: d2, publicKey: pub }).then(() => false, (e) => /signature/.test(e.message)) && !fs.existsSync(d2));
+  check('signature d\'une autre clé refusée', await downloadInstaller({ origin: O, update: { ...u, signature: sign('0.2.0', sha, other.privateKey) }, destDir: path.join(work, 'sg3'), publicKey: pub }).then(() => false, (e) => /signature/.test(e.message)));
+  check('signature d\'une autre version refusée (pas de rejeu)', await downloadInstaller({ origin: O, update: { ...u, signature: sign('0.1.0', sha) }, destDir: path.join(work, 'sg4'), publicKey: pub }).then(() => false, (e) => /signature/.test(e.message)));
+  check('empreinte modifiée par le serveur : signature invalide', await downloadInstaller({ origin: O, update: { ...su, sha256: '0'.repeat(64) }, destDir: path.join(work, 'sg5'), publicKey: pub }).then(() => false, (e) => /signature/.test(e.message)));
+  check('signature illisible refusée sans plantage', !verifySignature(pub, '0.2.0', sha, '%%%') && !verifySignature('pas une clé', '0.2.0', sha, su.signature));
 
   plain.close(); tls.close(); fs.rmSync(work, { recursive: true, force: true });
   process.exit(ko ? 1 : 0);

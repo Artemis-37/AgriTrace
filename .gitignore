@@ -11,3 +11,7 @@ desktop/payload/
 desktop/dist/
 e2e-theme-*.png
 mobile/android/build/
+
+# Clé privée de signature des versions : ne jamais la déposer dans le dépôt
+release-private*.pem
+*.pem.private

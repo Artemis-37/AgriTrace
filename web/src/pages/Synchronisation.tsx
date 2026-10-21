@@ -68,6 +68,7 @@ function AppUpdateCard() {
   const { data, reload } = useAsync(() => get<any>('/app/update?current=0.0.0'), []);
   const act = useAction();
   const [version, setVersion] = useState('');
+  const [signature, setSignature] = useState('');
   const [notes, setNotes] = useState('');
   const [done, setDone] = useState<string | null>(null);
   const file = useRef<HTMLInputElement>(null);
@@ -79,18 +80,19 @@ function AppUpdateCard() {
         : 'Aucune version déposée pour le moment.'}</p>
       {can('settings:manage') && (
         <>
-          <p className="muted">Déposez le fichier d'installation Windows (.exe) d'une version plus récente. Les postes le téléchargent depuis ce serveur, sans Internet. L'installateur n'est pas signé numériquement : ne déposez que le fichier fourni par votre équipe AgriTrace.</p>
+          <p className="muted">Déposez le fichier d'installation Windows (.exe) d'une version plus récente. Les postes le téléchargent depuis ce serveur, sans Internet. Ne déposez que le fichier fourni par votre équipe AgriTrace, avec la signature qui l'accompagne.</p>
           {act.error && <ErrorBox message={act.error} />}
           {done && <p className="notice" role="status">{done}</p>}
           <Field label="Numéro de version (ex. 0.2.0)"><input value={version} onChange={(e) => setVersion(e.target.value.trim())} maxLength={14} /></Field>
           <Field label="Installateur (.exe)"><input ref={file} type="file" accept=".exe" /></Field>
+          <Field label="Signature de l'installateur (Ed25519, produite par l'éditeur)" hint="Obligatoire pour les postes qui embarquent la clé publique de l'éditeur : sans signature valide, ils refusent la mise à jour."><input value={signature} onChange={(e) => setSignature(e.target.value.trim())} maxLength={90} placeholder="88 caractères" /></Field>
           <Field label="Nouveautés (facultatif)"><input value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={500} /></Field>
           <button className="btn" disabled={act.busy || !valid} onClick={() => act.run(async () => {
             const f = file.current?.files?.[0];
             if (!f) throw new Error('Choisissez le fichier d\'installation');
-            const form = new FormData(); form.append('file', f); form.append('version', version); if (notes.trim()) form.append('notes', notes.trim());
+            const form = new FormData(); form.append('file', f); form.append('version', version); if (signature) form.append('signature', signature); if (notes.trim()) form.append('notes', notes.trim());
             const r = await postForm<any>('/app/releases', form);
-            setDone(`Version ${r.version} déposée : les postes la proposeront à leurs utilisateurs.`); setVersion(''); setNotes(''); if (file.current) file.current.value = ''; reload();
+            setDone(`Version ${r.version} déposée : les postes la proposeront à leurs utilisateurs.`); setVersion(''); setNotes(''); setSignature(''); if (file.current) file.current.value = ''; reload();
           })}>Mettre à disposition des postes</button>
         </>
       )}

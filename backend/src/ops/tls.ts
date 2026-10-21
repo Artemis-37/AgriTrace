@@ -15,7 +15,7 @@ export const tlsInfo = () => state.current;
  * Les postes ne vérifient pas un nom d'hôte mais l'EMPREINTE (épinglage) : l'adresse IP du serveur peut donc changer sans rien casser.
  * Un certificat qui expire dans moins de 30 jours est refait ; les postes devront alors se ré-associer (empreinte nouvelle).
  */
-export function ensureCertificate(dir: string): TlsMaterial {
+export async function ensureCertificate(dir: string): Promise<TlsMaterial> {
   fs.mkdirSync(dir, { recursive: true });
   const keyFile = path.join(dir, 'key.pem'), certFile = path.join(dir, 'cert.pem');
   let key: string | null = null, cert: string | null = null;
@@ -24,7 +24,7 @@ export function ensureCertificate(dir: string): TlsMaterial {
     try { if (new Date(new X509Certificate(cert).validTo).getTime() - Date.now() < 30 * 86400000) { key = null; cert = null; } } catch { key = null; cert = null; }
   }
   if (!key || !cert) {
-    const pems = selfsigned.generate([{ name: 'commonName', value: 'AgriTrace serveur cooperative' }], {
+    const pems = await selfsigned.generate([{ name: 'commonName', value: 'AgriTrace serveur cooperative' }], {
       keySize: 2048, days: 3650, algorithm: 'sha256',
       extensions: [
         { name: 'basicConstraints', cA: false },

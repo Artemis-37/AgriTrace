@@ -4,6 +4,11 @@ import * as argon2 from 'argon2';
 import { createHash, randomBytes } from 'crypto';
 import { DbService } from '../db/db.service';
 import { AuditService } from '../audit/audit.service';
+import { assertStrongPassword } from './password-policy';
+
+// Empreinte factice : un compte inconnu coûte le même temps de calcul qu'un compte réel (pas de devinette d'adresses par le temps de réponse).
+let DUMMY: Promise<string> | null = null;
+const dummyHash = () => (DUMMY ??= argon2.hash('agritrace-dummy-password', { type: argon2.argon2id }));
 
 const MAX_FAILED = 5;
 const LOCK_MINUTES = 15;
@@ -28,9 +33,13 @@ export class AuthService {
       [email],
     );
     const invalid = new UnauthorizedException('Identifiants invalides');
-    if (!u || u.status !== 'active' || String(u.password_hash).startsWith('!')) throw invalid; // '!' = compte copié depuis un serveur local, sans mot de passe ici
-    if (u.locked_until && new Date(u.locked_until) > new Date())
-      throw new UnauthorizedException('Compte temporairement verrouillé');
+    // Même réponse et même durée pour : compte inconnu, désactivé, copié sans mot de passe ('!'), verrouillé ou mauvais mot de passe.
+    if (!u || u.status !== 'active' || String(u.password_hash).startsWith('!')) { await argon2.verify(await dummyHash(), password).catch(() => false); throw invalid; }
+    if (u.locked_until && new Date(u.locked_until) > new Date()) {
+      await argon2.verify(await dummyHash(), password).catch(() => false);
+      await this.audit.log({ actorUserId: u.id, action: 'auth.login_while_locked', ip });
+      throw invalid;
+    }
 
     if (!(await argon2.verify(u.password_hash, password))) {
       await this.db.query(
@@ -111,8 +120,9 @@ export class AuthService {
 
   /** Changement de mot de passe par l'utilisateur : l'ancien est exigé, les autres sessions sont fermées. */
   async changePassword(userId: string, sessionId: string, current: string, next: string) {
-    const [u] = await this.db.query(`SELECT password_hash FROM users WHERE id = $1`, [userId]);
+    const [u] = await this.db.query(`SELECT password_hash, email FROM users WHERE id = $1`, [userId]);
     if (!u || String(u.password_hash).startsWith('!') || !(await argon2.verify(u.password_hash, current))) throw new UnauthorizedException('Mot de passe actuel incorrect');
+    assertStrongPassword(next, u.email);
     if (await argon2.verify(u.password_hash, next)) throw new BadRequestException("Le nouveau mot de passe doit être différent de l'actuel");
     await this.db.query(`UPDATE users SET password_hash = $2, must_change_password = false, failed_logins = 0, locked_until = NULL WHERE id = $1`, [userId, await this.hashPassword(next)]);
     await this.db.query(`UPDATE user_sessions SET revoked_at = now() WHERE user_id = $1 AND id <> $2 AND revoked_at IS NULL`, [userId, sessionId]);
