@@ -26,6 +26,7 @@ import Missions from './pages/Missions';
 import OrgLogo from './OrgLogo';
 import Terrain from './pages/Terrain';
 import Operations from './pages/Operations';
+import Compte, { ForcedPasswordChange } from './pages/Compte';
 import Parcels from './pages/Parcels';
 import Producers from './pages/Producers';
 import Quality from './pages/Quality';
@@ -84,6 +85,7 @@ export default function App() {
   if (status === 'loading') return <div style={{ padding: '3rem' }}><Loading /></div>;
   if (status === 'platform') return <CentralConsole />;
   if (status !== 'ready') return <Login />;
+  if (me?.must_change_password) return <ForcedPasswordChange />;
 
   return (
     <div className="shell">
@@ -100,7 +102,7 @@ export default function App() {
           <NavLink to="/notifications"><span aria-hidden="true">🔔</span>Notifications{unread > 0 && <span className="badge badge-bad" style={{ marginLeft: 'auto' }} aria-label={`${unread} non lue(s)`}>{unread}</span>}</NavLink>
         </nav>
         <div className="who">
-          <strong>{org?.name}</strong><br />{me?.user.full_name}
+          <strong>{org?.name}</strong><br />{me?.user.full_name}<br /><NavLink to="/compte" className="muted">Mon compte</NavLink>
           <div><button className="btn btn-ghost btn-small" onClick={() => setTheme(theme === 'night' ? 'doux' : 'night')} aria-label="Changer de thème d'affichage">{THEMES.find(([k]) => k !== theme)?.[1]}</button>{' '}<button className="btn btn-ghost btn-small" onClick={signOut}>Se déconnecter</button></div>
         </div>
       </aside>
@@ -130,6 +132,7 @@ export default function App() {
           <Route path="/missions" element={<Missions />} />
           <Route path="/terrain" element={<Terrain />} />
           <Route path="/operations" element={<Operations />} />
+          <Route path="/compte" element={<Compte />} />
           <Route path="/stocks" element={<Stocks />} />
           <Route path="/finances" element={<Finance />} />
           <Route path="/qualite" element={<Quality />} />

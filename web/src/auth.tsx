@@ -2,7 +2,7 @@ import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, 
 import * as client from './api';
 
 export interface Org { id: string; code: string; name: string }
-interface Me { user: { id: string; email: string; full_name: string }; permissions: string[]; account_kind?: 'collector' | 'coach' | 'staff'; mobile_first?: boolean }
+interface Me { user: { id: string; email: string; full_name: string }; must_change_password?: boolean; permissions: string[]; account_kind?: 'collector' | 'coach' | 'staff'; mobile_first?: boolean }
 interface AuthState {
   status: 'loading' | 'anonymous' | 'choose-org' | 'ready' | 'platform';
   orgs: Org[]; org: Org | null; me: Me | null;

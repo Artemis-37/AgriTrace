@@ -29,7 +29,7 @@ const pw = 'MotDePasseSolide2026!';
   check('rôles créés', !!(rMag.id && rCai.id && rCol.id));
   check('création idempotente', (await mk('magasinier')).id === rMag.id);
   check('rôle type inconnu refusé', (await call('POST', '/roles/standard', { ...J(t0), body: { code: 'pirate' } })).status === 400);
-  const rAdg = await mk('adg'); const rCoach = await mk('coach'); await mk('comptable');
+  const rAdg = await mk('adg'); const rCoach = await mk('coach'); for (const t of (await call('GET', '/roles/templates', J(t0))).body) await mk(t.code);
   check('rôles ADG et coach créés', !!(rAdg.id && rCoach.id));
   check('rôle marqué « créé »', (await call('GET', '/roles/templates', J(t0))).body.every((t) => t.created));
 

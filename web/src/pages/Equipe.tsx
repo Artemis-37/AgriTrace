@@ -16,11 +16,18 @@ export default function Equipe() {
   const [role, setRole] = useState<any | null>(null);
   const [hist, setHist] = useState<any | null>(null);
   const [adding, setAdding] = useState(false);
+  const [temp, setTemp] = useState<{ email: string; temporary_password: string } | null>(null);
   const mk = useAction();
   return (
     <>
       <PageHeader title="Équipe" subtitle="Accès des utilisateurs : suspension, rôles et historique. Tout changement prend effet immédiatement." />
+      {can('org:branding') && <ProfileCard />}
       {can('org:branding') && <LogoCard />}
+      {temp && <Modal title="Mot de passe temporaire" onClose={() => setTemp(null)}>
+        <p>Communiquez ce mot de passe à <strong>{temp.email}</strong> par un canal sûr. Il ne sera plus affiché ; l'utilisateur devra le remplacer dès sa première connexion.</p>
+        <p><code style={{ fontSize: '1.2rem', userSelect: 'all' }}>{temp.temporary_password}</code></p>
+        <div className="modal-actions"><button className="btn" onClick={() => setTemp(null)}>J'ai noté le mot de passe</button></div>
+      </Modal>}
       {can('users:create') && <div className="toolbar"><button className="btn" onClick={() => setAdding(true)}>Ajouter un utilisateur</button></div>}
       {can('roles:manage') && (data?.templates?.length ?? 0) > 0 && (
         <Card title="Rôles types">
@@ -46,6 +53,7 @@ export default function Equipe() {
                   ? <button className="btn btn-small btn-secondary" onClick={() => setAsk({ u, what: 'suspend' })}>Suspendre</button>
                   : <button className="btn btn-small btn-secondary" onClick={() => setAsk({ u, what: 'reactivate' })}>Réactiver</button>)}
                 {can('users:suspend') && <button className="btn btn-small btn-secondary" onClick={() => setAsk({ u, what: 'revoke-sessions' })}>Révoquer les sessions</button>}
+                {can('users:manage') && u.id !== me?.user.id && <button className="btn btn-small btn-secondary" onClick={async () => { if (confirm(`Réinitialiser le mot de passe de ${u.full_name} ? Ses sessions seront fermées.`)) await mk.run(async () => setTemp(await post(`/users/${u.id}/reset-password`))); }}>Réinitialiser le mot de passe</button>}
                 {can('users:change_role') && u.id !== me?.user.id && <button className="btn btn-small btn-secondary" onClick={() => setRole(u)}>Rôle</button>}
                 <button className="btn btn-small btn-ghost" onClick={() => setHist(u)}>Historique</button>
               </div>) },
@@ -158,6 +166,30 @@ function History({ u, onClose }: { u: any; onClose: () => void }) {
       {loading && <Loading />}{error && <ErrorBox message={error} />}
       {data && <Table rows={data} empty="Aucun événement." columns={[{ header: 'Date', render: (e: any) => dateTime(e.created_at) }, { header: 'Action', render: (e: any) => ACTIONS[e.action] ?? e.action }, { header: 'Par', render: (e: any) => e.actor_name ?? '—' }, { header: 'Motif', render: (e: any) => e.reason ?? '—' }]} />}
     </Modal>
+  );
+}
+
+/** Profil de la coopérative : nom commercial et coordonnées repris sur les reçus imprimés. */
+function ProfileCard() {
+  const { data, reload } = useAsync(() => get<any>('/organization/profile'), []);
+  const [f, setF] = useState<any | null>(null);
+  const act = useAction();
+  const v = f ?? data;
+  const set = (k: string) => (e: any) => setF({ ...(f ?? data), [k]: e.target.value });
+  return (
+    <Card title="Profil de la coopérative">
+      <p className="muted">Ces informations figurent en en-tête des reçus et pièces imprimés. Nom enregistré : <strong>{data?.name ?? '…'}</strong></p>
+      {v && <div className="form-grid">
+        <Field label="Nom commercial"><input value={v.commercial_name ?? ''} maxLength={200} onChange={set('commercial_name')} /></Field>
+        <Field label="Adresse"><input value={v.address ?? ''} maxLength={300} onChange={set('address')} /></Field>
+        <Field label="Téléphone"><input value={v.phone ?? ''} maxLength={40} onChange={set('phone')} /></Field>
+        <Field label="E-mail"><input type="email" value={v.email ?? ''} onChange={set('email')} /></Field>
+        <Field label="Devise (code ISO)"><input value={v.currency ?? 'XOF'} maxLength={3} onChange={(e) => setF({ ...(f ?? data), currency: e.target.value.toUpperCase() })} /></Field>
+        <Field label="Langue par défaut"><select value={v.default_language ?? 'fr'} onChange={set('default_language')}><option value="fr">Français</option><option value="en">English</option></select></Field>
+      </div>}
+      {act.error && <ErrorBox message={act.error} />}
+      <div className="toolbar"><button className="btn" disabled={act.busy || !f} onClick={async () => { if (await act.run(() => put('/organization/profile', f))) { setF(null); reload(); } }}>Enregistrer le profil</button></div>
+    </Card>
   );
 }
 

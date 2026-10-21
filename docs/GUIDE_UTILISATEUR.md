@@ -25,6 +25,10 @@ Ce guide présente chaque utilisateur **sur ordinateur** (portail web dans le na
 
 <table class="phones"><tr><td><img src="captures/mobile/connexion.png" alt="Téléphone : connexion"><br><em>Téléphone : connexion</em></td></tr></table>
 
+### Mot de passe
+- **Changer le mien** : portail › « Mon compte » (bas du menu de gauche) ; l'ancien mot de passe est demandé, 10 caractères minimum, et vos autres sessions sont fermées.
+- **Mot de passe oublié ou réinitialisé** : l'administrateur de la coopérative utilise « Réinitialiser le mot de passe » dans Équipe ; il vous communique un mot de passe temporaire. À la première connexion (portail ou téléphone), l'application vous demande d'en choisir un nouveau avant tout le reste.
+
 ### Hors connexion
 - **Téléphone** : tout ce qui est saisi est gardé sur l'appareil puis envoyé au retour du réseau, sans doublon. Le bandeau en haut de l'accueil indique l'état : « Synchronisé », « Hors connexion », « n en attente », « n à corriger ».
 - **Ordinateur** : un poste client enregistre les achats et les messages hors connexion, rejoués au retour du serveur. Validation, paiements et stocks demandent le serveur.
@@ -134,6 +138,16 @@ Consultation des missions et des parcelles (mêmes écrans que le coach, selon l
 ![Portail : inventaire](captures/inventaire.png)
 *Portail : inventaire*
 
+## Magasinier, caissier(e) et comptable : reçus et demandes d'annulation (ordinateur)
+- **Mes opérations** (menu de gauche) : la liste de ce que **vous** avez fait (réceptions de convois, règlements, mouvements de caisse, écritures comptables, mouvements de stock), selon vos droits.
+- **Imprimer le reçu** : bon de réception, reçu de règlement, reçu de caisse, pièce comptable ou bon de mouvement, avec l'en-tête de la coopérative (logo, adresse, téléphone), les lignes de l'opération et deux cases de signature. Toute impression est tracée ; à partir de la deuxième, la pièce porte la mention **DUPLICATA n°…**.
+- **Demander l'annulation** : indiquez le motif (5 caractères minimum). L'opération n'est **pas** annulée tout de suite : l'administrateur de la coopérative (ou tout titulaire du droit d'approbation, par exemple la direction ou le responsable financier) reçoit une notification, approuve ou refuse (refus motivé). Le demandeur est averti de la décision. On ne peut pas approuver sa propre demande.
+- **Ce qu'une annulation fait** : rien n'est effacé de l'historique. Un mouvement de caisse ou de stock reçoit une écriture inverse ; une écriture comptable est contre-passée ; une réception non réglée est retirée (le convoi redevient « en transit ») ; un règlement est annulé (écritures inversées, la réception revient dans la file de la caisse pour être réglée à nouveau).
+- **Ce qui ne s'annule pas directement** : une écriture déjà d'annulation, une opération déjà annulée, une écriture générée par un document (annulez le document d'origine), une réception déjà réglée (la caisse demande d'abord l'annulation du règlement), un règlement dont le montant a déjà été payé au collecteur (solde insuffisant).
+
+![Portail : mes opérations, reçus et demandes d'annulation](captures/operations.png)
+*Portail : mes opérations, reçus et demandes d'annulation*
+
 ## Caissier (ordinateur)
 - **Convois** : traiter les convois reçus et régler les collecteurs ; les avances non soldées sont déduites automatiquement.
 - **Caisse** : ouvrir sa caisse (chaque caissier a sa session), enregistrer les mouvements, clôturer en comptant l'espèce ; l'écart entre le compté et l'attendu est calculé et conservé.
@@ -143,7 +157,10 @@ Consultation des missions et des parcelles (mêmes écrans que le coach, selon l
 *Portail : finances*
 
 ## Administrateur de coopérative (ordinateur)
-- **Équipe** : créer les comptes, choisir le rôle, suspendre, réactiver, révoquer les sessions, consulter l'historique d'accès.
+- **Équipe** : créer les comptes, choisir le rôle, suspendre, réactiver, révoquer les sessions, **réinitialiser un mot de passe** (le mot de passe temporaire n'est affiché qu'une fois), consulter l'historique d'accès.
+- **Profil de la coopérative** (Équipe) : nom commercial, adresse, téléphone, e-mail, devise, langue par défaut ; repris en en-tête des reçus.
+- **Rôles types** : 17 modèles prêts (direction, responsables de traçabilité / cartographie / magasin / financier / qualité / logistique, cartographe, agent de terrain, magasinier, caissier, comptable, collecteur, coach, ADG, auditeur, acheteur ou partenaire) à créer en un clic, puis à ajuster.
+- **Annulations** : traiter les demandes dans « Mes opérations » › « Demandes d'annulation ».
 - **Rôles** : créer des rôles en combinant les permissions ; certains droits sensibles peuvent exiger une seconde approbation.
 - **Référentiels** : filières, campagnes, prix (chaque modification crée une version datée).
 - **Producteurs** : fiches, statuts, import Excel ou CSV avec prévisualisation, création/mise à jour/erreurs, rapport d'import. Les codes à zéros initiaux sont conservés.

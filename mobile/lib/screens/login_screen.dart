@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/api_client.dart';
+import 'change_password_screen.dart';
 import '../main.dart';
 import 'home_screen.dart';
 
@@ -70,7 +71,15 @@ class _LoginScreenState extends State<LoginScreen> {
     }
     await services.store.setOrg(orgId);
     if (!mounted) return;
-    Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const SyncShell(child: HomeScreen())));
+    var forced = false;
+    try { forced = ((await services.api.get('/me')) as Map)['must_change_password'] == true; } catch (_) { /* hors ligne : pas de contrôle */ }
+    if (!mounted) return;
+    void go() => Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const SyncShell(child: HomeScreen())));
+    if (forced) {
+      Navigator.of(context).push(MaterialPageRoute(builder: (_) => ChangePasswordScreen(onDone: go)));
+    } else {
+      go();
+    }
   }
 
   @override
