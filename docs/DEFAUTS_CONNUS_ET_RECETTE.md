@@ -12,7 +12,7 @@ Document de suivi tenu à jour avec `ECARTS_CDC.md`. Il répond à trois questio
 | Versions de géométrie en table dédiée | §8.6 | Historique conservé par le journal des modifications | Table `parcel_geometry_versions` si l'audit l'exige |
 | Systèmes de coordonnées de l'import de parcelles | §9.3 | WGS84 seulement (Web Mercator accepté pour les couches de zones protégées) | Reprojection UTM 29N/30N |
 | Postes de bureau hors connexion | §27 | Achats et messages seulement ; pas de validation, paiements ni stocks | À arbitrer avec la coopérative |
-| Carte du portail web | §8 | Rendu vectoriel sans fond de carte, pas de dessin à la souris | Fonds OpenStreetMap/satellite comme sur le mobile |
+| Carte du portail web | §8 | Fonds Plan/Satellite en ligne livrés ; pas de dessin à la souris, pas de fond hors ligne | Fournisseur de tuiles sous contrat si le trafic grandit |
 | Couches de zones protégées sur les appareils | §10 | Contrôle côté serveur seulement | Réplication des couches (licence WDPA à régler d'abord) |
 
 ## 2. Non prouvé à ce jour (§33, §36)

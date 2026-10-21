@@ -1,7 +1,11 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { get } from '../api';
 import { ha } from '../format';
 import { Badge, Card, ErrorBox, Loading, Stat, useAsync } from '../ui';
+import { ATTRIBUTION, BaseLayer, tileUrl, visibleTiles } from '../tiles';
+
+const LAYER_KEY = 'agritrace.map.layer';
+const readLayer = (): BaseLayer => { try { const v = localStorage.getItem(LAYER_KEY); return v === 'plan' || v === 'satellite' ? v : 'none'; } catch { return 'none'; } };
 
 type Ring = number[][];
 const rings = (g: any): Ring[] => (!g ? [] : g.type === 'Polygon' ? [g.coordinates[0]] : g.type === 'MultiPolygon' ? g.coordinates.map((p: any) => p[0]) : []);
@@ -16,6 +20,14 @@ export default function ParcelMap() {
   const [view, setView] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   const drag = useRef<{ sx: number; sy: number; vx: number; vy: number } | null>(null);
   const svg = useRef<SVGSVGElement>(null);
+  const [layer, setLayer] = useState<BaseLayer>(readLayer);
+  const [online, setOnline] = useState(typeof navigator === 'undefined' ? true : navigator.onLine);
+  useEffect(() => {
+    const on = () => setOnline(true), off = () => setOnline(false);
+    window.addEventListener('online', on); window.addEventListener('offline', off);
+    return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off); };
+  }, []);
+  const pickLayer = (l: BaseLayer) => { setLayer(l); try { localStorage.setItem(LAYER_KEY, l); } catch { /* stockage indisponible */ } };
 
   const geo = useMemo(() => {
     const feats: any[] = data?.features ?? [];
@@ -26,7 +38,8 @@ export default function ParcelMap() {
     const px = (lon: number) => (lon - minLon) * k, py = (lat: number) => maxLat - lat;
     const W = Math.max((maxLon - minLon) * k, 1e-6), H = Math.max(maxLat - minLat, 1e-6), pad = Math.max(W, H) * 0.04;
     const items = feats.map((f) => ({ f, d: rings(f.geometry).map((r) => 'M' + r.map(([lon, lat]) => `${px(lon).toFixed(6)} ${py(lat).toFixed(6)}`).join('L') + 'Z').join('') }));
-    return { items, box: { x: -pad, y: -pad, w: W + 2 * pad, h: H + 2 * pad } };
+    const inv = { lon: (x: number) => x / k + minLon, lat: (y: number) => maxLat - y, px, py };
+    return { items, inv, box: { x: -pad, y: -pad, w: W + 2 * pad, h: H + 2 * pad } };
   }, [data]);
 
   if (loading) return <Loading />;
@@ -36,6 +49,9 @@ export default function ParcelMap() {
   const v = view ?? geo.box;
   const anomalies = geo.items.filter((i) => i.f.properties.anomaly).length;
   const shown = geo.items.filter((i) => !onlyAnom || i.f.properties.anomaly);
+  const tiles = layer !== 'none' && online
+    ? visibleTiles({ west: geo.inv.lon(v.x), east: geo.inv.lon(v.x + v.w), north: geo.inv.lat(v.y), south: geo.inv.lat(v.y + v.h) }, svg.current?.getBoundingClientRect().width || 900)
+    : [];
   const picked = geo.items.find((i) => i.f.properties.id === sel)?.f.properties;
   const zoom = (factor: number, cx = v.x + v.w / 2, cy = v.y + v.h / 2) => setView({ x: cx - (cx - v.x) * factor, y: cy - (cy - v.y) * factor, w: v.w * factor, h: v.h * factor });
   const onWheel = (e: React.WheelEvent) => {
@@ -60,6 +76,9 @@ export default function ParcelMap() {
           <button className="btn btn-small btn-secondary" aria-label="Zoom avant" onClick={() => zoom(1 / 1.5)}>＋</button>
           <button className="btn btn-small btn-secondary" aria-label="Zoom arrière" onClick={() => zoom(1.5)}>－</button>
           <button className="btn btn-small btn-secondary" onClick={() => setView(null)}>Tout voir</button>
+          <select aria-label="Fond de carte" value={layer} onChange={(e) => pickLayer(e.target.value as BaseLayer)}>
+            <option value="none">Fond neutre (hors ligne)</option><option value="plan">Plan (OpenStreetMap)</option><option value="satellite">Satellite</option>
+          </select>
           <label><input type="checkbox" checked={onlyAnom} onChange={(e) => setOnlyAnom(e.target.checked)} /> Anomalies seulement</label>
           <span className="muted">
             <i style={{ background: COLOR.verified }} className="dot" /> Vérifiée <i style={{ background: COLOR.controlled }} className="dot" /> Contrôlée <i style={{ background: COLOR.declared }} className="dot" /> Déclarée <i style={{ background: '#d9382f' }} className="dot" /> Anomalie
@@ -67,6 +86,11 @@ export default function ParcelMap() {
         </div>
         <svg ref={svg} role="img" aria-label="Carte des parcelles" viewBox={`${v.x} ${v.y} ${v.w} ${v.h}`} style={{ width: '100%', height: 480, background: 'var(--map-bg, #eef3ec)', borderRadius: 8, touchAction: 'none', cursor: drag.current ? 'grabbing' : 'grab' }}
           onWheel={onWheel} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={() => { drag.current = null; }} onPointerLeave={() => { drag.current = null; }}>
+          {tiles.map((t) => {
+            const x = geo.inv.px(t.west), y = geo.inv.py(t.north);
+            return <image key={`${layer}/${t.z}/${t.x}/${t.y}`} href={tileUrl(layer as Exclude<BaseLayer, 'none'>, t)} x={x} y={y} width={geo.inv.px(t.east) - x} height={geo.inv.py(t.south) - y}
+              preserveAspectRatio="none" style={{ pointerEvents: 'none' }} onError={(e) => { (e.target as SVGImageElement).style.display = 'none'; }} />;
+          })}
           {shown.map(({ f, d }) => {
             const p = f.properties, bad = p.anomaly, chosen = p.id === sel;
             return <path key={p.id} d={d} fill={COLOR[p.validation_status] ?? COLOR.declared} fillOpacity={chosen ? 0.85 : 0.45} stroke={bad ? '#d9382f' : chosen ? '#111' : COLOR[p.validation_status] ?? '#666'}
@@ -74,7 +98,7 @@ export default function ParcelMap() {
               onClick={(e) => { e.stopPropagation(); setSel(p.id); }} onKeyDown={(e) => { if (e.key === 'Enter') setSel(p.id); }}><title>{p.code}</title></path>;
           })}
         </svg>
-        <p className="muted" style={{ margin: '6px 0 0' }}>Molette ou boutons pour zoomer, glisser pour déplacer. Fond neutre : la carte fonctionne sans connexion.</p>
+        <p className="muted" style={{ margin: '6px 0 0' }}>Molette ou boutons pour zoomer, glisser pour déplacer. {layer === 'none' ? 'Fond neutre : la carte fonctionne sans connexion.' : online ? ATTRIBUTION[layer] + '. Les images du fond ne se chargent que lorsque vous êtes connecté.' : 'Hors connexion : fond neutre affiché.'}</p>
         {picked && (
           <div className="notice" role="status">
             <strong>{picked.code}</strong> · producteur {picked.producer_code} · {picked.filiere} · <Badge tone={picked.validation_status === 'verified' ? 'ok' : 'info'}>{LEVEL[picked.validation_status] ?? picked.validation_status}</Badge>

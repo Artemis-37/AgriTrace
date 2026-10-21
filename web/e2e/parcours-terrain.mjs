@@ -81,6 +81,25 @@ await step('carte : la parcelle importée est dessinée et sélectionnable', asy
   await page.locator('svg[aria-label="Carte des parcelles"] path').first().click(); await page.waitForTimeout(300);
   must(/producteur P\d+/.test(await page.locator('[role=status]').first().innerText()), 'fiche de la parcelle absente');
 });
+await step('carte : fond Plan et Satellite (tuiles simulées), attribution, retour au fond neutre', async () => {
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgYGD4DwABBAEAX+XDSwAAAABJRU5ErkJggg==', 'base64');
+  const asked = [];
+  await page.route(/tile\.openstreetmap\.org|arcgisonline\.com/, (r) => { asked.push(r.request().url()); r.fulfill({ status: 200, contentType: 'image/png', body: png }); });
+  await go('/cartographie');
+  const imgs = () => page.locator('svg[aria-label="Carte des parcelles"] image').count();
+  must(await imgs() === 0 && asked.length === 0, 'aucune tuile attendue avec le fond neutre');
+  await page.getByLabel('Fond de carte').selectOption('plan'); await page.waitForTimeout(800);
+  const n = await imgs();
+  must(n >= 1 && n <= 36, 'tuiles du plan : ' + n);
+  must(asked.every((u) => u.includes('tile.openstreetmap.org')), 'adresse du plan inattendue');
+  must((await page.locator('main').innerText()).includes('contributeurs OpenStreetMap'), 'attribution OpenStreetMap absente');
+  await page.getByLabel('Fond de carte').selectOption('satellite'); await page.waitForTimeout(800);
+  must(asked.some((u) => u.includes('arcgisonline.com')) && (await page.locator('main').innerText()).includes('Esri'), 'satellite ou attribution absents');
+  must(await page.locator('svg[aria-label="Carte des parcelles"] path').count() === 1, 'la parcelle doit rester visible sur le fond');
+  await page.getByLabel('Fond de carte').selectOption('none'); await page.waitForTimeout(300);
+  must(await imgs() === 0, 'tuiles encore affichées avec le fond neutre');
+  await page.unroute(/tile\.openstreetmap\.org|arcgisonline\.com/);
+});
 await step('anomalies : contrôle périodique sans anomalie', async () => {
   await go('/cartographie', 'Anomalies');
   await page.getByRole('button', { name: 'Lancer le contrôle périodique' }).click(); await page.waitForTimeout(1500);
