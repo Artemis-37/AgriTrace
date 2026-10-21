@@ -1,121 +1,156 @@
 # Guide utilisateur AgriTrace
 
-*Les captures d'écran montrent le portail web avec des données fictives. Les écrans du téléphone suivent la même logique ; leurs captures seront ajoutées après l'installation sur un appareil.*
+*Les captures du portail web montrent l'application avec des données fictives. Celles du téléphone sont le rendu des vrais écrans de l'application Android avec des données fictives (pas une photo d'un appareil : l'aspect exact dépend du modèle de téléphone).*
 
-Guide par rôle (CDC §35). Il décrit ce que chacun voit et fait dans le portail web et sur le téléphone Android. Le menu affiché dépend des droits du compte : si une page manque, c'est que le rôle ne la donne pas (voir `MATRICE_ROLES.md`). Un compte ne voit jamais les données d'une autre coopérative.
+Ce guide présente chaque utilisateur **sur ordinateur** (portail web dans le navigateur, ou application de bureau Windows) et **sur téléphone** (application Android). Le menu affiché dépend des droits du compte : si une page manque, c'est que le rôle ne la donne pas (voir la matrice des rôles). Un compte ne voit jamais les données d'une autre coopérative.
+
+## Qui utilise quoi
+| Utilisateur | Ordinateur (portail / bureau) | Téléphone (Android) |
+|---|---|---|
+| Collecteur (délégué) | Mes achats, stock, historique, convois (portail simplifié) | **Outil principal** : achats, convois, stock, fiche de compte, hors connexion |
+| Coach (agent de terrain) | Missions et parcelles en consultation | **Outil principal** : missions, relevé de parcelle, photos |
+| Administrateur de groupe (ADG) | **Outil principal** : missions, cartographie, qualité, rapports | Consultation (missions, parcelles) |
+| Magasinier | **Outil principal** : convois, stocks, inventaire | — |
+| Caissier | **Outil principal** : convois, caisse, finances | — |
+| Administrateur de coopérative | **Outil principal** : équipe, rôles, référentiels, producteurs | — |
 
 ## Pour tous
 
+### Connexion
+- **Ordinateur** : adresse électronique et mot de passe ; un poste de bureau demande en plus, la première fois, le code d'association de 8 caractères remis par l'administrateur.
+- **Téléphone** : mêmes identifiants ; « Associer ce téléphone à la coopérative (code) » pour entrer le code d'association. La première connexion demande Internet.
 
-![Tableau de bord : commandes, créances, missions en retard, anomalies de cartographie](captures/tableau-de-bord.png)
-*Tableau de bord : commandes, créances, missions en retard, anomalies de cartographie*
-- **Connexion** : adresse électronique et mot de passe.
+![Portail : écran de connexion](captures/connexion.png)
+*Portail : écran de connexion*
 
-![Écran de connexion](captures/connexion.png)
-*Écran de connexion*
- Sur un téléphone ou un poste de bureau, un code d'association de 8 caractères, remis par l'administrateur, est demandé la première fois.
-- **Hors connexion** : sur le téléphone, tout ce qui est saisi est gardé sur l'appareil puis envoyé au retour du réseau, sans doublon. La barre en haut de l'écran indique l'état : « Synchronisé », « Hors connexion », « n en attente », « n à corriger ».
-- **Accès retiré** : si l'administrateur suspend votre compte, le téléphone efface les données de la coopérative à la prochaine tentative de connexion. Seules les saisies jamais envoyées sont gardées.
-- **Notifications** : la cloche indique les alertes (retards, documents manquants, validations attendues). Elles ne s'affichent qu'avec du réseau.
-- **Messages** : messagerie interne entre membres de la coopérative.
-- **Thème** : bouton en bas du menu (clair, doux, nuit).
+<table class="phones"><tr><td><img src="captures/mobile/connexion.png" alt="Téléphone : connexion"><br><em>Téléphone : connexion</em></td></tr></table>
+
+### Hors connexion
+- **Téléphone** : tout ce qui est saisi est gardé sur l'appareil puis envoyé au retour du réseau, sans doublon. Le bandeau en haut de l'accueil indique l'état : « Synchronisé », « Hors connexion », « n en attente », « n à corriger ».
+- **Ordinateur** : un poste client enregistre les achats et les messages hors connexion, rejoués au retour du serveur. Validation, paiements et stocks demandent le serveur.
+
+### Accès retiré
+Si l'administrateur suspend le compte, le **téléphone efface les données de la coopérative** à la prochaine tentative de connexion ; seules les saisies jamais envoyées sont gardées. Sur ordinateur, la session est coupée et la connexion refusée.
+
+### Notifications et messages
+- **Ordinateur** : en haut à droite, une enveloppe (messages) et une cloche (notifications) avec leur compteur ; elles se balancent quand un nouvel élément arrive.
+- **Téléphone** : la cloche de l'accueil affiche le nombre de notifications non lues. Pas de messagerie sur le téléphone.
+- Les notifications ne s'affichent qu'avec du réseau.
+
+<table class="phones"><tr><td><img src="captures/mobile/notifications.png" alt="Téléphone : notifications"><br><em>Téléphone : notifications</em></td></tr></table>
+
+![Portail : tableau de bord (commandes, créances, missions en retard, anomalies)](captures/tableau-de-bord.png)
+*Portail : tableau de bord (commandes, créances, missions en retard, anomalies)*
 
 ## Collecteur (délégué)
-Sur le téléphone ou dans « Mes achats » du portail.
-1. **Déclarer un achat** : producteur (recherche par nom ou code), filière, quantité (sacs ou kg), **numéro du reçu d'achat dès la saisie** s'il est exigé, photo du reçu (facultative), date. Le prix vient du barème en vigueur : il ne change pas après coup.
-2. **Corriger** : une déclaration marquée « à corriger » se rouvre depuis la liste ; le motif du refus est affiché. Un numéro de reçu déjà utilisé est signalé comme conflit.
-3. **Convoi** : regrouper ses achats dans un convoi (numéro de convoi, chauffeur, camion). Le magasinier le réceptionne ensuite.
-4. **Mon stock, Historique, Ma fiche de compte** : ce qui a été livré, le solde et les avances en cours. Un collecteur ne voit que ses propres opérations et ne peut pas exporter vers Excel.
 
-![Mes achats (vue collecteur dans le portail)](captures/collecteur-mes-achats.png)
-*Mes achats : le collecteur ne voit que ses propres opérations*
+### Sur téléphone
+1. **Déclarer un achat** : bouton « Achat ». Producteur (recherche par nom ou code), filière, quantité (sacs ou kg), **numéro du reçu d'achat dès la saisie** s'il est exigé, photo du reçu (facultative), date. Le prix vient du barème en vigueur : il ne change pas après coup.
+2. **Suivre** : chaque ligne de l'accueil a une icône d'état (confirmé, en attente d'envoi, à corriger). Une déclaration « à corriger » se rouvre ; le motif est affiché. Un numéro de reçu déjà utilisé est signalé comme conflit.
+3. **Convoi** : regrouper ses achats dans un convoi (n° de connaissement, chauffeur, camion). Il est envoyé dès que le réseau revient ; le magasinier le réceptionne ensuite.
+4. **Historique, Mon stock, Ma fiche de compte** : achats passés avec filtre par état, quantités achetées / en route / livrées, et fiche de suivi du compte (report, financements, livraisons, solde). La fiche et le stock demandent le réseau.
 
+<table class="phones"><tr><td><img src="captures/mobile/collecteur-accueil.png" alt="Accueil : mes achats"><br><em>Accueil : mes achats</em></td><td><img src="captures/mobile/collecteur-nouvel-achat.png" alt="Nouvel achat"><br><em>Nouvel achat</em></td><td><img src="captures/mobile/collecteur-historique.png" alt="Historique"><br><em>Historique</em></td></tr></table>
 
-## Magasinier
+<table class="phones"><tr><td><img src="captures/mobile/collecteur-mon-stock.png" alt="Mon stock"><br><em>Mon stock</em></td><td><img src="captures/mobile/collecteur-fiche.png" alt="Ma fiche de compte"><br><em>Ma fiche de compte</em></td><td><img src="captures/mobile/collecteur-convoi.png" alt="Déclarer un convoi"><br><em>Déclarer un convoi</em></td></tr></table>
+
+### Sur ordinateur
+« Mes achats », « Mon stock » et « Historique » du portail montrent les mêmes informations. Un collecteur ne voit que ses propres opérations et ne peut pas exporter vers Excel.
+
+![Portail : Mes achats (vue collecteur)](captures/collecteur-mes-achats.png)
+*Portail : Mes achats (vue collecteur)*
+
+## Coach (agent de terrain)
+
+### Sur téléphone
+- **Missions** : liste des tâches données par l'ADG (en retard signalées en rouge) ; démarrer, saisir les résultats (texte, coordonnées, photos), soumettre. Le coach ne modifie pas les instructions : il peut **demander une nouvelle mission**, que l'ADG accepte ou refuse.
+- **Relevé de parcelle** : marcher autour de la parcelle avec le GPS ou poser les sommets sur la carte ; le téléphone calcule la superficie (distincte de la superficie déclarée). Un point GPS seul ne donne jamais de superficie. La liste « Mes parcelles » permet aussi d'ajouter une photo et signale un nouveau tracé en attente d'envoi.
+- **Fond de carte** : plan OpenStreetMap ou satellite quand le réseau est là ; fond hors ligne téléchargé en Wi-Fi depuis la page « Fond de carte ».
+
+<table class="phones"><tr><td><img src="captures/mobile/coach-accueil.png" alt="Accueil du coach"><br><em>Accueil du coach</em></td><td><img src="captures/mobile/coach-missions.png" alt="Mes missions"><br><em>Mes missions</em></td><td><img src="captures/mobile/coach-parcelles.png" alt="Mes parcelles"><br><em>Mes parcelles</em></td></tr></table>
+
+### Sur ordinateur
+Consultation des missions et des parcelles dans le portail ; la saisie de terrain se fait sur le téléphone.
+
+## Administrateur de groupe (ADG)
+Responsable de la conformité et de la certification.
+
+### Sur ordinateur
+- **Missions** : créer les tâches des coachs, les assigner, relire les résultats, clôturer, décider des demandes.
+- **Cartographie** : onglets Carte (fond neutre, plan ou satellite), Anomalies, Zones protégées, Importer, Exporter, Tolérances.
+  - Une anomalie bloquante empêche la validation de la parcelle : la corriger, ou accepter une **exception motivée** (tracée). « Corrigée » est refusée tant que le problème existe.
+  - Doublon : « Remplacer » garde l'historique de l'ancienne parcelle.
+  - Zones protégées : charger un fichier GeoJSON ou GeoPackage ; vérifier la licence du jeu de données avant de le charger. Le blocage ou non des parcelles concernées se règle dans Tolérances.
+  - Import : GeoJSON, KML, KMZ, Shapefile, GeoPackage ; WGS84 ou UTM sur WGS84 (converti avec avertissement).
+- **Parcelles** : contrôler puis vérifier (déclarée → contrôlée → vérifiée).
+- **Qualité et conformité** : certificats, inspections, alertes d'échéance. **Rapports** : achats, finance, stock, qualité, avec filtres et export Excel.
+
+![Portail : missions des coachs](captures/missions.png)
+*Portail : missions des coachs*
+
+![Portail : carte, les parcelles avec anomalie ouverte sont cerclées de rouge](captures/cartographie-carte.png)
+*Portail : carte, les parcelles avec anomalie ouverte sont cerclées de rouge*
+
+![Portail : anomalies (chevauchement, parcelle en zone protégée)](captures/cartographie-anomalies.png)
+*Portail : anomalies (chevauchement, parcelle en zone protégée)*
+
+![Portail : zones protégées](captures/cartographie-zones.png)
+*Portail : zones protégées*
+
+![Portail : rapports d’achats avec filtres et export Excel](captures/rapports.png)
+*Portail : rapports d’achats avec filtres et export Excel*
+
+![Portail : qualité et conformité](captures/qualite.png)
+*Portail : qualité et conformité*
+
+### Sur téléphone
+Consultation des missions et des parcelles (mêmes écrans que le coach, selon les droits du compte). Le travail de supervision se fait sur ordinateur.
+
+## Magasinier (ordinateur)
 - **Convois** : ouvrir un convoi arrivé, peser (brut, tare, net), constater les écarts, réceptionner en totalité ou en partie.
 - **Stocks et lots** : mouvements (entrée, transfert, sortie, chargement, perte, déclassement, quarantaine), lots et leur généalogie.
 - **Inventaire** : saisir le comptage ; l'inventaire doit être **approuvé par une autre personne**. Aucune suppression : seulement des ajustements tracés.
 - Pas d'accès à la caisse, aux finances ni à la cartographie.
 
-![Stocks et lots](captures/stocks-lots.png)
-*Stocks et lots : quantités calculées depuis les mouvements, traçabilité et PDF par lot*
+![Portail : stocks et lots](captures/stocks-lots.png)
+*Portail : stocks et lots*
 
-![Convois](captures/convois.png)
-*Convois : réception au magasin central*
+![Portail : convois](captures/convois.png)
+*Portail : convois*
 
+![Portail : inventaire](captures/inventaire.png)
+*Portail : inventaire*
 
-## Caissier
+## Caissier (ordinateur)
 - **Convois** : traiter les convois reçus et régler les collecteurs ; les avances non soldées sont déduites automatiquement.
 - **Caisse** : ouvrir sa caisse (chaque caissier a sa session), enregistrer les mouvements, clôturer en comptant l'espèce ; l'écart entre le compté et l'attendu est calculé et conservé.
 - **Finances** : consultation des comptes et de la comptabilité selon les droits.
 
-![Finances](captures/finances.png)
-*Finances*
+![Portail : finances](captures/finances.png)
+*Portail : finances*
 
-
-## Coach (agent de terrain)
-Sur le téléphone.
-- **Missions** : liste des tâches données par l'ADG ; démarrer, saisir les résultats (texte, coordonnées, photos), soumettre. Le coach ne modifie pas les instructions : il peut **demander une nouvelle mission**, que l'ADG accepte ou refuse.
-- **Relevé de parcelle** : marcher autour de la parcelle avec le GPS ou poser les sommets sur la carte ; le téléphone calcule la superficie (distincte de la superficie déclarée). Un point GPS seul ne donne jamais de superficie.
-- **Fond de carte** : plan OpenStreetMap ou satellite quand le réseau est là ; fond hors ligne téléchargé en Wi-Fi depuis la page « Fond de carte ».
-
-## Administrateur de groupe (ADG)
-Responsable de la conformité et de la certification.
-![Missions](captures/missions.png)
-*Missions : tâches des coachs*
-
-- **Missions** : créer les tâches des coachs, les assigner, relire les résultats, clôturer, décider des demandes.
-- **Cartographie** : onglets Carte (fond neutre, plan ou satellite), Anomalies (chevauchements, doublons, **parcelles en zone protégée**), Zones protégées (charger une couche), Importer, Exporter, Tolérances.
-  - Une anomalie bloquante empêche la validation de la parcelle : la corriger, ou accepter une **exception motivée** (tracée). « Corrigée » est refusée tant que le problème existe.
-  - Doublon : « Remplacer » garde l'historique de l'ancienne parcelle.
-  - Zones protégées : charger un fichier GeoJSON ou GeoPackage ; vérifier la licence du jeu de données avant de le charger.
-![Carte des parcelles : anomalies en rouge](captures/cartographie-carte.png)
-*Carte : les parcelles avec anomalie ouverte sont cerclées de rouge ; le choix du fond de carte est en haut*
-
-![Anomalies](captures/cartographie-anomalies.png)
-*Anomalies : chevauchement entre deux parcelles et parcelle touchant une zone protégée*
-
-![Zones protégées](captures/cartographie-zones.png)
-*Zones protégées : couches chargées et formulaire de chargement*
-
-- **Parcelles** : contrôler puis vérifier (déclarée → contrôlée → vérifiée).
-- **Qualité et conformité** : certificats, inspections, alertes d'échéance.
-- **Rapports** : achats, finance, stock, qualité, avec filtres et export Excel.
-
-![Rapports](captures/rapports.png)
-*Rapports d'achats avec filtres et export Excel*
-
-![Qualité et conformité](captures/qualite.png)
-*Qualité et conformité*
-
-
-## Administrateur de coopérative
-![Équipe](captures/equipe.png)
-*Équipe : comptes, rôles, suspension*
-
+## Administrateur de coopérative (ordinateur)
 - **Équipe** : créer les comptes, choisir le rôle, suspendre, réactiver, révoquer les sessions, consulter l'historique d'accès.
 - **Rôles** : créer des rôles en combinant les permissions ; certains droits sensibles peuvent exiger une seconde approbation.
 - **Référentiels** : filières, campagnes, prix (chaque modification crée une version datée).
 - **Producteurs** : fiches, statuts, import Excel ou CSV avec prévisualisation, création/mise à jour/erreurs, rapport d'import. Les codes à zéros initiaux sont conservés.
-
-![Producteurs](captures/producteurs.png)
-*Producteurs*
-
-![Parcelles](captures/parcelles.png)
-*Parcelles*
-
 - **Synchronisation** (si le serveur local est utilisé) : état de la réplication vers le central, association des postes.
+- **Bureau Windows** : poste unique, serveur ou client au premier démarrage ; menu « Sauvegarder maintenant… » (dossier de destination au choix, clé USB par exemple) ; la restauration se teste avec `scripts/restore-test.sh` (voir `EXPLOITATION.md`).
 
-## Bureau (Windows)
-- **Poste unique, serveur ou client** au premier démarrage ; les postes clients trouvent le serveur sur le réseau local.
-- Hors connexion, un poste client enregistre les achats et les messages, rejoués au retour du serveur. Validation, paiements et stocks demandent le serveur.
-- **Sauvegarde** : menu « Sauvegarder maintenant… » de l'application (dossier de destination au choix, clé USB par exemple) ; la restauration se teste avec `scripts/restore-test.sh` (voir `EXPLOITATION.md`).
+![Portail : équipe](captures/equipe.png)
+*Portail : équipe*
+
+![Portail : producteurs](captures/producteurs.png)
+*Portail : producteurs*
+
+![Portail : parcelles](captures/parcelles.png)
+*Portail : parcelles*
 
 ## En cas de problème
-| Constat | Que faire |
-|---|---|
-| « Hors connexion » alors que le réseau est là | Ouvrir un autre site pour vérifier ; relancer la synchronisation en revenant à l'écran d'accueil |
-| Déclaration « à corriger » | Lire le motif, corriger, renvoyer |
-| Numéro de reçu en conflit | Vérifier le carnet : le même numéro a déjà servi ; saisir le bon ou joindre la photo du reçu |
-| « Accès refusé » | Se reconnecter ; sinon contacter l'administrateur (compte suspendu ou droit retiré) |
-| Page absente du menu | Le rôle n'en donne pas l'accès : demander à l'administrateur |
+| Constat | Sur téléphone | Sur ordinateur |
+|---|---|---|
+| « Hors connexion » alors que le réseau est là | Vérifier le réseau, revenir à l'accueil pour relancer la synchronisation | Vérifier le serveur (icônes en haut à droite) |
+| Déclaration « à corriger » | Ouvrir la ligne, lire le motif, corriger, renvoyer | Même chose depuis « Mes achats » |
+| Numéro de reçu en conflit | Le même numéro a déjà servi : saisir le bon ou joindre la photo du reçu | Idem |
+| « Accès refusé » | Se reconnecter ; sinon contacter l'administrateur (compte suspendu ou droit retiré) | Idem |
+| Page absente du menu | Le rôle n'en donne pas l'accès : demander à l'administrateur | Idem |

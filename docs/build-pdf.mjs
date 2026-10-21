@@ -21,6 +21,7 @@ h2 { color: #2f5d46; font-size: 15pt; margin-top: 22px; break-after: avoid; }
 h3 { color: #3d6b52; font-size: 12pt; break-after: avoid; }
 img { max-width: 100%; border: 1px solid #d8dccf; border-radius: 6px; display: block; margin: 8px auto 2px; break-inside: avoid; }
 p > em { display: block; text-align: center; color: #6a766d; font-size: 9pt; margin-bottom: 12px; }
+table.phones { border: 0; table-layout: fixed; } table.phones td { border: 0; text-align: center; padding: 4px; } table.phones img { border-radius: 14px; margin: 0 auto; } table.phones em { display: block; font-size: 8pt; color: #6a766d; margin-top: 2px; }
 table { border-collapse: collapse; width: 100%; font-size: 8.5pt; margin: 8px 0 16px; }
 th { background: #2f5d46; color: #fff; text-align: left; }
 th, td { border: 1px solid #cfd5c8; padding: 4px 6px; vertical-align: top; }
