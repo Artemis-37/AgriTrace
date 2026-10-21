@@ -26,7 +26,7 @@ Document de suivi tenu à jour avec `ECARTS_CDC.md`. Il répond à trois questio
 - Installateur Windows `.exe` : construit par le workflow GitHub, jamais exécuté ; pas de signature de code.
 - Tests de charge (§32) : non réalisés, aucun objectif chiffré défini.
 - Restauration réelle d'une sauvegarde de production (§33.10) : le script `scripts/restore-test.sh` existe ; la preuve d'une restauration jouée sur les données de la coopérative manque.
-- Audit de sécurité indépendant (non fait) ; analyse interne et correctifs : voir `SECURITE.md` (4 avis `npm audit` modérés restants, authentification à deux facteurs absente, signature des mises à jour à activer en livrant la clé publique).
+- Audit de sécurité indépendant (non fait) ; analyse interne, correctifs et risques restants : voir `SECURITE.md` (double authentification, chiffrement des documents, 0 avis `npm audit` ; signature des mises à jour à activer en livrant la clé publique).
 - Purge des données à la révocation : décision testée, requête SQL non exercée hors appareil.
 - Recette avec les utilisateurs de chaque rôle principal (§33.11).
 

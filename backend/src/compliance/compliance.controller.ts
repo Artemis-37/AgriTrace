@@ -19,6 +19,8 @@ const DOC_SUBJECT_TABLE: Record<string, string> = {
   payment: 'payments', inspection: 'inspections', certificate: 'certificates', loan: 'loans', parcel: 'parcels', task: 'tasks', weighing: 'weighings', shipment: 'shipments', order: 'sales_orders', invoice: 'invoices', claim: 'sales_claims', field_record: 'field_records',
 };
 const CERT_HOLDER_TABLE: Record<string, string> = { producer: 'producers', warehouse: 'warehouses', lot: 'lots' };
+import { scanBuffer } from '../common/antivirus';
+import { decryptFile, encryptFile } from '../common/crypto';
 const docsDir = () => process.env.DOCUMENTS_DIR ?? path.join(process.cwd(), 'storage', 'documents');
 
 /** Type réel du fichier d'après sa signature (le type annoncé par le client n'est pas fiable). */
@@ -77,7 +79,8 @@ export class ComplianceController {
     const storageKey = randomUUID();
     const dir = path.join(docsDir(), req.org.id);
     await fs.mkdir(dir, { recursive: true });
-    await fs.writeFile(path.join(dir, storageKey), file.buffer, { mode: 0o600 });
+    await scanBuffer(file.buffer);
+    await fs.writeFile(path.join(dir, storageKey), encryptFile(file.buffer), { mode: 0o600 });
     try {
       const row = await this.db.tx(req.org.id, async (c) => {
         if (!(await c.query(`SELECT 1 FROM ${DOC_SUBJECT_TABLE[b.subject_type]} WHERE id = $1`, [b.subject_id])).rowCount)
@@ -140,7 +143,7 @@ export class ComplianceController {
       return r;
     });
     let buf: Buffer;
-    try { buf = await fs.readFile(path.join(docsDir(), req.org.id, d.storage_key)); } catch { throw new InternalServerErrorException('Fichier indisponible'); }
+    try { buf = decryptFile(await fs.readFile(path.join(docsDir(), req.org.id, d.storage_key))); } catch { throw new InternalServerErrorException('Fichier indisponible'); }
     if (createHash('sha256').update(buf).digest('hex') !== d.sha256) throw new InternalServerErrorException("Contrôle d'intégrité échoué : fichier altéré");
     if (d.sensitive) await this.log(req, 'document.download_sensitive', 'document', id);
     res.setHeader('Content-Type', d.mime);

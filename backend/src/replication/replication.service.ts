@@ -8,6 +8,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const IDENT_RE = /^[a-z][a-z0-9_]*$/;
 const BATCH_ROWS = 1000;
 const BATCH_BLOB_BYTES = 8 * 1024 * 1024;
+import { decryptFile, encryptFile } from '../common/crypto';
 const docsDir = () => process.env.DOCUMENTS_DIR ?? path.join(process.cwd(), 'storage', 'documents');
 const qi = (id: string) => '"' + id.replace(/"/g, '""') + '"';
 
@@ -103,7 +104,7 @@ export class ReplicationService implements OnModuleInit, OnModuleDestroy {
       const buf = Buffer.from(b64, 'base64');
       if (sha256Buf(buf) !== d.sha256) throw new BadRequestException(`Empreinte du fichier ${key} incorrecte`);
       await fs.mkdir(path.join(docsDir(), org), { recursive: true });
-      await fs.writeFile(path.join(docsDir(), org, key), buf, { mode: 0o600 });
+      await fs.writeFile(path.join(docsDir(), org, key), encryptFile(buf), { mode: 0o600 });
     }
 
     let applied = 0;
@@ -260,7 +261,7 @@ export class ReplicationService implements OnModuleInit, OnModuleDestroy {
       const r = rows[i];
       if (r.tbl === 'documents' && r.op === 'U' && r.row?.storage_key) {
         let buf: Buffer | null = null;
-        try { buf = await fs.readFile(path.join(docsDir(), orgId, r.row.storage_key)); } catch { this.log.warn(`Fichier manquant : ${r.row.storage_key}`); }
+        try { buf = decryptFile(await fs.readFile(path.join(docsDir(), orgId, r.row.storage_key))); } catch { this.log.warn(`Fichier manquant : ${r.row.storage_key}`); }
         if (buf) {
           if (weight > 0 && weight + buf.length > BATCH_BLOB_BYTES) {
             cut = i;

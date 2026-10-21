@@ -4,6 +4,7 @@ import { NoOrg } from '../access/decorators';
 import { ApiBearerAuth, ApiHeader, ApiTags } from '@nestjs/swagger';
 
 /** Contexte de l'utilisateur dans l'organisation courante : permet à un client (portail web) d'adapter son affichage. Le serveur reste seul juge des accès. */
+import { needsTwoFactor } from '../access/access.guard';
 @ApiTags('profil')
 @ApiBearerAuth()
 @ApiHeader({ name: 'X-Organization-Id', required: true })
@@ -31,6 +32,7 @@ export class MeController {
     return {
       user: { id: req.user.id, email: req.user.email, full_name: req.user.full_name },
       must_change_password: !!req.user.must_change_password,
+      must_setup_2fa: needsTwoFactor(req.user, p),
       organization_id: req.org.id,
       permissions: [...p].sort(),
       account_kind: kind,

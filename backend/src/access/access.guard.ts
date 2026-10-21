@@ -12,6 +12,11 @@ import { IS_PUBLIC, NO_ORG, PERMISSIONS, PLATFORM_ADMIN } from './decorators';
 import { hasAllPermissions } from './permission-evaluator';
 import { findWorkstation, workstationsRequired } from './workstation-policy';
 
+/** Droits sensibles : avec REQUIRE_2FA=true, leurs titulaires doivent activer la double authentification avant de poursuivre. */
+const SENSITIVE = ['users:manage', 'roles:manage', 'audit:read', 'finance:reverse', 'cash:manage', 'accounting:post', 'accounting:close', 'payments:confirm', 'loans:approve', 'loans:disburse', 'stock:adjust'];
+export const needsTwoFactor = (user: any, granted: Set<string>) =>
+  process.env.REQUIRE_2FA === 'true' && !user.totp_enabled && (!!user.is_platform_admin || SENSITIVE.some((p) => granted.has(p)));
+const TWO_FACTOR_OPEN = /^\/v1\/(auth\/(2fa(\/setup|\/enable)?|logout|change-password)|me|organizations)\/?(\?.*)?$/;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
@@ -42,7 +47,7 @@ export class AccessGuard implements CanActivate {
     }
 
     const rows = await this.db.query(
-      `SELECT u.id, u.email, u.full_name, u.is_platform_admin, u.must_change_password
+      `SELECT u.id, u.email, u.full_name, u.is_platform_admin, u.must_change_password, u.totp_enabled
          FROM user_sessions s JOIN users u ON u.id = s.user_id
         WHERE s.id = $1 AND s.user_id = $2 AND s.revoked_at IS NULL
           AND s.expires_at > now() AND u.status = 'active'`,
@@ -54,6 +59,9 @@ export class AccessGuard implements CanActivate {
     if (rows[0].must_change_password && !/^\/v1\/(auth\/change-password|auth\/logout|me|organizations)\/?(\?.*)?$/.test(String(req.originalUrl ?? req.url)) )
       throw new ForbiddenException({ message: 'Vous devez changer votre mot de passe temporaire avant de continuer', code: 'PASSWORD_CHANGE_REQUIRED' });
 
+    const url = String(req.originalUrl ?? req.url);
+    if (req.user.is_platform_admin && needsTwoFactor(req.user, new Set()) && !TWO_FACTOR_OPEN.test(url))
+      throw new ForbiddenException({ message: 'Activez la double authentification pour continuer', code: 'TWO_FACTOR_REQUIRED' });
     if (this.reflector.getAllAndOverride<boolean>(PLATFORM_ADMIN, targets)) {
       if (!req.user.is_platform_admin) throw new ForbiddenException('Réservé aux administrateurs de plateforme');
       return true;
@@ -92,6 +100,8 @@ export class AccessGuard implements CanActivate {
     }
 
     const granted = new Set(perms.map((p) => p.permission_code));
+    if (needsTwoFactor(req.user, granted) && !TWO_FACTOR_OPEN.test(String(req.originalUrl ?? req.url)))
+      throw new ForbiddenException({ message: 'Activez la double authentification pour continuer', code: 'TWO_FACTOR_REQUIRED' });
     const required = this.reflector.getAllAndOverride<string[]>(PERMISSIONS, targets) ?? [];
     if (!hasAllPermissions(granted, required)) throw new ForbiddenException('Permission insuffisante');
 

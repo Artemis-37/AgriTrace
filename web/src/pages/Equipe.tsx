@@ -54,6 +54,7 @@ export default function Equipe() {
                   : <button className="btn btn-small btn-secondary" onClick={() => setAsk({ u, what: 'reactivate' })}>Réactiver</button>)}
                 {can('users:suspend') && <button className="btn btn-small btn-secondary" onClick={() => setAsk({ u, what: 'revoke-sessions' })}>Révoquer les sessions</button>}
                 {can('users:manage') && u.id !== me?.user.id && <button className="btn btn-small btn-secondary" onClick={async () => { if (confirm(`Réinitialiser le mot de passe de ${u.full_name} ? Ses sessions seront fermées.`)) await mk.run(async () => setTemp(await post(`/users/${u.id}/reset-password`))); }}>Réinitialiser le mot de passe</button>}
+                {can('users:manage') && u.id !== me?.user.id && <button className="btn btn-small btn-secondary" onClick={async () => { if (confirm(`Retirer la double authentification de ${u.full_name} (téléphone perdu) ? Ses sessions seront fermées ; la personne pourra la reconfigurer.`)) await mk.run(async () => { await post(`/users/${u.id}/reset-2fa`); alert('Double authentification retirée.'); }); }}>Retirer sa double authentification</button>}
                 {can('users:change_role') && u.id !== me?.user.id && <button className="btn btn-small btn-secondary" onClick={() => setRole(u)}>Rôle</button>}
                 <button className="btn btn-small btn-ghost" onClick={() => setHist(u)}>Historique</button>
               </div>) },

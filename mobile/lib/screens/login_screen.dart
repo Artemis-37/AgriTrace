@@ -16,6 +16,8 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _email = TextEditingController();
   final _password = TextEditingController();
+  final _otp = TextEditingController();
+  bool _needOtp = false; // double authentification demandée par le serveur
   bool _busy = false;
   bool _syncing = false;
   String? _error;
@@ -46,7 +48,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _login() async {
     setState(() { _busy = true; _error = null; });
     try {
-      await services.api.login(_email.text.trim().toLowerCase(), _password.text, deviceLabel: 'Android');
+      await services.api.login(_email.text.trim().toLowerCase(), _password.text, deviceLabel: 'Android', otp: _needOtp ? _otp.text.trim() : null);
       final orgs = await services.api.myOrganizations();
       if (orgs.isEmpty) {
         await services.store.signOut();
@@ -59,7 +61,8 @@ class _LoginScreenState extends State<LoginScreen> {
     } on NetworkException {
       setState(() => _error = 'Pas de connexion : la première connexion nécessite Internet.');
     } on ApiException catch (e) {
-      setState(() { _error = e.status == 401 ? 'Identifiants invalides.' : e.message; if (e.message.contains('pas associé')) _pairing = true; });
+      if (e.status == 401 && e.message.contains('Code de vérification requis')) { setState(() { _needOtp = true; _error = null; }); return; }
+      setState(() { _error = e.status == 401 ? (e.message.contains('Code de vérification invalide') ? 'Code de vérification invalide ou déjà utilisé.' : 'Identifiants invalides.') : e.message; if (e.message.contains('pas associé')) _pairing = true; });
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -122,8 +125,12 @@ class _LoginScreenState extends State<LoginScreen> {
                   TextField(controller: _email, keyboardType: TextInputType.emailAddress, autofillHints: const [AutofillHints.username], decoration: const InputDecoration(labelText: 'E-mail', border: OutlineInputBorder())),
                   const SizedBox(height: 12),
                   TextField(controller: _password, obscureText: true, autofillHints: const [AutofillHints.password], decoration: const InputDecoration(labelText: 'Mot de passe', border: OutlineInputBorder()), onSubmitted: (_) => _login()),
+                  if (_needOtp) ...[
+                    const SizedBox(height: 12),
+                    TextField(controller: _otp, keyboardType: TextInputType.number, autofocus: true, autofillHints: const [AutofillHints.oneTimeCode], decoration: const InputDecoration(labelText: "Code de vérification (application d'authentification) ou code de secours", border: OutlineInputBorder()), onSubmitted: (_) => _login()),
+                  ],
                   const SizedBox(height: 16),
-                  FilledButton(onPressed: _busy ? null : _login, child: Text(_busy ? 'Connexion…' : 'Se connecter')),
+                  FilledButton(onPressed: _busy ? null : _login, child: Text(_busy ? 'Connexion…' : _needOtp ? 'Valider le code' : 'Se connecter')),
                   TextButton(onPressed: () => setState(() => _pairing = true), child: const Text('Associer ce téléphone à la coopérative (code)')),
                 ] else ...[
                   const Text('Choisissez la coopérative', style: TextStyle(fontWeight: FontWeight.bold)),

@@ -30,7 +30,11 @@ services:
     restart: unless-stopped
     environment:
       DATABASE_URL: postgres://agritrace_app:${APP_DB_PASSWORD}@db:5432/agritrace
-      JWT_SECRET: ${JWT_SECRET:?}
+      NODE_ENV: production
+      JWT_SECRET: ${JWT_SECRET:?}              # 32 caractères minimum : openssl rand -base64 48
+      DOCUMENTS_KEY: ${DOCUMENTS_KEY:?}        # chiffrement des documents au repos : openssl rand -base64 32 (À SAUVEGARDER À PART : sans elle, les documents sont perdus)
+      SECRETS_KEY: ${SECRETS_KEY:?}              # chiffrement des secrets 2FA : openssl rand -base64 32 (distincte de JWT_SECRET, à sauvegarder à part)
+      REQUIRE_2FA: ${REQUIRE_2FA:-true}        # double authentification obligatoire pour les rôles sensibles
       CORS_ORIGINS: ${CORS_ORIGINS:-}
       METRICS_TOKEN: ${METRICS_TOKEN:-}
       TRUST_PROXY: "2"

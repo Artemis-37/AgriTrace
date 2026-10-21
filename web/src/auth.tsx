@@ -2,11 +2,11 @@ import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, 
 import * as client from './api';
 
 export interface Org { id: string; code: string; name: string }
-interface Me { user: { id: string; email: string; full_name: string }; must_change_password?: boolean; permissions: string[]; account_kind?: 'collector' | 'coach' | 'staff'; mobile_first?: boolean }
+interface Me { user: { id: string; email: string; full_name: string }; must_change_password?: boolean; must_setup_2fa?: boolean; permissions: string[]; account_kind?: 'collector' | 'coach' | 'staff'; mobile_first?: boolean }
 interface AuthState {
   status: 'loading' | 'anonymous' | 'choose-org' | 'ready' | 'platform';
   orgs: Org[]; org: Org | null; me: Me | null;
-  signIn: (email: string, password: string) => Promise<void>;
+  signIn: (email: string, password: string, otp?: string) => Promise<void>;
   chooseOrg: (id: string) => Promise<void>;
   signOut: () => Promise<void>;
   can: (...perms: string[]) => boolean;
@@ -52,8 +52,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<AuthState>(() => ({
     status, orgs, org, me,
-    signIn: async (email, password) => {
-      await client.login(email, password);
+    signIn: async (email, password, otp) => {
+      await client.login(email, password, otp);
       try { await afterLogin(); } catch (e: any) {
         // Compte réservé au mobile détecté après la connexion (rôle personnalisé) : on ferme la session et on l'explique.
         if (e?.body?.code === 'MOBILE_ONLY') { await client.logout(); setStatus('anonymous'); setMe(null); setOrgState(null); throw new client.ApiError(403, "Ce compte se connecte uniquement depuis l'application mobile AgriTrace."); }

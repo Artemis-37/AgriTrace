@@ -1,4 +1,4 @@
-import { BadRequestException, Body, ConflictException, Controller, ForbiddenException, Get, NotFoundException, Param, ParseUUIDPipe, Post, Req } from '@nestjs/common';
+import { HttpCode, BadRequestException, Body, ConflictException, Controller, ForbiddenException, Get, NotFoundException, Param, ParseUUIDPipe, Post, Req } from '@nestjs/common';
 import { assertStrongPassword } from '../auth/password-policy';
 import { randomBytes } from 'crypto';
 import { ApiBearerAuth, ApiHeader, ApiTags } from '@nestjs/swagger';
@@ -166,5 +166,19 @@ export class UsersController {
     await this.auth.setTemporaryPassword(id, temp);
     await this.audit.log({ organizationId: req.org.id, actorUserId: req.user.id, action: 'user.reset_password', entityType: 'user', entityId: id });
     return { email: member.email, temporary_password: temp, must_change_password: true };
+  }
+
+  /** Téléphone perdu : l'administrateur retire la double authentification du compte (sessions fermées) ; la personne la reconfigurera. */
+  @Post('users/:id/reset-2fa')
+  @HttpCode(204)
+  @RequirePermissions('users:manage')
+  async resetTwoFactor(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
+    if (id === req.user.id) throw new BadRequestException("Utilisez « Désactiver » dans Mon compte pour votre propre compte");
+    const member = await this.db.tx(req.org.id, async (c) => (await c.query(
+      `SELECT u.is_platform_admin, (SELECT count(*) FROM user_organizations x WHERE x.user_id = u.id AND x.status = 'active' AND x.organization_id <> $2) AS others
+         FROM users u JOIN user_organizations uo ON uo.user_id = u.id WHERE u.id = $1 AND uo.organization_id = $2`, [id, req.org.id])).rows[0]);
+    if (!member) throw new NotFoundException('Utilisateur introuvable dans cette coopérative');
+    if (member.is_platform_admin || Number(member.others) > 0) throw new ForbiddenException("Ce compte ne peut pas être réinitialisé depuis cette coopérative");
+    await this.auth.twoFactorReset(id, req.user.id);
   }
 }

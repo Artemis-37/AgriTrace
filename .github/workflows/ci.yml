@@ -54,9 +54,10 @@ jobs:
           API=http://localhost:3001/v1 node scripts/e2e-geo.js
       - name: Sécurité (API en mode production, limites de connexion par défaut)
         run: |
-          NODE_ENV=production PORT=3003 THROTTLE_LIMIT=100000 node dist/main > /tmp/api-sec.log 2>&1 &
+          NODE_ENV=production TRUST_PROXY=1 JWT_SECRET=Zq8vK2mXr4Tn7LpA9sWd3YhB6cEj1UfG DOCUMENTS_KEY=$(openssl rand -base64 32) PORT=3003 THROTTLE_LIMIT=100000 node dist/main > /tmp/api-sec.log 2>&1 &
           for i in $(seq 1 30); do curl -fs http://localhost:3003/v1/ready && break; sleep 1; done
           API=http://localhost:3003/v1 node scripts/e2e-securite.js
+          API=http://localhost:3003/v1 node scripts/e2e-2fa.js
       - name: Portail web (build, aperçu relié à l'API) et navigateur
         working-directory: web
         run: |

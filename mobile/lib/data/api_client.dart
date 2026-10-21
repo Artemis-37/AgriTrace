@@ -37,9 +37,9 @@ class ApiClient {
 
   Uri _uri(String path, [Map<String, String>? q]) => Uri.parse('${Config.apiBase}$path').replace(queryParameters: q);
 
-  Future<bool> login(String email, String password, {String? deviceLabel}) async {
+  Future<bool> login(String email, String password, {String? deviceLabel, String? otp}) async {
     final res = await _send('POST', '/auth/login',
-        body: {'email': email, 'password': password, if (deviceLabel != null) 'device_label': deviceLabel}, auth: false, org: false);
+        body: {'email': email, 'password': password, if (deviceLabel != null) 'device_label': deviceLabel, if (otp != null && otp.isNotEmpty) 'otp': otp}, auth: false, org: false);
     await store.saveTokens(res['access_token'] as String, res['refresh_token'] as String);
     return true;
   }

@@ -1,5 +1,5 @@
-import { FormEvent, useState } from 'react';
-import { post } from '../api';
+import { FormEvent, useEffect, useState } from 'react';
+import { get, post } from '../api';
 import { Card, ErrorBox, Field, PageHeader, useAction } from '../ui';
 
 /** Formulaire de changement de mot de passe (page « Mon compte » ou écran obligatoire après réinitialisation). */
@@ -36,6 +36,55 @@ export function ForcedPasswordChange() {
   );
 }
 
+/** Double authentification (code à 6 chiffres d'une application d'authentification, codes de secours à usage unique). */
+export function TwoFactor() {
+  const [st, setSt] = useState<{ enabled: boolean; recovery_codes_left: number } | null>(null);
+  const [setup, setSetup] = useState<{ secret: string; otpauth_uri: string } | null>(null);
+  const [code, setCode] = useState(''), [pw, setPw] = useState('');
+  const [codes, setCodes] = useState<string[] | null>(null);
+  const act = useAction();
+  const reload = () => get<{ enabled: boolean; recovery_codes_left: number }>('/auth/2fa').then(setSt).catch(() => undefined);
+  useEffect(() => { reload(); }, []);
+  if (!st) return <p className="muted">Chargement…</p>;
+  if (codes) return (<div>
+    <p className="ok">Double authentification activée. Conservez ces codes de secours en lieu sûr : chacun ne sert qu'une fois et ils ne seront plus affichés.</p>
+    <pre style={{ fontSize: '1.1rem', lineHeight: 1.7 }}>{codes.join('\n')}</pre>
+    <button className="btn" onClick={() => { setCodes(null); setSetup(null); setCode(''); reload(); }}>J'ai noté les codes</button>
+  </div>);
+  if (st.enabled) return (<form className="form" onSubmit={(e) => { e.preventDefault(); act.run(async () => { await post('/auth/2fa/disable', { password: pw, code }); setPw(''); setCode(''); await reload(); }); }}>
+    <p className="ok">Active. Codes de secours restants : {st.recovery_codes_left}.</p>
+    <Field label="Mot de passe"><input type="password" autoComplete="current-password" required value={pw} onChange={(e) => setPw(e.target.value)} /></Field>
+    <Field label="Code à 6 chiffres ou code de secours"><input required value={code} onChange={(e) => setCode(e.target.value)} /></Field>
+    {act.error && <ErrorBox message={act.error} />}
+    <button className="btn btn-secondary" disabled={act.busy}>Désactiver la double authentification</button>
+  </form>);
+  if (!setup) return (<div>
+    <p className="muted">Protège votre compte même si votre mot de passe est volé. Recommandé pour les administrateurs, comptables et caissiers.</p>
+    {act.error && <ErrorBox message={act.error} />}
+    <button className="btn" disabled={act.busy} onClick={() => act.run(async () => setSetup(await post('/auth/2fa/setup', {})))}>Activer la double authentification</button>
+  </div>);
+  return (<form className="form" onSubmit={(e) => { e.preventDefault(); act.run(async () => { const r: any = await post('/auth/2fa/enable', { code }); setCodes(r.recovery_codes); }); }}>
+    <p>1. Dans une application d'authentification (Google Authenticator, Microsoft Authenticator, Aegis…), ajoutez un compte avec cette clé :</p>
+    <pre style={{ userSelect: 'all', fontSize: '1.1rem' }}>{setup.secret}</pre>
+    <p className="muted">Type « basé sur le temps », 6 chiffres, 30 secondes.</p>
+    <Field label="2. Saisissez le code à 6 chiffres affiché"><input inputMode="numeric" required value={code} onChange={(e) => setCode(e.target.value)} /></Field>
+    {act.error && <ErrorBox message={act.error} />}
+    <button className="btn" disabled={act.busy}>Confirmer et activer</button>
+  </form>);
+}
+
+export function ForcedTwoFactor() {
+  return (
+    <div style={{ maxWidth: 480, margin: '4rem auto', padding: '0 1rem' }}>
+      <Card title="Activez la double authentification">
+        <p className="muted">Votre rôle donne accès à des fonctions sensibles (équipe, finances, audit). Votre coopérative exige la double authentification : activez-la pour continuer.</p>
+        <TwoFactor />
+        <p style={{ marginTop: '1rem' }}><button className="btn btn-ghost btn-small" onClick={() => window.location.reload()}>C'est fait, continuer</button></p>
+      </Card>
+    </div>
+  );
+}
+
 export default function Compte() {
-  return (<><PageHeader title="Mon compte" subtitle="Sécurité de votre accès" /><Card title="Changer mon mot de passe"><ChangePasswordForm /></Card></>);
+  return (<><PageHeader title="Mon compte" subtitle="Sécurité de votre accès" /><Card title="Changer mon mot de passe"><ChangePasswordForm /></Card><Card title="Double authentification"><TwoFactor /></Card></>);
 }

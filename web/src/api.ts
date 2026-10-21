@@ -96,10 +96,10 @@ async function refresh(): Promise<RefreshResult> {
 
 export function clearSession() { accessToken = null; store.set(null); }
 
-export async function login(email: string, password: string) {
-  const res = await fetch('/v1/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Client': 'web' }, body: JSON.stringify({ email, password, device_label: 'Portail web' }) });
+export async function login(email: string, password: string, otp?: string) {
+  const res = await fetch('/v1/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Client': 'web' }, body: JSON.stringify({ email, password, device_label: 'Portail web', ...(otp ? { otp } : {}) }) });
   const body = await res.json().catch(() => null);
-  if (!res.ok) throw new ApiError(res.status, res.status === 401 ? 'Identifiants invalides.' : res.status === 403 && body?.code === 'MOBILE_ONLY' ? "Ce compte se connecte uniquement depuis l'application mobile AgriTrace." : errorMessage(body, 'Connexion impossible.'), body);
+  if (!res.ok) throw new ApiError(res.status, res.status === 401 && body?.code === 'OTP_REQUIRED' ? 'Code de vérification requis.' : res.status === 401 && body?.code === 'OTP_INVALID' ? 'Code de vérification invalide ou déjà utilisé.' : res.status === 401 ? 'Identifiants invalides.' : res.status === 403 && body?.code === 'MOBILE_ONLY' ? "Ce compte se connecte uniquement depuis l'application mobile AgriTrace." : errorMessage(body, 'Connexion impossible.'), body);
   accessToken = body.access_token; store.set(body.refresh_token); offlineSession = false; rememberUser(body.access_token);
 }
 

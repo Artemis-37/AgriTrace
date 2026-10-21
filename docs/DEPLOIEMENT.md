@@ -21,7 +21,15 @@ Un serveur Linux avec Docker, un nom de domaine, et un reverse proxy HTTPS devan
 ## Réglages de l'API
 | Variable | Rôle |
 |---|---|
-| `DATABASE_URL`, `JWT_SECRET` | obligatoires |
+| `DATABASE_URL`, `JWT_SECRET` | obligatoires. En production (`NODE_ENV=production`) : `JWT_SECRET` de 32 caractères minimum, non prévisible (`openssl rand -base64 48`), sinon l'API refuse de démarrer |
+| `*_FILE` | chaque secret peut être fourni par fichier (Docker/Kubernetes secrets) : `JWT_SECRET_FILE`, `DATABASE_URL_FILE`, `METRICS_TOKEN_FILE`, `SECRETS_KEY_FILE`, `DOCUMENTS_KEY_FILE`, `SMTP_URL_FILE`, `BOOTSTRAP_TOKEN_FILE` |
+| `DOCUMENTS_KEY` | **chiffre les documents au repos** (AES-256-GCM) : `openssl rand -base64 32`. À sauvegarder séparément : sans elle les documents chiffrés sont illisibles. Les documents anciens restent lisibles ; les nouveaux sont chiffrés |
+| `SECRETS_KEY` | chiffre les secrets de double authentification : `openssl rand -base64 32`, distincte de `JWT_SECRET` (changer `JWT_SECRET` après un incident ne doit pas casser la 2FA) |
+| `REQUIRE_2FA` | `true` : les titulaires de droits sensibles (équipe, finances, audit, validations) et les administrateurs de plateforme doivent activer la double authentification pour continuer |
+| `LOGIN_THROTTLE_LIMIT` | connexions par minute et par adresse (10 par défaut ; ne pas relever en production) |
+| `ENABLE_API_DOCS` | `true` réactive la documentation Swagger (fermée en production par défaut) |
+| `BOOTSTRAP_TOKEN` | serveur local vierge : l'initialisation est acceptée depuis ce poste, ou depuis le réseau avec l'en-tête `X-Bootstrap-Token` |
+| `CLAMAV_HOST`, `CLAMAV_PORT`, `CLAMAV_REQUIRED` | analyse antivirus (ClamAV, clamd) des documents déposés ; `CLAMAV_REQUIRED=true` refuse le dépôt si l'analyseur est injoignable |
 | `DOCUMENTS_DIR` | dossier des pièces (volume `documents`) |
 | `CORS_ORIGINS` | origines autorisées si le portail est sur un autre domaine |
 | `TRUST_PROXY` | nombre de proxys de confiance (2 dans le compose : proxy HTTPS + nginx) ; vérifier ce nombre, sinon l'IP du journal d'audit et du limiteur est fausse |

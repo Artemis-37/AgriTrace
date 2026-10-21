@@ -27,7 +27,7 @@ import Terrain from './pages/Terrain';
 import ModulesFormation from './pages/ModulesFormation';
 import ModulesExportateurs from './pages/ModulesExportateurs';
 import Operations from './pages/Operations';
-import Compte, { ForcedPasswordChange } from './pages/Compte';
+import Compte, { ForcedPasswordChange, ForcedTwoFactor } from './pages/Compte';
 import Parcels from './pages/Parcels';
 import Producers from './pages/Producers';
 import Quality from './pages/Quality';
@@ -85,6 +85,7 @@ export default function App() {
   if (status === 'platform') return <CentralConsole />;
   if (status !== 'ready') return <Login />;
   if (me?.must_change_password) return <ForcedPasswordChange />;
+  if (me?.must_setup_2fa) return <ForcedTwoFactor />;
 
   return (
     <div className="shell">

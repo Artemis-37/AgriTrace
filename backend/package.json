@@ -9,7 +9,7 @@
     "start:dev": "nest start --watch",
     "migrate": "node scripts/migrate.js",
     "test": "jest",
-    "test:e2e:securite": "node scripts/e2e-securite.js",
+    "test:e2e:securite": "node scripts/e2e-securite.js && node scripts/e2e-2fa.js",
     "test:e2e": "node scripts/e2e-p1.js && node scripts/e2e-p2-p3.js && node scripts/e2e-p4.js && node scripts/e2e-p4b.js && node scripts/e2e-parcelles.js && node scripts/e2e-recus.js && node scripts/e2e-geo.js && node scripts/e2e-taches.js && node scripts/e2e-ventes.js && node scripts/e2e-etape-e.js && node scripts/e2e-messagerie.js && node scripts/e2e-convois.js && node scripts/e2e-convois-liaison.js && node scripts/e2e-app-update.js && node scripts/e2e-fonds-carte.js && node scripts/e2e-postgis.js && node scripts/e2e-zones-protegees.js && node scripts/e2e-terrain.js && node scripts/e2e-annulations.js && node scripts/e2e-compte.js && node scripts/e2e-ecarts.js && node scripts/e2e-numero-convoi.js && node scripts/e2e-roles.js && node scripts/e2e-postes.js && node scripts/e2e-replication.js && node scripts/e2e-bibliotheque-formation.js && node scripts/e2e-producteurs-sections.js && node scripts/e2e-taches-terminees.js && node scripts/e2e-mobile-uniquement.js && node scripts/e2e-modules-exportateurs.js && node scripts/e2e-affectations.js"
   },
   "dependencies": {
@@ -66,5 +66,11 @@
       "^.+\\.ts$": "ts-jest"
     },
     "testEnvironment": "node"
+  },
+  "overrides": {
+    "uuid": "^11.1.1",
+    "@nestjs/swagger": {
+      "js-yaml": "^5.5.0"
+    }
   }
 }

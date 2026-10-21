@@ -89,8 +89,16 @@ export class ReplicationController {
   /** Crée la coopérative et son administrateur sur un serveur local vierge (avec ou sans jumelage au central). */
   @Public()
   @Post('bootstrap/local')
-  async bootstrap(@Body() b: BootstrapDto) {
+  async bootstrap(@Body() b: BootstrapDto, @Req() req: any) {
     if (!isLocal()) throw new ForbiddenException('Réservé au mode serveur local');
+    // Serveur vierge ouvert sur le réseau : l'initialisation n'est acceptée que depuis ce poste (127.0.0.1) ou avec le jeton BOOTSTRAP_TOKEN.
+    const remote = String(req.socket?.remoteAddress ?? '').replace(/^::ffff:/, '');
+    const own = new Set(Object.values(require('os').networkInterfaces()).flat().map((i: any) => i?.address)); // ce poste, y compris par son adresse du réseau local
+    const loopback = remote === '::1' || /^127\./.test(remote) || own.has(remote);
+    const token = process.env.BOOTSTRAP_TOKEN;
+    const given = String(req.headers['x-bootstrap-token'] ?? '');
+    const tokenOk = !!token && given.length === token.length && require('crypto').timingSafeEqual(Buffer.from(given), Buffer.from(token));
+    if (!loopback && !tokenOk) throw new ForbiddenException("Initialisation refusée depuis le réseau : lancez-la depuis le poste serveur, ou fournissez l'en-tête X-Bootstrap-Token (variable BOOTSTRAP_TOKEN)");
     assertStrongPassword(b.admin_password, b.admin_email);
     const hash = await this.auth.hashPassword(b.admin_password);
     let org: { id: string; code: string; name: string; country?: string };

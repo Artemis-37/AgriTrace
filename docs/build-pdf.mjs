@@ -15,6 +15,7 @@ const DOCS = [
   ['MATRICE_ROLES.md', 'AgriTrace - Matrice des roles et permissions', 'Matrice des rôles et permissions', true],
   ['DEFAUTS_CONNUS_ET_RECETTE.md', 'AgriTrace - Defauts connus et plan de recette', 'Défauts connus et plan de recette', false],
   ['SECURITE.md', 'AgriTrace - Rapport de securite', 'Rapport de sécurité', false],
+  ['DONNEES_PERSONNELLES.md', 'AgriTrace - Donnees personnelles', 'Données personnelles', false],
 ];
 const css = `
 @page { size: A4; margin: 31mm 14mm 18mm; }

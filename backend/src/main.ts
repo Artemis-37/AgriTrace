@@ -4,6 +4,7 @@ import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
+import * as fs from 'fs';
 import * as path from 'path';
 import { AppModule } from './app.module';
 import * as http from 'http';
@@ -11,9 +12,25 @@ import * as express from 'express';
 import { requestMiddleware } from './ops/metrics';
 import { ensureCertificate } from './ops/tls';
 
+/** Secrets fournis par fichier (Docker/Kubernetes secrets) : JWT_SECRET_FILE=/run/secrets/jwt → JWT_SECRET. */
+function loadSecretFiles() {
+  for (const [k, v] of Object.entries(process.env)) {
+    if (!k.endsWith('_FILE') || !v || k === 'AGRITRACE_RELEASE_PUBKEY_FILE') continue;
+    const target = k.slice(0, -5);
+    if (!['JWT_SECRET', 'DATABASE_URL', 'METRICS_TOKEN', 'SECRETS_KEY', 'DOCUMENTS_KEY', 'SMTP_URL', 'BOOTSTRAP_TOKEN'].includes(target) || process.env[target]) continue;
+    process.env[target] = fs.readFileSync(v, 'utf8').trim();
+  }
+}
+
 async function bootstrap() {
+  loadSecretFiles();
+  if (process.env.NODE_ENV === 'production') {
+    if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) throw new Error('Production : JWT_SECRET de 32 caractères minimum exigé (openssl rand -base64 48)');
+    if (/^(change|secret|test|password|dev)/i.test(process.env.JWT_SECRET)) throw new Error('Production : JWT_SECRET trop prévisible');
+  }
   if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 24)
     throw new Error('JWT_SECRET manquant ou trop court (24 caractères minimum)');
+  if (process.env.NODE_ENV === 'production' && !process.env.SECRETS_KEY) console.warn('[sécurité] SECRETS_KEY absente : les secrets 2FA sont chiffrés avec une clé dérivée de JWT_SECRET (changer JWT_SECRET les rendrait illisibles). Définissez SECRETS_KEY.');
   if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL manquant');
 
   // TLS sur le réseau local : TLS_DIR = dossier du certificat auto-signé (créé au premier démarrage). Les postes l'épinglent par son empreinte.

@@ -9,6 +9,11 @@ target=$(printf "%s" "$ADMIN_PGURL" | sed "s#/postgres\([?]\|\$\)#/$name\1#")
 [ "$target" != "$ADMIN_PGURL" ] || { echo "ADMIN_PGURL doit se terminer par /postgres (base d'administration)"; exit 1; }
 psql "$ADMIN_PGURL" -v ON_ERROR_STOP=1 -c "CREATE DATABASE $name"
 trap 'psql "$ADMIN_PGURL" -c "DROP DATABASE IF EXISTS $name" >/dev/null' EXIT
+if [[ "$BACKUP_FILE" == *.enc ]]; then
+  : "${BACKUP_PASSPHRASE_FILE:?sauvegarde chiffrée : BACKUP_PASSPHRASE_FILE requis}"
+  plain=$(mktemp); trap 'rm -f "$plain"; psql "$ADMIN_PGURL" -c "DROP DATABASE IF EXISTS $name" >/dev/null' EXIT
+  openssl enc -d -aes-256-cbc -pbkdf2 -iter 600000 -pass "file:$BACKUP_PASSPHRASE_FILE" -in "$BACKUP_FILE" -out "$plain"; BACKUP_FILE="$plain"
+fi
 pg_restore --no-owner --dbname "$target" "$BACKUP_FILE"
 psql "$target" -v ON_ERROR_STOP=1 -At <<'SQL'
 SELECT 'migrations appliquées : ' || count(*) FROM schema_migrations;

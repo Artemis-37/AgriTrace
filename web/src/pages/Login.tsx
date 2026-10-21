@@ -9,6 +9,7 @@ export default function Login() {
   const { status, orgs, signIn, chooseOrg, signOut } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [otp, setOtp] = useState(''); const [needOtp, setNeedOtp] = useState(false);
   const { busy, error, run } = useAction();
   // Serveur local tout neuf : on propose de créer la coopérative au lieu de la connexion.
   const [firstRun, setFirstRun] = useState(false);
@@ -26,7 +27,13 @@ export default function Login() {
   };
 
   const [pairing, setPairing] = useState(false);
-  const submit = (e: FormEvent) => { e.preventDefault(); run(() => signIn(email.trim(), password)); };
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    run(async () => {
+      try { await signIn(email.trim(), password, needOtp ? otp.trim() : undefined); }
+      catch (err: any) { if (err?.body?.code === 'OTP_REQUIRED') { setNeedOtp(true); return; } throw err; }
+    });
+  };
 
   if (pairing) return <PairWorkstation onDone={() => window.location.reload()} onCancel={() => setPairing(false)} />;
   return (
@@ -70,7 +77,8 @@ export default function Login() {
             <h2>Connexion</h2>
             <label className="field"><span>Adresse e-mail</span><input type="email" autoComplete="username" required value={email} onChange={(e) => setEmail(e.target.value)} /></label>
             <label className="field"><span>Mot de passe</span><input type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} /></label>
-            <button className="btn" disabled={busy} type="submit" style={{ width: '100%' }}>{busy ? 'Connexion…' : 'Se connecter'}</button>
+            {needOtp && <label className="field"><span>Code de vérification (application d'authentification) ou code de secours</span><input inputMode="numeric" autoComplete="one-time-code" autoFocus required value={otp} onChange={(e) => setOtp(e.target.value)} /></label>}
+            <button className="btn" disabled={busy} type="submit" style={{ width: '100%' }}>{busy ? 'Connexion…' : needOtp ? 'Valider le code' : 'Se connecter'}</button>
             <p style={{ marginTop: '.75rem', textAlign: 'center' }}><button type="button" className="btn btn-ghost btn-small" onClick={() => setPairing(true)}>Associer ce poste à la coopérative (code)</button></p>
           </form>
         )}

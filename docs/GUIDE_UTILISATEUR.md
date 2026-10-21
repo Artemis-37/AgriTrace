@@ -28,6 +28,7 @@ Ce guide présente chaque utilisateur **sur ordinateur** (portail web dans le na
 
 ### Mot de passe
 - **Changer le mien** : portail › « Mon compte » (bas du menu de gauche) ; l'ancien mot de passe est demandé, 10 caractères minimum, et vos autres sessions sont fermées.
+- **Double authentification** (recommandée, obligatoire si votre coopérative l'impose) : portail › « Mon compte » › « Activer la double authentification ». Ajoutez la clé affichée dans une application d'authentification (Google Authenticator, Microsoft Authenticator, Aegis…), saisissez le code à 6 chiffres, puis **notez les 8 codes de secours** (chacun ne sert qu'une fois, affichés une seule fois). À chaque connexion, portail ou téléphone, un code vous est ensuite demandé. Téléphone perdu : utilisez un code de secours, ou demandez à l'administrateur « Retirer sa double authentification » (Équipe).
 - **Mot de passe oublié ou réinitialisé** : l'administrateur de la coopérative utilise « Réinitialiser le mot de passe » dans Équipe ; il vous communique un mot de passe temporaire. À la première connexion (portail ou téléphone), l'application vous demande d'en choisir un nouveau avant tout le reste.
 
 ### Hors connexion
@@ -172,7 +173,7 @@ Consultation des missions et des parcelles (mêmes écrans que le coach, selon l
 *Portail : finances*
 
 ## Administrateur de coopérative (ordinateur)
-- **Équipe** : créer les comptes, choisir le rôle, suspendre, réactiver, révoquer les sessions, **réinitialiser un mot de passe** (le mot de passe temporaire n'est affiché qu'une fois), consulter l'historique d'accès.
+- **Équipe** : créer les comptes, choisir le rôle, suspendre, réactiver, révoquer les sessions, **réinitialiser un mot de passe** (le mot de passe temporaire n'est affiché qu'une fois), **retirer la double authentification** d'un collègue qui a perdu son téléphone, consulter l'historique d'accès.
 - **Profil de la coopérative** (Équipe) : nom commercial, adresse, téléphone, e-mail, devise, langue par défaut ; repris en en-tête des reçus. Le **code CCC** de la coopérative y est saisi une fois : il sert de préfixe au numéro de connaissement des convois (sans code, le collecteur saisit le numéro à la main). Changer le code n'affecte que les convois futurs. Deux collecteurs dont les noms commencent par les mêmes 3 lettres partagent le même compteur : leurs numéros restent distincts.
 - **Rôles types** : 17 modèles prêts (direction, responsables de traçabilité / cartographie / magasin / financier / qualité / logistique, cartographe, agent de terrain, magasinier, caissier, comptable, collecteur, coach, ADG, auditeur, acheteur ou partenaire) à créer en un clic, puis à ajuster.
 - **Rapprochement bancaire** (Finances › Rapprochement bancaire) : importer le relevé de la banque en CSV, choisir les colonnes, simuler, importer ; les lignes correspondant à une seule opération du compte sont pointées d'office, les autres se pointent à la main ou s'ignorent avec une note ; les opérations du compte absentes du relevé sont listées pour être expliquées.

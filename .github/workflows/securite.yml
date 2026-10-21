@@ -1,0 +1,32 @@
+name: Analyse de sécurité
+on:
+  push: { branches: [main] }
+  pull_request:
+  schedule: [{ cron: '0 3 * * 1' }]   # chaque lundi : de nouvelles failles sont publiées en continu
+permissions: { contents: read, security-events: write }
+jobs:
+  codeql:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v3
+        with: { languages: javascript-typescript, queries: security-extended }
+      - uses: github/codeql-action/analyze@v3
+  dependances:
+    runs-on: ubuntu-latest
+    strategy: { matrix: { dir: [backend, web, desktop] } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: npm audit (dépendances de production, niveau élevé ou critique = échec)
+        working-directory: ${{ matrix.dir }}
+        run: npm audit --omit=dev --audit-level=high
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Recherche de secrets dans l'historique
+        uses: gitleaks/gitleaks-action@v2
+        env: { GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}' }
