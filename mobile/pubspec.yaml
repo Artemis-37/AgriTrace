@@ -14,7 +14,7 @@ dependencies:
   sqflite_sqlcipher: ^3.1.0+1   # SQLite chiffré (protection des données locales)
   path: ^1.9.0
   path_provider: ^2.1.4
-  flutter_secure_storage: ^9.2.2
+  flutter_secure_storage: ^11.2.0
   connectivity_plus: ^6.0.5
   uuid: ^4.5.0
   decimal: ^3.0.2               # estimation locale sans flottants
