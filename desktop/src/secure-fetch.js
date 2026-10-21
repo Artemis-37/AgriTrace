@@ -34,6 +34,48 @@ function getJson(origin, pathname, { timeoutMs = 1500, pin = null } = {}) {
   });
 }
 
+/**
+ * Télécharge `pathname` dans `destFile` (écriture dans un fichier .part puis renommage). Renvoie { size, sha256 } et rejette si
+ * l'empreinte du certificat (HTTPS) ne correspond pas à `pin`, si le serveur répond autre chose que 200 ou si la connexion s'interrompt.
+ */
+function download(origin, pathname, destFile, { pin = null, timeoutMs = 30000, onProgress } = {}) {
+  const fs = require('fs');
+  const crypto = require('crypto');
+  return new Promise((resolve, reject) => {
+    const u = new URL(origin);
+    const secure = u.protocol === 'https:';
+    const part = destFile + '.part';
+    const fail = (e) => { try { fs.rmSync(part, { force: true }); } catch { /* ignoré */ } reject(e); };
+    const req = (secure ? https : http).request({
+      host: u.hostname, port: u.port || (secure ? 443 : 80), path: pathname, method: 'GET', timeout: timeoutMs, agent: false,
+      ...(secure && { rejectUnauthorized: false }),
+    }, (res) => {
+      if (res.statusCode !== 200) { res.resume(); return fail(new Error(`Le serveur a répondu ${res.statusCode}`)); }
+      const total = Number(res.headers['content-length'] ?? 0);
+      const hash = crypto.createHash('sha256');
+      const out = fs.createWriteStream(part);
+      let size = 0;
+      res.on('data', (d) => { size += d.length; hash.update(d); onProgress?.(size, total); });
+      res.on('error', fail);
+      res.on('aborted', () => fail(new Error('Téléchargement interrompu')));
+      res.pipe(out);
+      out.on('error', fail);
+      out.on('finish', () => {
+        if (total && size !== total) return fail(new Error('Téléchargement incomplet'));
+        try { fs.renameSync(part, destFile); } catch (e) { return fail(e); }
+        resolve({ size, sha256: hash.digest('hex') });
+      });
+    });
+    if (secure) req.on('socket', (sock) => sock.once('secureConnect', () => {
+      const fp = norm(sock.getPeerCertificate().fingerprint256);
+      if (pin && fp !== norm(pin)) req.destroy(new Error('Empreinte du serveur différente de celle mémorisée'));
+    }));
+    req.on('timeout', () => req.destroy(new Error('délai dépassé')));
+    req.on('error', fail);
+    req.end();
+  });
+}
+
 /** Convertit l'empreinte d'Electron (« sha256/BASE64 ») en hexadécimal comparable. */
 function electronFingerprintToHex(f) {
   const m = /^sha256\/(.+)$/.exec(String(f || ''));
@@ -45,4 +87,4 @@ function securityCode(fp) {
   return (norm(fp).slice(0, 16).toUpperCase().match(/.{4}/g) || []).join('-');
 }
 
-module.exports = { getJson, norm, electronFingerprintToHex, securityCode };
+module.exports = { getJson, download, norm, electronFingerprintToHex, securityCode };

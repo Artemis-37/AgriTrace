@@ -9,6 +9,8 @@ const path = require('path');
 const { LocalServer } = require('./server-manager');
 const { discover, findServer, startBeacon, probe, probeHost } = require('./discovery');
 const { electronFingerprintToHex, securityCode } = require('./secure-fetch');
+const { checkUpdate, downloadInstaller, installCommand, cleanOld } = require('./updater');
+const { spawn } = require('child_process');
 
 const PORT = 3000;
 let stopBeacon = null, cfg = null, server = null, win = null, tray = null, quitting = false;
@@ -61,6 +63,52 @@ function installCertificatePinning() {
   });
 }
 
+// ---- Mise à jour de l'application : l'installateur déposé par l'administrateur sur le serveur de la coopérative ----
+// Le poste le télécharge sur le réseau local, vérifie son empreinte SHA-256, puis l'installe et se rouvre. Windows uniquement.
+let updating = false;
+const declinedUpdates = new Set();
+function updateSource() {
+  if (cfg?.role === 'client') return cfg.serverUrl ? { origin: cfg.serverUrl, pin: cfg.serverFp ?? null } : null;
+  return server ? { origin: server.url, pin: null } : null;
+}
+async function checkForUpdate(manual = false) {
+  if (updating) return;
+  if (process.platform !== 'win32' && !process.env.AGRITRACE_UPDATE_TEST) { if (manual) dialog.showMessageBox({ message: 'Les mises à jour automatiques concernent la version Windows.' }); return; }
+  const src = updateSource();
+  if (!src) return;
+  const u = await checkUpdate({ ...src, current: app.getVersion() });
+  if (!u) { if (manual) dialog.showMessageBox({ message: 'AgriTrace est à jour.', detail: `Version ${app.getVersion()}` }); return; }
+  if (!manual && declinedUpdates.has(u.version)) return;
+  const isServer = cfg?.role === 'server' || cfg?.role === 'single';
+  const mo = Math.max(1, Math.round((u.size || 0) / 1048576));
+  const r = await dialog.showMessageBox({
+    type: 'question', buttons: ['Installer maintenant', 'Plus tard'], defaultId: 0, cancelId: 1, message: `Une nouvelle version d'AgriTrace est disponible (${u.version})`,
+    detail: `${u.notes ? u.notes + '\n\n' : ''}Téléchargement : environ ${mo} Mo, depuis le serveur de la coopérative. L'application va se fermer puis se rouvrir. Windows peut demander l'autorisation d'installer.` +
+      (cfg?.role === 'server' ? '\n\nCe poste est le serveur : pendant la mise à jour, les autres postes passent en mode hors connexion puis envoient leur travail au retour du serveur.' : ''),
+  });
+  if (r.response !== 0) { declinedUpdates.add(u.version); return; }
+  updating = true;
+  try {
+    const dir = path.join(app.getPath('userData'), 'updates');
+    const file = await downloadInstaller({ ...src, update: u, destDir: dir, onProgress: (n, t) => win?.setProgressBar(t ? n / t : 2) });
+    win?.setProgressBar(-1);
+    cleanOld(dir, u.version);
+    log(`mise à jour vers ${u.version} : installateur vérifié, lancement`);
+    const { cmd, args } = installCommand(file, process.execPath);
+    spawn(cmd, args, { detached: true, stdio: 'ignore', windowsHide: true }).unref();
+    quitting = true; void isServer;
+    app.quit();
+  } catch (e) {
+    updating = false; win?.setProgressBar(-1);
+    log('mise à jour impossible : ' + e.message);
+    dialog.showErrorBox('Mise à jour impossible', e.message);
+  }
+}
+function scheduleUpdateChecks() {
+  setTimeout(() => void checkForUpdate().catch((e) => log('vérification de mise à jour : ' + e.message)), 30000);
+  setInterval(() => void checkForUpdate().catch(() => undefined), 6 * 3600 * 1000);
+}
+
 // Retrouve le serveur sur le réseau local et met à jour l'adresse mémorisée. Au plus une recherche à la fois, et une toutes les 20 s.
 let finding = null, lastFind = 0;
 async function refindServer() {
@@ -111,6 +159,7 @@ function buildMenu() {
         { type: 'separator' },
       ] : []),
       { label: 'Poste et réseau…', click: showNetwork },
+      { label: 'Rechercher une mise à jour…', click: () => void checkForUpdate(true) },
       { label: 'Changer de rôle (poste unique / serveur / client)…', click: resetRole },
       { label: 'Journal technique', click: () => shell.openPath(logFile()) },
       { type: 'separator' }, { label: isServer ? 'Quitter et arrêter le serveur' : 'Quitter', role: 'quit' },
@@ -175,6 +224,7 @@ async function startServerRole() {
   ]));
   tray.on('double-click', () => { win?.show(); win?.focus(); });
   mainWindow(server.url);
+  scheduleUpdateChecks();
 }
 
 async function main() {
@@ -191,7 +241,7 @@ async function main() {
     buildMenu();
   }
   if (cfg.role === 'server' || cfg.role === 'single') await startServerRole();
-  else { installCertificatePinning(); registerClientProtocol(); mainWindow('agritrace://app/'); refindServer().catch(() => undefined); }
+  else { installCertificatePinning(); registerClientProtocol(); mainWindow('agritrace://app/'); refindServer().catch(() => undefined); scheduleUpdateChecks(); }
 }
 
 ipcMain.handle('setup:check', async (_e, url) => {

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { get, post } from '../api';
+import { useRef, useState } from 'react';
+import { get, post, postForm } from '../api';
 import { useAuth } from '../auth';
 import { dateTime } from '../format';
 import { Badge, Card, ErrorBox, Field, Loading, PageHeader, Stat, useAction, useAsync } from '../ui';
@@ -56,6 +56,43 @@ export default function Synchronisation() {
           <button className="btn" disabled={act.busy || code.trim().length < 10} onClick={() => act.run(async () => { await post('/replication/link', { pairing_code: code.trim() }); setCode(''); await post('/replication/sync-now'); reload(); })}>Relier et envoyer les données existantes</button>
         </Card>
       )}
+      <AppUpdateCard />
     </>
+  );
+}
+
+/** Mise à jour de l'application de bureau : l'administrateur dépose le nouvel installateur, les postes le reçoivent sur le réseau local. */
+function AppUpdateCard() {
+  const { can } = useAuth();
+  const { data, reload } = useAsync(() => get<any>('/app/update?current=0.0.0'), []);
+  const act = useAction();
+  const [version, setVersion] = useState('');
+  const [notes, setNotes] = useState('');
+  const [done, setDone] = useState<string | null>(null);
+  const file = useRef<HTMLInputElement>(null);
+  const valid = /^\d{1,4}\.\d{1,4}\.\d{1,4}$/.test(version);
+  return (
+    <Card title="Mise à jour de l'application de bureau">
+      <p>{data?.available
+        ? <>Version mise à disposition des postes : <strong>{data.version}</strong> ({Math.max(1, Math.round(data.size_bytes / 1048576))} Mo, déposée le {dateTime(data.uploaded_at)}). Chaque poste la propose à son utilisateur et l'installe après vérification de l'empreinte du fichier.</>
+        : 'Aucune version déposée pour le moment.'}</p>
+      {can('settings:manage') && (
+        <>
+          <p className="muted">Déposez le fichier d'installation Windows (.exe) d'une version plus récente. Les postes le téléchargent depuis ce serveur, sans Internet. L'installateur n'est pas signé numériquement : ne déposez que le fichier fourni par votre équipe AgriTrace.</p>
+          {act.error && <ErrorBox message={act.error} />}
+          {done && <p className="notice" role="status">{done}</p>}
+          <Field label="Numéro de version (ex. 0.2.0)"><input value={version} onChange={(e) => setVersion(e.target.value.trim())} maxLength={14} /></Field>
+          <Field label="Installateur (.exe)"><input ref={file} type="file" accept=".exe" /></Field>
+          <Field label="Nouveautés (facultatif)"><input value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={500} /></Field>
+          <button className="btn" disabled={act.busy || !valid} onClick={() => act.run(async () => {
+            const f = file.current?.files?.[0];
+            if (!f) throw new Error('Choisissez le fichier d\'installation');
+            const form = new FormData(); form.append('file', f); form.append('version', version); if (notes.trim()) form.append('notes', notes.trim());
+            const r = await postForm<any>('/app/releases', form);
+            setDone(`Version ${r.version} déposée : les postes la proposeront à leurs utilisateurs.`); setVersion(''); setNotes(''); if (file.current) file.current.value = ''; reload();
+          })}>Mettre à disposition des postes</button>
+        </>
+      )}
+    </Card>
   );
 }

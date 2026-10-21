@@ -56,6 +56,21 @@ const { probe } = require('../src/discovery');
   check('écriture en base', pr.status === 201);
   check('secrets créés avec droits restreints', fs.existsSync(srv.secretsFile) && (process.platform === 'win32' || (fs.statSync(srv.secretsFile).mode & 0o077) === 0));
 
+  console.log('Mise à jour de l\'application');
+  const exeBytes = Buffer.concat([Buffer.from('MZ'), require('crypto').randomBytes(4096)]);
+  const upForm = (bytes, version) => { const f = new FormData(); f.append('file', new Blob([bytes]), 'AgriTrace-Setup.exe'); f.append('version', version); return f; };
+  const auth = { authorization: 'Bearer ' + login.access_token, 'x-organization-id': orgId };
+  const upBad = await fetch(srv.url + '/v1/app/releases', { method: 'POST', headers: auth, body: upForm(Buffer.from('pas un exe'), '9.9.9') });
+  check('serveur local : fichier qui n\'est pas un .exe refusé', upBad.status === 400, upBad.status);
+  const upOk = await fetch(srv.url + '/v1/app/releases', { method: 'POST', headers: auth, body: upForm(exeBytes, '9.9.9') });
+  check('serveur local : l\'administrateur de la coopérative dépose un installateur', upOk.status === 201, upOk.status);
+  const { checkUpdate, downloadInstaller } = require('../src/updater');
+  const ann = await checkUpdate({ origin: `https://127.0.0.1:${port}`, pin: srv.fingerprint, current: '0.1.0' });
+  check('un poste (HTTPS épinglé) voit la nouvelle version', ann && ann.version === '9.9.9' && ann.size === exeBytes.length, ann);
+  const got = await downloadInstaller({ origin: `https://127.0.0.1:${port}`, pin: srv.fingerprint, update: ann, destDir: path.join(work, 'updates') });
+  check('… la télécharge et la vérifie', fs.readFileSync(got).equals(exeBytes));
+  check('poste d\'une empreinte étrangère : annonce ignorée', (await checkUpdate({ origin: `https://127.0.0.1:${port}`, pin: '00'.repeat(32), current: '0.1.0' })) === null);
+
   console.log('Sauvegarde puis redémarrage');
   const bk = await srv.backup(work);
   check('sauvegarde créée (base + secrets + certificat)', fs.existsSync(path.join(bk, 'pgdata', 'PG_VERSION')) && fs.existsSync(path.join(bk, 'server.json')) && fs.existsSync(path.join(bk, 'tls', 'cert.pem')), bk);

@@ -82,6 +82,12 @@ Le poste serveur crée seul un certificat auto-signé (dossier `server/tls`, sau
 - Navigateur d'un autre ordinateur (déconseillé) : l'adresse https du serveur affiche un avertissement ; télécharger le certificat sur `/v1/tls/certificate` et l'installer comme autorité de confiance pour le supprimer.
 - Poste unique : le serveur n'écoute que sur 127.0.0.1, en HTTP, sans exposition au réseau.
 
+## Mise à jour de l'application de bureau
+1. Mettre à jour le serveur : lancer le nouvel installateur sur le poste serveur (ou le déposer comme ci-dessous et accepter la proposition).
+2. Dans le portail du serveur : Synchronisation > « Mise à jour de l'application de bureau » : saisir le numéro de version, choisir le fichier `AgriTrace-Setup-x.y.z.exe`, valider.
+3. Chaque poste propose la mise à jour dans les 6 heures (ou tout de suite : Fichier > « Rechercher une mise à jour… »). L'utilisateur accepte, l'application se ferme, s'installe et se rouvre.
+Le fichier est vérifié par son empreinte SHA-256 ; l'installateur n'est pas signé numériquement, ne déposer que le fichier fourni officiellement.
+
 ## Limites connues
 
 * Un seul sens : local → central. Pas de diffusion du central vers les locaux (référentiels communs, par exemple).
