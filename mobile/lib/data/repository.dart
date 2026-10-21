@@ -207,4 +207,20 @@ class Repository {
     });
     return true;
   }
+
+  /// Accès révoqué par le serveur (compte suspendu) : on efface tout ce qui vient du serveur (producteurs, parcelles, prix,
+  /// déclarations déjà envoyées, droits). Seules les saisies jamais envoyées restent, dans la base chiffrée, pour ne pas
+  /// perdre le travail du collecteur : elles partiront si le compte est réactivé.
+  Future<void> purgeAfterRevocation() async {
+    await db.raw.transaction((txn) async {
+      for (final t in ['value_chains', 'campaigns', 'unit_conversions', 'price_versions', 'producers', 'my_assignments', 'parcels']) {
+        await txn.delete(t);
+      }
+      await txn.delete('declarations', where: "local_state NOT IN ('local_only','pending','pending_validation','error')");
+      await txn.delete('outbox', where: "status NOT IN ('pending','pending_validation')");
+      await txn.delete('pending_uploads', where: "status != 'pending'");
+      await txn.delete('kv', where: "k IN ('cursor','permissions','my_collector_id')");
+      await txn.insert('kv', {'k': 'revoked', 'v': '1'}, conflictAlgorithm: ConflictAlgorithm.replace);
+    });
+  }
 }

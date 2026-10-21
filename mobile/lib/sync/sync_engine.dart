@@ -28,6 +28,8 @@ class SyncEngine {
   final AppDatabase db;
   final ApiClient api;
   bool _running = false;
+  /// Vrai quand l'accès a été révoqué : l'écran revient à la connexion.
+  final ValueNotifier<bool> revoked = ValueNotifier(false);
   final ValueNotifier<SyncStatus> status = ValueNotifier(const SyncStatus(SyncPhase.idle));
 
   SyncEngine(this.db, this.api);
@@ -46,6 +48,7 @@ class SyncEngine {
       status.value = SyncStatus(SyncPhase.offline, lastSuccess: previousSuccess, message: e.message);
     } on ApiException catch (e) {
       final blocked = e.status == 401 || e.status == 403;
+      if (blocked && await api.store.refreshToken == null) revoked.value = true;
       status.value = SyncStatus(blocked ? SyncPhase.blocked : SyncPhase.error, lastSuccess: previousSuccess, message: e.message);
     } catch (e) {
       status.value = SyncStatus(SyncPhase.error, lastSuccess: previousSuccess, message: e.toString());

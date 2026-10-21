@@ -38,6 +38,10 @@ Future<void> main() async {
   final tiles = MapTiles(mapPack);
   unawaited(tiles.init());
   services = Services(store, api, db, Repository(db), SyncEngine(db, api), mapPack, tiles);
+  api.onRevoked = () async {
+    await services.repo.purgeAfterRevocation();
+    await store.signOut();
+  };
   final loggedIn = await store.refreshToken != null && await store.orgId != null;
   runApp(AgriTraceApp(loggedIn: loggedIn));
 }

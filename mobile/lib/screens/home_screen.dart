@@ -33,13 +33,24 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     services.sync.status.addListener(_reload);
+    services.sync.revoked.addListener(_onRevoked);
     _reload();
   }
 
   @override
   void dispose() {
     services.sync.status.removeListener(_reload);
+    services.sync.revoked.removeListener(_onRevoked);
     super.dispose();
+  }
+
+  void _onRevoked() {
+    if (!services.sync.revoked.value || !mounted) return;
+    services.sync.revoked.value = false;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginScreen(notice: "Votre accès a été retiré par l'administrateur. Les données de la coopérative ont été effacées de ce téléphone ; les saisies non envoyées sont conservées.")),
+      (r) => false,
+    );
   }
 
   Future<void> _reload() async {

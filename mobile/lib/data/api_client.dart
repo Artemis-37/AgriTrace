@@ -28,6 +28,10 @@ class NetworkException implements Exception {
 class ApiClient {
   final SessionStore store;
   final http.Client _http;
+  /// Appelé quand le serveur refuse définitivement le renouvellement de la session (compte suspendu, session révoquée).
+  /// Jamais appelé sur une simple coupure réseau.
+  Future<void> Function()? onRevoked;
+
   ApiClient(this.store, {http.Client? client}) : _http = client ?? createHttpClient();
 
   Uri _uri(String path, [Map<String, String>? q]) => Uri.parse('${Config.apiBase}$path').replace(queryParameters: q);
@@ -190,6 +194,10 @@ class ApiClient {
       final res = await _http
           .post(_uri('/auth/refresh'), headers: {'content-type': 'application/json'}, body: jsonEncode({'refresh_token': rt}))
           .timeout(const Duration(seconds: 30));
+      if (res.statusCode == 401 || res.statusCode == 403) {
+        await onRevoked?.call();
+        return false;
+      }
       if (res.statusCode != 200 && res.statusCode != 201) return false;
       final j = jsonDecode(res.body) as Map<String, dynamic>;
       await store.saveTokens(j['access_token'] as String, j['refresh_token'] as String);

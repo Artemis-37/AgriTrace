@@ -5,7 +5,8 @@ import '../main.dart';
 import 'home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  final String? notice;
+  const LoginScreen({super.key, this.notice});
   @override
   State<LoginScreen> createState() => _LoginScreenState();
 }
@@ -15,6 +16,12 @@ class _LoginScreenState extends State<LoginScreen> {
   final _password = TextEditingController();
   bool _busy = false;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _error = widget.notice;
+  }
   List<dynamic> _orgs = [];
   final _code = TextEditingController();
   bool _pairing = false;
