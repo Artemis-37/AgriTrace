@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'config.dart';
 import 'data/api_client.dart';
 import 'data/app_database.dart';
+import 'data/map_pack.dart';
 import 'data/repository.dart';
 import 'data/session_store.dart';
 import 'screens/home_screen.dart';
@@ -19,7 +20,8 @@ class Services {
   final AppDatabase db;
   final Repository repo;
   final SyncEngine sync;
-  Services(this.store, this.api, this.db, this.repo, this.sync);
+  final MapPackStore mapPack;
+  Services(this.store, this.api, this.db, this.repo, this.sync, this.mapPack);
 }
 
 late Services services;
@@ -29,7 +31,9 @@ Future<void> main() async {
   final store = SessionStore();
   final db = await AppDatabase.open(await store.databaseKey());
   final api = ApiClient(store);
-  services = Services(store, api, db, Repository(db), SyncEngine(db, api));
+  final mapPack = MapPackStore(api);
+  await mapPack.load();
+  services = Services(store, api, db, Repository(db), SyncEngine(db, api), mapPack);
   final loggedIn = await store.refreshToken != null && await store.orgId != null;
   runApp(AgriTraceApp(loggedIn: loggedIn));
 }
@@ -67,10 +71,18 @@ class _SyncShellState extends State<SyncShell> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     services.sync.run();
+    _fetchMap();
     _sub = Connectivity().onConnectivityChanged.listen((r) {
       if (r.any((x) => x != ConnectivityResult.none)) services.sync.run();
+      if (r.any((x) => x == ConnectivityResult.wifi || x == ConnectivityResult.ethernet)) _fetchMap();
     });
     _timer = Timer.periodic(const Duration(minutes: Config.syncIntervalMinutes), (_) => services.sync.run());
+  }
+
+  /// Le fond de carte (plusieurs dizaines de Mo) ne se télécharge tout seul que sur Wi-Fi ; sur données mobiles, c'est à l'utilisateur de le demander.
+  Future<void> _fetchMap() async {
+    final c = await Connectivity().checkConnectivity();
+    if (c.any((x) => x == ConnectivityResult.wifi || x == ConnectivityResult.ethernet)) await services.mapPack.sync();
   }
 
   @override

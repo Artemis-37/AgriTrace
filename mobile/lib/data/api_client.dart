@@ -131,6 +131,57 @@ class ApiClient {
     }
   }
 
+  /// Téléchargement d'un gros fichier, reprenable : les octets sont ajoutés à [target] à partir de sa taille actuelle (en-tête Range).
+  /// Retourne l'empreinte SHA-256 annoncée par le serveur (null si absente).
+  Future<String?> download(String path, File target, {void Function(int received)? onBytes}) async {
+    Future<http.StreamedResponse> once() async {
+      final start = await target.exists() ? await target.length() : 0;
+      final req = http.Request('GET', _uri(path));
+      final t = await store.accessToken;
+      if (t != null) req.headers['authorization'] = 'Bearer $t';
+      final dev = await store.deviceToken;
+      if (dev != null) req.headers['x-device-token'] = dev;
+      final o = await store.orgId;
+      if (o != null) req.headers['x-organization-id'] = o;
+      if (start > 0) req.headers['range'] = 'bytes=$start-';
+      return _http.send(req).timeout(const Duration(seconds: 30));
+    }
+
+    try {
+      var res = await once();
+      if (res.statusCode == 401 && await _refresh()) res = await once();
+      if (res.statusCode == 416) { // fichier déjà complet côté téléphone
+        await res.stream.drain<void>();
+        return res.headers['x-content-sha256'];
+      }
+      if (res.statusCode >= 400) {
+        final body = await res.stream.bytesToString();
+        var msg = body;
+        try { final j = jsonDecode(body); final m = j is Map ? j['message'] : null; msg = m is List ? m.join(', ') : (m?.toString() ?? body); } catch (_) {}
+        throw ApiException(res.statusCode, msg);
+      }
+      // 200 : le serveur renvoie tout (pas de reprise possible) ; 206 : suite du fichier.
+      final sink = target.openWrite(mode: res.statusCode == 206 ? FileMode.append : FileMode.write);
+      var received = res.statusCode == 206 ? await target.length() : 0;
+      try {
+        await for (final chunk in res.stream.timeout(const Duration(seconds: 30))) {
+          sink.add(chunk);
+          received += chunk.length;
+          onBytes?.call(received);
+        }
+      } finally {
+        await sink.close();
+      }
+      return res.headers['x-content-sha256'];
+    } on SocketException catch (e) {
+      throw NetworkException(e.message);
+    } on TimeoutException {
+      throw NetworkException('Délai dépassé');
+    } on http.ClientException catch (e) {
+      throw NetworkException(e.message);
+    }
+  }
+
   /// Renouvelle la session ; le serveur fait tourner le jeton de renouvellement.
   Future<bool> _refresh() async {
     final rt = await store.refreshToken;

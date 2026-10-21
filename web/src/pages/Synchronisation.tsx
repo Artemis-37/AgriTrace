@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { get, post, postForm } from '../api';
+import { api, get, post, postForm } from '../api';
 import { useAuth } from '../auth';
 import { dateTime } from '../format';
 import { Badge, Card, ErrorBox, Field, Loading, PageHeader, Stat, useAction, useAsync } from '../ui';
@@ -57,6 +57,7 @@ export default function Synchronisation() {
         </Card>
       )}
       <AppUpdateCard />
+      <MapPackCard />
     </>
   );
 }
@@ -91,6 +92,57 @@ function AppUpdateCard() {
             const r = await postForm<any>('/app/releases', form);
             setDone(`Version ${r.version} déposée : les postes la proposeront à leurs utilisateurs.`); setVersion(''); setNotes(''); if (file.current) file.current.value = ''; reload();
           })}>Mettre à disposition des postes</button>
+        </>
+      )}
+    </Card>
+  );
+}
+
+/** Fond de carte hors ligne des téléphones : l'administrateur dépose un paquet de tuiles (MBTiles), les téléphones le téléchargent sur le Wi-Fi de la coopérative. */
+function MapPackCard() {
+  const { can } = useAuth();
+  const manage = can('settings:manage');
+  const { data: cur, reload } = useAsync(() => get<any>('/map-packs/current'), []);
+  const { data: list, reload: reloadList } = useAsync(() => (manage ? get<any[]>('/map-packs') : Promise.resolve([])), [manage]);
+  const act = useAction();
+  const [name, setName] = useState('');
+  const [done, setDone] = useState<string | null>(null);
+  const [removing, setRemoving] = useState<any | null>(null);
+  const file = useRef<HTMLInputElement>(null);
+  const mb = (b: number) => `${(b / 1048576).toFixed(b < 10485760 ? 1 : 0)} Mo`;
+  const refresh = () => { reload(); reloadList(); };
+  return (
+    <Card title="Fond de carte hors ligne des téléphones">
+      <p>{cur?.available
+        ? <>Fond de carte proposé aux téléphones : <strong>{cur.name}</strong> ({mb(cur.size_bytes)}, déposé le {dateTime(cur.uploaded_at)}). Chaque téléphone le télécharge une fois sur le Wi-Fi de la coopérative, puis l'affiche sans connexion.</>
+        : 'Aucun fond de carte déposé : sur les téléphones, le plan du tracé s\'affiche sans fond.'}</p>
+      {manage && (
+        <>
+          <p className="muted">Déposez un paquet de tuiles raster au format MBTiles (.mbtiles), préparé par exemple avec QGIS à partir d'une imagerie dont la licence autorise le stockage. Limitez la zone et le niveau de détail à ce dont les techniciens ont besoin : un paquet de quelques dizaines de Mo suffit pour une zone de coopérative.</p>
+          {act.error && <ErrorBox message={act.error} />}
+          {done && <p className="notice" role="status">{done}</p>}
+          <Field label="Nom (facultatif)"><input value={name} onChange={(e) => setName(e.target.value)} maxLength={120} /></Field>
+          <Field label="Paquet de tuiles (.mbtiles)"><input ref={file} type="file" accept=".mbtiles" /></Field>
+          <button className="btn" disabled={act.busy} onClick={() => act.run(async () => {
+            const f = file.current?.files?.[0];
+            if (!f) throw new Error('Choisissez le fichier .mbtiles');
+            const form = new FormData(); form.append('file', f); if (name.trim()) form.append('name', name.trim());
+            const r = await postForm<any>('/map-packs', form);
+            setDone(`Fond de carte « ${r.name} » déposé : les téléphones le téléchargeront sur le Wi-Fi.`); setName(''); if (file.current) file.current.value = ''; refresh();
+          })}>{act.busy ? 'Envoi…' : 'Mettre à disposition des téléphones'}</button>
+          {!!list?.length && (
+            <table className="table" style={{ marginTop: 12 }}>
+              <thead><tr><th>Nom</th><th>Taille</th><th>Déposé le</th><th></th></tr></thead>
+              <tbody>{list.map((p: any, i: number) => (
+                <tr key={p.id}><td>{p.name} {i === 0 && <Badge tone="ok">En service</Badge>}</td><td>{mb(p.size_bytes)}</td><td>{dateTime(p.uploaded_at)}</td>
+                  <td><button className="btn secondary" onClick={() => setRemoving(p)}>Retirer</button></td></tr>
+              ))}</tbody>
+            </table>
+          )}
+          {removing && (
+            <Confirm title={`Retirer « ${removing.name} » ?`} intro="Les téléphones qui l'ont déjà téléchargé le gardent ; les nouveaux ne pourront plus le recevoir."
+              onClose={() => setRemoving(null)} onSubmit={async () => { await api('DELETE', `/map-packs/${removing.id}`); setRemoving(null); refresh(); }} />
+          )}
         </>
       )}
     </Card>

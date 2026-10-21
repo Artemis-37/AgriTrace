@@ -5,6 +5,8 @@ import 'package:geolocator/geolocator.dart';
 
 import '../geo/polygon.dart';
 import '../main.dart';
+import 'basemap_view.dart';
+import 'map_pack_screen.dart';
 
 /// Relevé du tracé d'une parcelle au GPS : le technicien fait le tour de la parcelle et ajoute un point à chaque angle.
 /// Tout se calcule sur l'appareil (surface, périmètre, contrôle du tracé) ; l'enregistrement part à la synchronisation, réseau ou non.
@@ -27,6 +29,7 @@ class _ParcelSurveyScreenState extends State<ParcelSurveyScreen> {
   List<Map<String, Object?>> _chains = [];
   String? _chainId;
   final List<GeoPoint> _points = [];
+  GeoPoint? _me;
   bool _locating = false, _saving = false;
   String? _message;
 
@@ -92,7 +95,8 @@ class _ParcelSurveyScreenState extends State<ParcelSurveyScreen> {
       ));
       if (keep != true || !mounted) return;
     }
-    setState(() => _points.add(GeoPoint(pos.latitude, pos.longitude, accuracyM: pos.accuracy)));
+    final here = GeoPoint(pos.latitude, pos.longitude, accuracyM: pos.accuracy);
+    setState(() { _points.add(here); _me = here; });
   }
 
   double? get _declaredHa => double.tryParse(_declared.text.trim().replaceAll(',', '.'));
@@ -119,7 +123,12 @@ class _ParcelSurveyScreenState extends State<ParcelSurveyScreen> {
     final measured = areaHa(_points);
     final gap = _declaredHa == null || _points.length < 3 ? null : gapPct(_declaredHa!, measured);
     return Scaffold(
-      appBar: AppBar(title: Text(widget.existing == null ? 'Relever une parcelle' : 'Reprendre le tracé')),
+      appBar: AppBar(title: Text(widget.existing == null ? 'Relever une parcelle' : 'Reprendre le tracé'), actions: [
+        IconButton(
+          tooltip: 'Fond de carte hors ligne', icon: Icon(services.mapPack.ready ? Icons.layers : Icons.layers_outlined),
+          onPressed: () async { await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MapPackScreen())); if (mounted) setState(() {}); },
+        ),
+      ]),
       body: ListView(padding: const EdgeInsets.all(16), children: [
         if (_producer == null) ...[
           TextField(controller: _search, decoration: const InputDecoration(labelText: 'Producteur (nom ou code)', prefixIcon: Icon(Icons.search)), onChanged: _find),
@@ -143,7 +152,9 @@ class _ParcelSurveyScreenState extends State<ParcelSurveyScreen> {
           const SizedBox(height: 12),
           Container(
             height: 240, decoration: BoxDecoration(border: Border.all(color: Colors.black26), borderRadius: BorderRadius.circular(8)),
-            child: ClipRRect(borderRadius: BorderRadius.circular(8), child: CustomPaint(painter: _TracePainter(_points), size: Size.infinite)),
+            child: services.mapPack.ready
+                ? BasemapView(pack: services.mapPack, points: _points, me: _me, height: 240)
+                : ClipRRect(borderRadius: BorderRadius.circular(8), child: CustomPaint(painter: _TracePainter(_points), size: Size.infinite)),
           ),
           const SizedBox(height: 8),
           Wrap(spacing: 16, runSpacing: 4, children: [
