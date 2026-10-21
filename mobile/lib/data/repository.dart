@@ -184,6 +184,75 @@ class Repository {
            (SELECT count(*) FROM outbox o WHERE o.entity_id = c.id AND o.op_type = 'parcel.update' AND o.status IN ('pending','pending_validation')) AS pending_updates
       FROM parcels c LEFT JOIN producers p ON p.id = c.producer_id ORDER BY c.code LIMIT 500''');
 
+  /// Nouveau producteur enregistré sur le terrain : disponible tout de suite sur le téléphone (relevé de parcelle, formation),
+  /// créé côté serveur à la prochaine connexion avec le même identifiant. Le code officiel est attribué par le serveur.
+  Future<String> queueProducer({
+    required String lastName, required String firstNames, String? gender, String? birthDate, String? idDocType, String? idDocNumber,
+    String? phone, String? region, String? section, String? village, required bool consent,
+  }) async {
+    final id = _uuid.v4();
+    final key = 'producer-${_uuid.v4()}';
+    final payload = <String, Object?>{
+      'id': id, 'last_name': lastName, 'first_names': firstNames, 'consent': consent,
+      if (gender != null) 'gender': gender, if (birthDate != null) 'birth_date': birthDate,
+      if (idDocType != null) 'id_doc_type': idDocType, if (idDocNumber != null) 'id_doc_number': idDocNumber,
+      if (phone != null) 'phone': phone, if (region != null) 'region': region, if (section != null) 'section': section, if (village != null) 'village': village,
+    };
+    await db.raw.transaction((txn) async {
+      await txn.insert('outbox', {'idempotency_key': key, 'op_type': 'producer.create', 'payload': jsonEncode(payload), 'entity_id': id, 'created_at': DateTime.now().toIso8601String()});
+      await txn.insert('producers', {'id': id, 'internal_code': '(en attente)', 'last_name': lastName, 'first_names': firstNames, 'phone': phone, 'section': section, 'village': village, 'status': 'active', 'value_chain_ids': '[]'}, conflictAlgorithm: ConflictAlgorithm.replace);
+    });
+    return id;
+  }
+
+  /// Infrastructure sociale, formation ou distribution enregistrée sur le terrain (envoi idempotent). Renvoie l'identifiant du dossier.
+  Future<String> queueFieldRecord({required String kind, required String title, double? latitude, double? longitude, required Map<String, Object?> data}) async {
+    final id = _uuid.v4();
+    final key = 'field-${_uuid.v4()}';
+    final payload = {'id': id, 'idempotency_key': key, 'kind': kind, 'title': title, if (latitude != null) 'latitude': latitude, if (longitude != null) 'longitude': longitude, 'data': data};
+    await db.raw.insert('outbox', {'idempotency_key': key, 'op_type': 'field_record.create', 'payload': jsonEncode(payload), 'entity_id': id, 'created_at': DateTime.now().toIso8601String()});
+    return id;
+  }
+
+  /// Éléments conservés sur l'appareil et pas encore confirmés par le serveur (opérations puis photos), du plus récent au plus ancien.
+  Future<List<({String label, String detail, String state, String? error})>> pendingItems() async {
+    final ops = await db.raw.query('outbox', where: "status IN ('pending','pending_validation','to_correct','rejected','conflict')", orderBy: 'seq DESC', limit: 100);
+    final out = <({String label, String detail, String state, String? error})>[];
+    for (final o in ops) {
+      Map<String, dynamic> p = {};
+      try { p = jsonDecode(o['payload'] as String) as Map<String, dynamic>; } catch (_) { /* illisible : libellé générique */ }
+      final t = o['op_type'] as String;
+      String label, detail = '';
+      switch (t) {
+        case 'producer.create': label = 'Nouveau producteur'; detail = '${p['last_name'] ?? ''} ${p['first_names'] ?? ''}'.trim().toUpperCase(); break;
+        case 'field_record.create':
+          label = const {'social_infrastructure': 'Infrastructure sociale', 'training': 'Formation', 'distribution': 'Distribution'}[p['kind']] ?? 'Enregistrement';
+          detail = '${p['title'] ?? ''}'; break;
+        case 'parcel.create': label = 'Parcelle relevée'; detail = '${p['declared_area_ha'] ?? ''} ha déclarés'; break;
+        case 'parcel.update': label = 'Nouveau tracé de parcelle'; break;
+        case 'purchase_declaration.create': label = 'Achat'; break;
+        case 'convoy.create': label = 'Convoi'; detail = '${p['convoy_no'] ?? ''}'; break;
+        default: label = t;
+      }
+      out.add((label: label, detail: detail, state: o['status'] as String, error: o['error'] as String?));
+    }
+    final photos = await db.raw.query('pending_uploads', where: "status IN ('pending','error')", orderBy: 'created_at DESC', limit: 50);
+    for (final f in photos) {
+      out.add((label: 'Photo', detail: '${f['kind'] ?? ''}', state: f['status'] == 'error' ? 'rejected' : 'pending', error: f['error'] as String?));
+    }
+    return out;
+  }
+
+  /// Dossiers de ce type encore conservés sur l'appareil (avant confirmation du serveur).
+  Future<List<Map<String, dynamic>>> localFieldRecords(String kind) async {
+    final ops = await db.raw.query('outbox', where: "op_type = 'field_record.create' AND status IN ('pending','pending_validation','to_correct','rejected','conflict')", orderBy: 'seq DESC');
+    final out = <Map<String, dynamic>>[];
+    for (final o in ops) {
+      try { final p = jsonDecode(o['payload'] as String) as Map<String, dynamic>; if (p['kind'] == kind) out.add({...p, 'local_status': o['status']}); } catch (_) {}
+    }
+    return out;
+  }
+
   Future<List<Map<String, Object?>>> declarations() => db.raw.rawQuery('''
     SELECT d.*, p.last_name || ' ' || p.first_names AS producer_name, p.internal_code AS producer_code
       FROM declarations d LEFT JOIN producers p ON p.id = d.producer_id

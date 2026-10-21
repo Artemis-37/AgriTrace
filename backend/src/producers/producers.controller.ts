@@ -4,7 +4,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiHeader, ApiTags } from '@nestjs/swagger';
-import { IsArray, IsDateString, IsOptional, IsString, IsUUID, Length, Matches } from 'class-validator';
+import { IsArray, IsBoolean, IsDateString, IsIn, IsOptional, IsString, IsUUID, Length, Matches } from 'class-validator';
 import * as ExcelJS from 'exceljs';
 import { PoolClient } from 'pg';
 import { RequirePermissions } from '../access/decorators';
@@ -14,7 +14,15 @@ import {
   duplicateKeys, findInFileDuplicates, ParsedRow, resolveMapping, TARGET_FIELDS, TEMPLATE_HEADERS, validateRow,
 } from './producer-import';
 
-class CreateProducerDto {
+export class CreateProducerDto {
+  /** Identifiant fourni par l'appareil (création hors connexion) : le producteur est utilisable tout de suite sur le téléphone. */
+  @IsOptional() @IsUUID() id?: string;
+  @IsOptional() @IsIn(['male', 'female']) gender?: string;
+  @IsOptional() @IsDateString() birth_date?: string;
+  @IsOptional() @IsString() @Length(1, 40) id_doc_type?: string;
+  @IsOptional() @IsString() @Length(1, 60) id_doc_number?: string;
+  /** Déclaration de consentement lue et validée par le producteur. */
+  @IsOptional() @IsBoolean() consent?: boolean;
   @IsOptional() @Matches(/^[A-Za-z0-9_-]{1,30}$/) internal_code?: string;
   @IsString() @Length(1, 100) last_name: string;
   @IsString() @Length(1, 150) first_names: string;
@@ -103,7 +111,9 @@ export class ProducersController {
             WHERE k.user_id = $1 AND k.status = 'active' AND a.value_chain_id = ANY($2::uuid[])`, [req.user.id, vc.rows.map((r) => r.value_chain_id)]);
         if (!ok.rowCount) return null;
       }
-      return { ...p.rows[0], value_chain_ids: vc.rows.map((r) => r.value_chain_id) };
+      const out = { ...p.rows[0], value_chain_ids: vc.rows.map((r) => r.value_chain_id) };
+      if (!req.org.permissions.has('documents:sensitive')) delete out.id_doc_number; // pièce d'identité : donnée sensible
+      return out;
     });
     if (!row) throw new NotFoundException();
     return row;
@@ -118,10 +128,13 @@ export class ProducersController {
       const exists = await c.query(`SELECT 1 FROM producers WHERE internal_code = $1`, [code]);
       if (exists.rowCount) throw new ConflictException('Code producteur déjà utilisé');
       const ins = await c.query(
-        `INSERT INTO producers(organization_id, internal_code, last_name, first_names, phone, region, department, section, village, joined_on, created_by)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
+        `INSERT INTO producers(id, organization_id, internal_code, last_name, first_names, phone, region, department, section, village, joined_on, created_by,
+                               gender, birth_date, id_doc_type, id_doc_number, consent_at)
+         VALUES (coalesce($12::uuid, gen_random_uuid()),$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$13,$14,$15,$16, CASE WHEN $17::boolean THEN now() END)
+         ON CONFLICT (id) DO UPDATE SET id = producers.id RETURNING *`,
         [req.org.id, code, b.last_name, b.first_names, b.phone ?? null, b.region ?? null, b.department ?? null,
-         b.section ?? null, b.village ?? null, b.joined_on ?? null, req.user.id]);
+         b.section ?? null, b.village ?? null, b.joined_on ?? null, req.user.id, b.id ?? null,
+         b.gender ?? null, b.birth_date ?? null, b.id_doc_type ?? null, b.id_doc_number ?? null, b.consent === true]);
       for (const vc of b.value_chain_ids ?? []) {
         const ok = await c.query(`SELECT 1 FROM value_chains WHERE id = $1`, [vc]);
         if (!ok.rowCount) throw new BadRequestException('Filière inconnue');

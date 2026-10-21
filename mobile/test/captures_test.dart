@@ -22,6 +22,10 @@ import 'package:agritrace_mobile/screens/new_declaration_screen.dart';
 import 'package:agritrace_mobile/screens/notifications_screen.dart';
 import 'package:agritrace_mobile/screens/producers_screen.dart';
 import 'package:agritrace_mobile/screens/download_screen.dart';
+import 'package:agritrace_mobile/screens/add_producer_screen.dart';
+import 'package:agritrace_mobile/screens/social_infra_screen.dart';
+import 'package:agritrace_mobile/screens/distribution_screen.dart';
+import 'package:agritrace_mobile/screens/training_screen.dart';
 import 'package:agritrace_mobile/sync/sync_engine.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -41,6 +45,11 @@ class _Store extends SessionStore {
 
 class _Db implements AppDatabase {
   int pending = 0, problems = 0;
+  final Map<String, String> kv = {};
+  @override
+  Future<String?> getKv(String k) async => kv[k];
+  @override
+  Future<void> setKv(String k, String v) async { kv[k] = v; }
   @override
   Future<int> pendingCount() async => pending;
   @override
@@ -84,6 +93,15 @@ class _Repo extends Repository {
   @override
   Future<List<String>> unitsFor(String chainId) async => ['kg', 'sac'];
   @override
+  Future<List<({String label, String detail, String state, String? error})>> pendingItems() async => [
+        (label: 'Nouveau producteur', detail: 'Kouamé Yao', state: 'pending', error: null),
+        (label: 'Formation', detail: 'Agriculture régénératrice', state: 'pending', error: null),
+      ];
+  @override
+  Future<List<Map<String, dynamic>>> localFieldRecords(String kind) async => kind == 'training'
+      ? [{'id': 'f1', 'kind': 'training', 'title': 'Agriculture régénératrice', 'data': {'participants': [{}, {}, {}]}}]
+      : [];
+  @override
   Future<List<Map<String, Object?>>> linkableDeclarations({Set<String>? serverAvailableIds}) async => [];
 }
 
@@ -109,7 +127,7 @@ final _parcels = <Map<String, Object?>>[
   {'id': 'p3', 'code': 'P00044-02', 'producer_name': 'BAMBA Salif', 'producer_code': 'P00044', 'declared_area_ha': '1.8', 'geometry_area_ha': '1.74', 'pending_updates': 1},
 ];
 const _collector = ['declarations:create', 'declarations:read', 'producers:read', 'convoys:create', 'convoys:read', 'collector:stock', 'documents:upload', 'messages:use', 'sync:use'];
-const _coach = ['tasks:read', 'tasks:execute', 'tasks:request', 'parcels:create', 'parcels:read', 'producers:read', 'inspections:perform', 'documents:upload', 'messages:use', 'sync:use'];
+const _coach = ['producers:create', 'field_records:create', 'field_records:read', 'tasks:read', 'tasks:execute', 'tasks:request', 'parcels:create', 'parcels:read', 'producers:read', 'inspections:perform', 'documents:upload', 'messages:use', 'sync:use'];
 
 final _routes = <String, dynamic>{
   '/notifications/unread-count': {'unread': 2},
@@ -126,6 +144,10 @@ final _routes = <String, dynamic>{
     {'id': 't1', 'title': 'Relever le contour de la parcelle P00131-01', 'description': 'Tracé GPS complet et photo du coin nord.', 'category': 'mapping', 'status': 'open', 'due_date': '2026-10-24', 'section': 'Section Est', 'overdue': false, 'latitude': null, 'longitude': null, 'content': null, 'decision_note': null},
     {'id': 't2', 'title': 'Visite de contrôle — KOFFI Adjoua', 'description': 'Vérifier les ombrages et prendre deux photos.', 'category': 'visit', 'status': 'in_progress', 'due_date': '2026-10-19', 'section': 'Section Nord', 'overdue': true, 'latitude': null, 'longitude': null, 'content': null, 'decision_note': null}],
   '/task-requests': [],
+  '/distribution-articles': [
+    {'id': 'a1', 'category': 'Intrants et Outils', 'group_name': 'Engrais', 'name': 'Engrais NPK 0-23-19', 'unit': 'sac de 50 kg'},
+    {'id': 'a2', 'category': 'Intrants et Outils', 'group_name': 'Engrais', 'name': 'Engrais foliaire', 'unit': 'litre'}],
+  '/field-records?kind=training': [],
   '/tasks?producer_id=pr1': [
     {'id': 't1', 'title': 'Relever le contour de la parcelle P00112-01', 'description': 'Tracé GPS complet et photo du coin nord.', 'category': 'mapping', 'status': 'open', 'due_date': '2026-10-24', 'section': 'Section Est', 'overdue': false, 'latitude': null, 'longitude': null, 'content': null, 'decision_note': null},
     {'id': 't2', 'title': 'Visite de contrôle — KONÉ Awa', 'description': 'Vérifier les ombrages et prendre deux photos.', 'category': 'visit', 'status': 'in_progress', 'due_date': '2026-10-19', 'section': 'Section Est', 'overdue': true, 'latitude': null, 'longitude': null, 'content': null, 'decision_note': null}],
@@ -192,10 +214,21 @@ void main() {
   });
   testWidgets('écrans du coach', (t) async {
     try {
-    await shot(t, 'coach-accueil', const HomeScreen(), perms: _coach);
+    await shot(t, 'coach-accueil', const HomeScreen(), perms: _coach, pending: 2);
     await shot(t, 'coach-producteurs', const ProducersScreen(), perms: _coach);
     await shot(t, 'coach-producteur-taches', const ProducersScreen(), perms: _coach, after: (t) async { await t.tap(find.textContaining('KONÉ')); await t.pump(const Duration(milliseconds: 300)); await t.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200))); await t.pump(const Duration(milliseconds: 300)); });
     await shot(t, 'coach-producteur-infos', const ProducersScreen(), perms: _coach, after: (t) async { await t.tap(find.textContaining('KONÉ')); await t.pump(const Duration(milliseconds: 300)); await t.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200))); await t.pump(const Duration(milliseconds: 600)); await t.tap(find.text('Informations sur le producteur')); await t.pump(const Duration(milliseconds: 400)); });
+    await shot(t, 'coach-ajout-producteur', const AddProducerScreen(), perms: _coach);
+    await shot(t, 'coach-infrastructure', const SocialInfraScreen(), perms: _coach);
+    await shot(t, 'coach-distribution', const DistributionScreen(), perms: _coach);
+    await shot(t, 'coach-distribution-articles', const DistributionScreen(), perms: _coach, after: (t) async {
+      await t.tap(find.byType(DropdownButtonFormField<String>).first); await t.pump(const Duration(milliseconds: 400));
+      await t.tap(find.text('Intrants et Outils').last); await t.pump(const Duration(milliseconds: 400));
+      await t.tap(find.byType(DropdownButtonFormField<String>).last); await t.pump(const Duration(milliseconds: 400));
+      await t.tap(find.text('Engrais').last); await t.pump(const Duration(milliseconds: 400));
+    });
+    await shot(t, 'coach-formations', const TrainingListScreen(), perms: _coach);
+    await shot(t, 'coach-formation', const TrainingFormScreen(), perms: _coach);
     await shot(t, 'coach-telecharger', const DownloadScreen(), perms: _coach);
     await shot(t, 'connexion', const LoginScreen());
     } finally { debugDisableShadows = true; }

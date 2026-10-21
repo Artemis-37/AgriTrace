@@ -76,3 +76,7 @@ bool canSeeFiche(List<String> permissions) => permissions.contains('collector:st
 bool canSeeMissions(List<String> permissions) => permissions.contains('tasks:read');
 /// Un coach demande une mission : elle ne devient officielle qu'après décision d'un responsable.
 bool canRequestMission(List<String> permissions) => permissions.contains('tasks:request');
+
+/// Enregistrer un producteur, une infrastructure sociale, une formation ou une distribution sur le terrain.
+bool canCreateProducer(List<String> permissions) => permissions.contains('producers:create');
+bool canFieldRecord(List<String> permissions) => permissions.contains('field_records:create');

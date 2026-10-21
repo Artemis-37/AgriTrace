@@ -9,6 +9,8 @@ import { CreateDeclarationDto, DeclarationsController } from '../declarations/de
 import { CreateParcelDto, ParcelsController, SyncUpdateParcelDto, UpdateParcelDto } from '../parcels/parcels.controller';
 import { FinanceController, TransactionDto } from '../finance/finance.controller';
 import { TaskEntryDto, TasksController } from '../tasks/tasks.controller';
+import { CreateProducerDto, ProducersController } from '../producers/producers.controller';
+import { CreateFieldRecordDto, FieldRecordsController } from '../field-records/field-records.controller';
 import { MessagesController, SendMessageDto } from '../messages/messages.controller';
 import { ConvoysController, CreateConvoyDto, ReceiveConvoyDto } from '../convoys/convoys.controller';
 import { CreateWeighingDto, ReceptionController } from '../reception/reception.controller';
@@ -56,6 +58,8 @@ export class SyncController {
         if (typeof id !== 'string' || !/^[0-9a-f-]{36}$/i.test(id)) throw new BadRequestException('payload.id (uuid) requis');
         return ctl.update(id, plainToInstance(UpdateParcelDto, rest), req);
       } },
+      'producer.create': { controller: ProducersController, permission: 'producers:create', dto: CreateProducerDto, run: (ctl, p, req) => ctl.create(p, req) },
+      'field_record.create': { controller: FieldRecordsController, permission: 'field_records:create', dto: CreateFieldRecordDto, run: (ctl, p, req) => ctl.create(p, req) },
       'message.send': { controller: MessagesController, permission: 'messages:use', dto: SendMessageDto, run: (ctl, p, req) => ctl.send(p, req) },
       'weighing.create': { controller: ReceptionController, permission: 'weighings:create', dto: CreateWeighingDto,
         run: (ctl, p, req) => ctl.createWeighing(p, req) },

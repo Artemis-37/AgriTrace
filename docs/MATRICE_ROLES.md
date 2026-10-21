@@ -2,14 +2,14 @@
 
 Fichier généré par `backend/scripts/gen-matrice-roles.js` à partir du code : ne pas le modifier à la main. Les menus du portail et les routes de l'API se règlent sur les **permissions**, jamais sur le nom du rôle. Une coopérative crée ses propres rôles en combinant ces permissions ; les cinq rôles ci-dessous sont des modèles proposés.
 
-118 permissions, 271 routes protégées. Les droits sensibles (paiements, ajustements, exports de noms) peuvent en plus exiger une seconde approbation, réglée par rôle.
+121 permissions, 275 routes protégées. Les droits sensibles (paiements, ajustements, exports de noms) peuvent en plus exiger une seconde approbation, réglée par rôle.
 
 ## Rôles types
 - **Magasinier** (`magasinier`) : Réceptionne et pèse les convois au magasin central, tient les stocks et l'inventaire.
 - **Caissier** (`caissier`) : Traite les convois reçus, règle les collecteurs, tient la caisse et les comptes des collecteurs.
 - **Collecteur (délégué)** (`collecteur`) : Déclare ses achats chez les producteurs et ses convois, voit son stock, son historique et sa fiche de compte.
 - **Administrateur de groupe (ADG)** (`adg`) : Responsable de la conformité et de la certification : suit les certificats, les inspections et la qualité, contrôle et vérifie les parcelles, met en place les missions des coachs et décide de leurs demandes.
-- **Coach** (`coach`) : Agent de terrain suivi par l'ADG : exécute ses missions, relève des parcelles, joint des photos et demande de nouvelles missions.
+- **Coach** (`coach`) : Agent de terrain suivi par l'ADG : exécute ses missions, enregistre des producteurs, relève des parcelles, des infrastructures sociales, des formations et des distributions, joint des photos et demande de nouvelles missions.
 
 ## Permissions par domaine
 Colonnes : ✓ = accordé par le rôle type. Les rôles Administrateur de coopérative et Administrateur de plateforme ne figurent pas : le premier gère les utilisateurs et les rôles de sa coopérative, le second crée les coopératives et n'a pas accès à leurs données.
@@ -93,6 +93,13 @@ Colonnes : ✓ = accordé par le rôle type. Les rôles Administrateur de coopé
 | `documents:read` | Consulter et télécharger les documents |  |  |  | ✓ |  | `GET /documents`<br>`GET /documents/:id/download` |
 | `documents:sensitive` | Télécharger les documents sensibles |  |  |  | ✓ |  | `GET /documents/:id/downloads` |
 | `documents:upload` | Déposer des documents |  |  | ✓ | ✓ | ✓ | `POST /documents` |
+
+### field_records
+| Permission | Rôle du droit | Magasinier | Caissier | Collecteur | Administrateur de groupe | Coach | Routes |
+|---|---|:-:|:-:|:-:|:-:|:-:|---|
+| `field_records:create` | Enregistrer sur le terrain : infrastructures sociales, formations, distributions |  |  |  |  | ✓ | `POST /field-records` |
+| `field_records:manage` | Gérer le catalogue des articles et services distribuables |  |  |  |  |  | `POST /distribution-articles` |
+| `field_records:read` | Consulter les enregistrements de terrain |  |  |  |  | ✓ | `GET /field-records`<br>`GET /distribution-articles` |
 
 ### finance
 | Permission | Rôle du droit | Magasinier | Caissier | Collecteur | Administrateur de groupe | Coach | Routes |
@@ -198,7 +205,7 @@ Colonnes : ✓ = accordé par le rôle type. Les rôles Administrateur de coopé
 ### producers
 | Permission | Rôle du droit | Magasinier | Caissier | Collecteur | Administrateur de groupe | Coach | Routes |
 |---|---|:-:|:-:|:-:|:-:|:-:|---|
-| `producers:create` | Créer des producteurs |  |  |  |  |  | `POST /producers`<br>`POST /producers/imports` |
+| `producers:create` | Créer des producteurs |  |  |  |  | ✓ | `POST /producers`<br>`POST /producers/imports` |
 | `producers:export` | Exporter les producteurs |  |  |  |  |  | — |
 | `producers:import` | Importer des producteurs depuis Excel |  |  |  |  |  | `GET /producers/imports/template`<br>`POST /producers/imports` |
 | `producers:read` | Consulter les producteurs |  |  | ✓ | ✓ | ✓ | `GET /producers/:id/status-history`<br>`GET /producers`<br>`GET /producers/:id` |

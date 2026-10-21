@@ -32,8 +32,8 @@ export const STANDARD_ROLES: Record<string, { name: string; description: string;
   },
   coach: {
     name: 'Coach',
-    description: 'Agent de terrain suivi par l\'ADG : exécute ses missions, relève des parcelles, joint des photos et demande de nouvelles missions.',
-    permissions: ['tasks:read', 'tasks:execute', 'tasks:request', 'parcels:create', 'parcels:read', 'producers:read', 'inspections:perform', 'documents:upload', 'messages:use', 'sync:use'],
+    description: 'Agent de terrain suivi par l\'ADG : exécute ses missions, enregistre des producteurs, relève des parcelles, des infrastructures sociales, des formations et des distributions, joint des photos et demande de nouvelles missions.',
+    permissions: ['tasks:read', 'tasks:execute', 'tasks:request', 'parcels:create', 'parcels:read', 'producers:read', 'producers:create', 'field_records:create', 'field_records:read', 'inspections:perform', 'documents:upload', 'messages:use', 'sync:use'],
     hidden: ['Caisse et comptabilité', 'Finances', 'Convois', 'Stocks', 'Équipe'],
   },
 };

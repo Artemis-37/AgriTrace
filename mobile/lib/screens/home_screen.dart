@@ -10,7 +10,11 @@ import 'history_screen.dart';
 import 'my_stock_screen.dart';
 import 'notifications_screen.dart';
 import 'producers_screen.dart';
+import 'add_producer_screen.dart';
+import 'distribution_screen.dart';
 import 'download_screen.dart';
+import 'social_infra_screen.dart';
+import 'training_screen.dart';
 import 'my_location_screen.dart';
 import 'new_convoy_screen.dart';
 import 'new_declaration_screen.dart';
@@ -29,6 +33,8 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _canConvoy = false;
   bool _canHistory = false, _canFiche = false, _canMissions = false, _canSurvey = false;
   int _unreadNotes = 0;
+  bool _canProducer = false, _canField = false;
+  List<({String label, String detail, String state, String? error})> _pendingItems = [];
   ({String name, String org, String zone}) _identity = (name: '', org: '', zone: '');
 
   @override
@@ -61,10 +67,11 @@ class _HomeScreenState extends State<HomeScreen> {
     final problems = await services.db.problemCount();
     final perms = await services.repo.permissions();
     final identity = await services.repo.identity();
+    final pendingItems = await services.repo.pendingItems();
     int unread = _unreadNotes;
     try { final r = await services.api.get('/notifications/unread-count'); unread = (r['unread'] as num?)?.toInt() ?? 0; } catch (_) { /* hors connexion : compteur conservé */ }
     if (!mounted) return;
-    setState(() { _items = items; _pending = pending; _problems = problems; _canCreate = canCreateDeclaration(perms); _canConvoy = canCreateConvoy(perms); _canHistory = canReadHistory(perms); _canFiche = canSeeFiche(perms); _canMissions = canSeeMissions(perms); _canSurvey = canSurveyParcel(perms); _unreadNotes = unread; _identity = identity; });
+    setState(() { _items = items; _pending = pending; _problems = problems; _canCreate = canCreateDeclaration(perms); _canConvoy = canCreateConvoy(perms); _canHistory = canReadHistory(perms); _canFiche = canSeeFiche(perms); _canMissions = canSeeMissions(perms); _canSurvey = canSurveyParcel(perms); _unreadNotes = unread; _identity = identity; _canProducer = canCreateProducer(perms); _canField = canFieldRecord(perms); _pendingItems = pendingItems; });
   }
 
   Color _color(String localState, String? status) {
@@ -153,9 +160,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   /// Profil terrain (coach) : pas d'achats ni de convoi, mais des relevés de parcelles et des missions.
-  bool get _coachMode => !_canCreate && !_canConvoy && (_canSurvey || _canMissions);
+  bool get _coachMode => !_canCreate && !_canConvoy && (_canSurvey || _canMissions || _canProducer || _canField);
 
-  Widget _tile(IconData icon, String label, VoidCallback onTap, {double height = 120}) => Material(
+  Widget _tile(IconData icon, String label, VoidCallback onTap, {double height = 120, double fontSize = 13}) => Material(
         color: const Color(0xFF3F9B2E), elevation: 2, borderRadius: BorderRadius.circular(6),
         child: InkWell(
           borderRadius: BorderRadius.circular(6), onTap: onTap,
@@ -164,7 +171,7 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
               Icon(icon, color: Colors.white, size: 44),
               const SizedBox(height: 8),
-              Text(label.toUpperCase(), textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700)),
+              Text(label.toUpperCase(), textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontSize: fontSize, fontWeight: FontWeight.w700)),
             ]),
           )),
         ),
@@ -172,21 +179,25 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _coachBody() {
     // Même organisation que le terminal de terrain : les parcelles et les tâches se consultent depuis la fiche du producteur.
-    final big = <Widget>[
+    final r1 = <Widget>[
+      if (_canProducer) _tile(Icons.person_add_alt_1, 'Ajouter un nouveau producteur et une exploitation agricole', () => _open(const AddProducerScreen(), sync: true), height: 150),
       _tile(Icons.fact_check_outlined, 'Producteurs et enquêtes', () => _open(const ProducersScreen()), height: 150),
     ];
-    final small = <Widget>[
-      _tile(Icons.download_for_offline_outlined, 'Télécharger les données', () => _open(const DownloadScreen())),
-      _tile(Icons.my_location, 'Capturer mon emplacement', () => _open(const MyLocationScreen())),
+    final r2 = <Widget>[
+      if (_canField) _tile(Icons.location_on, 'Ajouter une infrastructure sociale', () => _open(const SocialInfraScreen(), sync: true), height: 150, fontSize: 11),
+      _tile(Icons.assignment_outlined, 'Télécharger les données', () => _open(const DownloadScreen()), height: 150, fontSize: 11),
+      if (_canField) _tile(Icons.volunteer_activism_outlined, 'Distribution et services', () => _open(const DistributionScreen(), sync: true), height: 150, fontSize: 11),
+    ];
+    final r3 = <Widget>[
+      if (_canField) _tile(Icons.school, 'Enregistrer une formation', () => _open(const TrainingListScreen(), sync: true), height: 130),
+      _tile(Icons.pin_drop_outlined, 'Capturer mon emplacement', () => _open(const MyLocationScreen()), height: 130),
     ];
     Widget row(List<Widget> w) => Row(children: [for (var i = 0; i < w.length; i++) ...[if (i > 0) const SizedBox(width: 10), Expanded(child: w[i])]]);
     return RefreshIndicator(
       onRefresh: () async { await services.sync.run(); await _reload(); },
       child: ListView(padding: const EdgeInsets.fromLTRB(12, 14, 12, 24), children: [
-        if (big.isNotEmpty) row(big),
-        if (big.isNotEmpty) const SizedBox(height: 10),
-        if (small.isNotEmpty) row(small),
-        const SizedBox(height: 16),
+        for (final r in [r1, r2, r3]) ...[row(r), const SizedBox(height: 10)],
+        const SizedBox(height: 6),
         Material(
           color: const Color(0xFFE9EEE3),
           child: InkWell(
@@ -200,8 +211,26 @@ class _HomeScreenState extends State<HomeScreen> {
             ])),
           ),
         ),
-        if (_problems > 0) Padding(padding: const EdgeInsets.only(top: 8), child: Text('$_problems opération(s) à corriger', style: TextStyle(color: Colors.red.shade700, fontWeight: FontWeight.w700))),
-        if (_pending == 0 && _problems == 0) const Padding(padding: EdgeInsets.all(20), child: Center(child: Text('Rien à envoyer : tout est synchronisé.'))),
+        const SizedBox(height: 10),
+        for (final it in _pendingItems) _pendingRow(it),
+        if (_pendingItems.isEmpty) const Padding(padding: EdgeInsets.all(20), child: Center(child: Text('Rien à envoyer : tout est synchronisé.'))),
+      ]),
+    );
+  }
+
+  Widget _pendingRow(({String label, String detail, String state, String? error}) it) {
+    final bad = const {'to_correct', 'rejected', 'conflict'}.contains(it.state);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8), padding: const EdgeInsets.fromLTRB(14, 10, 4, 10),
+      decoration: BoxDecoration(color: Colors.white, border: Border.all(color: const Color(0xFFDDDDDD))),
+      child: Row(children: [
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(it.label, style: const TextStyle(fontSize: 17)),
+          if (it.detail.isNotEmpty) Text(it.detail.toUpperCase(), style: const TextStyle(color: Colors.black54, fontSize: 15)),
+          if (bad) Text(it.error == null || it.error!.isEmpty ? 'À corriger' : 'À corriger : ${it.error}', style: TextStyle(color: Colors.red.shade700, fontSize: 13)),
+        ])),
+        Container(width: 1, height: 54, color: const Color(0xFFDDDDDD)),
+        IconButton(onPressed: () => services.sync.run(), tooltip: 'Envoyer', iconSize: 34, icon: Icon(bad ? Icons.error_outline : Icons.cloud_upload_outlined, color: bad ? Colors.red : Colors.black87)),
       ]),
     );
   }
