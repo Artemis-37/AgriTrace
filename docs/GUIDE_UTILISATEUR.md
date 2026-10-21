@@ -18,14 +18,14 @@ Sur le téléphone ou dans « Mes achats » du portail.
 4. **Mon stock, Historique, Ma fiche de compte** : ce qui a été livré, le solde et les avances en cours. Un collecteur ne voit que ses propres opérations et ne peut pas exporter vers Excel.
 
 ## Magasinier
-- **Convois** : ouvrir un convoi arrivé, peser (brut, tare, net), constater les écarts, réceptionner en totalité ou en partie. Un écart au-delà du seuil demande un motif.
+- **Convois** : ouvrir un convoi arrivé, peser (brut, tare, net), constater les écarts, réceptionner en totalité ou en partie.
 - **Stocks et lots** : mouvements (entrée, transfert, sortie, chargement, perte, déclassement, quarantaine), lots et leur généalogie.
 - **Inventaire** : saisir le comptage ; l'inventaire doit être **approuvé par une autre personne**. Aucune suppression : seulement des ajustements tracés.
 - Pas d'accès à la caisse, aux finances ni à la cartographie.
 
 ## Caissier
 - **Convois** : traiter les convois reçus et régler les collecteurs ; les avances non soldées sont déduites automatiquement.
-- **Caisse** : ouvrir sa caisse (chaque caissier a sa session), enregistrer les mouvements, clôturer en comptant l'espèce ; l'écart est calculé et motivé.
+- **Caisse** : ouvrir sa caisse (chaque caissier a sa session), enregistrer les mouvements, clôturer en comptant l'espèce ; l'écart entre le compté et l'attendu est calculé et conservé.
 - **Finances** : consultation des comptes et de la comptabilité selon les droits.
 
 ## Coach (agent de terrain)
@@ -55,7 +55,7 @@ Responsable de la conformité et de la certification.
 ## Bureau (Windows)
 - **Poste unique, serveur ou client** au premier démarrage ; les postes clients trouvent le serveur sur le réseau local.
 - Hors connexion, un poste client enregistre les achats et les messages, rejoués au retour du serveur. Validation, paiements et stocks demandent le serveur.
-- **Sauvegarde** : bouton de sauvegarde dans l'application ; la restauration se teste avec `scripts/restore-test.sh` (voir `EXPLOITATION.md`).
+- **Sauvegarde** : menu « Sauvegarder maintenant… » de l'application (dossier de destination au choix, clé USB par exemple) ; la restauration se teste avec `scripts/restore-test.sh` (voir `EXPLOITATION.md`).
 
 ## En cas de problème
 | Constat | Que faire |
