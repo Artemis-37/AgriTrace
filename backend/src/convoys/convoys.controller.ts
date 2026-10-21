@@ -1,6 +1,6 @@
 import { BadRequestException, Body, ConflictException, Controller, Get, NotFoundException, Param, ParseUUIDPipe, Post, Query, Req, UnprocessableEntityException, ForbiddenException } from '@nestjs/common';
 import { ApiBearerAuth, ApiHeader, ApiTags } from '@nestjs/swagger';
-import { IsIn, IsInt, IsOptional, Matches, IsString, IsUUID, Length, Min } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsIn, IsInt, IsOptional, Matches, IsString, IsUUID, Length, Min } from 'class-validator';
 import { RequirePermissions } from '../access/decorators';
 import { AuditService } from '../audit/audit.service';
 import { accountingCodeOf, postEntry, today } from '../accounting/accounting.helpers';
@@ -18,7 +18,11 @@ export class CreateConvoyDto {
   @IsOptional() @IsInt() @Min(0) declared_bags?: number;
   @IsOptional() @Dec(3) declared_kg?: string;
   @IsOptional() @IsString() @Length(1, 500) notes?: string;
+  /** Achats chargés dans ce convoi (déclarations du collecteur, une seule fois chacune). Sans poids/sacs annoncés, ils sont déduits de ces achats. */
+  @IsOptional() @IsArray() @ArrayMaxSize(300) @IsUUID('all', { each: true }) declaration_ids?: string[];
 }
+const DECL_KG = `round(d.quantity * coalesce(CASE WHEN d.unit = 'kg' THEN 1 ELSE f.factor END, 0), 3)`;
+const DECL_JOIN = `LEFT JOIN unit_conversions f ON f.value_chain_id = d.value_chain_id AND f.from_unit = d.unit AND f.to_unit = 'kg'`;
 export class ReceiveConvoyDto {
   @IsString() @Length(8, 100) idempotency_key: string;
   @IsUUID() collector_id: string;
@@ -90,11 +94,25 @@ export class ConvoysController {
       if (!(await c.query(`SELECT 1 FROM collectors WHERE id = $1 AND status = 'active'`, [collectorId])).rowCount) throw new BadRequestException('Collecteur inconnu ou désactivé');
       if ((await c.query(`SELECT 1 FROM convoys WHERE convoy_no = $1`, [b.convoy_no.trim()])).rowCount)
         throw new ConflictException(`Le numéro de convoi « ${b.convoy_no.trim()} » existe déjà`);
+      const ids = [...new Set(b.declaration_ids ?? [])];
+      let linked: any[] = [];
+      if (ids.length) {
+        linked = (await c.query(
+          `SELECT d.id, d.bags, d.status, d.collector_id, ${DECL_KG} AS kg, EXISTS (SELECT 1 FROM convoy_declarations x WHERE x.declaration_id = d.id) AS taken
+             FROM purchase_declarations d ${DECL_JOIN} WHERE d.id = ANY($1::uuid[]) FOR UPDATE OF d`, [ids])).rows;
+        if (linked.length !== ids.length) throw new BadRequestException('Achat inconnu parmi ceux du convoi');
+        if (linked.some((d) => d.collector_id !== collectorId)) throw new BadRequestException('Un convoi ne peut contenir que les achats de son collecteur');
+        if (linked.some((d) => !['received', 'in_review', 'accepted'].includes(d.status))) throw new BadRequestException('Seuls les achats reçus par la coopérative (non rejetés) peuvent être chargés');
+        if (linked.some((d) => d.taken)) throw new ConflictException('Un des achats est déjà chargé dans un autre convoi');
+        if (linked.some((d) => Number(d.kg) <= 0)) throw new BadRequestException('Un des achats n\'a pas de conversion en kg : poids inconnu');
+      }
+      const linkedKg = linked.reduce((a, d) => a + Number(d.kg), 0), linkedBags = linked.reduce((a, d) => a + Number(d.bags ?? 0), 0);
       const ins = await c.query(
         `INSERT INTO convoys(organization_id, idempotency_key, convoy_no, collector_id, driver_name, truck_no, declared_bags, declared_kg, notes, created_by)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
         [req.org.id, b.idempotency_key, b.convoy_no.trim(), collectorId, b.driver_name.trim(), b.truck_no.trim().toUpperCase(),
-         b.declared_bags ?? null, b.declared_kg ?? null, b.notes ?? null, req.user.id]);
+         b.declared_bags ?? (linked.length ? linkedBags : null), b.declared_kg ?? (linked.length ? linkedKg.toFixed(3) : null), b.notes ?? null, req.user.id]);
+      for (const d of linked) await c.query(`INSERT INTO convoy_declarations(organization_id, convoy_id, declaration_id, kg, bags) VALUES ($1,$2,$3,$4,$5)`, [req.org.id, ins.rows[0].id, d.id, d.kg, d.bags ?? 0]);
       const who = (await c.query(`SELECT u.full_name FROM collectors k JOIN users u ON u.id = k.user_id WHERE k.id = $1`, [collectorId])).rows[0];
       await this.notif.notifyPermission(c, req.org.id, 'convoys:receive', { kind: 'convoy_created', title: `Convoi en route : ${ins.rows[0].convoy_no}`,
         body: `${who?.full_name ?? 'Collecteur'} · camion ${ins.rows[0].truck_no} · chauffeur ${ins.rows[0].driver_name}`, entityType: 'convoy', entityId: ins.rows[0].id, dedupe: `convoy_created:${ins.rows[0].id}` }, req.user.id);
@@ -102,6 +120,37 @@ export class ConvoysController {
     });
     if (!replay) await this.log(req, 'convoy.create', row.id, { convoy_no: row.convoy_no, truck_no: row.truck_no });
     return { ...row, replayed: replay };
+  }
+
+  /** Achats du collecteur pas encore chargés dans un convoi (reçus, en revue ou acceptés). */
+  @Get('convoys/available-declarations')
+  @RequirePermissions('convoys:create')
+  availableDeclarations(@Req() req: any, @Query('collector_id') collectorId?: string) {
+    return this.db.tx(req.org.id, async (c) => {
+      const own = (await c.query(`SELECT id FROM collectors WHERE user_id = $1 AND status = 'active'`, [req.user.id])).rows[0];
+      const col = own?.id ?? collectorId;
+      if (!col) return [];
+      return (await c.query(
+        `SELECT d.id, d.operation_date, d.bags, d.quantity, d.unit, ${DECL_KG} AS kg, p.last_name || ' ' || p.first_names AS producer_name, p.internal_code AS producer_code
+           FROM purchase_declarations d ${DECL_JOIN} JOIN producers p ON p.id = d.producer_id
+          WHERE d.collector_id = $1 AND d.status IN ('received','in_review','accepted') AND NOT EXISTS (SELECT 1 FROM convoy_declarations x WHERE x.declaration_id = d.id)
+          ORDER BY d.operation_date, d.created_at`, [col])).rows;
+    });
+  }
+
+  /** Achats chargés dans un convoi (pour la réception : ce que le camion est censé transporter). */
+  @Get('convoys/:id/declarations')
+  @RequirePermissions('convoys:read')
+  convoyDeclarations(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
+    return this.db.tx(req.org.id, async (c) => {
+      const own = (await c.query(`SELECT id FROM collectors WHERE user_id = $1`, [req.user.id])).rows[0];
+      const v = (await c.query(`SELECT collector_id FROM convoys WHERE id = $1`, [id])).rows[0];
+      if (!v || (own && own.id !== v.collector_id && !req.org.permissions.has('convoys:receive') && !req.org.permissions.has('convoys:settle'))) throw new NotFoundException();
+      return (await c.query(
+        `SELECT x.declaration_id AS id, x.kg, x.bags, d.operation_date, p.last_name || ' ' || p.first_names AS producer_name, p.internal_code AS producer_code
+           FROM convoy_declarations x JOIN purchase_declarations d ON d.id = x.declaration_id JOIN producers p ON p.id = d.producer_id
+          WHERE x.convoy_id = $1 ORDER BY d.operation_date`, [id])).rows;
+    });
   }
 
   @Get('convoys')
@@ -123,7 +172,8 @@ export class ConvoysController {
   expected(@Req() req: any, @Query('collector_id') collectorId?: string) {
     return this.db.tx(req.org.id, async (c) => (await c.query(
       `SELECT v.id, v.convoy_no, v.collector_id, u.full_name AS collector_name, v.driver_name, v.truck_no, v.declared_bags, v.declared_kg, v.created_at,
-              coalesce((SELECT convoy_weight_tolerance_pct FROM org_settings), 2) AS weight_tolerance_pct
+              coalesce((SELECT convoy_weight_tolerance_pct FROM org_settings), 2) AS weight_tolerance_pct,
+              (SELECT count(*)::int FROM convoy_declarations x WHERE x.convoy_id = v.id) AS declaration_count
          FROM convoys v JOIN collectors k ON k.id = v.collector_id JOIN users u ON u.id = k.user_id WHERE v.status = 'in_transit' AND ($1::uuid IS NULL OR v.collector_id = $1) ORDER BY v.created_at`, [collectorId ?? null])).rows);
   }
 

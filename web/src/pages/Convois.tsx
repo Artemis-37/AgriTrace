@@ -59,11 +59,16 @@ function List() {
 }
 
 function CreateConvoy({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
-  const { org } = useAuth();
+  const { org, can } = useAuth();
   const off = useOffline();
   const act = useAction();
   const [f, setF] = useState({ convoy_no: '', driver_name: '', truck_no: '', declared_bags: '', declared_kg: '' });
   const set = (k: keyof typeof f) => (e: any) => setF({ ...f, [k]: e.target.value });
+  const avail = useAsync(() => (off.offline || !can('convoys:create') ? Promise.resolve([] as any[]) : get<any[]>('/convoys/available-declarations').catch(() => [] as any[])), []);
+  const [picked, setPicked] = useState<string[]>([]);
+  const list = avail.data ?? [];
+  const pickKg = list.filter((d) => picked.includes(d.id)).reduce((a, d) => a + Number(d.kg), 0), pickBags = list.filter((d) => picked.includes(d.id)).reduce((a, d) => a + Number(d.bags ?? 0), 0);
+  const toggle = (id: string) => setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
   const valid = f.convoy_no.trim().length >= 2 && f.driver_name.trim().length >= 2 && f.truck_no.trim().length >= 2 && (!f.declared_kg || /^\d+(\.\d{1,3})?$/.test(f.declared_kg));
   return (
     <Modal title="Déclarer un convoi" onClose={onClose}>
@@ -71,6 +76,17 @@ function CreateConvoy({ onClose, onDone }: { onClose: () => void; onDone: () => 
       <Field label="Numéro de connaissement du convoi" hint="Saisi par le collecteur ; il accompagne le convoi jusqu'au magasin."><input value={f.convoy_no} onChange={set('convoy_no')} maxLength={60} /></Field>
       <Field label="Nom du chauffeur"><input value={f.driver_name} onChange={set('driver_name')} maxLength={120} /></Field>
       <Field label="N° du camion"><input value={f.truck_no} onChange={set('truck_no')} maxLength={40} /></Field>
+      {list.length > 0 && (
+        <fieldset className="field">
+          <legend>Achats chargés dans ce convoi (facultatif)</legend>
+          <ul className="list">
+            {list.map((d) => (
+              <li key={d.id}><label><input type="checkbox" checked={picked.includes(d.id)} onChange={() => toggle(d.id)} /> {d.producer_name} · {date(d.operation_date)} · {num(d.kg)} kg · {d.bags ?? 0} sacs</label></li>
+            ))}
+          </ul>
+          {picked.length > 0 && <p className="muted">{picked.length} achat(s) : {num(pickKg)} kg, {pickBags} sacs — le poids et les sacs annoncés sont déduits de ces achats si vous ne les saisissez pas.</p>}
+        </fieldset>
+      )}
       <Field label="Nombre de sacs annoncé (facultatif)"><input inputMode="numeric" value={f.declared_bags} onChange={set('declared_bags')} /></Field>
       <Field label="Poids annoncé en kg (facultatif)"><input inputMode="decimal" value={f.declared_kg} onChange={set('declared_kg')} /></Field>
       {act.error && <ErrorBox message={act.error} />}
@@ -79,7 +95,7 @@ function CreateConvoy({ onClose, onDone }: { onClose: () => void; onDone: () => 
         <button className="btn" disabled={act.busy || !valid || !org} onClick={() => act.run(async () => {
           await enqueue(org!.id, 'convoy.create', {
             idempotency_key: idem(), convoy_no: f.convoy_no.trim(), driver_name: f.driver_name.trim(), truck_no: f.truck_no.trim(),
-            ...(f.declared_bags && { declared_bags: Number(f.declared_bags) }), ...(f.declared_kg && { declared_kg: f.declared_kg }),
+            ...(f.declared_bags && { declared_bags: Number(f.declared_bags) }), ...(f.declared_kg && { declared_kg: f.declared_kg }), ...(picked.length && { declaration_ids: picked }),
           }, `Convoi ${f.convoy_no.trim()}`);
           onDone();
         })}>{off.offline ? 'Enregistrer sur ce poste' : 'Enregistrer'}</button>
@@ -102,6 +118,8 @@ function Receive() {
   const [bags, setBags] = useState('');
   const [notes, setNotes] = useState('');
   const [done, setDone] = useState('');
+  const exp0 = data?.expected.find((v) => v.collector_id === collector && v.convoy_no === convoyNo.trim());
+  const content = useAsync(() => (exp0?.declaration_count > 0 ? get<any[]>(`/convoys/${exp0.id}/declarations`) : Promise.resolve([] as any[])), [exp0?.id]);
   if (loading) return <Loading />;
   if (error || !data) return <ErrorBox message={error ?? 'Chargement impossible'} onRetry={reload} />;
   const collectors = [...new Map(data.expected.map((v) => [v.collector_id, v.collector_name])).entries()];
@@ -119,6 +137,10 @@ function Receive() {
         <input list="convois-attendus" value={convoyNo} onChange={(e) => setConvoyNo(e.target.value)} /></Field>
       <datalist id="convois-attendus">{mine.map((v) => <option key={v.id} value={v.convoy_no} />)}</datalist>
       {expected && <p className="muted">Chauffeur : {expected.driver_name} · Camion : {expected.truck_no}{expected.declared_kg ? ` · Annoncé : ${num(expected.declared_kg)} kg` : ''}{expected.declared_bags != null ? ` / ${expected.declared_bags} sacs` : ''}</p>}
+      {(content.data ?? []).length > 0 && (
+        <details open><summary>Contenu annoncé : {(content.data ?? []).length} achat(s)</summary>
+          <ul className="list">{(content.data ?? []).map((d) => <li key={d.id}>{d.producer_name} · {date(d.operation_date)} · {num(d.kg)} kg · {d.bags} sacs</li>)}</ul></details>
+      )}
       <Field label="Magasin"><select value={wh} onChange={(e) => setWh(e.target.value)}><option value="">—</option>{data.whs.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}</select></Field>
       <Field label="Poids total pesé (kg)"><input inputMode="decimal" value={kg} onChange={(e) => setKg(e.target.value)} /></Field>
       <Field label="Nombre de sacs"><input inputMode="numeric" value={bags} onChange={(e) => setBags(e.target.value)} /></Field>

@@ -126,13 +126,28 @@ class Repository {
   Future<int> pendingPhotos() async => Sqflite.firstIntValue(await db.raw.rawQuery("SELECT count(*) FROM pending_uploads WHERE status = 'pending'")) ?? 0;
 
   /// Convoi vers le magasin central : mis en file d'envoi, envoyé dès que le réseau revient (idempotent).
-  Future<void> queueConvoy({required String convoyNo, required String driverName, required String truckNo, int? declaredBags, String? declaredKg}) async {
+  Future<void> queueConvoy({required String convoyNo, required String driverName, required String truckNo, int? declaredBags, String? declaredKg, List<String> declarationIds = const []}) async {
     final key = 'convoy-${_uuid.v4()}';
     final payload = {
       'idempotency_key': key, 'convoy_no': convoyNo.trim(), 'driver_name': driverName.trim(), 'truck_no': truckNo.trim(),
       if (declaredBags != null) 'declared_bags': declaredBags, if (declaredKg != null && declaredKg.isNotEmpty) 'declared_kg': declaredKg,
+      if (declarationIds.isNotEmpty) 'declaration_ids': declarationIds,
     };
     await db.raw.insert('outbox', {'idempotency_key': key, 'op_type': 'convoy.create', 'payload': jsonEncode(payload), 'entity_id': key, 'created_at': DateTime.now().toIso8601String()});
+  }
+
+  /// Achats que le collecteur peut charger dans un convoi : envoyés (ou en attente d'envoi) et pas déjà chargés dans un convoi de cet appareil.
+  /// [serverAvailableIds] : achats que le serveur déclare libres (null hors connexion) ; un achat déjà parti sur le serveur absent de la liste est écarté.
+  Future<List<Map<String, Object?>>> linkableDeclarations({Set<String>? serverAvailableIds}) async {
+    final rows = await db.raw.rawQuery('''
+      SELECT d.*, p.last_name || ' ' || p.first_names AS producer_name FROM declarations d LEFT JOIN producers p ON p.id = d.producer_id
+       WHERE d.local_state IN ('pending','synced') AND coalesce(d.status, '') NOT IN ('rejected','to_correct') ORDER BY d.operation_date DESC, d.created_at DESC LIMIT 300''');
+    final used = <String>{};
+    for (final o in await db.raw.query('outbox', where: "op_type = 'convoy.create' AND status NOT IN ('rejected','to_correct','conflict')")) {
+      final ids = (jsonDecode(o['payload'] as String) as Map)['declaration_ids'];
+      if (ids is List) used.addAll(ids.cast<String>());
+    }
+    return rows.where((r) => !used.contains(r['id']) && (r['local_state'] == 'pending' || serverAvailableIds == null || serverAvailableIds.contains(r['id']))).toList();
   }
 
   /// Parcelle relevée au GPS : mise en file d'envoi (idempotente), créée côté serveur dès que le réseau revient.
