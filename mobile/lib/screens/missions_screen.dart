@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 
 import '../data/api_client.dart';
 import '../main.dart';
+import '../sync/sync_state.dart';
 import 'photo_capture.dart';
 
 /// Missions du coach (ou de l'agent de terrain) : liste, démarrage, saisie d'observations / résultats / position, soumission. Nécessite le réseau.
@@ -16,11 +17,15 @@ const _status = {
   'open': 'À faire', 'in_progress': 'En cours', 'submitted': 'Soumise', 'to_correct': 'À corriger', 'validated': 'Validée', 'completed': 'Terminée',
   'closed': 'Clôturée', 'cancelled': 'Annulée', 'pending_sync': 'À envoyer',
 };
+const _requestStatus = {'pending': 'En attente', 'accepted': 'Acceptée', 'rejected': 'Refusée'};
 const _cat = {'mapping': 'Cartographie', 'visit': 'Visite', 'survey': 'Enquête', 'collection': 'Collecte', 'training': 'Formation', 'control': 'Contrôle', 'other': 'Autre'};
 
 class _MissionsScreenState extends State<MissionsScreen> {
   List<dynamic>? _rows;
+  List<dynamic> _requests = const [];
+  bool _canRequest = false;
   String? _error;
+  String? _msg;
 
   @override
   void initState() {
@@ -31,11 +36,46 @@ class _MissionsScreenState extends State<MissionsScreen> {
   Future<void> _load() async {
     try {
       final r = await services.api.get('/tasks');
+      final perms = await services.repo.permissions();
+      var reqs = const <dynamic>[];
+      if (canRequestMission(perms)) {
+        try { reqs = await services.api.get('/task-requests') as List<dynamic>; } catch (_) { /* demandes indisponibles : on garde les missions */ }
+      }
       if (!mounted) return;
-      setState(() { _rows = (r as List<dynamic>).where((t) => !['closed', 'cancelled'].contains(t['status'])).toList(); _error = null; });
+      setState(() { _rows = (r as List<dynamic>).where((t) => !['closed', 'cancelled'].contains(t['status'])).toList(); _requests = reqs; _canRequest = canRequestMission(perms); _error = null; });
     } catch (_) {
       if (!mounted) return;
       setState(() => _error = 'Indisponible hors connexion. Réessayez avec du réseau.');
+    }
+  }
+
+  /// Demande de mission d'un coach : titre, catégorie, précisions. La clé est créée une fois par demande : un renvoi ne crée pas de doublon.
+  Future<void> _ask() async {
+    final key = 'req-${const Uuid().v4()}';
+    final title = TextEditingController(), desc = TextEditingController();
+    var cat = 'visit';
+    final go = await showDialog<bool>(context: context, builder: (ctx) => StatefulBuilder(builder: (ctx, setS) => AlertDialog(
+      title: const Text('Demander une mission'),
+      content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
+        TextField(controller: title, decoration: const InputDecoration(labelText: 'Titre'), onChanged: (_) => setS(() {})),
+        DropdownButtonFormField<String>(value: cat, decoration: const InputDecoration(labelText: 'Catégorie'),
+            items: [for (final e in _cat.entries) DropdownMenuItem(value: e.key, child: Text(e.value))], onChanged: (v) => setS(() => cat = v ?? cat)),
+        TextField(controller: desc, minLines: 2, maxLines: 5, decoration: const InputDecoration(labelText: 'Précisions (facultatif)')),
+      ])),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
+        FilledButton(onPressed: title.text.trim().length >= 3 ? () => Navigator.pop(ctx, true) : null, child: const Text('Envoyer la demande')),
+      ],
+    )));
+    if (go != true) return;
+    try {
+      await services.api.post('/task-requests', {'idempotency_key': key, 'title': title.text.trim(), 'category': cat, if (desc.text.trim().isNotEmpty) 'description': desc.text.trim()});
+      setState(() => _msg = 'Demande envoyée : un responsable la décidera.');
+      _load();
+    } on ApiException catch (e) {
+      setState(() => _msg = e.message);
+    } catch (_) {
+      setState(() => _msg = 'Envoi impossible hors connexion. Réessayez avec du réseau.');
     }
   }
 
@@ -44,10 +84,12 @@ class _MissionsScreenState extends State<MissionsScreen> {
     final rows = _rows;
     return Scaffold(
       appBar: AppBar(title: const Text('Mes missions')),
+      floatingActionButton: _canRequest ? FloatingActionButton.extended(onPressed: _ask, icon: const Icon(Icons.add), label: const Text('Demander une mission')) : null,
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(children: [
           if (_error != null) Padding(padding: const EdgeInsets.all(16), child: Text(_error!)),
+          if (_msg != null) Padding(padding: const EdgeInsets.fromLTRB(16, 8, 16, 0), child: Text(_msg!)),
           if (rows == null && _error == null) const Padding(padding: EdgeInsets.all(32), child: Center(child: CircularProgressIndicator())),
           if (rows != null && rows.isEmpty) const Padding(padding: EdgeInsets.all(32), child: Center(child: Text('Aucune mission.'))),
           for (final t in rows ?? const [])
@@ -60,6 +102,16 @@ class _MissionsScreenState extends State<MissionsScreen> {
                 await Navigator.of(context).push(MaterialPageRoute(builder: (_) => MissionScreen(task: Map<String, dynamic>.from(t as Map))));
                 _load();
               }),
+          if (_requests.isNotEmpty) ...[
+            const Padding(padding: EdgeInsets.fromLTRB(16, 20, 16, 4), child: Text('Mes demandes', style: TextStyle(fontWeight: FontWeight.w700))),
+            for (final r in _requests)
+              ListTile(
+                dense: true, leading: const Icon(Icons.outbox_outlined), title: Text('${r['title']}'),
+                subtitle: r['decision_note'] != null ? Text('${r['decision_note']}') : null,
+                trailing: Text(_requestStatus[r['status']] ?? '${r['status']}', style: const TextStyle(fontSize: 12)),
+              ),
+          ],
+          const SizedBox(height: 80),
         ]),
       ),
     );

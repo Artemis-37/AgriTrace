@@ -36,6 +36,13 @@ void main() {
     });
   });
 
+  group('demande de mission', () {
+    test('un coach demande une mission avec tasks:request', () {
+      expect(canRequestMission(['tasks:read']), isFalse);
+      expect(canRequestMission(['tasks:read', 'tasks:request']), isTrue);
+    });
+  });
+
   group('declarationLabel', () {
     test("une déclaration non confirmée est signalée comme locale", () {
       expect(declarationLabel(localState: 'local_only'), 'Brouillon local');

@@ -74,3 +74,5 @@ bool canCreateConvoy(List<String> permissions) => permissions.contains('convoys:
 bool canReadHistory(List<String> permissions) => permissions.contains('declarations:read') && permissions.contains('declarations:create');
 bool canSeeFiche(List<String> permissions) => permissions.contains('collector:stock');
 bool canSeeMissions(List<String> permissions) => permissions.contains('tasks:read');
+/// Un coach demande une mission : elle ne devient officielle qu'après décision d'un responsable.
+bool canRequestMission(List<String> permissions) => permissions.contains('tasks:request');
