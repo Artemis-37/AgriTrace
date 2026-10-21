@@ -54,3 +54,6 @@ Méthode : relecture des 38 sections, puis tests rejoués (et non reportés de l
   6. Écarts déjà listés plus haut : *traités le 21 octobre 2026* — versions de géométrie, envoi automatique des rapports, import de relevés bancaires (CSV), poussée des notifications côté serveur. *Restent ouverts* — poussée côté téléphone (projet Firebase requis), postes de bureau hors connexion (à arbitrer avec la coopérative), couches de zones protégées sur appareil (licence WDPA), datums locaux à l'import.
 - **Non prouvé** (inchangé) : Android réel, installateur Windows, charge (le script `scripts/load-test.js` existe, aucun objectif chiffré ni mesure), restauration réelle, audit de sécurité indépendant, recette avec les utilisateurs.
 - Remarque : les fonctions « infrastructures sociales, formations, distribution et services », modèles de saisie et logo de coopérative dépassent le cahier des charges (demandes ultérieures) ; elles n'ont pas de section dans le CDC.
+
+
+**Connexion mobile et synchronisation (21/10)** : logo AgriTrace sans fond sur les pages de connexion (portail, poste, mobile) ; synchronisation lancée à la connexion mobile avec icône animée. Limite : les tâches sont copiées en lecture seule hors connexion (changement d'état = réseau) ; non testé sur appareil réel.

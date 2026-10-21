@@ -60,6 +60,15 @@ class _ProducerDetailScreenState extends State<ProducerDetailScreen> {
         if (mounted) setState(() => _assigned = a);
       } catch (_) {}
     } catch (_) {
+      // Hors connexion : tâches copiées lors de la dernière synchronisation.
+      try {
+        final raw = await services.db.getKv('tasks_cache');
+        if (raw != null) {
+          final all = (jsonDecode(raw) as List).where((t) => t['producer_id'] == widget.producer['id'] && !['closed', 'cancelled'].contains(t['status'])).toList();
+          if (mounted) setState(() { _tasks = all; _taskError = null; _msg = 'Hors connexion : tâches de la dernière synchronisation.'; });
+          return;
+        }
+      } catch (_) {}
       if (mounted) setState(() => _taskError = 'Les tâches demandent le réseau. Réessayez en ligne.');
     }
   }

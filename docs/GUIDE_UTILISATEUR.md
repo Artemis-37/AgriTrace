@@ -32,6 +32,7 @@ Ce guide présente chaque utilisateur **sur ordinateur** (portail web dans le na
 
 ### Hors connexion
 - **Téléphone** : tout ce qui est saisi est gardé sur l'appareil puis envoyé au retour du réseau, sans doublon. Le bandeau en haut de l'accueil indique l'état : « Synchronisé », « Hors connexion », « n en attente », « n à corriger ».
+- **Synchronisation à la connexion** : dès que l'utilisateur se connecte sur le téléphone, une synchronisation démarre (logo AgriTrace et icône de synchronisation qui tourne). Elle envoie au serveur les saisies et opérations en attente, et reçoit le profil, les producteurs, les parcelles, les missions affectées et la copie des tâches (lisibles ensuite hors connexion ; leurs changements d'état demandent le réseau). L'icône de synchronisation en haut de l'accueil tourne pendant l'échange ; un appui la relance.
 - **Ordinateur** : un poste client enregistre les achats et les messages hors connexion, rejoués au retour du serveur. Validation, paiements et stocks demandent le serveur.
 
 ### Accès retiré

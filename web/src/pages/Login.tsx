@@ -3,6 +3,7 @@ import { get, post } from '../api';
 import { useAuth } from '../auth';
 import { useAction } from '../ui';
 import PairWorkstation from '../PairWorkstation';
+import logo from '../assets/agritrace-logo.png';
 
 export default function Login() {
   const { status, orgs, signIn, chooseOrg, signOut } = useAuth();
@@ -35,6 +36,7 @@ export default function Login() {
         <p>La traçabilité agricole, de la parcelle au marché. Producteurs, achats, stocks, finances et conformité de votre coopérative, au même endroit.</p>
       </div>
       <div className="login-form">
+        <img className="login-logo" src={logo} alt="AgriTrace, la traçabilité agricole, de la parcelle au marché" />
         {status === 'choose-org' ? (
           <div style={{ width: 'min(380px,100%)' }}>
             <h2>Choisissez votre coopérative</h2>

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../config.dart';
 import '../main.dart';
+import 'sync_icon.dart';
 import '../sync/sync_engine.dart';
 import '../sync/sync_state.dart';
 import 'login_screen.dart';
@@ -291,6 +292,7 @@ class _HomeHeader extends StatelessWidget {
             tooltip: 'Notifications', onPressed: onNotes,
             icon: Badge(isLabelVisible: unread > 0, label: Text('$unread'), child: const Icon(Icons.notifications_outlined, color: white, size: 26)),
           ),
+          const SyncIcon(),
           ValueListenableBuilder<SyncStatus>(
             valueListenable: services.sync.status,
             builder: (_, s, __) => Icon(s.phase == SyncPhase.offline ? Icons.wifi_off : Icons.wifi, color: white, size: 22),

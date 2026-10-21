@@ -43,6 +43,7 @@ class SyncEngine {
       await _push();
       await _pushPhotos();
       await _pull();
+      await _pullTasks();
       status.value = SyncStatus(SyncPhase.idle, lastSuccess: DateTime.now());
     } on NetworkException catch (e) {
       status.value = SyncStatus(SyncPhase.offline, lastSuccess: previousSuccess, message: e.message);
@@ -131,6 +132,16 @@ class SyncEngine {
   }
 
   // ---------------- Réception ----------------
+
+  /// Tâches de l'utilisateur : copiées du serveur à chaque synchronisation pour rester lisibles hors connexion (les changements d'état se font en ligne).
+  Future<void> _pullTasks() async {
+    try {
+      final r = await api.get('/tasks');
+      await db.setKv('tasks_cache', jsonEncode(r));
+    } on ApiException catch (e) {
+      if (e.status == 401) rethrow; // droit « tâches » absent (403) ou autre : sans effet sur le reste
+    }
+  }
 
   Future<void> _pull() async {
     var cursor = await db.getKv('cursor');

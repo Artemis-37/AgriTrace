@@ -1,4 +1,5 @@
 import { FormEvent, useState } from 'react';
+import logo from './assets/agritrace-logo.png';
 import { pairWorkstation } from './api';
 import { ErrorBox } from './ui';
 import { useAction } from './ui';
@@ -12,6 +13,7 @@ export default function PairWorkstation({ onDone, onCancel, blocking }: { onDone
     <div className="login">
       <div className="login-panel">
         <form onSubmit={submit} className="login-form" aria-label="Associer ce poste">
+          <img className="login-logo" src={logo} alt="AgriTrace" />
           <h1>Associer ce poste</h1>
           <p className="muted">{blocking ? 'Ce poste n\'est pas associé à la coopérative : l\'accès est refusé, même avec un bon mot de passe. ' : ''}Demandez à votre administrateur un code d'association (Équipe → Postes de travail → Associer un poste), puis saisissez-le ici.</p>
           <label className="field"><span>Code d'association</span>

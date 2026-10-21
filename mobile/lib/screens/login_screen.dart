@@ -4,6 +4,7 @@ import '../data/api_client.dart';
 import 'change_password_screen.dart';
 import '../main.dart';
 import 'home_screen.dart';
+import 'sync_icon.dart';
 
 class LoginScreen extends StatefulWidget {
   final String? notice;
@@ -16,6 +17,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _email = TextEditingController();
   final _password = TextEditingController();
   bool _busy = false;
+  bool _syncing = false;
   String? _error;
 
   @override
@@ -74,6 +76,10 @@ class _LoginScreenState extends State<LoginScreen> {
     var forced = false;
     try { forced = ((await services.api.get('/me')) as Map)['must_change_password'] == true; } catch (_) { /* hors ligne : pas de contrôle */ }
     if (!mounted) return;
+    // À la connexion : synchronisation immédiate (profil, producteurs, tâches, opérations en attente), avec l'icône de synchronisation.
+    if (mounted) setState(() => _syncing = true);
+    try { await services.sync.run().timeout(const Duration(seconds: 25)); } catch (_) { /* hors connexion : l'accueil réessaiera */ }
+    if (!mounted) return;
     void go() => Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const SyncShell(child: HomeScreen())));
     if (forced) {
       Navigator.of(context).push(MaterialPageRoute(builder: (_) => ChangePasswordScreen(onDone: go)));
@@ -84,6 +90,16 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_syncing) {
+      return Scaffold(body: SafeArea(child: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Image.asset('assets/agritrace-logo.png', width: 260),
+        const SizedBox(height: 32),
+        SyncIcon(color: Theme.of(context).colorScheme.primary, size: 56, tappable: false),
+        const SizedBox(height: 16),
+        const Text('Synchronisation en cours…', style: TextStyle(fontSize: 18)),
+        const Padding(padding: EdgeInsets.fromLTRB(32, 8, 32, 0), child: Text('Mise à jour de votre profil, de vos producteurs, tâches et opérations avec le serveur.', textAlign: TextAlign.center, style: TextStyle(color: Colors.black54))),
+      ]))));
+    }
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -92,8 +108,7 @@ class _LoginScreenState extends State<LoginScreen> {
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 420),
               child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                Text('AgriTrace', textAlign: TextAlign.center, style: Theme.of(context).textTheme.headlineLarge?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold)),
-                const Text('La traçabilité agricole, de la parcelle au marché.', textAlign: TextAlign.center),
+                Image.asset('assets/agritrace-logo.png', width: 280, semanticLabel: 'AgriTrace, la traçabilité agricole, de la parcelle au marché'),
                 const SizedBox(height: 32),
                 if (_pairing) ...[
                   const Text('Associer ce téléphone', style: TextStyle(fontWeight: FontWeight.bold)),
