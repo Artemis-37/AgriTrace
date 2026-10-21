@@ -195,6 +195,14 @@ const feat = (props, geometry) => ({ type: 'Feature', properties: props, geometr
   let fin; for (let i = 0; i < 30; i++) { fin = (await call('GET', `/geo/imports/${running.body.id}`, J(B.t, B.org))).body; if (fin.status !== 'running') break; await new Promise((r) => setTimeout(r, 200)); }
   check('état de progression consultable jusqu\'à la fin', fin.status === 'simulated' && fin.progress === fin.total, fin);
 
+  // UTM 30N (EPSG:32630) : ce point vaut environ (-5.7500, 6.8500) ; le carré de 100 m × 100 m est converti puis traité comme n'importe quelle parcelle
+  const utmFile = Buffer.from(JSON.stringify({ type: 'FeatureCollection', crs: { type: 'name', properties: { name: 'urn:ogc:def:crs:EPSG::32630' } },
+    features: [feat({ producer_code: B.prods[0].internal_code, declared_area_ha: '1', filiere: 'Cacao' }, { type: 'Polygon', coordinates: [[[196049.55, 758037.44], [196149.55, 758037.44], [196149.55, 758137.44], [196049.55, 758137.44], [196049.55, 758037.44]]] })] }));
+  const utmRes = await upload(B.t, B.org, 'utm.geojson', utmFile, 'simulate');
+  check('UTM 30N : converti en WGS84 et signalé', utmRes.status === 201 && utmRes.body.report?.creatable === 1 && /UTM 30N.*converties en WGS84/.test((utmRes.body.warnings ?? []).join(' ')), utmRes.body);
+  const lambert = Buffer.from(JSON.stringify({ type: 'FeatureCollection', crs: { type: 'name', properties: { name: 'EPSG:2154' } }, features: [] }));
+  check('Lambert 93 : refusé (422)', (await upload(B.t, B.org, 'l.geojson', lambert, 'simulate')).status === 422);
+
   console.log('Fichiers refusés');
   check('extension non conforme au contenu → 422', (await upload(B.t, B.org, 'x.kml', file, 'simulate')).status === 422);
   check('archive corrompue → 422', (await upload(B.t, B.org, 'x.zip', Buffer.from('PK\x03\x04garbage'), 'simulate')).status === 422);

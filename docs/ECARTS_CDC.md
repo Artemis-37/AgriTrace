@@ -29,7 +29,7 @@
 
 **Géographie**
 - **PostGIS facultatif** (voir section « Moteur géospatial PostGIS ») : actif sur le serveur central et sur les installations Docker ; **absent du serveur local embarqué dans l'application de bureau**, qui garde le calcul par l'application (boîtes englobantes GiST puis calcul exact en Node), suffisant pour quelques dizaines de milliers de parcelles.
-- Seul WGS84 est accepté : pas de reprojection (UTM, etc.).
+- Systèmes de coordonnées : WGS84 et **UTM sur WGS84** (EPSG:326xx / 327xx, dont les fuseaux 29N et 30N de la Côte d'Ivoire) sont acceptés pour GeoJSON, GeoPackage et Shapefile (`.prj`) ; les coordonnées UTM sont converties en WGS84 (concordance avec PROJ à moins de 1 cm sur 6 points de référence) et l'avertissement figure dans le rapport d'import. Les systèmes locaux (Abidjan 1987, Locodjo), Lambert, etc. sont refusés avec la consigne de reprojeter le fichier en WGS84 : la transformation de datum n'est pas faite. KML/KMZ sont en WGS84 par définition.
 - GeoPackage via `node:sqlite`, encore expérimental dans Node 22.
 - Pas de versions de géométrie en table dédiée : l'historique des modifications garde l'ancienne et la nouvelle géométrie.
 

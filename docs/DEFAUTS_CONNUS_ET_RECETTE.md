@@ -8,9 +8,9 @@ Document de suivi tenu à jour avec `ECARTS_CDC.md`. Il répond à trois questio
 | Notifications push et courriel | §25 | Aucune poussée distante : le mobile ne reçoit les notifications qu'avec du réseau | Projet Firebase (clés `google-services.json` et compte de service) |
 | Import de relevés bancaires, Mobile Money | §21.1 | Rapprochement des paiements disponible ; aucun import de relevé ni connexion opérateur | Format de relevé de la banque, accès opérateur ; ne pas déclarer opérationnel sans test réel (§36) |
 | Envoi automatique des rapports | §26 | Rapports et export Excel à la demande | Choix des destinataires et de la fréquence |
-| Import lourd en arrière-plan avec statut | §31 | Progression calculée côté serveur ; pas de tâche de fond consultable | À tester sur un fichier de plusieurs dizaines de milliers de parcelles |
+| Import lourd (limite 5 000 objets par fichier) | §31 | Traitement en arrière-plan avec progression consultable (testé) | Mesurer sur des volumes réels ; découpage des très gros fichiers |
 | Versions de géométrie en table dédiée | §8.6 | Historique conservé par le journal des modifications | Table `parcel_geometry_versions` si l'audit l'exige |
-| Systèmes de coordonnées de l'import de parcelles | §9.3 | WGS84 seulement (Web Mercator accepté pour les couches de zones protégées) | Reprojection UTM 29N/30N |
+| Systèmes de coordonnées de l'import de parcelles | §9.3 | WGS84 et UTM sur WGS84 (conversion vérifiée) ; Web Mercator pour les couches de zones protégées ; datums locaux refusés | Transformation de datum (Abidjan 1987) si la coopérative en reçoit |
 | Postes de bureau hors connexion | §27 | Achats et messages seulement ; pas de validation, paiements ni stocks | À arbitrer avec la coopérative |
 | Carte du portail web | §8 | Fonds Plan/Satellite en ligne livrés ; pas de dessin à la souris, pas de fond hors ligne | Fournisseur de tuiles sous contrat si le trafic grandit |
 | Couches de zones protégées sur les appareils | §10 | Contrôle côté serveur seulement | Réplication des couches (licence WDPA à régler d'abord) |

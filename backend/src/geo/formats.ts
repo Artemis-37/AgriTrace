@@ -5,6 +5,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { Polygon } from '../parcels/geo';
+import { epsgFromName, Reprojector, reprojectorFor } from './projection';
 
 export type GeoFormat = 'geojson' | 'kml' | 'kmz' | 'shapefile' | 'gpkg';
 export interface RawFeature { props: Record<string, any>; geometry: any | null }
@@ -85,19 +86,19 @@ export function mercatorToWgs84(g: any): any {
     : c.map(conv));
   return { ...g, coordinates: conv(g.coordinates) };
 }
-const isMercator = (v: unknown) => /(3857|900913|Pseudo-Mercator)/i.test(String(v));
 
 export function parseGeoJson(text: string, opts: { allowWebMercator?: boolean } = {}): ParsedFile {
   let o: any;
   try { o = JSON.parse(text.replace(/^﻿/, '')); } catch { throw new GeoFormatError('GeoJSON mal formé (JSON invalide)'); }
   const crsName = o?.crs?.properties?.name;
-  const reproject = !!crsName && !!opts.allowWebMercator && isMercator(crsName);
-  if (crsName && !reproject && !/(4326|CRS84)/i.test(String(crsName))) throw new GeoFormatError(`Système de coordonnées non pris en charge (${crsName}) : WGS84 (EPSG:4326) attendu`);
+  const epsg = crsName ? epsgFromName(crsName) : 4326;
+  const rp = epsg === 4326 ? null : crsName ? reprojectorFor(epsg ?? 0, opts) : null;
+  if (crsName && epsg !== 4326 && !rp) throw new GeoFormatError(`Système de coordonnées non pris en charge (${crsName}) : WGS84 (EPSG:4326) ou UTM sur WGS84 (EPSG:326xx / 327xx) attendu`);
   const feats: any[] = o?.type === 'FeatureCollection' && Array.isArray(o.features) ? o.features
     : o?.type === 'Feature' ? [o] : o?.type && o.coordinates ? [{ type: 'Feature', properties: {}, geometry: o }] : [];
   if (!feats.length && !(o?.type === 'FeatureCollection')) throw new GeoFormatError('GeoJSON sans Feature exploitable');
-  return { format: 'geojson', crs: 'EPSG:4326', features: feats.map((f) => ({ props: f?.properties && typeof f.properties === 'object' ? f.properties : {}, geometry: reproject ? mercatorToWgs84(f?.geometry ?? null) : f?.geometry ?? null })),
-    warnings: reproject ? ['Coordonnées en Web Mercator (EPSG:3857) converties en WGS84'] : [] };
+  return { format: 'geojson', crs: 'EPSG:4326', features: feats.map((f) => ({ props: f?.properties && typeof f.properties === 'object' ? f.properties : {}, geometry: rp ? rp.apply(f?.geometry ?? null) : f?.geometry ?? null })),
+    warnings: rp ? [`Coordonnées en ${rp.label} converties en WGS84`] : [] };
 }
 
 export function parseKml(text: string, format: GeoFormat = 'kml'): ParsedFile {
@@ -138,20 +139,27 @@ async function parseShapefile(zip: JSZip, assumeWgs84: boolean): Promise<ParsedF
   if (!dbf) throw new GeoFormatError('Shapefile incomplet : fichier .dbf (attributs) manquant');
   if (!(await get('.shx'))) warnings.push('Fichier .shx absent (non bloquant)');
   const prj = await get('.prj');
+  let rp: Reprojector | null = null;
   if (!prj) {
     if (!assumeWgs84) throw new GeoFormatError('Shapefile sans fichier .prj : système de coordonnées inconnu. Ajouter le .prj (WGS84) ou confirmer avec assume_wgs84=true');
     warnings.push('Pas de .prj : WGS84 supposé sur confirmation de l\'utilisateur');
   } else {
     const wkt = prj.toString('utf8');
-    if (/PROJCS/i.test(wkt) || !/(WGS[_ ]?(19)?84|EPSG["',\s\[]*4326)/i.test(wkt))
-      throw new GeoFormatError(`Système de coordonnées non pris en charge dans le .prj (${wkt.slice(0, 60)}…) : WGS84 géographique (EPSG:4326) attendu, aucune reprojection n'est effectuée`);
+    const code = (wkt.match(/AUTHORITY\["EPSG","(\d+)"\]\s*\]\s*$/) ?? [])[1];
+    const epsg = code ? Number(code) : epsgFromName(wkt.match(/PROJCS\["([^"]+)"/)?.[1] ?? '');
+    const geographic = !/PROJCS/i.test(wkt) && /(WGS[_ ]?(19)?84|EPSG["',\s\[]*4326)/i.test(wkt);
+    if (!geographic) {
+      rp = epsg ? reprojectorFor(epsg) : null;
+      if (!rp) throw new GeoFormatError(`Système de coordonnées non pris en charge dans le .prj (${wkt.slice(0, 60)}…) : WGS84 (EPSG:4326) ou UTM sur WGS84 (EPSG:326xx / 327xx) attendu ; pour un autre système, reprojeter le fichier en WGS84 avant l'import`);
+      warnings.push(`Coordonnées en ${rp.label} converties en WGS84`);
+    }
   }
   const cpg = await get('.cpg');
   const enc = cpg && /(1252|8859|latin)/i.test(cpg.toString('utf8')) ? 'latin1' : 'utf8';
   const geoms = readShp(shp);
   const rows = readDbf(dbf, enc);
   if (geoms.length !== rows.length) throw new GeoFormatError(`Shapefile incohérent : ${geoms.length} géométries pour ${rows.length} enregistrements d'attributs`);
-  return { format: 'shapefile', crs: 'EPSG:4326', warnings, features: geoms.map((g, i) => ({ props: rows[i], geometry: g })) };
+  return { format: 'shapefile', crs: 'EPSG:4326', warnings, features: geoms.map((g, i) => ({ props: rows[i], geometry: rp ? rp.apply(g) : g })) };
 }
 
 function readShp(b: Buffer): any[] {
@@ -261,8 +269,8 @@ export function parseGpkg(buf: Buffer, layer?: string, opts: { allowWebMercator?
       if (!c) throw new GeoFormatError(`Couche « ${layer} » introuvable (disponibles : ${cols.map((x) => x.table_name).join(', ')})`);
       const srs = db.prepare('SELECT organization, organization_coordsys_id FROM gpkg_spatial_ref_sys WHERE srs_id = ?').get(c.srs_id) as any;
       const epsg = srs ? Number(srs.organization_coordsys_id) : c.srs_id;
-      const reproject = !!opts.allowWebMercator && epsg === 3857;
-      if (epsg !== 4326 && !reproject) throw new GeoFormatError(`Système de coordonnées non pris en charge (EPSG:${epsg}) : WGS84 (EPSG:4326) attendu, aucune reprojection n'est effectuée`);
+      const rp = epsg === 4326 ? null : reprojectorFor(epsg, opts);
+      if (epsg !== 4326 && !rp) throw new GeoFormatError(`Système de coordonnées non pris en charge (EPSG:${epsg}) : WGS84 (EPSG:4326) ou UTM sur WGS84 (EPSG:326xx / 327xx) attendu`);
       void app;
       const rows = db.prepare(`SELECT * FROM ${qIdent(c.table_name)} LIMIT ${MAX_FEATURES + 1}`).all() as any[];
       const features: RawFeature[] = rows.map((r) => {
@@ -270,9 +278,9 @@ export function parseGpkg(buf: Buffer, layer?: string, opts: { allowWebMercator?
         for (const [k, v] of Object.entries(r)) if (k !== c.column_name && !(v instanceof Uint8Array)) props[k] = typeof v === 'bigint' ? Number(v) : v;
         const blob = r[c.column_name];
         const geo = blob ? gpkgBlobToGeometry(Buffer.from(blob)) : null;
-        return { props, geometry: reproject ? mercatorToWgs84(geo) : geo };
+        return { props, geometry: rp ? rp.apply(geo) : geo };
       });
-      return { format: 'gpkg', crs: 'EPSG:4326', warnings: [...(cols.length > 1 ? [`Plusieurs couches : « ${c.table_name} » lue`] : []), ...(reproject ? ['Coordonnées en Web Mercator (EPSG:3857) converties en WGS84'] : [])], features };
+      return { format: 'gpkg', crs: 'EPSG:4326', warnings: [...(cols.length > 1 ? [`Plusieurs couches : « ${c.table_name} » lue`] : []), ...(rp ? [`Coordonnées en ${rp.label} converties en WGS84`] : [])], features };
     } catch (e: any) {
       if (e instanceof GeoFormatError) throw e;
       throw new GeoFormatError(`GeoPackage illisible ou non conforme : ${String(e.message).slice(0, 120)}`);
