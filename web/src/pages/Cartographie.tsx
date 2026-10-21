@@ -238,7 +238,7 @@ function Zones() {
   return (
     <>
       <Card>
-        <p className="notice">Les parcelles qui touchent une zone chargée ici sont signalées dans l'onglet Anomalies (non bloquant). Les couches restent propres à votre coopérative et ne sont pas synchronisées vers les appareils. Vérifiez la licence du jeu de données avant de le charger (la base mondiale WDPA est limitée à un usage non commercial sauf autorisation de l'UNEP-WCMC).</p>
+        <p className="notice">Les parcelles qui touchent une zone chargée ici sont signalées dans l'onglet Anomalies (bloquant ou non selon la politique réglée dans Tolérances). Les couches restent propres à votre coopérative et ne sont pas synchronisées vers les appareils. Vérifiez la licence du jeu de données avant de le charger (la base mondiale WDPA est limitée à un usage non commercial sauf autorisation de l'UNEP-WCMC).</p>
         {error && <ErrorBox message={error} onRetry={reload} />}
         {loading ? <Loading /> : (
           <Table rows={data ?? []} empty="Aucune couche chargée." columns={[
