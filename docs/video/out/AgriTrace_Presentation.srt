@@ -1,679 +1,739 @@
 1
-00:00:00,150 --> 00:00:08,248
+00:00:00,150 --> 00:00:08,308
 Bienvenue dans Agri Trace, la plateforme intégrée de gestion agricole, de traçabilité et de gestion financière des coopératives.
 
 2
-00:00:08,248 --> 00:00:12,423
+00:00:08,308 --> 00:00:12,515
 Dans cette présentation, nous parcourons l'outil de bout en bout :
 
 3
-00:00:12,423 --> 00:00:21,660
+00:00:12,515 --> 00:00:21,820
 ce que voit chaque profil, sur ordinateur comme sur téléphone, depuis la parcelle du producteur jusqu'à la comptabilité, et jusqu'à l'exportateur.
 
 4
-00:00:21,960 --> 00:00:24,389
+00:00:22,120 --> 00:00:24,577
 Agri Trace repose sur quatre briques.
 
 5
-00:00:24,389 --> 00:00:31,741
+00:00:24,577 --> 00:00:32,016
 D'abord un serveur, avec une base de données PostgreSQL qui isole strictement les données de chaque coopérative.
 
 6
-00:00:31,741 --> 00:00:35,023
+00:00:32,016 --> 00:00:35,337
 Ensuite un portail web, pour le travail de bureau.
 
 7
-00:00:35,023 --> 00:00:40,537
+00:00:35,337 --> 00:00:40,916
 Puis une application Android, pensée pour fonctionner sans réseau dans les villages.
 
 8
-00:00:40,537 --> 00:00:47,626
+00:00:40,916 --> 00:00:48,089
 Enfin une application Windows, qui peut servir de serveur local à la coopérative, ou de simple poste client.
 
 9
-00:00:47,626 --> 00:00:51,630
+00:00:48,089 --> 00:00:52,140
 Tout se synchronise, sans doublon, dès que le réseau revient.
 
 10
-00:00:51,930 --> 00:00:58,145
+00:00:52,440 --> 00:00:58,584
 On se connecte avec son adresse électronique et son mot de passe, sur le portail comme sur le téléphone.
 
 11
-00:00:58,145 --> 00:01:07,228
+00:00:58,584 --> 00:01:07,563
 Un poste de bureau, ou un téléphone, doit être associé une première fois à la coopérative grâce à un code de huit caractères remis par l'administrateur.
 
 12
-00:01:07,228 --> 00:01:12,905
+00:01:07,563 --> 00:01:13,175
 Au premier accès avec un mot de passe temporaire, l'application impose d'en choisir un nouveau.
 
 13
-00:01:12,905 --> 00:01:19,060
+00:01:13,175 --> 00:01:19,260
 Si un compte est suspendu, la session est coupée, et le téléphone efface les données de la coopérative.
 
 14
-00:01:19,360 --> 00:01:23,494
+00:01:19,560 --> 00:01:23,695
 Chaque utilisateur a un profil, et le menu s'adapte à ses droits.
 
 15
-00:01:23,494 --> 00:01:29,663
+00:01:23,695 --> 00:01:29,865
 L'administrateur de la coopérative crée les comptes en un clic à partir de dix-huit rôles types :
 
 16
-00:01:29,663 --> 00:01:43,655
-direction, responsables de traçabilité, de cartographie, de magasin, financier, qualité et logistique, magasinier, caissier, comptable, cartographe, ADG, auditeur, acheteur, exportateur, et les trois profils de terrain :
+00:01:29,865 --> 00:01:45,194
+direction, responsables de traçabilité, de cartographie, de magasin, financier, qualité et logistique, magasinier, caissier, comptable, cartographe, Administrateur de groupe, auditeur, acheteur, exportateur, et les trois profils de terrain :
 
 17
-00:01:43,655 --> 00:01:49,570
+00:01:45,194 --> 00:01:51,110
 collecteur, agent de terrain et coach, qui se connectent uniquement par l'application mobile.
 
 18
-00:01:49,870 --> 00:01:56,292
+00:01:51,410 --> 00:01:57,963
 Voici le portail, vu par l'administrateur de la coopérative. Le tableau de bord rassemble l'essentiel :
 
 19
-00:01:56,292 --> 00:02:00,470
+00:01:57,963 --> 00:02:02,226
 commandes, créances, missions en retard, anomalies de cartographie.
 
 20
-00:02:00,470 --> 00:02:07,890
+00:02:02,226 --> 00:02:09,798
 En haut à droite, la messagerie et la cloche de notifications avec leurs compteurs, et l'indicateur de synchronisation.
 
 21
-00:02:07,890 --> 00:02:12,005
-Le logo de la coopérative apparaît dans le menu, et sur ses reçus.
+00:02:09,798 --> 00:02:13,361
+Le logo de la coopérative figure sur ses reçus imprimés.
 
 22
-00:02:12,005 --> 00:02:15,310
-Un thème nuit est disponible pour travailler le soir.
+00:02:13,361 --> 00:02:18,260
+L'affichage est volontairement sobre, avec un seul thème, doux pour les yeux.
 
 23
-00:02:15,610 --> 00:02:24,375
+00:02:18,560 --> 00:02:27,206
 Dans Équipe, l'administrateur crée les comptes, choisit le rôle, suspend ou réactive un accès, révoque les sessions et réinitialise un mot de passe.
 
 24
-00:02:24,375 --> 00:02:29,172
+00:02:27,206 --> 00:02:31,938
 Les rôles types se créent en un clic, puis s'ajustent permission par permission ;
 
 25
-00:02:29,172 --> 00:02:32,606
+00:02:31,938 --> 00:02:35,327
 certains droits sensibles exigent une seconde approbation.
 
 26
-00:02:32,606 --> 00:02:42,970
+00:02:35,327 --> 00:02:45,550
 Le profil de la coopérative donne son adresse et sa devise, repris en en-tête des reçus, ainsi que le code CCC, qui sert de préfixe aux numéros de connaissement des convois.
 
 27
-00:02:43,270 --> 00:02:47,368
+00:02:45,850 --> 00:02:50,060
 Le registre des producteurs : fiches, statuts, village, section.
 
 28
-00:02:47,368 --> 00:02:50,570
+00:02:50,060 --> 00:02:53,349
 La recherche est instantanée, par nom ou par code.
 
 29
-00:02:50,570 --> 00:03:01,583
+00:02:53,349 --> 00:03:04,663
 L'administrateur peut importer une liste Excel ou CSV avec une prévisualisation avant validation, et un rapport d'import indique ce qui est créé, mis à jour ou en erreur.
 
 30
-00:03:01,583 --> 00:03:04,273
+00:03:04,663 --> 00:03:07,426
 Les codes à zéros initiaux sont conservés.
 
 31
-00:03:04,273 --> 00:03:10,740
+00:03:07,426 --> 00:03:14,070
 Les coachs retrouvent les mêmes producteurs sur leur téléphone, avec recherche et filtre par section.
 
 32
-00:03:11,040 --> 00:03:16,146
+00:03:14,370 --> 00:03:19,430
 Chaque producteur a ses parcelles, avec leur superficie, leur tracé et leur statut :
 
 33
-00:03:16,146 --> 00:03:18,273
+00:03:19,430 --> 00:03:21,539
 déclarée, contrôlée, puis vérifiée.
 
 34
-00:03:18,273 --> 00:03:24,412
+00:03:21,539 --> 00:03:27,623
 Un tracé relevé au GPS sur le terrain ne devient jamais une superficie à partir d'un simple point :
 
 35
-00:03:24,412 --> 00:03:28,424
+00:03:27,623 --> 00:03:31,599
 le téléphone calcule la surface en marchant autour de la parcelle.
 
 36
-00:03:28,424 --> 00:03:33,590
+00:03:31,599 --> 00:03:36,720
 Les versions successives du tracé sont conservées, et ne peuvent plus être modifiées.
 
 37
-00:03:33,890 --> 00:03:39,748
+00:03:37,020 --> 00:03:42,865
 La cartographie affiche les parcelles sur un fond neutre, un plan ou une image satellite.
 
 38
-00:03:39,748 --> 00:03:42,776
+00:03:42,865 --> 00:03:45,886
 Les anomalies sont détectées automatiquement :
 
 39
-00:03:42,776 --> 00:03:47,318
+00:03:45,886 --> 00:03:50,417
 chevauchements entre parcelles, superposition avec une zone protégée.
 
 40
-00:03:47,318 --> 00:03:51,333
+00:03:50,417 --> 00:03:54,423
 Une anomalie bloquante empêche la validation de la parcelle :
 
 41
-00:03:51,333 --> 00:03:55,743
+00:03:54,423 --> 00:03:58,823
 on la corrige, ou on accepte une exception motivée, qui est tracée.
 
 42
-00:03:55,743 --> 00:04:08,710
+00:03:58,823 --> 00:04:11,760
 On peut importer des tracés au format GeoJSON, KML, KMZ, Shapefile ou GeoPackage, et les exporter, ce qui prépare les dossiers de conformité comme le règlement européen contre la déforestation.
 
 43
-00:04:09,010 --> 00:04:13,981
+00:04:12,060 --> 00:04:17,218
 Le collecteur travaille uniquement sur son téléphone, même sans réseau.
 
 44
-00:04:13,981 --> 00:04:21,053
+00:04:17,218 --> 00:04:24,555
 Il choisit le producteur, saisit l'achat : quantité, unité, nombre de sacs. Puis il crée son convoi :
 
 45
-00:04:21,053 --> 00:04:27,145
+00:04:24,555 --> 00:04:30,875
 chauffeur, camion, sacs et poids annoncés. Le numéro de connaissement n'est pas saisi :
 
 46
-00:04:27,145 --> 00:04:37,088
+00:04:30,875 --> 00:04:41,190
 le logiciel le fabrique, avec le code CCC de la coopérative, l'année, les trois premières lettres du nom du collecteur et un numéro d'ordre.
 
 47
-00:04:37,088 --> 00:04:41,569
+00:04:41,190 --> 00:04:45,839
 Par exemple : SC000000-2026-SYL-1.
 
 48
-00:04:41,569 --> 00:04:45,560
+00:04:45,839 --> 00:04:49,980
 Le collecteur suit aussi son stock et sa fiche de compte.
 
 49
-00:04:45,860 --> 00:04:51,345
+00:04:50,280 --> 00:04:55,796
 Voici la chaîne d'achat. Le collecteur déclare ses achats et crée son convoi.
 
 50
-00:04:51,345 --> 00:04:57,257
+00:04:55,796 --> 00:05:01,741
 Le magasinier réceptionne et pèse. Le caissier règle le collecteur au prix du jour.
 
 51
-00:04:57,257 --> 00:05:01,745
+00:05:01,741 --> 00:05:06,254
 Le comptable passe l'écriture, la direction suit les résultats.
 
 52
-00:05:01,745 --> 00:05:07,230
+00:05:06,254 --> 00:05:11,770
 À chaque étape, la personne suivante est notifiée, et chaque geste est tracé.
 
 53
-00:05:07,530 --> 00:05:12,604
+00:05:12,070 --> 00:05:17,191
 Côté traçabilité, le responsable reçoit les déclarations d'achat des collecteurs.
 
 54
-00:05:12,604 --> 00:05:17,866
+00:05:17,191 --> 00:05:22,502
 Il les met en vérification, puis les valide ou demande une correction avec un motif.
 
 55
-00:05:17,866 --> 00:05:22,377
+00:05:22,502 --> 00:05:27,055
 Le collecteur voit alors l'achat marqué à corriger dans son application.
 
 56
-00:05:22,377 --> 00:05:29,080
+00:05:27,055 --> 00:05:33,820
 Les reçus sont numérotés, et chaque déclaration est rattachée à un producteur, une filière et une campagne.
 
 57
-00:05:29,380 --> 00:05:31,953
+00:05:34,120 --> 00:05:36,700
 Le magasinier voit les convois en route.
 
 58
-00:05:31,953 --> 00:05:39,931
+00:05:36,700 --> 00:05:44,696
 Il ouvre un convoi arrivé, pèse en brut, déduit la tare, obtient le poids net, et constate les écarts avec le poids annoncé.
 
 59
-00:05:39,931 --> 00:05:46,171
+00:05:44,696 --> 00:05:50,952
 Si l'écart dépasse la tolérance, il doit être approuvé. Il réceptionne en totalité ou en partie ;
 
 60
-00:05:46,171 --> 00:05:50,160
+00:05:50,952 --> 00:05:54,950
 le stock est mis à jour, et le convoi passe à reçu, en caisse.
 
 61
-00:05:50,460 --> 00:05:55,251
+00:05:55,250 --> 00:06:00,108
 Les stocks se suivent par magasin et par lot, avec la généalogie des lots :
 
 62
-00:05:55,251 --> 00:05:59,978
+00:06:00,108 --> 00:06:04,902
 division, fusion, transfert, chargement, perte, déclassement, quarantaine.
 
 63
-00:05:59,978 --> 00:06:06,366
+00:06:04,902 --> 00:06:11,379
 Pour l'inventaire, on saisit le comptage, et l'inventaire doit être approuvé par une autre personne.
 
 64
-00:06:06,366 --> 00:06:10,390
+00:06:11,379 --> 00:06:15,460
 Il n'y a aucune suppression : seulement des ajustements tracés.
 
 65
-00:06:10,690 --> 00:06:12,888
+00:06:15,760 --> 00:06:17,959
 Le caissier règle les convois reçus :
 
 66
-00:06:12,888 --> 00:06:21,085
+00:06:17,959 --> 00:06:26,160
 il saisit le prix unitaire du jour, le montant égale le poids reçu fois le prix, et les avances non soldées sont déduites automatiquement.
 
 67
-00:06:21,085 --> 00:06:27,797
+00:06:26,160 --> 00:06:32,875
 Chaque caissier ouvre sa propre session de caisse, enregistre les mouvements, puis clôture en comptant l'espèce ;
 
 68
-00:06:27,797 --> 00:06:31,420
+00:06:32,875 --> 00:06:36,500
 l'écart entre le compté et l'attendu est calculé et conservé.
 
 69
-00:06:31,720 --> 00:06:37,040
+00:06:36,800 --> 00:06:42,245
 Le comptable tient les comptes : plan comptable, écritures, prêts aux producteurs, paiements.
 
 70
-00:06:37,040 --> 00:06:44,133
+00:06:42,245 --> 00:06:49,506
 Le rapprochement bancaire importe le relevé de la banque en CSV, l'utilisateur choisit les colonnes, simule, puis importe.
 
 71
-00:06:44,133 --> 00:06:48,424
+00:06:49,506 --> 00:06:53,897
 Les lignes qui correspondent à une seule opération sont pointées d'office ;
 
 72
-00:06:48,424 --> 00:06:50,311
+00:06:53,897 --> 00:06:55,829
 les autres se pointent à la main.
 
 73
-00:06:50,311 --> 00:06:54,773
+00:06:55,829 --> 00:07:00,396
 Les opérations du compte absentes du relevé sont listées pour être expliquées.
 
 74
-00:06:54,773 --> 00:06:59,750
+00:07:00,396 --> 00:07:05,490
 Cet onglet est réservé aux profils habilités, comme l'administrateur de la coopérative.
 
 75
-00:07:00,050 --> 00:07:04,025
+00:07:05,790 --> 00:07:09,815
 La direction suit les finances en lecture et décide des demandes.
 
 76
-00:07:04,025 --> 00:07:13,258
+00:07:09,815 --> 00:07:19,164
 Le préfinancement permet de suivre les avances accordées, leurs échéances et leurs remboursements, et l'approbation est réservée aux profils habilités.
 
 77
-00:07:13,258 --> 00:07:17,600
+00:07:19,164 --> 00:07:23,560
 Le responsable financier supervise la caisse, les comptes et les prêts.
 
 78
-00:07:17,900 --> 00:07:21,420
+00:07:23,860 --> 00:07:27,360
 Une règle protège toute la chaîne : on ne supprime rien.
 
 79
-00:07:21,420 --> 00:07:27,769
+00:07:27,360 --> 00:07:33,673
 Le magasinier, le caissier ou le comptable peut demander l'annulation d'une opération, avec un motif.
 
 80
-00:07:27,769 --> 00:07:30,598
+00:07:33,673 --> 00:07:36,486
 L'opération n'est pas annulée tout de suite :
 
 81
-00:07:30,598 --> 00:07:36,507
+00:07:36,486 --> 00:07:42,361
 l'administrateur, la direction ou le responsable financier est notifié, et approuve ou refuse.
 
 82
-00:07:36,507 --> 00:07:42,982
+00:07:42,361 --> 00:07:48,799
 Le demandeur ne peut jamais approuver sa propre demande. Une annulation passe par une écriture inverse.
 
 83
-00:07:42,982 --> 00:07:49,520
+00:07:48,799 --> 00:07:55,300
 On peut aussi imprimer le reçu : toute impression est tracée, et la deuxième porte la mention duplicata.
 
 84
-00:07:49,820 --> 00:07:56,645
+00:07:55,600 --> 00:08:02,357
 Le responsable qualité gère les contrôles, les inspections et les certificats, avec des alertes d'échéance.
 
 85
-00:07:56,645 --> 00:08:05,831
+00:08:02,357 --> 00:08:11,451
 La logistique planifie les transports et les expéditions, et un acheteur partenaire ne voit que ses propres commandes, expéditions et documents.
 
 86
-00:08:05,831 --> 00:08:10,870
+00:08:11,451 --> 00:08:16,440
 Les rapports d'achats, de finance, de stock et de qualité s'exportent en Excel.
 
 87
-00:08:11,170 --> 00:08:16,568
+00:08:16,740 --> 00:08:22,054
 Voici la vue d'un acheteur partenaire : uniquement ses commandes et ses documents.
 
 88
-00:08:16,568 --> 00:08:19,530
+00:08:22,054 --> 00:08:24,970
 Le reste de la coopérative lui est invisible.
 
 89
-00:08:19,830 --> 00:08:24,554
-L'ADG, administrateur de groupe, met en place les missions des coachs :
+00:08:25,270 --> 00:08:29,443
+L'Administrateur de groupe met en place les missions des coachs :
 
 90
-00:08:24,554 --> 00:08:31,475
+00:08:29,443 --> 00:08:36,120
 titre, catégorie, priorité, échéance, producteur, coach assigné, instructions et critères de validation.
 
 91
-00:08:31,475 --> 00:08:37,530
-Le coach exécute et joint ses preuves ; l'ADG relit puis valide, ou demande une correction.
+00:08:36,120 --> 00:08:38,623
+Le coach exécute et joint ses preuves ;
 
 92
-00:08:37,530 --> 00:08:48,509
-Une fois la tâche terminée et validée, elle est grisée et n'est plus cliquable, puis elle disparaît de la liste après le délai fixé par l'ADG, sept jours par défaut.
+00:08:38,623 --> 00:08:43,246
+l'Administrateur de groupe relit puis valide, ou demande une correction.
 
 93
-00:08:48,509 --> 00:08:51,570
-Une case permet de revoir les tâches masquées.
+00:08:43,246 --> 00:08:55,187
+Une fois la tâche terminée et validée, elle est grisée et n'est plus cliquable, puis elle disparaît de la liste après le délai fixé par l'Administrateur de groupe, sept jours par défaut.
 
 94
-00:08:51,870 --> 00:08:54,300
-Le coach utilise l'application mobile.
+00:08:55,187 --> 00:08:58,140
+Une case permet de revoir les tâches masquées.
 
 95
-00:08:54,300 --> 00:09:00,119
-Il choisit un producteur, avec recherche par nom, code ou téléphone, et filtre par section.
+00:08:58,440 --> 00:09:00,945
+Le coach utilise l'application mobile.
 
 96
-00:09:00,119 --> 00:09:04,915
-La fiche du producteur donne ses tâches, ses parcelles et ses informations.
+00:09:00,945 --> 00:09:06,945
+Il choisit un producteur, avec recherche par nom, code ou téléphone, et filtre par section.
 
 97
-00:09:04,915 --> 00:09:09,967
-Il enregistre un nouveau producteur, relève une parcelle, et ajoute des photos.
+00:09:06,945 --> 00:09:11,890
+La fiche du producteur donne ses tâches, ses parcelles et ses informations.
 
 98
-00:09:09,967 --> 00:09:13,803
-Tout reste sur le téléphone, puis part à la synchronisation.
+00:09:11,890 --> 00:09:17,098
+Il enregistre un nouveau producteur, relève une parcelle, et ajoute des photos.
 
 99
-00:09:13,803 --> 00:09:17,640
-Le bandeau de l'accueil indique ce qui attend d'être envoyé.
+00:09:17,098 --> 00:09:21,054
+Tout reste sur le téléphone, puis part à la synchronisation.
 
 100
-00:09:17,940 --> 00:09:20,496
-Le coach saisit des relevés de terrain :
+00:09:21,054 --> 00:09:25,010
+Le bandeau de l'accueil indique ce qui attend d'être envoyé.
 
 101
-00:09:20,496 --> 00:09:26,374
-un registre de formation, avec thème, module, photo, participants et scores de zéro à cent ;
+00:09:25,310 --> 00:09:27,806
+Le coach saisit des relevés de terrain :
 
 102
-00:09:26,374 --> 00:09:29,250
-une infrastructure sociale avec sa position ;
+00:09:27,806 --> 00:09:33,548
+un registre de formation, avec thème, module, photo, participants et scores de zéro à cent ;
 
 103
-00:09:29,250 --> 00:09:37,876
-et une distribution de biens et services, où l'on choisit la catégorie, le groupe et les articles du catalogue, puis les bénéficiaires.
+00:09:33,548 --> 00:09:36,356
+une infrastructure sociale avec sa position ;
 
 104
-00:09:37,876 --> 00:09:41,390
-L'ADG adapte les modèles de saisie, puis les déploie.
+00:09:36,356 --> 00:09:44,782
+et une distribution de biens et services, où l'on choisit la catégorie, le groupe et les articles du catalogue, puis les bénéficiaires.
 
 105
-00:09:41,690 --> 00:09:50,116
-Une bibliothèque de modules de formation agricole est préchargée, liée aux certifications, avec le cacao en priorité, puis le café :
+00:09:44,782 --> 00:09:49,400
+L'Administrateur de groupe adapte les modèles de saisie, puis les déploie.
 
 106
-00:09:50,116 --> 00:09:51,265
-vingt-six modules.
+00:09:49,700 --> 00:09:58,163
+Une bibliothèque de modules de formation agricole est préchargée, liée aux certifications, avec le cacao en priorité, puis le café :
 
 107
-00:09:51,265 --> 00:09:57,074
-Les coachs la lisent sur leur téléphone, avec une copie gardée pour travailler sans réseau.
+00:09:58,163 --> 00:09:59,317
+vingt-six modules.
 
 108
-00:09:57,074 --> 00:10:02,436
-L'ADG relit chaque module et choisit : conserver tel quel, modifier, ou supprimer.
+00:09:59,317 --> 00:10:05,152
+Les coachs la lisent sur leur téléphone, avec une copie gardée pour travailler sans réseau.
 
 109
-00:10:02,436 --> 00:10:04,989
-Le contenu fourni est un socle général :
+00:10:05,152 --> 00:10:11,756
+L'Administrateur de groupe relit chaque module et choisit : conserver tel quel, modifier, ou supprimer.
 
 110
-00:10:04,989 --> 00:10:09,330
-il doit être adapté au cahier des charges de la certification visée.
+00:10:11,756 --> 00:10:14,320
+Le contenu fourni est un socle général :
 
 111
-00:10:09,630 --> 00:10:15,689
-Sur le téléphone, le coach filtre les modules par culture ou par thème, puis ouvre un module :
+00:10:14,320 --> 00:10:18,680
+il doit être adapté au cahier des charges de la certification visée.
 
 112
-00:10:15,689 --> 00:10:21,490
-objectifs, points à enseigner, erreurs à éviter, questions pour vérifier la compréhension.
+00:10:18,980 --> 00:10:25,202
+Sur le téléphone, le coach filtre les modules par culture ou par thème, puis ouvre un module :
 
 113
-00:10:21,790 --> 00:10:27,536
-Les exportateurs peuvent eux aussi proposer des modules de formation. Voici le circuit.
+00:10:25,202 --> 00:10:31,160
+objectifs, points à enseigner, erreurs à éviter, questions pour vérifier la compréhension.
 
 114
-00:10:27,536 --> 00:10:30,310
-L'exportateur propose un module à l'ADG.
+00:10:31,460 --> 00:10:37,144
+Les exportateurs peuvent eux aussi proposer des modules de formation. Voici le circuit.
 
 115
-00:10:30,310 --> 00:10:34,735
-L'ADG le transmet aux coachs, d'un simple clic, sans le modifier.
+00:10:37,144 --> 00:10:41,129
+L'exportateur propose un module à l'Administrateur de groupe.
 
 116
-00:10:34,735 --> 00:10:39,028
-Les coachs dispensent la formation et saisissent leurs résultats.
+00:10:41,129 --> 00:10:46,747
+L'Administrateur de groupe le transmet aux coachs, d'un simple clic, sans le modifier.
 
 117
-00:10:39,028 --> 00:10:47,020
-Les résultats arrivent d'abord à l'ADG, qui les transmet à l'exportateur, toujours d'un clic, sans aucune modification.
+00:10:46,747 --> 00:10:50,994
+Les coachs dispensent la formation et saisissent leurs résultats.
 
 118
-00:10:47,320 --> 00:10:52,409
-Voici l'espace de l'exportateur. À l'accueil, il retrouve ses indicateurs :
+00:10:50,994 --> 00:11:00,140
+Les résultats arrivent d'abord à l'Administrateur de groupe, qui les transmet à l'exportateur, toujours d'un clic, sans aucune modification.
 
 119
-00:10:52,409 --> 00:10:57,905
-propositions en attente, transmises aux coachs, non retenues, et résultats reçus.
+00:11:00,440 --> 00:11:05,274
+Voici l'espace de l'exportateur. À l'accueil, il retrouve ses indicateurs :
 
 120
-00:10:57,905 --> 00:11:03,604
-Il ne voit que ses propres propositions et les résultats que l'ADG lui a transmis.
+00:11:05,274 --> 00:11:10,494
+propositions en attente, transmises aux coachs, non retenues, et résultats reçus.
 
 121
-00:11:03,604 --> 00:11:10,050
-Il clique sur proposer un module : titre, thème, résumé, objectifs, sections avec leurs points.
+00:11:10,494 --> 00:11:17,132
+Il ne voit que ses propres propositions et les résultats que l'Administrateur de groupe lui a transmis.
 
 122
-00:11:10,050 --> 00:11:15,410
-Une fois envoyé, le module n'est plus modifiable. L'ADG est aussitôt notifié.
+00:11:17,132 --> 00:11:23,254
+Il clique sur proposer un module : titre, thème, résumé, objectifs, sections avec leurs points.
 
 123
-00:11:15,710 --> 00:11:22,232
-Du côté de l'ADG, la proposition apparaît dans l'onglet propositions, avec le nom de l'exportateur.
+00:11:23,254 --> 00:11:29,570
+Une fois envoyé, le module n'est plus modifiable. L'Administrateur de groupe est aussitôt notifié.
 
 124
-00:11:22,232 --> 00:11:26,236
-L'ADG lit le module, puis clique sur transmettre aux coachs.
+00:11:29,870 --> 00:11:37,467
+Du côté de l'Administrateur de groupe, la proposition apparaît dans l'onglet propositions, avec le nom de l'exportateur.
 
 125
-00:11:26,236 --> 00:11:29,400
-Il peut aussi décliner, avec un motif facultatif.
+00:11:37,467 --> 00:11:42,595
+L'Administrateur de groupe lit le module, puis clique sur transmettre aux coachs.
 
 126
-00:11:29,400 --> 00:11:33,662
-Le contenu est copié tel que proposé, et les coachs sont prévenus.
+00:11:42,595 --> 00:11:47,344
+Une fenêtre lui demande alors deux choses. D'abord la nature de l'élément :
 
 127
-00:11:33,662 --> 00:11:40,830
-Dans la bibliothèque, ce module est marqué proposé par l'exportateur, et il n'est ni modifiable ni supprimable.
+00:11:47,344 --> 00:11:51,269
+module de formation, distribution ou tâche. Ensuite la cible :
 
 128
-00:11:41,130 --> 00:11:43,223
-Le coach dispense la formation.
+00:11:51,269 --> 00:11:57,157
+tous les producteurs, ou certains seulement, qu'il retrouve par nom, par code ou par section.
 
 129
-00:11:43,223 --> 00:11:49,232
-Ensuite, sur le module marqué proposé par l'exportateur, il touche saisir les résultats :
+00:11:57,157 --> 00:12:00,006
+Il peut ajouter une échéance et une consigne.
 
 130
-00:11:49,232 --> 00:11:54,633
-date de la séance, village, nombre de participants, score moyen et observations.
+00:12:00,006 --> 00:12:05,577
+L'élément s'ajoute au profil de chaque producteur concerné, et les coachs sont prévenus.
 
 131
-00:11:54,633 --> 00:12:00,642
-L'envoi demande une connexion. Les résultats vont à l'ADG et ne sont plus modifiables ;
+00:12:05,577 --> 00:12:11,908
+Le contenu du module reste exactement celui de l'exportateur, il n'est ni modifiable ni supprimable.
 
 132
-00:12:00,642 --> 00:12:05,300
-le coach voit, dans la liste, s'ils ont été transmis à l'exportateur.
+00:12:11,908 --> 00:12:15,960
+Il peut aussi décliner la proposition, avec un motif facultatif.
 
 133
-00:12:05,600 --> 00:12:09,420
-Les résultats arrivent dans l'onglet résultats de l'ADG :
+00:12:16,260 --> 00:12:20,554
+L'Administrateur de groupe peut aussi implémenter lui-même un modèle.
 
 134
-00:12:09,420 --> 00:12:14,406
-coach, module, exportateur, village, participants, score moyen, observations.
+00:12:20,554 --> 00:12:31,008
+Dans l'onglet affectations aux producteurs, il clique sur affecter un modèle, choisit la nature, ici une distribution, donne un intitulé, et cible tous les producteurs.
 
 135
-00:12:14,406 --> 00:12:21,140
-L'ADG clique sur transmettre à l'exportateur, et les résultats partent tels que le coach les a saisis.
+00:12:31,008 --> 00:12:37,355
+Le tableau indique ensuite, pour chaque affectation, la nature, la cible, l'échéance et l'avancement :
 
 136
-00:12:21,440 --> 00:12:29,679
-L'exportateur est notifié, par la cloche en haut à droite, et voit les résultats de ses propres modules, uniquement ceux que l'ADG a transmis.
+00:12:37,355 --> 00:12:40,280
+combien de producteurs l'ont fait, sur combien.
 
 137
-00:12:29,679 --> 00:12:32,940
-Il ne voit jamais le reste des données de la coopérative.
+00:12:40,580 --> 00:12:45,086
+Dans la liste des producteurs, un clic sur le nom ouvre son profil.
 
 138
-00:12:33,240 --> 00:12:39,114
-Les rapports d'achats, de finance, de stock et de qualité se filtrent et s'exportent en Excel.
+00:12:45,086 --> 00:12:52,080
+On y trouve, sous formations, distributions et tâches, tout ce que l'Administrateur de groupe a ajouté :
 
 139
-00:12:39,114 --> 00:12:42,926
-L'administrateur peut aussi programmer un envoi automatique :
+00:12:52,080 --> 00:12:58,940
+la nature, l'intitulé, la consigne, l'échéance et l'état. Le coach peut marquer un élément comme fait.
 
 140
-00:12:42,926 --> 00:12:49,551
-il choisit le rapport, la fréquence, quotidienne, hebdomadaire ou mensuelle, l'heure et les destinataires.
+00:12:59,240 --> 00:13:11,741
+Sur l'application, la fiche du producteur affiche, dans la liste des tâches, les formations, distributions et tâches ajoutées par l'Administrateur de groupe, avec la consigne et l'échéance.
 
 141
-00:12:49,551 --> 00:12:53,113
-Chacun reçoit une notification et télécharge le fichier ;
+00:13:11,741 --> 00:13:18,950
+Une fois la séance ou la distribution réalisée, le coach touche fait, avec du réseau, et l'élément est grisé.
 
 142
-00:12:53,113 --> 00:12:57,300
-l'envoi par courriel est possible si le serveur est configuré pour.
+00:13:19,250 --> 00:13:21,245
+Le coach dispense la formation.
 
 143
-00:12:57,600 --> 00:13:04,524
-Sur le téléphone, tout ce qui est saisi est gardé sur l'appareil, puis envoyé au retour du réseau, sans doublon :
+00:13:21,245 --> 00:13:26,973
+Ensuite, sur le module marqué proposé par l'exportateur, il touche saisir les résultats :
 
 144
-00:13:04,524 --> 00:13:09,365
-chaque opération porte une clé unique. Le bandeau de l'accueil indique l'état :
+00:13:26,973 --> 00:13:32,122
+date de la séance, village, nombre de participants, score moyen et observations.
 
 145
-00:13:09,365 --> 00:13:15,983
-synchronisé, hors connexion, éléments en attente, ou éléments à corriger, avec le motif du refus du serveur.
+00:13:32,122 --> 00:13:34,053
+L'envoi demande une connexion.
 
 146
-00:13:15,983 --> 00:13:20,946
-Des fonds de carte peuvent être téléchargés en Wi-Fi pour travailler sans réseau.
+00:13:34,053 --> 00:13:39,009
+Les résultats vont à l'Administrateur de groupe et ne sont plus modifiables ;
 
 147
-00:13:20,946 --> 00:13:26,890
-Si l'accès d'un utilisateur est retiré, les données de la coopérative sont effacées du téléphone.
+00:13:39,009 --> 00:13:43,450
+le coach voit, dans la liste, s'ils ont été transmis à l'exportateur.
 
 148
-00:13:27,190 --> 00:13:33,482
-L'application Windows s'installe sur les postes de la coopérative. Au premier démarrage, on choisit :
+00:13:43,750 --> 00:13:48,607
+Les résultats arrivent dans l'onglet résultats de l'Administrateur de groupe :
 
 149
-00:13:33,482 --> 00:13:39,837
-poste unique, serveur local ou poste client. Le serveur local embarque la base de données et l'API ;
+00:13:48,607 --> 00:13:53,401
+coach, module, exportateur, village, participants, score moyen, observations.
 
 150
-00:13:39,837 --> 00:13:43,700
-les autres postes le retrouvent automatiquement sur le réseau.
+00:13:53,401 --> 00:14:01,060
+L'Administrateur de groupe clique sur transmettre à l'exportateur, et les résultats partent tels que le coach les a saisis.
 
 151
-00:13:43,700 --> 00:13:51,986
-L'installateur affiche le contrat de licence en français, configure le pare-feu pour les réseaux privés, et propose des mises à jour.
+00:14:01,360 --> 00:14:10,310
+L'exportateur est notifié, par la cloche en haut à droite, et voit les résultats de ses propres modules, uniquement ceux que l'Administrateur de groupe a transmis.
 
 152
-00:13:51,986 --> 00:14:00,210
-Un menu permet de sauvegarder les données sur une clé USB, et le serveur local réplique vers le serveur central de la coopérative.
+00:14:10,310 --> 00:14:13,440
+Il ne voit jamais le reste des données de la coopérative.
 
 153
-00:14:00,510 --> 00:14:06,388
-La sécurité est au cœur de l'outil. Chaque coopérative est isolée au niveau de la base de données.
+00:14:13,740 --> 00:14:19,688
+Les rapports d'achats, de finance, de stock et de qualité se filtrent et s'exportent en Excel.
 
 154
-00:14:06,388 --> 00:14:09,807
-Les droits sont vérifiés par le serveur à chaque requête.
+00:14:19,688 --> 00:14:23,547
+L'administrateur peut aussi programmer un envoi automatique :
 
 155
-00:14:09,807 --> 00:14:13,046
-Le journal d'audit conserve qui a fait quoi, et quand.
+00:14:23,547 --> 00:14:30,254
+il choisit le rapport, la fréquence, quotidienne, hebdomadaire ou mensuelle, l'heure et les destinataires.
 
 156
-00:14:13,046 --> 00:14:17,845
-Les écritures, les historiques de prix et les versions de tracés sont immuables.
+00:14:30,254 --> 00:14:33,861
+Chacun reçoit une notification et télécharge le fichier ;
 
 157
-00:14:17,845 --> 00:14:20,544
-Les actions sensibles exigent deux personnes.
+00:14:33,861 --> 00:14:38,100
+l'envoi par courriel est possible si le serveur est configuré pour.
 
 158
-00:14:20,544 --> 00:14:24,743
-Les identifiants de connexion sont protégés contre les essais répétés.
+00:14:38,400 --> 00:14:45,409
+Sur le téléphone, tout ce qui est saisi est gardé sur l'appareil, puis envoyé au retour du réseau, sans doublon :
 
 159
-00:14:24,743 --> 00:14:28,462
-Et les comptes de terrain ne se connectent que par le mobile :
+00:14:45,409 --> 00:14:50,310
+chaque opération porte une clé unique. Le bandeau de l'accueil indique l'état :
 
 160
-00:14:28,462 --> 00:14:33,500
-c'est une règle d'usage de l'interface, les droits restant contrôlés par le serveur.
+00:14:50,310 --> 00:14:57,009
+synchronisé, hors connexion, éléments en attente, ou éléments à corriger, avec le motif du refus du serveur.
 
 161
-00:14:33,800 --> 00:14:35,992
-Soyons précis sur l'état de l'outil.
+00:14:57,009 --> 00:15:02,033
+Des fonds de carte peuvent être téléchargés en Wi-Fi pour travailler sans réseau.
 
 162
-00:14:35,992 --> 00:14:41,595
-Il a été éprouvé par des tests automatiques de bout en bout, mais pas encore sur le terrain.
+00:15:02,033 --> 00:15:08,050
+Si l'accès d'un utilisateur est retiré, les données de la coopérative sont effacées du téléphone.
 
 163
-00:14:41,595 --> 00:14:47,746
-L'application Android doit être compilée par le workflow prévu, puis essayée sur de vrais téléphones.
+00:15:08,350 --> 00:15:14,604
+L'application Windows s'installe sur les postes de la coopérative. Au premier démarrage, on choisit :
 
 164
-00:14:47,746 --> 00:14:52,009
-L'installateur Windows doit être testé sur un poste de la coopérative.
+00:15:14,604 --> 00:15:20,921
+poste unique, serveur local ou poste client. Le serveur local embarque la base de données et l'API ;
 
 165
-00:14:52,009 --> 00:14:56,333
-Le contenu des modules de formation est un socle à relire et à adapter.
+00:15:20,921 --> 00:15:24,760
+les autres postes le retrouvent automatiquement sur le réseau.
 
 166
-00:14:56,333 --> 00:15:00,535
-Les résultats de formation demandent une connexion pour être envoyés.
+00:15:24,760 --> 00:15:32,996
+L'installateur affiche le contrat de licence en français, configure le pare-feu pour les réseaux privés, et propose des mises à jour.
 
 167
-00:15:00,535 --> 00:15:05,650
-Ces points sont listés dans le document des défauts connus, avec un plan de recette.
+00:15:32,996 --> 00:15:41,170
+Un menu permet de sauvegarder les données sur une clé USB, et le serveur local réplique vers le serveur central de la coopérative.
 
 168
-00:15:05,950 --> 00:15:07,216
-Voilà Agri Trace :
+00:15:41,470 --> 00:15:47,254
+La sécurité est au cœur de l'outil. Chaque coopérative est isolée au niveau de la base de données.
 
 169
-00:15:07,216 --> 00:15:17,902
-une chaîne complète, de la parcelle du producteur à la comptabilité et à l'exportateur, sur ordinateur et sur téléphone, avec une traçabilité sans trou.
+00:15:47,254 --> 00:15:50,618
+Les droits sont vérifiés par le serveur à chaque requête.
 
 170
-00:15:17,902 --> 00:15:19,660
+00:15:50,618 --> 00:15:53,805
+Le journal d'audit conserve qui a fait quoi, et quand.
+
+171
+00:15:53,805 --> 00:15:58,526
+Les écritures, les historiques de prix et les versions de tracés sont immuables.
+
+172
+00:15:58,526 --> 00:16:01,182
+Les actions sensibles exigent deux personnes.
+
+173
+00:16:01,182 --> 00:16:05,313
+Les identifiants de connexion sont protégés contre les essais répétés.
+
+174
+00:16:05,313 --> 00:16:08,972
+Et les comptes de terrain ne se connectent que par le mobile :
+
+175
+00:16:08,972 --> 00:16:13,930
+c'est une règle d'usage de l'interface, les droits restant contrôlés par le serveur.
+
+176
+00:16:14,230 --> 00:16:16,438
+Soyons précis sur l'état de l'outil.
+
+177
+00:16:16,438 --> 00:16:22,081
+Il a été éprouvé par des tests automatiques de bout en bout, mais pas encore sur le terrain.
+
+178
+00:16:22,081 --> 00:16:28,277
+L'application Android doit être compilée par le workflow prévu, puis essayée sur de vrais téléphones.
+
+179
+00:16:28,277 --> 00:16:32,570
+L'installateur Windows doit être testé sur un poste de la coopérative.
+
+180
+00:16:32,570 --> 00:16:36,925
+Le contenu des modules de formation est un socle à relire et à adapter.
+
+181
+00:16:36,925 --> 00:16:41,158
+Les résultats de formation demandent une connexion pour être envoyés.
+
+182
+00:16:41,158 --> 00:16:46,310
+Ces points sont listés dans le document des défauts connus, avec un plan de recette.
+
+183
+00:16:46,610 --> 00:16:47,851
+Voilà Agri Trace :
+
+184
+00:16:47,851 --> 00:16:58,327
+une chaîne complète, de la parcelle du producteur à la comptabilité et à l'exportateur, sur ordinateur et sur téléphone, avec une traçabilité sans trou.
+
+185
+00:16:58,327 --> 00:17:00,050
 Merci de votre attention.

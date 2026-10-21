@@ -43,8 +43,8 @@ et les trois profils de terrain : collecteur, agent de terrain et coach, qui se 
 scene('dashboard', 'Tableau de bord', """
 Voici le portail, vu par l'administrateur de la coopérative. Le tableau de bord rassemble l'essentiel : commandes, créances, missions en retard, anomalies de cartographie.
 En haut à droite, la messagerie et la cloche de notifications avec leurs compteurs, et l'indicateur de synchronisation.
-Le logo de la coopérative apparaît dans le menu, et sur ses reçus. Un thème nuit est disponible pour travailler le soir.""",
-  live('coop_admin', [{'goto': '/', 'w': 2}, {'scroll': 500, 'w': 2}, {'scroll': -500, 'w': 1}, {'click': 'button:has-text("Thème nuit")', 'w': 2}, {'click': 'button:has-text("Thème doux")', 'w': 1}]))
+Le logo de la coopérative figure sur ses reçus imprimés. L'affichage est volontairement sobre, avec un seul thème, doux pour les yeux.""",
+  live('coop_admin', [{'goto': '/', 'w': 2}, {'scroll': 500, 'w': 2}, {'scroll': -500, 'w': 1}]))
 
 scene('equipe', 'Équipe, rôles et profil', """
 Dans Équipe, l'administrateur crée les comptes, choisit le rôle, suspend ou réactive un accès, révoque les sessions et réinitialise un mot de passe.

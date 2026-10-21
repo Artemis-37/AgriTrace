@@ -44,7 +44,7 @@
  {
   "id": "dashboard",
   "title": "Tableau de bord",
-  "narration": "Voici le portail, vu par l'administrateur de la coopérative. Le tableau de bord rassemble l'essentiel : commandes, créances, missions en retard, anomalies de cartographie. En haut à droite, la messagerie et la cloche de notifications avec leurs compteurs, et l'indicateur de synchronisation. Le logo de la coopérative apparaît dans le menu, et sur ses reçus. Un thème nuit est disponible pour travailler le soir.",
+  "narration": "Voici le portail, vu par l'administrateur de la coopérative. Le tableau de bord rassemble l'essentiel : commandes, créances, missions en retard, anomalies de cartographie. En haut à droite, la messagerie et la cloche de notifications avec leurs compteurs, et l'indicateur de synchronisation. Le logo de la coopérative figure sur ses reçus imprimés. L'affichage est volontairement sobre, avec un seul thème, doux pour les yeux.",
   "visual": {
    "type": "live",
    "role": "coop_admin",
@@ -59,14 +59,6 @@
     },
     {
      "scroll": -500,
-     "w": 1
-    },
-    {
-     "click": "button:has-text(\"Thème nuit\")",
-     "w": 2
-    },
-    {
-     "click": "button:has-text(\"Thème doux\")",
      "w": 1
     }
    ]
