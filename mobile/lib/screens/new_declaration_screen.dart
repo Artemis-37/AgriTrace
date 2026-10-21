@@ -31,6 +31,7 @@ class _NewDeclarationScreenState extends State<NewDeclarationScreen> {
   String? _error;
   bool _saving = false;
   String? _photoPath;
+  bool _infoOk = false; // fiche « Informations du producteur » vue et validée (comme sur le terminal SNT)
 
   String get _dateStr => _date.toIso8601String().substring(0, 10);
 
@@ -47,7 +48,7 @@ class _NewDeclarationScreenState extends State<NewDeclarationScreen> {
 
   Future<void> _pickProducer(Map<String, Object?> p) async {
     final chains = await services.repo.chainsFor(p['id'] as String);
-    setState(() { _producer = p; _chains = chains; _chain = null; _campaign = null; _campaigns = []; _estimate = null; });
+    setState(() { _producer = p; _infoOk = false; _chains = chains; _chain = null; _campaign = null; _campaigns = []; _estimate = null; });
     if (chains.length == 1) await _pickChain(chains.first);
     if (chains.isEmpty) setState(() => _error = "Aucune filière disponible pour ce producteur et votre affectation.");
   }
@@ -99,16 +100,22 @@ class _NewDeclarationScreenState extends State<NewDeclarationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Achat')),
+      appBar: AppBar(title: const Text('Acheter du produit')),
       body: ListView(padding: const EdgeInsets.all(16), children: [
         if (_producer == null) ...[
           TextField(controller: _search, decoration: const InputDecoration(labelText: 'Rechercher un producteur (code ou nom)', prefixIcon: Icon(Icons.search), border: OutlineInputBorder()), onChanged: _findProducers),
           const SizedBox(height: 8),
           if (_producers.isEmpty) const Padding(padding: EdgeInsets.all(16), child: Text('Aucun producteur. Synchronisez pour télécharger la liste.')),
           for (final p in _producers) ListTile(title: Text('${p['last_name']} ${p['first_names']}'), subtitle: Text('${p['internal_code']}  •  ${p['village'] ?? ''}'), onTap: () => _pickProducer(p)),
+        ] else if (!_infoOk) ...[
+          _ProducerInfo(
+            producer: _producer!, error: _error,
+            onChange: () => setState(() { _producer = null; _chain = null; _campaign = null; _error = null; }),
+            onContinue: _chains.isEmpty ? null : () => setState(() => _infoOk = true),
+          ),
         ] else ...[
           ListTile(contentPadding: EdgeInsets.zero, title: Text('${_producer!['last_name']} ${_producer!['first_names']}'), subtitle: Text('${_producer!['internal_code']}'),
-              trailing: TextButton(onPressed: () => setState(() { _producer = null; _chain = null; _campaign = null; }), child: const Text('Changer'))),
+              trailing: TextButton(onPressed: () => setState(() { _producer = null; _infoOk = false; _chain = null; _campaign = null; }), child: const Text('Changer'))),
           if (_chains.length > 1) DropdownButtonFormField<Map<String, Object?>>(
               decoration: const InputDecoration(labelText: 'Filière', border: OutlineInputBorder()), value: _chain,
               items: [for (final c in _chains) DropdownMenuItem(value: c, child: Text(c['name'] as String))], onChanged: (c) { if (c != null) _pickChain(c); }),
@@ -158,6 +165,60 @@ class _NewDeclarationScreenState extends State<NewDeclarationScreen> {
         ],
         if (_error != null) Padding(padding: const EdgeInsets.only(top: 12), child: Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error))),
       ]),
+    );
+  }
+}
+
+
+/// Fiche « Informations du producteur » affichée après sa sélection, avant la saisie de l'achat (modèle du terminal SNT).
+class _ProducerInfo extends StatelessWidget {
+  final Map<String, Object?> producer;
+  final String? error;
+  final VoidCallback onChange;
+  final VoidCallback? onContinue;
+  const _ProducerInfo({required this.producer, required this.error, required this.onChange, required this.onContinue});
+
+  Widget _row(IconData icon, String label, Object? value) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Row(children: [
+          CircleAvatar(radius: 24, backgroundColor: const Color(0xFF3F9B2E), child: Icon(icon, color: Colors.white)),
+          const SizedBox(width: 14),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(label, style: const TextStyle(fontSize: 14, color: Color(0xFF1F2937))),
+            Text(value == null || '$value'.trim().isEmpty ? '—' : '$value', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Color(0xFF1F2937))),
+          ])),
+        ]),
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 0, color: const Color(0xFFEFF6E4), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
+        child: Column(children: [
+          const Text('Informations du producteur', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: Color(0xFF1F2937))),
+          const SizedBox(height: 10),
+          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Nom :'), Text('${producer['last_name']}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700))])),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Prénoms :'), Text('${producer['first_names']}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700))])),
+          ]),
+          const Divider(),
+          _row(Icons.person, 'Matricule', producer['internal_code']),
+          const Divider(height: 1),
+          _row(Icons.phone_android, 'Contact', producer['phone']),
+          const Divider(height: 1),
+          _row(Icons.place, 'Localité', producer['village']),
+          if ('${producer['section'] ?? ''}'.isNotEmpty) ...[const Divider(height: 1), _row(Icons.map_outlined, 'Section', producer['section'])],
+          if (error != null) Padding(padding: const EdgeInsets.only(top: 12), child: Text(error!, style: const TextStyle(color: Colors.red))),
+          const SizedBox(height: 16),
+          SizedBox(width: double.infinity, child: FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: const Color(0xFF3F9B2E), padding: const EdgeInsets.symmetric(vertical: 14), shape: const StadiumBorder()),
+            onPressed: onContinue, child: const Text('Continuer', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+          )),
+          TextButton(onPressed: onChange, child: const Text('Changer de producteur')),
+        ]),
+      ),
     );
   }
 }

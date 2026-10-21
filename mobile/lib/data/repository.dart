@@ -21,6 +21,12 @@ class Repository {
     return v == null ? <String>[] : (jsonDecode(v) as List).cast<String>();
   }
 
+  /// Nom de l'utilisateur et de la coopérative, mémorisés à la synchronisation (accueil).
+  Future<({String name, String org, String zone})> identity() async {
+    final zone = await db.raw.query('my_assignments', columns: ['zone'], where: "coalesce(zone,'') != ''", limit: 1);
+    return (name: (await db.getKv('me_name')) ?? '', org: (await db.getKv('org_name')) ?? '', zone: zone.isEmpty ? '' : '${zone.first['zone']}');
+  }
+
   Future<String?> myCollectorId() async {
     final v = await db.getKv('my_collector_id');
     return (v == null || v.isEmpty) ? null : v;
@@ -202,7 +208,7 @@ class Repository {
       for (final t in ['value_chains', 'campaigns', 'unit_conversions', 'price_versions', 'producers', 'my_assignments', 'declarations', 'outbox', 'parcels', 'pending_uploads']) {
         await txn.delete(t);
       }
-      await txn.delete('kv', where: "k IN ('cursor','permissions','my_collector_id')");
+      await txn.delete('kv', where: "k IN ('cursor','permissions','my_collector_id','me_name','org_name')");
       await txn.insert('kv', {'k': 'org_id', 'v': orgId}, conflictAlgorithm: ConflictAlgorithm.replace);
     });
     return true;
@@ -219,7 +225,7 @@ class Repository {
       await txn.delete('declarations', where: "local_state NOT IN ('local_only','pending','pending_validation','error')");
       await txn.delete('outbox', where: "status NOT IN ('pending','pending_validation')");
       await txn.delete('pending_uploads', where: "status != 'pending'");
-      await txn.delete('kv', where: "k IN ('cursor','permissions','my_collector_id')");
+      await txn.delete('kv', where: "k IN ('cursor','permissions','my_collector_id','me_name','org_name')");
       await txn.insert('kv', {'k': 'revoked', 'v': '1'}, conflictAlgorithm: ConflictAlgorithm.replace);
     });
   }

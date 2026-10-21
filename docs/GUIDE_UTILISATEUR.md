@@ -45,12 +45,12 @@ Si l'administrateur suspend le compte, le **téléphone efface les données de l
 ## Collecteur (délégué)
 
 ### Sur téléphone
-1. **Déclarer un achat** : bouton « Achat ». Producteur (recherche par nom ou code), filière, quantité (sacs ou kg), **numéro du reçu d'achat dès la saisie** s'il est exigé, photo du reçu (facultative), date. Le prix vient du barème en vigueur : il ne change pas après coup.
+1. **Déclarer un achat** : sur l'accueil (en-tête vert avec date, nom, coopérative, zone et total des achats du jour), bouton « Acheter du produit ». Choisir le producteur (recherche par nom ou code) : une fiche « Informations du producteur » s'affiche (nom, prénoms, matricule, contact, localité, section) ; « Continuer » ouvre la saisie : filière, quantité (sacs ou kg), **numéro du reçu d'achat dès la saisie** s'il est exigé, photo du reçu (facultative), date. Le prix vient du barème en vigueur : il ne change pas après coup.
 2. **Suivre** : chaque ligne de l'accueil a une icône d'état (confirmé, en attente d'envoi, à corriger). Une déclaration « à corriger » se rouvre ; le motif est affiché. Un numéro de reçu déjà utilisé est signalé comme conflit.
 3. **Convoi** : regrouper ses achats dans un convoi (n° de connaissement, chauffeur, camion). Il est envoyé dès que le réseau revient ; le magasinier le réceptionne ensuite.
 4. **Historique, Mon stock, Ma fiche de compte** : achats passés avec filtre par état, quantités achetées / en route / livrées, et fiche de suivi du compte (report, financements, livraisons, solde). La fiche et le stock demandent le réseau.
 
-<table class="phones"><tr><td><img src="captures/mobile/collecteur-accueil.png" alt="Accueil : mes achats"><br><em>Accueil : mes achats</em></td><td><img src="captures/mobile/collecteur-nouvel-achat.png" alt="Nouvel achat"><br><em>Nouvel achat</em></td><td><img src="captures/mobile/collecteur-historique.png" alt="Historique"><br><em>Historique</em></td></tr></table>
+<table class="phones"><tr><td><img src="captures/mobile/collecteur-accueil.png" alt="Accueil collecteur"><br><em>Accueil collecteur</em></td><td><img src="captures/mobile/collecteur-info-producteur.png" alt="Informations du producteur"><br><em>Informations du producteur</em></td><td><img src="captures/mobile/collecteur-nouvel-achat.png" alt="Saisie de l'achat"><br><em>Saisie de l'achat</em></td></tr></table>
 
 <table class="phones"><tr><td><img src="captures/mobile/collecteur-mon-stock.png" alt="Mon stock"><br><em>Mon stock</em></td><td><img src="captures/mobile/collecteur-fiche.png" alt="Ma fiche de compte"><br><em>Ma fiche de compte</em></td><td><img src="captures/mobile/collecteur-convoi.png" alt="Déclarer un convoi"><br><em>Déclarer un convoi</em></td></tr></table>
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../config.dart';
 import '../main.dart';
 import '../sync/sync_engine.dart';
 import '../sync/sync_state.dart';
@@ -13,6 +14,7 @@ import 'parcel_survey_screen.dart';
 import 'parcels_screen.dart';
 import 'new_convoy_screen.dart';
 import 'new_declaration_screen.dart';
+import 'map_pack_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -28,6 +30,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _canConvoy = false;
   bool _canHistory = false, _canFiche = false, _canMissions = false, _canSurvey = false;
   int _unreadNotes = 0;
+  ({String name, String org, String zone}) _identity = (name: '', org: '', zone: '');
 
   @override
   void initState() {
@@ -58,10 +61,11 @@ class _HomeScreenState extends State<HomeScreen> {
     final pending = await services.db.pendingCount();
     final problems = await services.db.problemCount();
     final perms = await services.repo.permissions();
+    final identity = await services.repo.identity();
     int unread = _unreadNotes;
     try { final r = await services.api.get('/notifications/unread-count'); unread = (r['unread'] as num?)?.toInt() ?? 0; } catch (_) { /* hors connexion : compteur conservé */ }
     if (!mounted) return;
-    setState(() { _items = items; _pending = pending; _problems = problems; _canCreate = canCreateDeclaration(perms); _canConvoy = canCreateConvoy(perms); _canHistory = canReadHistory(perms); _canFiche = canSeeFiche(perms); _canMissions = canSeeMissions(perms); _canSurvey = canSurveyParcel(perms); _unreadNotes = unread; });
+    setState(() { _items = items; _pending = pending; _problems = problems; _canCreate = canCreateDeclaration(perms); _canConvoy = canCreateConvoy(perms); _canHistory = canReadHistory(perms); _canFiche = canSeeFiche(perms); _canMissions = canSeeMissions(perms); _canSurvey = canSurveyParcel(perms); _unreadNotes = unread; _identity = identity; });
   }
 
   Color _color(String localState, String? status) {
@@ -88,51 +92,55 @@ class _HomeScreenState extends State<HomeScreen> {
     Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const LoginScreen()));
   }
 
+  String _two(int n) => n.toString().padLeft(2, '0');
+  String get _now { final d = DateTime.now(); return '${_two(d.day)}-${_two(d.month)}-${d.year} ${_two(d.hour)}:${_two(d.minute)}'; }
+
+  /// Total des achats du jour (calculé sur l'appareil, donc disponible hors connexion).
+  ({int count, double amount}) get _today {
+    final d = DateTime.now();
+    final key = '${d.year}-${_two(d.month)}-${_two(d.day)}';
+    var n = 0; var sum = 0.0;
+    for (final x in _items) {
+      if ('${x['operation_date']}'.startsWith(key)) { n++; sum += double.tryParse('${x['amount']}') ?? 0; }
+    }
+    return (count: n, amount: sum);
+  }
+
+  String _fcfa(double v) => v.round().toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => ' ');
+
+  Future<void> _open(Widget screen, {bool sync = false}) async {
+    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
+    await _reload();
+    if (sync) services.sync.run(); // envoi immédiat si la connexion est disponible
+  }
+
   @override
   Widget build(BuildContext context) {
+    final t = _today;
+    final buttons = <_HomeButton>[
+      if (_canCreate) _HomeButton(Icons.add_shopping_cart, 'Acheter du produit', () => _open(const NewDeclarationScreen(), sync: true)),
+      if (_canHistory) _HomeButton(Icons.history, 'Historique des achats', () => _open(const HistoryScreen())),
+      if (_canConvoy) _HomeButton(Icons.local_shipping_outlined, 'Déclarer un convoi', () => _open(const NewConvoyScreen(), sync: true)),
+      if (_canConvoy) _HomeButton(Icons.inventory_2_outlined, 'Mon stock', () => _open(const MyStockScreen())),
+      if (_canFiche) _HomeButton(Icons.receipt_long_outlined, 'Ma fiche de compte', () => _open(const FicheScreen())),
+      if (_canMissions) _HomeButton(Icons.assignment_outlined, 'Mes missions', () => _open(const MissionsScreen())),
+      if (_canSurvey) _HomeButton(Icons.map_outlined, 'Relever une parcelle', () async {
+        final saved = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => const ParcelSurveyScreen()));
+        if (saved == true) services.sync.run();
+      }),
+      if (_canSurvey) _HomeButton(Icons.landscape_outlined, 'Mes parcelles', () => _open(const ParcelsScreen())),
+      _HomeButton(Icons.notifications_outlined, 'Notifications', () => _open(const NotificationsScreen()), badge: _unreadNotes),
+    ];
     return Scaffold(
-      appBar: AppBar(title: const Text('Mes achats'), actions: [
-        if (_canHistory)
-          IconButton(tooltip: 'Historique', icon: const Icon(Icons.history), onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const HistoryScreen()))),
-        if (_canFiche)
-          IconButton(tooltip: 'Ma fiche de compte', icon: const Icon(Icons.receipt_long_outlined), onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const FicheScreen()))),
-        if (_canSurvey)
-          IconButton(tooltip: 'Relever une parcelle', icon: const Icon(Icons.map_outlined), onPressed: () async {
-            final saved = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => const ParcelSurveyScreen()));
-            if (saved == true) services.sync.run();
-          }),
-        if (_canSurvey)
-          IconButton(tooltip: 'Mes parcelles', icon: const Icon(Icons.landscape_outlined), onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ParcelsScreen()))),
-        if (_canMissions)
-          IconButton(tooltip: 'Mes missions', icon: const Icon(Icons.assignment_outlined), onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MissionsScreen()))),
-        if (_canConvoy)
-          IconButton(tooltip: 'Mon stock', icon: const Icon(Icons.inventory_2_outlined), onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MyStockScreen()))),
-        if (_canConvoy)
-          IconButton(tooltip: 'Déclarer un convoi', icon: const Icon(Icons.local_shipping_outlined), onPressed: () async {
-            await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const NewConvoyScreen()));
-            await _reload();
-            services.sync.run();
-          }),
-        IconButton(
-          tooltip: _unreadNotes > 0 ? 'Notifications ($_unreadNotes non lues)' : 'Notifications',
-          icon: Badge(isLabelVisible: _unreadNotes > 0, label: Text('$_unreadNotes'), child: const Icon(Icons.notifications_outlined)),
-          onPressed: () async {
-            await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const NotificationsScreen()));
-            await _reload();
-          }),
-        IconButton(tooltip: 'Synchroniser', icon: const Icon(Icons.sync), onPressed: () => services.sync.run()),
-        IconButton(tooltip: 'Se déconnecter', icon: const Icon(Icons.logout), onPressed: _signOut),
-      ]),
-      floatingActionButton: _canCreate
-          ? FloatingActionButton.extended(
-              icon: const Icon(Icons.add), label: const Text('Achat'),
-              onPressed: () async {
-                await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const NewDeclarationScreen()));
-                await _reload();
-                services.sync.run(); // envoi immédiat si la connexion est disponible
-              })
-          : null,
+      backgroundColor: const Color(0xFFF7FAF2),
       body: Column(children: [
+        _HomeHeader(
+          now: _now, name: _identity.name, org: _identity.org, zone: _identity.zone,
+          amount: _fcfa(t.amount), count: t.count,
+          onSync: () => services.sync.run(),
+          onSignOut: _signOut,
+          onMap: _canSurvey ? () => _open(const MapPackScreen()) : null,
+        ),
         ValueListenableBuilder<SyncStatus>(
           valueListenable: services.sync.status,
           builder: (_, s, __) => _SyncBanner(status: s, pending: _pending, problems: _problems),
@@ -140,35 +148,121 @@ class _HomeScreenState extends State<HomeScreen> {
         Expanded(
           child: RefreshIndicator(
             onRefresh: () async { await services.sync.run(); await _reload(); },
-            child: _items.isEmpty
-                ? ListView(children: const [SizedBox(height: 120), Center(child: Text('Aucune déclaration.\nTirez pour synchroniser.', textAlign: TextAlign.center))])
-                : ListView.separated(
-                    itemCount: _items.length,
-                    separatorBuilder: (_, __) => const Divider(height: 1),
-                    itemBuilder: (_, i) {
-                      final d = _items[i];
-                      final ls = d['local_state'] as String;
-                      final st = d['status'] as String?;
-                      final label = declarationLabel(localState: ls, status: st);
-                      final amount = d['amount'] as String?;
-                      return ListTile(
-                        title: Text('${d['producer_name'] ?? 'Producteur'}  •  ${d['quantity']} ${d['unit']}'),
-                        subtitle: Text([
-                          d['operation_date'], label,
-                          if (d['purchase_receipt_no'] != null) 'Reçu ${d['purchase_receipt_no']}${d['receipt_conflict'] == 1 ? ' (numéro déjà utilisé — à résoudre)' : ''}',
-                          if (amount != null) 'Montant ${double.parse(amount).toStringAsFixed(0)} ${d['currency'] ?? ''}',
-                          if (d['local_error'] != null) '${d['local_error']}',
-                        ].join('  •  ')),
-                        leading: Icon(ls == 'synced' ? Icons.cloud_done : Icons.cloud_off, color: _color(ls, st)),
-                        trailing: ls == 'error'
-                            ? IconButton(icon: const Icon(Icons.delete_outline), tooltip: 'Abandonner',
-                                onPressed: () async { await services.repo.discardFailed(d['id'] as String); await _reload(); })
-                            : null,
-                      );
-                    }),
+            child: ListView(padding: const EdgeInsets.fromLTRB(16, 12, 16, 24), children: [
+              for (final b in buttons) Padding(padding: const EdgeInsets.only(bottom: 12), child: b),
+              if (_items.isNotEmpty) ...[
+                const Padding(padding: EdgeInsets.only(top: 8, bottom: 4), child: Text('Achats récents', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0B5E3B)))),
+                for (final d in _items.take(20)) _purchaseTile(d),
+              ] else
+                const Padding(padding: EdgeInsets.all(16), child: Center(child: Text('Aucun achat.\nTirez pour synchroniser.', textAlign: TextAlign.center))),
+            ]),
           ),
         ),
       ]),
+    );
+  }
+
+  Widget _purchaseTile(Map<String, Object?> d) {
+    final ls = d['local_state'] as String;
+    final st = d['status'] as String?;
+    final label = declarationLabel(localState: ls, status: st);
+    final amount = d['amount'] as String?;
+    return Card(
+      margin: const EdgeInsets.only(bottom: 6), elevation: 0, color: Colors.white,
+      child: ListTile(
+        title: Text('${d['producer_name'] ?? 'Producteur'}  •  ${d['quantity']} ${d['unit']}'),
+        subtitle: Text([
+          d['operation_date'], label,
+          if (d['purchase_receipt_no'] != null) 'Reçu ${d['purchase_receipt_no']}${d['receipt_conflict'] == 1 ? ' (numéro déjà utilisé — à résoudre)' : ''}',
+          if (amount != null) 'Montant ${double.parse(amount).toStringAsFixed(0)} ${d['currency'] ?? ''}',
+          if (d['local_error'] != null) '${d['local_error']}',
+        ].join('  •  ')),
+        leading: Icon(ls == 'synced' ? Icons.cloud_done : Icons.cloud_off, color: _color(ls, st)),
+        trailing: ls == 'error'
+            ? IconButton(icon: const Icon(Icons.delete_outline), tooltip: 'Abandonner',
+                onPressed: () async { await services.repo.discardFailed(d['id'] as String); await _reload(); })
+            : null,
+      ),
+    );
+  }
+}
+
+/// En-tête de l'accueil, sur le modèle du terminal SNT : date, salutation, coopérative, zone, total du jour.
+class _HomeHeader extends StatelessWidget {
+  final String now, name, org, zone, amount;
+  final int count;
+  final VoidCallback onSync, onSignOut;
+  final VoidCallback? onMap;
+  const _HomeHeader({required this.now, required this.name, required this.org, required this.zone, required this.amount, required this.count, required this.onSync, required this.onSignOut, this.onMap});
+
+  @override
+  Widget build(BuildContext context) {
+    const white = Colors.white;
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.fromLTRB(20, MediaQuery.of(context).padding.top + 8, 12, 18),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF84CC16), Color(0xFF16A34A)]),
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(28)),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          const Text('AgriTrace', style: TextStyle(color: white, fontSize: 22, fontWeight: FontWeight.w800)),
+          const SizedBox(width: 8),
+          const Text('V ${Config.appVersion}', style: TextStyle(color: white, fontSize: 13)),
+          const Spacer(),
+          ValueListenableBuilder<SyncStatus>(
+            valueListenable: services.sync.status,
+            builder: (_, s, __) => Icon(s.phase == SyncPhase.offline ? Icons.wifi_off : Icons.wifi, color: white, size: 22),
+          ),
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert, color: white), tooltip: 'Menu',
+            onSelected: (v) { if (v == 'sync') onSync(); if (v == 'map') onMap?.call(); if (v == 'out') onSignOut(); },
+            itemBuilder: (_) => [
+              const PopupMenuItem(value: 'sync', child: Text('Synchroniser')),
+              if (onMap != null) const PopupMenuItem(value: 'map', child: Text('Fond de carte')),
+              const PopupMenuItem(value: 'out', child: Text('Se déconnecter')),
+            ],
+          ),
+        ]),
+        const SizedBox(height: 6),
+        Text(now, style: const TextStyle(color: white, fontSize: 13)),
+        if (name.isNotEmpty) Text('Bonjour, ${name.toUpperCase()}', style: const TextStyle(color: white, fontSize: 18, fontWeight: FontWeight.w700)),
+        if (org.isNotEmpty) Text(org, style: const TextStyle(color: white, fontSize: 15)),
+        if (zone.isNotEmpty) Text('Zone : $zone', style: const TextStyle(color: white, fontSize: 14, fontWeight: FontWeight.w600)),
+        const SizedBox(height: 10),
+        Center(child: Column(children: [
+          Text('$amount FCFA', style: const TextStyle(color: white, fontSize: 26, fontWeight: FontWeight.w800)),
+          Text("Achats d'aujourd'hui : $count", style: const TextStyle(color: white, fontSize: 13, fontWeight: FontWeight.w600)),
+        ])),
+      ]),
+    );
+  }
+}
+
+/// Gros bouton de l'accueil (même principe que le terminal SNT).
+class _HomeButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final int badge;
+  const _HomeButton(this.icon, this.label, this.onTap, {this.badge = 0});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: const Color(0xFF3F9B2E), elevation: 2, borderRadius: BorderRadius.circular(18),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18), onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(children: [
+            Badge(isLabelVisible: badge > 0, label: Text('$badge'), child: Icon(icon, color: Colors.white, size: 34)),
+            const SizedBox(width: 16),
+            Expanded(child: Text(label, style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w700))),
+          ]),
+        ),
+      ),
     );
   }
 }

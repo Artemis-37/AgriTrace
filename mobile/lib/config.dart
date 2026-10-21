@@ -11,6 +11,7 @@ class Config {
   /// identification de l'application). Satellite : imagerie Esri World Imagery, dont les conditions d'usage (attribution, licence pour un usage commercial)
   /// sont à vérifier par la coopérative ; remplaçable à la compilation par un autre fournisseur :
   ///   --dart-define=SATELLITE_TILE_URL=https://exemple.ci/{z}/{x}/{y}.jpg
+  static const appVersion = String.fromEnvironment('APP_VERSION', defaultValue: '0.1.0');
   static const osmTileUrl = String.fromEnvironment('OSM_TILE_URL', defaultValue: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png');
   static const satelliteTileUrl = String.fromEnvironment('SATELLITE_TILE_URL',
       defaultValue: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');

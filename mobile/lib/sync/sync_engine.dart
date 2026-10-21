@@ -148,6 +148,8 @@ class SyncEngine {
   static Future<void> _apply(Transaction txn, Map<String, dynamic> j, List<String> perms) async {
     await txn.insert('kv', {'k': 'permissions', 'v': jsonEncode(perms)}, conflictAlgorithm: ConflictAlgorithm.replace);
     await txn.insert('kv', {'k': 'my_collector_id', 'v': (j['my_collector_id'] ?? '') as String}, conflictAlgorithm: ConflictAlgorithm.replace);
+    await txn.insert('kv', {'k': 'me_name', 'v': (j['me_name'] ?? '') as String}, conflictAlgorithm: ConflictAlgorithm.replace);
+    await txn.insert('kv', {'k': 'org_name', 'v': (j['organization_name'] ?? '') as String}, conflictAlgorithm: ConflictAlgorithm.replace);
     final ch = j['changes'] as Map<String, dynamic>;
 
     Future<void> upsert(String table, List<dynamic> rows, Map<String, Object?> Function(Map<String, dynamic>) map) async {

@@ -177,6 +177,9 @@ export class SyncController {
     return this.db.tx(req.org.id, async (c) => {
       const started = (await c.query(`SELECT clock_timestamp() AS t`)).rows[0].t as Date;
       const mine = (await c.query(`SELECT id FROM collectors WHERE user_id = $1 AND status = 'active'`, [req.user.id])).rows[0]?.id ?? null;
+      // Nom de l'utilisateur et de la coopérative : affichés dans l'en-tête de l'accueil du téléphone
+      const meName = (await c.query(`SELECT full_name FROM users WHERE id = $1`, [req.user.id])).rows[0]?.full_name ?? null;
+      const orgName = (await c.query(`SELECT name FROM organizations WHERE id = $1`, [req.org.id])).rows[0]?.name ?? null;
 
       const specs: { key: string; sql: string; params?: any[] }[] = [
         { key: 'value_chains', sql: `SELECT id, code, name, default_unit, status, updated_at AS ts FROM value_chains` },
@@ -224,6 +227,8 @@ export class SyncController {
         has_more: hasMore,
         organization_id: req.org.id,
         my_collector_id: mine,
+        me_name: meName,
+        organization_name: orgName,
         permissions: [...req.org.permissions].sort(),
         changes,
       };

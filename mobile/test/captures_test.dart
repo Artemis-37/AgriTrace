@@ -71,7 +71,18 @@ class _Repo extends Repository {
   @override
   Future<List<Map<String, Object?>>> parcels() async => parcs;
   @override
-  Future<List<Map<String, Object?>>> searchProducers(String q) async => [];
+  Future<({String name, String org, String zone})> identity() async => (name: 'Koffi Yao Serge', org: 'Société Coopérative Agricole de Hiré', zone: 'Section Est');
+  @override
+  Future<List<Map<String, Object?>>> searchProducers(String q) async => [
+        {'id': 'pr1', 'internal_code': 'P00112', 'last_name': 'KONÉ', 'first_names': 'Awa', 'phone': '07 00 00 00 01', 'village': 'Hiré', 'section': 'Section Est'},
+        {'id': 'pr2', 'internal_code': 'P00131', 'last_name': 'YAO', 'first_names': 'Marie', 'phone': '05 00 00 00 02', 'village': 'Zégban', 'section': 'Section Est'},
+      ];
+  @override
+  Future<List<Map<String, Object?>>> chainsFor(String producerId) async => [{'id': 'vc1', 'name': 'Cacao'}];
+  @override
+  Future<List<Map<String, Object?>>> openCampaigns(String chainId) async => [{'id': 'c1', 'name': 'Campagne 2026-2027'}];
+  @override
+  Future<List<String>> unitsFor(String chainId) async => ['kg', 'sac'];
   @override
   Future<List<Map<String, Object?>>> linkableDeclarations({Set<String>? serverAvailableIds}) async => [];
 }
@@ -125,7 +136,7 @@ void main() {
   }
   Directory(dir).createSync(recursive: true);
 
-  Future<void> shot(WidgetTester t, String name, Widget screen, {List<String> perms = _collector, int pending = 0, int problems = 0}) async {
+  Future<void> shot(WidgetTester t, String name, Widget screen, {List<String> perms = _collector, int pending = 0, int problems = 0, Future<void> Function(WidgetTester)? after}) async {
     debugDisableShadows = false; // sinon les ombres des tests sont des aplats noirs (remis en place à la fin de chaque test)
     final db = _Db()..pending = pending..problems = problems;
     final api = _Api(_routes);
@@ -140,6 +151,8 @@ void main() {
           appBarTheme: const AppBarTheme(backgroundColor: Color(0xFF2F5D46), foregroundColor: Colors.white)),
       home: ExcludeFocus(child: screen))));
     await t.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));
+    await t.pump(const Duration(milliseconds: 100));
+    if (after != null) { await after(t); await t.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200))); await t.pump(const Duration(milliseconds: 200)); }
     FocusManager.instance.primaryFocus?.unfocus();
     await t.pump(const Duration(milliseconds: 100)); await t.pump(const Duration(milliseconds: 400));
     await t.runAsync(() async {
@@ -161,7 +174,12 @@ void main() {
     addTearDown(() => debugDisableShadows = true);
     try {
     await shot(t, 'collecteur-accueil', const HomeScreen(), pending: 1);
-    await shot(t, 'collecteur-nouvel-achat', const NewDeclarationScreen());
+    await shot(t, 'collecteur-choix-producteur', const NewDeclarationScreen());
+    await shot(t, 'collecteur-info-producteur', const NewDeclarationScreen(), after: (t) async { await t.tap(find.text('KONÉ Awa')); });
+    await shot(t, 'collecteur-nouvel-achat', const NewDeclarationScreen(), after: (t) async {
+      await t.tap(find.text('KONÉ Awa')); await t.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200))); await t.pump(const Duration(milliseconds: 200));
+      await t.tap(find.text('Continuer'));
+    });
     await shot(t, 'collecteur-historique', const HistoryScreen());
     await shot(t, 'collecteur-mon-stock', const MyStockScreen());
     await shot(t, 'collecteur-fiche', const FicheScreen());

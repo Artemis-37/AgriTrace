@@ -104,3 +104,8 @@
 - **Périmètre** : couches propres à chaque coopérative, **non répliquées** vers les postes et les appareils (le contrôle se fait sur le serveur auquel le poste se synchronise).
 - **Licence** : la base mondiale WDPA/WDPCA est limitée à un usage non commercial sauf autorisation de l'UNEP-WCMC ; à vérifier avant tout chargement en production. OpenStreetMap (ODbL) est une alternative pour les forêts classées.
 - **Vérifié** : 36 contrôles de bout en bout sur chacun des deux moteurs, 11 tests unitaires, essai sur un fichier réel de 248 zones (chargé en 0,5 s).
+
+## Interface collecteur alignée sur le terminal SNT (octobre 2026)
+- Accueil : en-tête (date, nom, coopérative, zone, total des achats du jour) et gros boutons ; « Acheter du produit » → fiche « Informations du producteur » → « Continuer ».
+- Non repris : « Potentiel de vente » et « Limite de la carte » (pas de donnée dans AgriTrace), et, sur consigne, impression du dernier reçu, recharge de compte, paiements en attente, producteurs pré-enregistrés.
+- Le montant affiché est le total local des achats du jour, pas un solde de compte SNT.
