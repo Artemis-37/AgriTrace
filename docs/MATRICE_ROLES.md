@@ -2,7 +2,7 @@
 
 Fichier généré par `backend/scripts/gen-matrice-roles.js` à partir du code : ne pas le modifier à la main. Les menus du portail et les routes de l'API se règlent sur les **permissions**, jamais sur le nom du rôle. Une coopérative crée ses propres rôles en combinant ces permissions ; les cinq rôles ci-dessous sont des modèles proposés.
 
-125 permissions, 292 routes protégées. Les droits sensibles (paiements, ajustements, exports de noms) peuvent en plus exiger une seconde approbation, réglée par rôle.
+126 permissions, 300 routes protégées. Les droits sensibles (paiements, ajustements, exports de noms) peuvent en plus exiger une seconde approbation, réglée par rôle.
 
 ## Rôles types
 - **Magasinier** (`magasinier`) : Réceptionne et pèse les convois au magasin central, tient les stocks et l'inventaire.
@@ -207,7 +207,7 @@ Colonnes : ✓ = accordé par le rôle type. Les rôles Administrateur de coopé
 |---|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|---|
 | `parcels:control` | Contrôler les données d'une parcelle |  |  |  |  |  | ✓ |  |  |  |  |  |  |  |  |  | ✓ |  | `POST /parcels/:id/control` |
 | `parcels:create` | Enregistrer des parcelles |  |  |  |  |  |  | ✓ | ✓ |  |  |  |  |  |  |  |  | ✓ | `POST /parcels` |
-| `parcels:read` | Consulter les parcelles |  |  |  | ✓ | ✓ | ✓ | ✓ | ✓ |  |  |  |  | ✓ |  |  | ✓ | ✓ | `GET /geo/settings`<br>`GET /geo/map`<br>`GET /parcels/checks`<br>… +2 |
+| `parcels:read` | Consulter les parcelles |  |  |  | ✓ | ✓ | ✓ | ✓ | ✓ |  |  |  |  | ✓ |  |  | ✓ | ✓ | `GET /geo/settings`<br>`GET /geo/map`<br>`GET /parcels/checks`<br>… +3 |
 | `parcels:update` | Modifier une parcelle (repasse en « déclarée ») |  |  |  |  |  | ✓ | ✓ |  |  |  |  |  |  |  |  |  |  | `POST /parcels/:id/update`<br>`POST /parcels/:id/archive` |
 | `parcels:verify` | Vérifier une parcelle (inspection conforme exigée) |  |  |  |  |  | ✓ |  |  |  |  |  |  |  |  |  | ✓ |  | `POST /parcels/:id/verify` |
 
@@ -257,7 +257,7 @@ Colonnes : ✓ = accordé par le rôle type. Les rôles Administrateur de coopé
 ### reconciliation
 | Permission | Rôle du droit | Magasinier | Caissier | Comptable | Direction | Responsable de traçabilité | Responsable cartographie | Cartographe | Agent de terrain | Responsable de magasin | Responsable financier | Responsable qualité | Responsable logistique | Auditeur | Acheteur / partenaire externe | Collecteur | Administrateur de groupe | Coach | Routes |
 |---|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|---|
-| `reconciliation:manage` | Effectuer et consulter les rapprochements |  |  |  |  |  |  |  |  |  | ✓ |  |  |  |  |  |  |  | `POST /reconciliations`<br>`GET /reconciliations` |
+| `reconciliation:manage` | Effectuer et consulter les rapprochements |  |  |  |  |  |  |  |  |  | ✓ |  |  |  |  |  |  |  | `POST /bank-statements/import`<br>`GET /bank-statements`<br>`GET /bank-statements/:id`<br>… +6 |
 
 ### replication
 | Permission | Rôle du droit | Magasinier | Caissier | Comptable | Direction | Responsable de traçabilité | Responsable cartographie | Cartographe | Agent de terrain | Responsable de magasin | Responsable financier | Responsable qualité | Responsable logistique | Auditeur | Acheteur / partenaire externe | Collecteur | Administrateur de groupe | Coach | Routes |
@@ -268,6 +268,7 @@ Colonnes : ✓ = accordé par le rôle type. Les rôles Administrateur de coopé
 | Permission | Rôle du droit | Magasinier | Caissier | Comptable | Direction | Responsable de traçabilité | Responsable cartographie | Cartographe | Agent de terrain | Responsable de magasin | Responsable financier | Responsable qualité | Responsable logistique | Auditeur | Acheteur / partenaire externe | Collecteur | Administrateur de groupe | Coach | Routes |
 |---|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|---|
 | `reports:read` | Consulter et exporter les rapports d'achats (période, section, collecteur, filière) |  |  |  | ✓ | ✓ | ✓ |  |  | ✓ | ✓ | ✓ | ✓ | ✓ |  |  | ✓ |  | `GET /reports/purchases`<br>`GET /reports/filters`<br>`GET /reports/purchases/xlsx`<br>… +6 |
+| `reports:schedule` | Programmer l'envoi automatique des rapports |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | — |
 
 ### roles
 | Permission | Rôle du droit | Magasinier | Caissier | Comptable | Direction | Responsable de traçabilité | Responsable cartographie | Cartographe | Agent de terrain | Responsable de magasin | Responsable financier | Responsable qualité | Responsable logistique | Auditeur | Acheteur / partenaire externe | Collecteur | Administrateur de groupe | Coach | Routes |

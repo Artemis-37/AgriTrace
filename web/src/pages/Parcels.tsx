@@ -65,6 +65,7 @@ export default function Parcels() {
 
 function ParcelDetail({ id, onClose }: { id: string; onClose: () => void }) {
   const { data, loading, error } = useAsync(() => get<any>(`/parcels/${id}`), [id]);
+  const versions = useAsync(() => get<any[]>(`/parcels/${id}/geometry-versions`), [id]);
   const EVENT: Record<string, string> = { created: 'Créée', updated: 'Modifiée', controlled: 'Contrôlée', verified: 'Vérifiée', reset: 'Remise à « déclarée »', archived: 'Archivée' };
   return (
     <Modal title={data ? `Parcelle ${data.code}` : 'Parcelle'} onClose={onClose}>
@@ -74,6 +75,8 @@ function ParcelDetail({ id, onClose }: { id: string; onClose: () => void }) {
           <p>Déclarée : {ha(data.declared_area_ha)} · Mesurée : {ha(data.geometry_area_ha)} · {data.latitude ? `GPS ${data.latitude}, ${data.longitude}` : 'GPS manquant'}</p>
           <h3>Historique</h3>
           <ul className="plain">{data.history.map((h: any, i: number) => <li key={i}>{new Date(h.at).toLocaleString('fr-FR')} — {EVENT[h.event] ?? h.event}</li>)}</ul>
+          <h3>Versions du tracé ({versions.data?.length ?? 0})</h3>
+          {versions.data?.length ? <ul className="plain">{versions.data.map((v: any) => <li key={v.version}>Version {v.version} — {new Date(v.changed_at).toLocaleString('fr-FR')} — {ha(v.area_ha)}{v.actor_name ? ` — ${v.actor_name}` : ''}{v.reason ? ` — ${v.reason}` : ''}</li>)}</ul> : <p className="muted">Aucun tracé enregistré.</p>}
           <h3>Inspections ({data.inspections.length})</h3>
           {data.inspections.length ? <ul className="plain">{data.inspections.map((i: any) => <li key={i.id}>{i.kind} — {i.status}{i.outcome ? ` — ${i.outcome}` : ''}</li>)}</ul> : <p className="muted">Aucune inspection.</p>}
         </>

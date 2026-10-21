@@ -73,6 +73,16 @@ export class ReportsController {
     return new StreamableFile(Buffer.from(await wb.xlsx.writeBuffer()), { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', disposition: 'attachment; filename="Rapport_des_achats.xlsx"' });
   }
 
+  /** Fichier Excel d'un rapport (même contenu que les routes `…/xlsx`), pour l'envoi programmé. */
+  async buildXlsx(kind: 'purchases' | 'finance' | 'stock' | 'quality', orgId: string, q: Record<string, string>): Promise<{ filename: string; buffer: Buffer }> {
+    const req = { org: { id: orgId } };
+    const f = kind === 'purchases' ? await this.xlsx(req, q) : kind === 'finance' ? await this.financeXlsx(req, q) : kind === 'stock' ? await this.stockXlsx(req, q) : await this.qualityXlsx(req, q);
+    const chunks: Buffer[] = [];
+    for await (const ch of f.getStream()) chunks.push(Buffer.from(ch as any));
+    const name = /filename="([^"]+)"/.exec(f.getHeaders().disposition ?? '')?.[1] ?? `Rapport_${kind}.xlsx`;
+    return { filename: name, buffer: Buffer.concat(chunks) };
+  }
+
   // ---------- Rapports unifiés : finance, stock, qualité (CDC §26) ----------
   private period(q: Record<string, string | undefined>) {
     for (const k of ['from', 'to']) if (q[k] && !DATE.test(q[k]!)) throw new BadRequestException('Dates attendues au format AAAA-MM-JJ');

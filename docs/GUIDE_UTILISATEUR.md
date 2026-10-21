@@ -160,6 +160,8 @@ Consultation des missions et des parcelles (mêmes écrans que le coach, selon l
 - **Équipe** : créer les comptes, choisir le rôle, suspendre, réactiver, révoquer les sessions, **réinitialiser un mot de passe** (le mot de passe temporaire n'est affiché qu'une fois), consulter l'historique d'accès.
 - **Profil de la coopérative** (Équipe) : nom commercial, adresse, téléphone, e-mail, devise, langue par défaut ; repris en en-tête des reçus.
 - **Rôles types** : 17 modèles prêts (direction, responsables de traçabilité / cartographie / magasin / financier / qualité / logistique, cartographe, agent de terrain, magasinier, caissier, comptable, collecteur, coach, ADG, auditeur, acheteur ou partenaire) à créer en un clic, puis à ajuster.
+- **Rapprochement bancaire** (Finances › Rapprochement bancaire) : importer le relevé de la banque en CSV, choisir les colonnes, simuler, importer ; les lignes correspondant à une seule opération du compte sont pointées d'office, les autres se pointent à la main ou s'ignorent avec une note ; les opérations du compte absentes du relevé sont listées pour être expliquées.
+- **Rapports automatiques** (Rapports › Envoi automatique) : choisir le rapport, la fréquence (jour, semaine, mois), l'heure et les destinataires ; chacun reçoit une notification et télécharge le fichier Excel ; envoi par e-mail si le serveur est configuré pour.
 - **Annulations** : traiter les demandes dans « Mes opérations » › « Demandes d'annulation ».
 - **Rôles** : créer des rôles en combinant les permissions ; certains droits sensibles peuvent exiger une seconde approbation.
 - **Référentiels** : filières, campagnes, prix (chaque modification crée une version datée).

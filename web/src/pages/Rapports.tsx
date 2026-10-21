@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useAuth } from '../auth';
+import { useDeepLink } from '../notifTarget';
 import { download, get } from '../api';
 import { kg, money } from '../format';
+import RapportsProgrammes from './RapportsProgrammes';
 import { Card, ErrorBox, Field, Loading, PageHeader, Stat, Table, useAsync } from '../ui';
 
 const GROUPS: [string, string][] = [['section', 'Section'], ['village', 'Village'], ['collector', 'Collecteur'], ['chain', 'Filière'], ['day', 'Jour']];
@@ -60,12 +62,13 @@ function Unified({ kind }: { kind: 'finance' | 'stock' | 'quality' }) {
 
 export default function Rapports() {
   const { can } = useAuth();
-  const tabs: [string, string][] = [['purchases', 'Achats'], ...(can('finance:read') ? [['finance', 'Finance'] as [string, string]] : []), ...(can('warehouses:read') ? [['stock', 'Stock'] as [string, string]] : []), ...(can('quality:read') ? [['quality', 'Qualité'] as [string, string]] : [])];
-  const [tab, setTab] = useState('purchases');
+  const tabs: [string, string][] = [['purchases', 'Achats'], ...(can('finance:read') ? [['finance', 'Finance'] as [string, string]] : []), ...(can('warehouses:read') ? [['stock', 'Stock'] as [string, string]] : []), ...(can('quality:read') ? [['quality', 'Qualité'] as [string, string]] : []), ['runs', 'Envoi automatique']];
+  const dl = useDeepLink(tabs.map((t) => t[0]));
+  const [tab, setTab] = useState(dl.tab ?? 'purchases');
   return (
     <>
       {tabs.length > 1 && <div className="tabs" role="tablist">{tabs.map(([k, l]) => <button key={k} role="tab" aria-selected={tab === k} className={tab === k ? 'tab active' : 'tab'} onClick={() => setTab(k)}>{l}</button>)}</div>}
-      {tab === 'purchases' ? <Achats /> : <><PageHeader title={`Rapport ${tabs.find(([k]) => k === tab)?.[1].toLowerCase()}`} subtitle="Synthèse sur la période choisie." /><Unified key={tab} kind={tab as any} /></>}
+      {tab === 'purchases' ? <Achats /> : tab === 'runs' ? <><PageHeader title="Envoi automatique" subtitle="Rapports générés à heure fixe, notifiés et téléchargeables ici" /><RapportsProgrammes /></> : <><PageHeader title={`Rapport ${tabs.find(([k]) => k === tab)?.[1].toLowerCase()}`} subtitle="Synthèse sur la période choisie." /><Unified key={tab} kind={tab as any} /></>}
     </>
   );
 }

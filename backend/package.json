@@ -9,7 +9,7 @@
     "start:dev": "nest start --watch",
     "migrate": "node scripts/migrate.js",
     "test": "jest",
-    "test:e2e": "node scripts/e2e-p1.js && node scripts/e2e-p2-p3.js && node scripts/e2e-p4.js && node scripts/e2e-p4b.js && node scripts/e2e-parcelles.js && node scripts/e2e-recus.js && node scripts/e2e-geo.js && node scripts/e2e-taches.js && node scripts/e2e-ventes.js && node scripts/e2e-etape-e.js && node scripts/e2e-messagerie.js && node scripts/e2e-convois.js && node scripts/e2e-convois-liaison.js && node scripts/e2e-app-update.js && node scripts/e2e-fonds-carte.js && node scripts/e2e-postgis.js && node scripts/e2e-zones-protegees.js && node scripts/e2e-terrain.js && node scripts/e2e-annulations.js && node scripts/e2e-compte.js && node scripts/e2e-roles.js && node scripts/e2e-postes.js && node scripts/e2e-replication.js"
+    "test:e2e": "node scripts/e2e-p1.js && node scripts/e2e-p2-p3.js && node scripts/e2e-p4.js && node scripts/e2e-p4b.js && node scripts/e2e-parcelles.js && node scripts/e2e-recus.js && node scripts/e2e-geo.js && node scripts/e2e-taches.js && node scripts/e2e-ventes.js && node scripts/e2e-etape-e.js && node scripts/e2e-messagerie.js && node scripts/e2e-convois.js && node scripts/e2e-convois-liaison.js && node scripts/e2e-app-update.js && node scripts/e2e-fonds-carte.js && node scripts/e2e-postgis.js && node scripts/e2e-zones-protegees.js && node scripts/e2e-terrain.js && node scripts/e2e-annulations.js && node scripts/e2e-compte.js && node scripts/e2e-ecarts.js && node scripts/e2e-roles.js && node scripts/e2e-postes.js && node scripts/e2e-replication.js"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.0",
@@ -31,6 +31,7 @@
     "exceljs": "^4.4.0",
     "helmet": "^7.1.0",
     "jszip": "^3.10.1",
+    "nodemailer": "^6.10.1",
     "pdfkit": "^0.15.2",
     "pg": "^8.12.0",
     "reflect-metadata": "^0.2.2",
@@ -44,6 +45,7 @@
     "@types/jest": "^29.5.12",
     "@types/multer": "^2.3.0",
     "@types/node": "^20.14.0",
+    "@types/nodemailer": "^6.4.24",
     "@types/pdfkit": "^0.17.6",
     "@types/pg": "^8.11.6",
     "jest": "^29.7.0",

@@ -43,6 +43,9 @@ import { GeoService } from './geo/geo.service';
 import { UsersController } from './users/users.controller';
 import { ConvoysController } from './convoys/convoys.controller';
 import { ProfileController } from './organizations/profile.controller';
+import { BankStatementsController } from './payments/bank-statements.controller';
+import { ReportScheduler, ReportSchedulesController } from './reports/schedules';
+import { PushService, PushTokenController } from './notifications/push';
 import { OperationsController } from './operations/operations.controller';
 import { ReportsController } from './reports/reports.controller';
 import { WorkstationsController } from './workstations/workstations.controller';
@@ -61,9 +64,9 @@ import { ReplicationService } from './replication/replication.service';
     OrganizationsController, LogoController, UsersController, ReferentialsController, ProducersController,
     CollectorsController, DeclarationsController, FinanceController,
     ReceptionController, StockController, LotsController, SyncController,
-    AccountingController, LoansController, PaymentsController, QualityController, ComplianceController, ParcelsController, GeoController, ReferenceLayersController, TasksController, LogisticsController, SalesController, NotificationsController, AccessAdminController, ProducerStatusController, PrefinancingController, StockCountController, MeController, OpsController, AppUpdateController, MapPacksController, ReplicationController, MessagesController, ConvoysController, OperationsController, ProfileController, WorkstationsController, ReportsController, FieldRecordsController,
+    AccountingController, LoansController, PaymentsController, QualityController, ComplianceController, ParcelsController, GeoController, ReferenceLayersController, TasksController, LogisticsController, SalesController, NotificationsController, AccessAdminController, ProducerStatusController, PrefinancingController, StockCountController, MeController, OpsController, AppUpdateController, MapPacksController, ReplicationController, MessagesController, ConvoysController, OperationsController, BankStatementsController, ReportSchedulesController, PushTokenController, ProfileController, WorkstationsController, ReportsController, FieldRecordsController,
   ],
-  providers: [NotificationsService, ReplicationService, 
+  providers: [NotificationsService, ReportScheduler, PushService, ReportsController, ReplicationService, 
     GeoService, GeoImportService,
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: AccessGuard },

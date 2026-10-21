@@ -248,6 +248,23 @@ export class ParcelsController {
       [producerId ?? null, vs ?? null])).rows);
   }
 
+  /** Versions successives de la géométrie (CDC §8.6) : numéro, date, auteur et motif ; `?with_geometry=1` pour le tracé de chaque version. */
+  @Get('parcels/:id/geometry-versions')
+  @RequirePermissions('parcels:read')
+  async geometryVersions(@Param('id', ParseUUIDPipe) id: string, @Query('with_geometry') withGeom: string | undefined, @Req() req: any) {
+    return this.db.tx(req.org.id, async (c) => {
+      if (!(await c.query(`SELECT 1 FROM parcels WHERE id = $1`, [id])).rowCount) throw new NotFoundException();
+      return (await c.query(
+        `SELECT v.version, v.changed_at, v.area_ha, v.geometry_hash, ${withGeom === '1' ? 'v.geometry,' : ''}
+                h.actor_id, u.full_name AS actor_name, h.details->>'reason' AS reason
+           FROM parcel_geometry_versions v
+           LEFT JOIN LATERAL (SELECT actor_id, details FROM parcel_history x WHERE x.parcel_id = v.parcel_id AND x.event IN ('created','updated') AND x.at = v.changed_at
+                               ORDER BY x.seq LIMIT 1) h ON true
+           LEFT JOIN users u ON u.id = h.actor_id
+          WHERE v.parcel_id = $1 ORDER BY v.version`, [id])).rows;
+    });
+  }
+
   @Get('parcels/:id')
   @RequirePermissions('parcels:read')
   async detail(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {

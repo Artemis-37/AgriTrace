@@ -5,13 +5,14 @@ import { useAuth } from '../auth';
 import { LOAN_KIND, LOAN_STATUS, PAYMENT_STATUS, date, dateTime, money } from '../format';
 import { Card, ErrorBox, Loading, PageHeader, StatusBadge, Table, useAsync } from '../ui';
 import { Confirm } from './Declarations';
+import Rapprochement from './Rapprochement';
 
-type Tab = 'accounts' | 'payments' | 'loans' | 'accounting';
+type Tab = 'accounts' | 'payments' | 'loans' | 'accounting' | 'bank';
 
 export default function Finance() {
   const { can } = useAuth();
   const tabs: [Tab, string, boolean][] = [
-    ['accounts', 'Comptes et caisses', true], ['payments', 'Paiements', can('payments:read')], ['loans', 'Prêts et préfinancements', can('loans:read')], ['accounting', 'Comptabilité', can('accounting:read')],
+    ['accounts', 'Comptes et caisses', true], ['payments', 'Paiements', can('payments:read')], ['loans', 'Prêts et préfinancements', can('loans:read')], ['accounting', 'Comptabilité', can('accounting:read')], ['bank', 'Rapprochement bancaire', can('reconciliation:manage')],
   ];
   const dl = useDeepLink(tabs.filter((t) => t[2]).map((t) => t[0]));
   const [tab, setTab] = useState<Tab>((dl.tab as Tab) ?? 'accounts');
@@ -25,6 +26,7 @@ export default function Finance() {
       {tab === 'payments' && <Payments />}
       {tab === 'loans' && <Loans />}
       {tab === 'accounting' && <Accounting />}
+      {tab === 'bank' && <Rapprochement />}
     </>
   );
 }

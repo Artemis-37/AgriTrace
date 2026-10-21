@@ -18,6 +18,7 @@ const BY_KIND: Record<string, { to: string; tab?: string; open?: boolean }> = {
   role_changed: { to: '/equipe' }, user_suspended: { to: '/equipe' },
   task_assigned: { to: '/missions', tab: 'tasks' }, task_overdue: { to: '/missions', tab: 'tasks' }, task_submitted: { to: '/missions', tab: 'tasks' }, task_to_correct: { to: '/missions', tab: 'tasks' },
   cancellation_request: { to: '/operations', tab: 'requests' }, cancellation_decided: { to: '/operations', tab: 'requests' },
+  report_ready: { to: '/rapports', tab: 'runs' },
   task_request: { to: '/missions', tab: 'requests' }, task_request_decided: { to: '/missions', tab: 'requests' },
 };
 const BY_ENTITY: Record<string, string> = {
