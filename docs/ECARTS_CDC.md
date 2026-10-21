@@ -105,19 +105,17 @@
 - **Licence** : la base mondiale WDPA/WDPCA est limitée à un usage non commercial sauf autorisation de l'UNEP-WCMC ; à vérifier avant tout chargement en production. OpenStreetMap (ODbL) est une alternative pour les forêts classées.
 - **Vérifié** : 36 contrôles de bout en bout sur chacun des deux moteurs, 11 tests unitaires, essai sur un fichier réel de 248 zones (chargé en 0,5 s).
 
-## Interface collecteur alignée sur le terminal SNT (octobre 2026)
+## Interface collecteur (accueil et fiche producteur) (octobre 2026)
 - Accueil : en-tête (date, nom, coopérative, zone, nombre d'achats du jour) et gros boutons ; « Acheter du produit » → fiche « Informations du producteur » → « Continuer ».
 - Non repris : « Potentiel de vente » et « Limite de la carte » (pas de donnée dans AgriTrace), et, sur consigne, impression du dernier reçu, recharge de compte, paiements en attente, producteurs pré-enregistrés.
 - Aucun montant n'est affiché sur l'accueil ; la cloche des notifications est dans l'en-tête.
 
-## Interface coach inspirée d'un outil terrain existant (octobre 2026)
+## Interface coach, première version (octobre 2026)
 - Accueil en tuiles, barre « Éléments à soumettre », recherche de producteur et fiche à deux onglets (Parcelles / Informations).
-- Non repris : formations, infrastructures sociales, distribution d'articles, enquêtes (hors périmètre actuel) et toute donnée des captures fournies.
 
-## Interface coach alignée sur le terminal de terrain (octobre 2026)
+## Interface coach (profil producteur, accueil en tuiles) (octobre 2026)
 - Les parcelles se consultent dans les « Informations sur le producteur » et les missions sont la « Liste des tâches » de la fiche du producteur ; pour relever une parcelle il faut d'abord choisir le producteur ; le fond de carte s'affiche depuis la fiche (« Ouvrir la carte ») et pendant le relevé. L'accueil ne propose plus « Mes parcelles », « Mes missions » ni « Fond de carte ».
 - Nouveaux écrans : « Télécharger les données » (synchronisation et fond de carte hors ligne), (l'écran « Capturer mon emplacement » a été retiré ensuite).
-- Non repris du terminal : ajout d'un nouveau producteur et de son exploitation, infrastructure sociale, distribution et services, enregistrement d'une formation, demande de désactivation d'un producteur (fonctions absentes du cahier des charges ou à définir).
 - Les tâches du producteur demandent le réseau (inchangé). Les notifications de missions ouvrent la liste des producteurs.
 
 ## Accueil coach complété (octobre 2026)
@@ -127,7 +125,7 @@
 - **Retiré (octobre 2026)** : la tuile « Capturer mon emplacement » (la position GPS reste utilisée dans les relevés et l'infrastructure sociale). Icônes de l'accueil coach revues pour mieux représenter chaque libellé.
 
 ## Distribution et services : parcours en 4 étapes
-- Parcours aligné sur le terminal de référence : articles (catégorie, groupe, recherche, pastilles) → vérification et devise → bénéficiaires → configuration (quantité, preuve photo, signature) → révision → enregistrement hors connexion.
+- Parcours : articles (catégorie, groupe, recherche, pastilles) → vérification et devise → bénéficiaires → configuration (quantité, preuve photo, signature) → révision → enregistrement hors connexion.
 - Formation : le module est une liste à cocher avec recherche ; seuls les modules du thème « Agriculture régénératrice » sont renseignés (autres thèmes : saisie libre).
 - Limites : les listes de modules des autres thèmes et les devises sont à valider ; la page de révision finale est une conception propre (non visible sur les captures de référence) ; non testé sur appareil réel.
 
@@ -143,3 +141,7 @@
 ## Catégories et groupes de distribution modifiables
 - Ajouté : `POST /distribution-articles/renommer` (catégorie ou groupe) et `/retirer-groupe` ; l'application des coachs déduit catégories et groupes du catalogue (valeurs de départ seulement si le catalogue est vide). Test `e2e-terrain` : 47 contrôles.
 - Limites : renommer ne change pas les distributions déjà enregistrées (elles gardent l'ancien nom) ; une catégorie vide ne peut pas exister (elle naît avec son premier article) ; non essayé dans un navigateur.
+
+## Logo de la coopérative (migration 032)
+- Ajouté : table `organization_logos`, routes `GET/PUT/DELETE /organization/logo`, droit `org:branding`, carte « Logo de la coopérative » dans Équipe, affichage dans le portail et l'accueil mobile (cache hors connexion). Contrôles : type réel vérifié (PNG/JPEG), SVG refusé, 1 Mo maximum, isolation entre coopératives, audit. Test `e2e-terrain` : 58 contrôles.
+- Limites : le logo n'apparaît pas encore dans les PDF ni les exports, ni dans l'application Windows hors portail ; il n'est pas répliqué entre le poste local et le cloud ; non essayé dans un navigateur ni sur téléphone.

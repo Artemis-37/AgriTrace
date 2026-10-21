@@ -125,6 +125,24 @@ const uuid = () => crypto.randomUUID();
   await call('POST', `/field-templates/${tpl.body.id}/retirer`, { ...J(A) });
   check('un modèle retiré disparaît chez le coach', (await call('GET', '/field-templates', { ...J(A, coach.t) })).body.every((x) => x.category !== 'Centre de santé'));
 
+  console.log('Logo de la coopérative');
+  const PNGB = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+  const put = async (tok, org, buf, name = 'logo.png') => { const f = new FormData(); f.append('file', new Blob([buf]), name); const r = await fetch(API + '/organization/logo', { method: 'PUT', headers: { authorization: `Bearer ${tok}`, 'x-organization-id': org }, body: f }); return { status: r.status, body: await r.json().catch(() => null) }; };
+  const getLogo = async (tok, org, extra = {}) => fetch(API + '/organization/logo', { headers: { authorization: `Bearer ${tok}`, 'x-organization-id': org, ...extra } });
+  check('aucun logo au départ : 404', (await getLogo(A.t, A.org.id)).status === 404);
+  check('le coach ne change pas le logo', (await put(coach.t, A.org.id, PNGB)).status === 403);
+  check('un SVG est refusé', (await put(A.t, A.org.id, Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>'), 'logo.svg')).status === 400);
+  check('un faux PNG est refusé (type réel vérifié)', (await put(A.t, A.org.id, Buffer.from('MZ-pas-une-image'), 'logo.png')).status === 400);
+  check('un fichier trop lourd est refusé', (await put(A.t, A.org.id, Buffer.concat([PNGB, Buffer.alloc(1100000)]))).status === 413);
+  check("l'administrateur enregistre le logo", (await put(A.t, A.org.id, PNGB)).status === 200);
+  const g = await getLogo(coach.t, A.org.id);
+  const gb = Buffer.from(await g.arrayBuffer());
+  check('un membre (coach) lit le logo, type image/png', g.status === 200 && g.headers.get('content-type') === 'image/png' && gb.equals(PNGB) && g.headers.get('x-content-type-options') === 'nosniff');
+  check('ETag : 304 si inchangé', (await getLogo(coach.t, A.org.id, { 'if-none-match': g.headers.get('etag') })).status === 304);
+  check("l'autre coopérative n'a pas ce logo", (await getLogo(B.t, B.org.id)).status === 404);
+  check('le coach ne supprime pas le logo', (await call('DELETE', '/organization/logo', { ...J(A, coach.t) })).status === 403);
+  check("l'administrateur supprime le logo", (await call('DELETE', '/organization/logo', { ...J(A) })).status === 200 && (await getLogo(A.t, A.org.id)).status === 404);
+
   console.log(`\n${ok} contrôles réussis, ${ko} en échec`);
   process.exit(ko ? 1 : 0);
 })();

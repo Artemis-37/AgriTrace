@@ -2,7 +2,7 @@
 
 Fichier généré par `backend/scripts/gen-matrice-roles.js` à partir du code : ne pas le modifier à la main. Les menus du portail et les routes de l'API se règlent sur les **permissions**, jamais sur le nom du rôle. Une coopérative crée ses propres rôles en combinant ces permissions ; les cinq rôles ci-dessous sont des modèles proposés.
 
-122 permissions, 283 routes protégées. Les droits sensibles (paiements, ajustements, exports de noms) peuvent en plus exiger une seconde approbation, réglée par rôle.
+123 permissions, 285 routes protégées. Les droits sensibles (paiements, ajustements, exports de noms) peuvent en plus exiger une seconde approbation, réglée par rôle.
 
 ## Rôles types
 - **Magasinier** (`magasinier`) : Réceptionne et pèse les convois au magasin central, tient les stocks et l'inventaire.
@@ -172,6 +172,11 @@ Colonnes : ✓ = accordé par le rôle type. Les rôles Administrateur de coopé
 | Permission | Rôle du droit | Magasinier | Caissier | Collecteur | Administrateur de groupe | Coach | Routes |
 |---|---|:-:|:-:|:-:|:-:|:-:|---|
 | `orders:manage` | Créer, confirmer et annuler des commandes, affecter des lots |  |  |  |  |  | `POST /sales-orders`<br>`POST /sales-orders/:id/confirm`<br>`POST /sales-orders/:id/cancel`<br>… +3 |
+
+### org
+| Permission | Rôle du droit | Magasinier | Caissier | Collecteur | Administrateur de groupe | Coach | Routes |
+|---|---|:-:|:-:|:-:|:-:|:-:|---|
+| `org:branding` | Modifier l'identité visuelle de la coopérative (logo) |  |  |  |  |  | `PUT /organization/logo`<br>`DELETE /organization/logo` |
 
 ### organizations
 | Permission | Rôle du droit | Magasinier | Caissier | Collecteur | Administrateur de groupe | Coach | Routes |

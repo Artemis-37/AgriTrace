@@ -31,7 +31,7 @@ class _NewDeclarationScreenState extends State<NewDeclarationScreen> {
   String? _error;
   bool _saving = false;
   String? _photoPath;
-  bool _infoOk = false; // fiche « Informations du producteur » vue et validée (comme sur le terminal SNT)
+  bool _infoOk = false; // fiche « Informations du producteur » vue et validée
 
   String get _dateStr => _date.toIso8601String().substring(0, 10);
 
@@ -170,7 +170,7 @@ class _NewDeclarationScreenState extends State<NewDeclarationScreen> {
 }
 
 
-/// Fiche « Informations du producteur » affichée après sa sélection, avant la saisie de l'achat (modèle du terminal SNT).
+/// Fiche « Informations du producteur » affichée après sa sélection, avant la saisie de l'achat.
 class _ProducerInfo extends StatelessWidget {
   final Map<String, Object?> producer;
   final String? error;

@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -54,6 +55,34 @@ class ApiClient {
 
   Future<dynamic> get(String path, {Map<String, String>? query}) => _send('GET', path, query: query);
   Future<dynamic> post(String path, Object body) => _send('POST', path, body: body);
+
+  /// Lecture d'un fichier binaire (logo) : null s'il n'existe pas (404).
+  Future<Uint8List?> getBytes(String path) async {
+    Future<http.Response> once() async {
+      final headers = <String, String>{};
+      final t = await store.accessToken;
+      if (t != null) headers['authorization'] = 'Bearer $t';
+      final dev = await store.deviceToken;
+      if (dev != null) headers['x-device-token'] = dev;
+      final o = await store.orgId;
+      if (o != null) headers['x-organization-id'] = o;
+      return _http.get(_uri(path), headers: headers).timeout(const Duration(seconds: 30));
+    }
+
+    try {
+      var res = await once();
+      if (res.statusCode == 401 && await _refresh()) res = await once();
+      if (res.statusCode == 404) return null;
+      if (res.statusCode >= 400) throw ApiException(res.statusCode, 'Lecture impossible');
+      return res.bodyBytes;
+    } on SocketException catch (e) {
+      throw NetworkException(e.message);
+    } on TimeoutException {
+      throw NetworkException('Délai dépassé');
+    } on http.ClientException catch (e) {
+      throw NetworkException(e.message);
+    }
+  }
 
   Future<dynamic> _send(String method, String path,
       {Object? body, Map<String, String>? query, bool auth = true, bool org = true}) async {

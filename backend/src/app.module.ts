@@ -13,6 +13,7 @@ import { ReceptionController } from './reception/reception.controller';
 import { StockController } from './stock/stock.controller';
 import { SyncController } from './sync/sync.controller';
 import { OrganizationsController } from './organizations/organizations.controller';
+import { LogoController } from './organizations/logo.controller';
 import { ProducersController } from './producers/producers.controller';
 import { ReferentialsController } from './referentials/referentials.controller';
 import { AccountingController } from './accounting/accounting.controller';
@@ -55,7 +56,7 @@ import { ReplicationService } from './replication/replication.service';
     AuthModule,
   ],
   controllers: [
-    OrganizationsController, UsersController, ReferentialsController, ProducersController,
+    OrganizationsController, LogoController, UsersController, ReferentialsController, ProducersController,
     CollectorsController, DeclarationsController, FinanceController,
     ReceptionController, StockController, LotsController, SyncController,
     AccountingController, LoansController, PaymentsController, QualityController, ComplianceController, ParcelsController, GeoController, ReferenceLayersController, TasksController, LogisticsController, SalesController, NotificationsController, AccessAdminController, ProducerStatusController, PrefinancingController, StockCountController, MeController, OpsController, AppUpdateController, MapPacksController, ReplicationController, MessagesController, ConvoysController, WorkstationsController, ReportsController, FieldRecordsController,

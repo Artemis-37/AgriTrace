@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { get, post, put } from '../api';
+import { useRef } from 'react';
+import { del, get, post, put, putForm } from '../api';
+import OrgLogo, { LOGO_EVENT } from '../OrgLogo';
 import { useAuth } from '../auth';
 import { Badge, Card, ErrorBox, Field, Loading, Modal, PageHeader, Table, useAction, useAsync } from '../ui';
 import { dateTime } from '../format';
@@ -18,6 +20,7 @@ export default function Equipe() {
   return (
     <>
       <PageHeader title="Équipe" subtitle="Accès des utilisateurs : suspension, rôles et historique. Tout changement prend effet immédiatement." />
+      {can('org:branding') && <LogoCard />}
       {can('users:create') && <div className="toolbar"><button className="btn" onClick={() => setAdding(true)}>Ajouter un utilisateur</button></div>}
       {can('roles:manage') && (data?.templates?.length ?? 0) > 0 && (
         <Card title="Rôles types">
@@ -155,5 +158,30 @@ function History({ u, onClose }: { u: any; onClose: () => void }) {
       {loading && <Loading />}{error && <ErrorBox message={error} />}
       {data && <Table rows={data} empty="Aucun événement." columns={[{ header: 'Date', render: (e: any) => dateTime(e.created_at) }, { header: 'Action', render: (e: any) => ACTIONS[e.action] ?? e.action }, { header: 'Par', render: (e: any) => e.actor_name ?? '—' }, { header: 'Motif', render: (e: any) => e.reason ?? '—' }]} />}
     </Modal>
+  );
+}
+
+/** Identité de la coopérative : son logo apparaît dans son portail et dans l'application mobile de ses équipes. */
+function LogoCard() {
+  const file = useRef<HTMLInputElement>(null);
+  const act = useAction();
+  const changed = () => window.dispatchEvent(new Event(LOGO_EVENT));
+  const send = async () => {
+    const f = file.current?.files?.[0];
+    if (!f) return;
+    const form = new FormData(); form.append('file', f);
+    if (await act.run(() => putForm('/organization/logo', form))) { if (file.current) file.current.value = ''; changed(); }
+  };
+  return (
+    <Card title="Logo de la coopérative">
+      <p className="muted">Image PNG ou JPEG de 1 Mo maximum (fond clair ou transparent de préférence). Elle s'affiche en tête du portail et sur l'accueil de l'application mobile ; les téléphones la reçoivent à leur prochaine synchronisation.</p>
+      <div style={{ minHeight: 60, marginBottom: 8 }}><OrgLogo height={80} /></div>
+      <div className="toolbar">
+        <input ref={file} type="file" accept="image/png,image/jpeg" aria-label="Choisir un logo" />
+        <button className="btn" disabled={act.busy} onClick={send}>Enregistrer le logo</button>
+        <button className="btn btn-ghost" disabled={act.busy} onClick={async () => { if (confirm('Supprimer le logo ?') && (await act.run(() => del('/organization/logo')))) changed(); }}>Supprimer</button>
+      </div>
+      {act.error && <ErrorBox message={act.error} />}
+    </Card>
   );
 }

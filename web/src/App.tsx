@@ -23,6 +23,7 @@ import OfflineBar from './OfflineBar';
 import Synchronisation from './pages/Synchronisation';
 import CentralConsole from './pages/CentralConsole';
 import Missions from './pages/Missions';
+import OrgLogo from './OrgLogo';
 import Terrain from './pages/Terrain';
 import Parcels from './pages/Parcels';
 import Producers from './pages/Producers';
@@ -89,7 +90,7 @@ export default function App() {
         <strong>AgriTrace</strong>
       </div>
       <aside className={`sidebar ${open ? 'open' : ''}`}>
-        <div className="brand"><strong>Agri<span>Trace</span></strong><small>La traçabilité agricole, de la parcelle au marché.</small></div>
+        <div className="brand"><strong>Agri<span>Trace</span></strong><small>La traçabilité agricole, de la parcelle au marché.</small><div className="org-logo-box"><OrgLogo /></div></div>
         <nav className="nav" aria-label="Navigation principale" onClick={() => setOpen(false)}>
           {NAV.filter((n) => (n.any ? n.perm.some((p) => can(p)) : can(...n.perm)) && (!n.only || me?.account_kind === n.only) && (!n.notFor || me?.account_kind !== n.notFor)).map((n) => (
             <NavLink key={n.to} to={n.to} end={n.to === '/'}><span aria-hidden="true">{n.icon}</span>{n.label}{n.to === '/messages' && msgUnread > 0 && <span className="badge badge-bad" style={{ marginLeft: 'auto' }} aria-label={`${msgUnread} message(s) non lu(s)`}>{msgUnread}</span>}</NavLink>

@@ -13,7 +13,7 @@ import 'producer_map_screen.dart';
 const _green = Color(0xFF2F5D46);
 const _action = Color(0xFF3F9B2E);
 
-/// Profil d'un producteur (même organisation que le terminal de terrain) :
+/// Profil d'un producteur :
 /// onglet « Liste des tâches » (les missions de ce producteur) et onglet « Informations sur le producteur »
 /// (identité, parcelles capturées, relevé d'une parcelle, carte).
 class ProducerDetailScreen extends StatefulWidget {

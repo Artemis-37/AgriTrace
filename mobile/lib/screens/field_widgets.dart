@@ -25,7 +25,7 @@ class FieldBand extends StatelessWidget {
       );
 }
 
-/// Bloc blanc à bordure fine, comme les cartes du terminal de terrain.
+/// Bloc blanc à bordure fine.
 class FieldCard extends StatelessWidget {
   final String? title;
   final Widget child;

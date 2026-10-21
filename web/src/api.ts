@@ -164,3 +164,29 @@ export async function postForm<T = any>(path: string, form: FormData): Promise<T
 
 /** Clé d'idempotence pour une action de l'utilisateur (un double clic ne crée pas de doublon). */
 export const idem = () => (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `k-${Date.now()}-${Math.random().toString(16).slice(2)}`);
+
+/** Récupère un fichier binaire de la coopérative courante (null s'il n'existe pas). */
+export async function getBlob(path: string): Promise<Blob | null> {
+  const res = await raw(path);
+  if (res.status === 404) return null;
+  if (!res.ok) throw new ApiError(res.status, `Lecture impossible (${res.status})`);
+  return res.blob();
+}
+
+export async function putForm<T = any>(path: string, form: FormData): Promise<T> {
+  const res = await raw(path, { method: 'PUT', body: form });
+  const text = await res.text();
+  let body: any = null;
+  try { body = text ? JSON.parse(text) : null; } catch { body = text; }
+  if (!res.ok) throw new ApiError(res.status, errorMessage(body, res.status === 413 ? 'Fichier trop lourd (1 Mo maximum)' : `Erreur ${res.status}`), body);
+  return body as T;
+}
+
+export async function del<T = any>(path: string): Promise<T> {
+  const res = await raw(path, { method: 'DELETE' });
+  const text = await res.text();
+  let body: any = null;
+  try { body = text ? JSON.parse(text) : null; } catch { body = text; }
+  if (!res.ok) throw new ApiError(res.status, errorMessage(body, `Erreur ${res.status}`), body);
+  return body as T;
+}

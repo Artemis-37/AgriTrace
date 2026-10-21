@@ -1,4 +1,8 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
+
+import '../data/org_logo.dart';
 
 import '../config.dart';
 import '../main.dart';
@@ -42,6 +46,15 @@ class _HomeScreenState extends State<HomeScreen> {
     services.sync.status.addListener(_reload);
     services.sync.revoked.addListener(_onRevoked);
     _reload();
+    _loadLogo();
+  }
+
+  Uint8List? _logo;
+
+  Future<void> _loadLogo() async {
+    final c = await OrgLogo.cached();
+    if (mounted && c != null) setState(() => _logo = c);
+    if (await OrgLogo.refresh()) { final n = await OrgLogo.cached(); if (mounted) setState(() => _logo = n); }
   }
 
   @override
@@ -132,7 +145,7 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: const Color(0xFFF7FAF2),
       body: Column(children: [
         _HomeHeader(
-          now: _now, name: _identity.name, org: _identity.org, zone: _identity.zone,
+          logo: _logo, now: _now, name: _identity.name, org: _identity.org, zone: _identity.zone,
           count: _coachMode ? null : t.count, unread: _unreadNotes, onNotes: () => _open(const NotificationsScreen()),
           onSync: () => services.sync.run(),
           onSignOut: _signOut,
@@ -177,7 +190,7 @@ class _HomeScreenState extends State<HomeScreen> {
       );
 
   Widget _coachBody() {
-    // Même organisation que le terminal de terrain : les parcelles et les tâches se consultent depuis la fiche du producteur.
+    // Les parcelles et les tâches se consultent depuis la fiche du producteur.
     final r1 = <Widget>[
       if (_canProducer) _tile(Icons.person_add, 'Ajouter un nouveau producteur et une exploitation agricole', () => _open(const AddProducerScreen(), sync: true), height: 150),
       _tile(Icons.groups, 'Producteurs et enquêtes', () => _open(const ProducersScreen()), height: 150, iconWidget: const _GroupCheckIcon()),
@@ -258,13 +271,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-/// En-tête de l'accueil, sur le modèle du terminal SNT : date, salutation, coopérative, zone, total du jour.
+/// En-tête de l'accueil : date, salutation, coopérative, zone, total du jour.
 class _HomeHeader extends StatelessWidget {
   final String now, name, org, zone;
+  final Uint8List? logo;
   final int? count;
   final int unread;
   final VoidCallback onSync, onSignOut, onNotes;
-  const _HomeHeader({required this.now, required this.name, required this.org, required this.zone, required this.count, required this.unread, required this.onNotes, required this.onSync, required this.onSignOut});
+  const _HomeHeader({this.logo, required this.now, required this.name, required this.org, required this.zone, required this.count, required this.unread, required this.onNotes, required this.onSync, required this.onSignOut});
 
   @override
   Widget build(BuildContext context) {
@@ -302,7 +316,13 @@ class _HomeHeader extends StatelessWidget {
         const SizedBox(height: 6),
         Text(now, style: const TextStyle(color: white, fontSize: 13)),
         if (name.isNotEmpty) Text('Bonjour, ${name.toUpperCase()}', style: const TextStyle(color: white, fontSize: 18, fontWeight: FontWeight.w700)),
-        if (org.isNotEmpty) Text(org, style: const TextStyle(color: white, fontSize: 15)),
+        if (org.isNotEmpty || logo != null) Row(children: [
+          if (logo != null) Container(
+            height: 40, margin: const EdgeInsets.only(right: 10), padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+            decoration: BoxDecoration(color: white, borderRadius: BorderRadius.circular(8)),
+            child: Image.memory(logo!, fit: BoxFit.contain, errorBuilder: (_, __, ___) => const SizedBox.shrink())),
+          if (org.isNotEmpty) Expanded(child: Text(org, style: const TextStyle(color: white, fontSize: 15))),
+        ]),
         if (zone.isNotEmpty) Text('Zone : $zone', style: const TextStyle(color: white, fontSize: 14, fontWeight: FontWeight.w600)),
         if (count != null) ...[
           const SizedBox(height: 10),
@@ -313,7 +333,7 @@ class _HomeHeader extends StatelessWidget {
   }
 }
 
-/// Gros bouton de l'accueil (même principe que le terminal SNT).
+/// Gros bouton de l'accueil.
 class _HomeButton extends StatelessWidget {
   final IconData icon;
   final String label;
