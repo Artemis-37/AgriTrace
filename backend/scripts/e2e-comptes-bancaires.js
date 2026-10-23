@@ -8,6 +8,11 @@ async function call(m, p, { token, org, body } = {}) { const r = await fetch(API
   const org = (await call('POST', '/organizations', { token: adm, body: { code: 'CB' + run, name: 'CB' + run } })).body;
   await call('POST', `/organizations/${org.id}/admins`, { token: adm, body: { email: `cb.${run}@t.test`, full_name: 'Chef', password: pw } });
   const A = { token: (await call('POST', '/auth/login', { body: { email: `cb.${run}@t.test`, password: pw } })).body.access_token, org: org.id };
+  const login2 = async (code) => {
+    const role = (await call('POST', '/roles', { ...A, body: { code, name: code, permissions: code === 'caissier' ? ['finance:read', 'cash:operate', 'cash:read', 'convoys:settle'] : ['convoys:receive'] } })).body;
+    const email = `${code}.${run}@t.test`; await call('POST', '/users', { ...A, body: { email, full_name: code, password: pw, role_id: role.id } });
+    const tk = (await call('POST', '/auth/login', { body: { email, password: pw } })).body.access_token; return { token: tk, org: org.id };
+  };
   const r = await call('POST', '/financial-accounts', { ...A, body: { owner_type: 'other', name: 'SGBCI 0123', bank_name: 'SGBCI', account_number: 'CI0123456789', opening_balance: '2500000' } });
   check('compte créé avec banque, n° et solde initial', r.status < 300 && r.body.account_number === 'CI0123456789' && r.body.bank_name === 'SGBCI', r.body);
   const l = (await call('GET', '/financial-accounts', A)).body.find((a) => a.id === r.body.id);
@@ -30,6 +35,16 @@ async function call(m, p, { token, org, body } = {}) { const r = await fetch(API
   check('journal espèces : 150 000 (fonds + entrée), sans le virement', jc.closing === 150000 && jc.total_in === 150000, jc);
   const jb = (await call('GET', `/cash-journal?from=2000-01-01&to=2099-12-31&account_id=${r.body.id}`, A)).body;
   check('journal du compte bancaire : 2 500 000 + 300 000', jb.closing === 2800000 && jb.rows.some((x) => x.label.includes('virement')), jb);
+  // Évolution du compte : ce qui y est ajouté ou soustrait, visible des détenteurs de finance:read
+  await call('POST', '/financial-transactions', { ...A, body: { idempotency_key: 'sor-bq-' + run, account_id: r.body.id, cash_session_id: ses.id, direction: 'out', amount: '120000', reason: 'Paiement fournisseur par chèque' } });
+  const sm = await call('GET', `/financial-accounts/${r.body.id}/statement?from=2000-01-01&to=2099-12-31`, A);
+  check('évolution : ouverture 0, entrées 2 800 000, sorties 120 000, solde 2 680 000', sm.status === 200 && sm.body.opening === 0 && sm.body.total_in === 2800000 && sm.body.total_out === 120000 && sm.body.closing === 2680000, sm.body);
+  check('évolution : solde cumulé ligne à ligne et série par jour', sm.body.rows.at(-1).balance === 2680000 && sm.body.series.length >= 1 && sm.body.rows.every((x, i, a) => i === 0 || x.at >= a[i - 1].at));
+  check('évolution : solde d\'ouverture reporté après la période', (await call('GET', `/financial-accounts/${r.body.id}/statement?from=2099-01-01&to=2099-12-31`, A)).body.opening === 2680000);
+  const cais = await login2('caissier');
+  check('le caissier voit l\'évolution du compte', cais && (await call('GET', `/financial-accounts/${r.body.id}/statement`, cais)).status === 200);
+  const mag = await login2('magasinier');
+  check('le magasinier n\'y a pas accès', mag && (await call('GET', `/financial-accounts/${r.body.id}/statement`, mag)).status === 403);
   check('clôture de caisse : seuls les espèces comptent (150 000 attendus)', Number((await call('POST', `/cash-sessions/${ses.id}/close`, { ...A, body: { counted_amount: '150000' } })).body.variance) === 0);
   console.log(`${ok} contrôles réussis, ${ko} en échec`); process.exit(ko ? 1 : 0);
 })();

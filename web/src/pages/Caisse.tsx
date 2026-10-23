@@ -17,12 +17,12 @@ const range = (p: Period): [string, string] | null => {
   return null;
 };
 
-type Key = 'cash' | 'variance' | 'accounts' | 'journal' | 'in' | 'out' | 'desk' | 'entry';
+type Key = 'cash' | 'variance' | 'accounts' | 'journal' | 'in' | 'out' | 'desk' | 'entry' | 'bank';
 const GROUPS: { title: string; perm: string; items: [Key, string][] }[] = [
   { title: 'Opérations', perm: 'convoys:settle', items: [['cash', 'Traiter une pesée / régler un achat'], ['variance', 'Écarts de poids à valider']] },
   { title: 'Achats prod. agricole', perm: 'convoys:settle', items: [['cash', 'Journal des achats (pesées à traiter)']] },
   { title: 'Solde délégué', perm: 'convoys:settle', items: [['accounts', 'Solde et fiche des délégués']] },
-  { title: 'Mouvements de caisse', perm: 'finance:read', items: [['desk', 'Ouvrir / fermer la caisse'], ['entry', 'Enregistrer une entrée / sortie'], ['journal', 'Mouvements de caisse'], ['in', 'Les entrées en caisse'], ['out', 'Les sorties de caisse']] },
+  { title: 'Mouvements de caisse', perm: 'finance:read', items: [['desk', 'Ouvrir / fermer la caisse'], ['entry', 'Enregistrer une entrée / sortie'], ['journal', 'Mouvements de caisse'], ['in', 'Les entrées en caisse'], ['out', 'Les sorties de caisse'], ['bank', 'Évolution des comptes bancaires']] },
 ];
 
 /** Caisse : menu à gauche en rubriques dépliantes, journal de caisse avec solde d'ouverture et solde actuel. */
@@ -52,6 +52,7 @@ export default function Caisse() {
           {cur === 'accounts' && <Accounts />}
           {cur === 'desk' && <CashDesk />}
           {cur === 'entry' && <CashEntry />}
+          {cur === 'bank' && <BankEvolution />}
           {(cur === 'journal' || cur === 'in' || cur === 'out') && <Journal key={cur} kind={cur === 'in' ? 'in' : cur === 'out' ? 'out' : ''} />}
         </div>
       </div>
@@ -138,6 +139,48 @@ function CashDesk() {
           })}
           {can('cash:manage') && <div className="toolbar"><input placeholder="Nom de la nouvelle caisse" value={name} maxLength={100} onChange={(e) => setName(e.target.value)} />
             <button className="btn btn-secondary" disabled={act.busy || name.trim().length < 2} onClick={() => act.run(async () => { await post('/cash-registers', { name: name.trim() }); setName(''); reload(); })}>Créer une caisse</button></div>}
+        </>
+      )}
+    </Card>
+  );
+}
+
+/** Évolution d'un compte bancaire : solde d'ouverture, ce qui y est ajouté (+) ou soustrait (−), solde cumulé et courbe du solde. Réservé aux détenteurs du droit finance:read (caisse, comptabilité, direction…). */
+export function BankEvolution({ accountId }: { accountId?: string }) {
+  const [acc, setAcc] = useState(accountId ?? '');
+  const [from, setFrom] = useState(iso(new Date(Date.now() - 29 * 86400000)));
+  const [to, setTo] = useState(iso(new Date()));
+  const [q, setQ] = useState({ from, to });
+  const banks = useAsync(async () => (await get<any[]>('/financial-accounts')).filter((a) => a.owner_type === 'other'), []);
+  const id = acc || banks.data?.[0]?.id || '';
+  const { data, loading, error, reload } = useAsync(() => (id ? get<any>(`/financial-accounts/${id}/statement?from=${q.from}&to=${q.to}`) : Promise.resolve(null)), [id, q.from, q.to]);
+  const pts: { date: string; balance: number }[] = data ? [{ date: q.from, balance: data.opening }, ...data.series] : [];
+  const W = 640, H = 120, min = Math.min(...pts.map((p) => p.balance), 0), max = Math.max(...pts.map((p) => p.balance), 1);
+  const path = pts.map((p, i) => `${i ? 'L' : 'M'}${pts.length > 1 ? (i / (pts.length - 1)) * W : 0},${H - ((p.balance - min) / (max - min || 1)) * (H - 10) - 5}`).join(' ');
+  return (
+    <Card>
+      <h2 className="win-title">Évolution des comptes bancaires</h2>
+      <div className="toolbar">
+        {!accountId && <label>Compte <select value={id} onChange={(e) => setAcc(e.target.value)}>{(banks.data ?? []).map((b: any) => <option key={b.id} value={b.id}>{b.name}</option>)}</select></label>}
+        <label>Du <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></label>
+        <label>Au <input type="date" value={to} onChange={(e) => setTo(e.target.value)} /></label>
+        <button className="btn" onClick={() => (from === q.from && to === q.to ? reload() : setQ({ from, to }))}>Afficher</button>
+        <button className="btn btn-secondary" onClick={() => window.print()}>Imprimer</button>
+      </div>
+      {error && <ErrorBox message={error} onRetry={reload} />}
+      {!id && !banks.loading ? <p className="muted">Aucun compte bancaire. Créez-le dans Comptabilité → États des comptes.</p> : loading || !data ? <Loading /> : (
+        <>
+          <div className="solde-bar"><span>SOLDE OUVERTURE <b>{FR(data.opening)}</b></span><span>AJOUTÉ (+) <b>{FR(data.total_in)}</b></span><span>SOUSTRAIT (−) <b>{FR(data.total_out)}</b></span><span className="big">SOLDE <b>{FR(data.closing)}</b></span></div>
+          {pts.length > 1 && <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Évolution du solde du compte" style={{ width: '100%', maxHeight: 140 }}><path d={path} fill="none" stroke="currentColor" strokeWidth="2" /></svg>}
+          <div className="tw"><table>
+            <thead><tr><th>N°</th><th>Date</th><th>Heure</th><th>Libellé</th><th className="r">Soustrait (−)</th><th className="r">Ajouté (+)</th><th className="r">Solde</th><th>Opérateur</th></tr></thead>
+            <tbody>
+              {data.rows.map((r: any) => (
+                <tr key={r.id} className={r.reversal ? 'muted' : ''}><td>{r.n}</td><td>{new Date(r.at).toLocaleDateString('fr-FR')}</td><td>{new Date(r.at).toLocaleTimeString('fr-FR')}</td><td>{r.label}{r.reversal ? ' (écriture inverse)' : ''}</td>
+                  <td className="r">{FR(r.out)}</td><td className="r">{FR(r.in)}</td><td className="r"><strong>{FR(r.balance)}</strong></td><td>{r.by ?? ''}</td></tr>
+              ))}
+              {!data.rows.length && <tr><td colSpan={8} className="muted">Aucun mouvement sur la période.</td></tr>}
+            </tbody></table></div>
         </>
       )}
     </Card>

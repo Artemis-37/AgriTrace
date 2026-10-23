@@ -1,3 +1,4 @@
+import { BankEvolution } from './Caisse';
 import { ReactNode, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { get, post } from '../api';
@@ -175,13 +176,15 @@ function Banks() {
   const { data, loading, error, reload } = useAsync(() => get<any[]>('/financial-accounts'), []);
   const rows = (data ?? []).filter((a) => a.owner_type !== 'collector' && a.owner_type !== 'producer');
   const [adding, setAdding] = useState(false);
+  const [evo, setEvo] = useState<string | null>(null);
   const [name, setName] = useState(''); const [num, setNum] = useState(''); const [open0, setOpen0] = useState('');
   const act = useAction();
   return (
     <Frame title="État des comptes bancaires et caisses" total={<span>SOLDE <b>{FR(rows.reduce((s, r) => s + Number(r.balance), 0))}</b></span>}>
       {can('cash:manage') && <div className="toolbar"><button className="btn" onClick={() => setAdding(true)}>Nouveau</button></div>}
       {error && <ErrorBox message={error} onRetry={reload} />}{act.error && <ErrorBox message={act.error} />}
-      {loading ? <Loading /> : <Table rows={rows} empty="Aucun compte." columns={[{ header: 'N°', render: (a) => rows.indexOf(a) + 1 }, { header: 'Compte', render: (a) => <strong>{a.name}</strong> }, { header: 'N° de compte', render: (a) => a.account_number ?? '—' }, { header: 'Type', render: (a) => (a.owner_type === 'cash_register' ? 'Caisse' : 'Compte bancaire') }, { header: 'Solde', align: 'right', render: (a) => <strong>{FR(Number(a.balance))}</strong> }]} />}
+      {loading ? <Loading /> : <Table rows={rows} empty="Aucun compte." columns={[{ header: 'N°', render: (a) => rows.indexOf(a) + 1 }, { header: 'Compte', render: (a) => <strong>{a.name}</strong> }, { header: 'N° de compte', render: (a) => a.account_number ?? '—' }, { header: 'Type', render: (a) => (a.owner_type === 'cash_register' ? 'Caisse' : 'Compte bancaire') }, { header: 'Solde', align: 'right', render: (a) => <strong>{FR(Number(a.balance))}</strong> }, { header: '', render: (a) => a.owner_type === 'other' && <button className="btn btn-small btn-secondary" onClick={() => setEvo(a.id)}>Évolution</button> }]} />}
+      {evo && <Modal title="Évolution du compte" onClose={() => setEvo(null)}><BankEvolution accountId={evo} /></Modal>}
       {adding && <Modal title="Nouveau compte" onClose={() => setAdding(false)}>
         <Field label="Banque (ou nom du compte)"><input value={name} onChange={(e) => setName(e.target.value)} maxLength={100} /></Field>
         <Field label="N° de compte"><input value={num} onChange={(e) => setNum(e.target.value)} maxLength={60} /></Field>

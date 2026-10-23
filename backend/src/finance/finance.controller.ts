@@ -85,6 +85,32 @@ export class FinanceController {
          FROM financial_transactions WHERE account_id = $1 ORDER BY created_at DESC, id LIMIT $2`, [id, Math.min(Number(limit) || 100, 500)])).rows);
   }
 
+  /** Évolution d'un compte (bancaire ou autre) : solde d'ouverture, mouvements avec solde cumulé (ce qui y est ajouté ou soustrait), totaux et solde de fin de chaque jour. */
+  @Get('financial-accounts/:id/statement')
+  @RequirePermissions('finance:read')
+  statement(@Param('id', ParseUUIDPipe) id: string, @Req() req: any, @Query('from') from?: string, @Query('to') to?: string) {
+    const d = (v?: string) => (v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
+    const t = d(to) ?? new Date().toISOString().slice(0, 10);
+    const f = d(from) ?? new Date(Date.parse(t) - 29 * 86400000).toISOString().slice(0, 10);
+    return this.db.tx(req.org.id, async (c) => {
+      const acc = (await c.query(`SELECT id, name, owner_type, currency, bank_name, account_number, status FROM financial_accounts WHERE id = $1`, [id])).rows[0];
+      if (!acc) throw new NotFoundException();
+      const opening = Number((await c.query(`SELECT coalesce(sum(CASE direction WHEN 'in' THEN amount ELSE -amount END), 0) AS o FROM financial_transactions WHERE account_id = $1 AND created_at < $2::date`, [id, f])).rows[0].o);
+      const rows = (await c.query(
+        `SELECT x.id, x.created_at, x.direction, x.amount, x.reason, x.reversal_of, u.full_name AS by
+           FROM financial_transactions x LEFT JOIN users u ON u.id = x.created_by
+          WHERE x.account_id = $1 AND x.created_at >= $2::date AND x.created_at < $3::date + 1 ORDER BY x.created_at, x.id`, [id, f, t])).rows;
+      let run = opening, inn = 0, out = 0; const days = new Map<string, number>();
+      const list = rows.map((r: any, i: number) => {
+        const a = Number(r.amount);
+        if (r.direction === 'in') { run += a; inn += a; } else { run -= a; out += a; }
+        days.set(new Date(r.created_at).toISOString().slice(0, 10), run);
+        return { n: i + 1, id: r.id, at: r.created_at, label: r.reason, in: r.direction === 'in' ? a : null, out: r.direction === 'out' ? a : null, balance: run, by: r.by, reversal: !!r.reversal_of };
+      });
+      return { account: acc, from: f, to: t, opening, closing: run, total_in: inn, total_out: out, rows: list, series: [...days.entries()].map(([date, balance]) => ({ date, balance })) };
+    });
+  }
+
   /** Journal de caisse d'une période : solde d'ouverture, mouvements avec solde cumulé, totaux entrées / sorties. */
   @Get('cash-journal')
   @RequirePermissions('finance:read')
