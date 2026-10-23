@@ -139,7 +139,7 @@ Chaque intervenant de la coopérative (délégué, magasinier, caissier, coach, 
 
 ## Interface « logiciel de bureau » aux couleurs AgriTrace
 
-Le menu latéral est remplacé par une présentation de logiciel de bureau : **barre de titre** verte (logo, coopérative, connexion, messages, cloche, compte), **barre de menus** vert clair — *Accueil, Fichier* (producteurs, plantations, délégués, partenaires, produits et campagnes), *Opérations* (pesées, convois, caisse, ventes, déclarations…), *Comptabilité*, *Stock*, *Suivi*, *Administration* —, **bandeau de titre** vert sur chaque écran et **barre d'état** (coopérative, utilisateur, date). Les menus ne montrent que ce que les droits de l'utilisateur permettent ; sur téléphone, la barre de menus s'ouvre par le bouton ☰.
+Le menu latéral est remplacé par une présentation de logiciel de bureau : **barre de titre** verte (logo, coopérative, connexion, messages, cloche, compte), **barre de menus** vert clair — *Accueil, Fichier* (producteurs, plantations, délégués, partenaires, produits et campagnes), *Opérations* (pesées, convois, caisse, ventes, déclarations…), *Comptabilité*, *Stock*, *Suivi*, *Administration* —, **bandeau de titre** vert sur chaque écran. Il n'y a plus de barre d'état en bas : la **date** s'affiche tout en haut à droite de la barre de titre, et l'accueil montre les grandes tuiles de modules et un **petit calendrier** du mois (au lieu des indicateurs chiffrés), puis les points d'attention. Les menus ne montrent que ce que les droits de l'utilisateur permettent ; sur téléphone, la barre de menus s'ouvre par le bouton ☰.
 
 ## Comptabilité : présentation de l'ancien logiciel
 

@@ -40,7 +40,7 @@ import Producers from './pages/Producers';
 import Quality from './pages/Quality';
 import Stocks from './pages/Stocks';
 import { Loading } from './ui';
-import { MenuBar, StatusBar } from './MenuBar';
+import { MenuBar } from './MenuBar';
 
 
 const NAV: { to: string; label: string; icon: string; perm: string[]; any?: boolean; only?: 'collector'; notFor?: 'collector' }[] = [
@@ -112,6 +112,7 @@ export default function App() {
           <ConnectionStatus />{can('messages:use') && <MessageButton unread={msgUnread} />}<Bell unread={unread} onChange={refreshUnread} />
           <span className="who-inline">{me?.user.full_name} · <NavLink to="/compte">Mon compte</NavLink></span>
           <button className="btn btn-ghost btn-small" onClick={signOut}>Se déconnecter</button>
+          <span className="today-date">{new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
         </div>
       </header>
       <MenuBar open={open} onNavigate={() => setOpen(false)}
@@ -157,7 +158,6 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
-      <StatusBar><span>{org?.name}</span><span>{me?.user.full_name}</span><span>{new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span></StatusBar>
     </div>
   );
 }

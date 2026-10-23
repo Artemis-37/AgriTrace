@@ -1,53 +1,53 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { get } from '../api';
 import { useAuth } from '../auth';
-import { dateTime, kg, money } from '../format';
+import { dateTime } from '../format';
 import { Tiles } from './Tiles';
 import { Card, ErrorBox, Loading, PageHeader, Stat, useAsync } from '../ui';
 
 const ok = async <T,>(p: Promise<T>): Promise<T | null> => { try { return await p; } catch { return null; } };
+const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+const JOURS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+
+/** Petit calendrier du mois (lundi en premier), jour courant en évidence. */
+function MiniCalendar() {
+  const today = new Date();
+  const [cur, setCur] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
+  const y = cur.getFullYear(), m = cur.getMonth();
+  const lead = (new Date(y, m, 1).getDay() + 6) % 7;
+  const days = new Date(y, m + 1, 0).getDate();
+  const cells: (number | null)[] = [...Array(lead).fill(null), ...Array.from({ length: days }, (_, i) => i + 1)];
+  while (cells.length % 7) cells.push(null);
+  const isToday = (d: number | null) => d !== null && d === today.getDate() && m === today.getMonth() && y === today.getFullYear();
+  return (
+    <section className="mini-cal" aria-label="Calendrier">
+      <div className="mini-cal-head">
+        <button className="btn btn-ghost btn-small" aria-label="Mois précédent" onClick={() => setCur(new Date(y, m - 1, 1))}>‹</button>
+        <strong>{MOIS[m]} {y}</strong>
+        <button className="btn btn-ghost btn-small" aria-label="Mois suivant" onClick={() => setCur(new Date(y, m + 1, 1))}>›</button>
+      </div>
+      <table>
+        <thead><tr>{JOURS.map((j, i) => <th key={i} scope="col">{j}</th>)}</tr></thead>
+        <tbody>{Array.from({ length: cells.length / 7 }, (_, r) => (
+          <tr key={r}>{cells.slice(r * 7, r * 7 + 7).map((d, i) => <td key={i} className={isToday(d) ? 'today' : ''} aria-current={isToday(d) ? 'date' : undefined}>{d ?? ''}</td>)}</tr>
+        ))}</tbody>
+      </table>
+    </section>
+  );
+}
 
 export default function Dashboard() {
   const { can, me } = useAuth();
   const { data, loading, error, reload } = useAsync(async () => {
-    const trainingOn = can('training:propose') || can('training:forward');
-    const [sync, producers, parcels, decls, stocks, accounts, loans, alerts, invoices, orders, tasks, anomalies, prefin, subs, results] = await Promise.all([
-      ok(get<any>('/replication/status')),
-      can('producers:read') ? ok(get<any[]>('/producers')) : null,
-      can('parcels:read') ? ok(get<any[]>('/parcels')) : null,
-      can('declarations:read') ? ok(get<any[]>('/purchase-declarations')) : null,
-      can('warehouses:read') ? ok(get<any[]>('/stocks')) : null,
-      can('finance:read') ? ok(get<any[]>('/financial-accounts')) : null,
-      can('loans:read') ? ok(get<any[]>('/loans')) : null,
-      can('alerts:read') ? ok(get<any>('/alerts')) : null,
-      can('invoices:read') ? ok(get<any[]>('/invoices')) : null,
-      can('buyers:read') ? ok(get<any[]>('/sales-orders')) : null,
-      can('tasks:read') ? ok(get<any>(`/tasks/dashboard${can('tasks:read_all') ? '?scope=all' : ''}`)) : null,
-      can('geo:anomalies') ? ok(get<any[]>('/geo/anomalies?status=open')) : null,
-      can('prefinancing:read') ? ok(get<any>('/prefinancings/report')) : null,
-      trainingOn ? ok(get<any[]>('/training-submissions')) : null,
-      trainingOn ? ok(get<any[]>('/training-results')) : null,
-    ]);
-    return { sync, producers, parcels, decls, stocks, accounts, loans, alerts, invoices, orders, tasks, anomalies, prefin, subs, results };
+    const [sync, alerts] = await Promise.all([ok(get<any>('/replication/status')), can('alerts:read') ? ok(get<any>('/alerts')) : null]);
+    return { sync, alerts };
   }, []);
 
   if (loading) return <Loading />;
   if (error || !data) return <ErrorBox message={error ?? 'Chargement impossible'} onRetry={reload} />;
-  const { sync, producers, parcels, decls, stocks, accounts, loans, alerts, invoices, orders, tasks, anomalies, prefin, subs, results } = data;
+  const { sync, alerts } = data;
   const exporter = can('training:propose') && !can('training:forward');
-  const adgForward = can('training:forward');
-  const subCount = (st: string) => (subs ?? []).filter((x) => x.status === st).length;
-  const live = invoices?.filter((i) => i.status !== 'cancelled');
-  const receivable = live?.reduce((s, i) => s + Number(i.balance), 0);
-  const overdue = live?.reduce((s, i) => s + (i.overdue ? Number(i.balance) : 0), 0);
-  const openOrders = orders?.filter((o) => ['confirmed', 'partially_shipped', 'shipped'].includes(o.status)).length;
-  const t = tasks?.counts;
-  const blocking = anomalies?.filter((a) => a.blocking).length;
-  const outstanding = prefin?.by_currency?.reduce((s: number, r: any) => s + Number(r.outstanding), 0);
-  const pending = decls?.filter((d) => ['received', 'in_review', 'to_correct'].includes(d.status)).length;
-  const cash = accounts?.filter((a) => a.owner_type === 'cash_register').reduce((s, a) => s + Number(a.balance), 0);
-  const owed = loans?.filter((l) => l.status === 'disbursed').reduce((s, l) => s + Number(l.remaining ?? 0), 0);
-  const stockKg = stocks?.reduce((s, x) => s + Number(x.balance_kg), 0);
   const c = alerts?.counts ?? {};
   const alertTotal = Object.values<number>(c).reduce((s, n) => s + n, 0);
 
@@ -62,25 +62,8 @@ export default function Dashboard() {
             tone={!sync.linked ? 'neutral' : sync.last_error ? 'bad' : sync.pending_rows ? 'warn' : 'ok'}
             hint={sync.linked ? (sync.last_ok_at ? `Dernier envoi : ${dateTime(sync.last_ok_at)}` : 'Aucun envoi réussi') : undefined} />
         )}
-        {producers && <Stat label="Producteurs" value={producers.length} />}
-        {parcels && <Stat label="Parcelles" value={parcels.length} hint={`${parcels.filter((p) => p.verification_status === 'verified').length} vérifiée(s)`} />}
-        {decls && <Stat label="Déclarations à traiter" value={pending} tone={pending ? 'warn' : 'ok'} />}
-        {stocks && <Stat label="Stock total" value={kg(stockKg)} />}
-        {accounts && <Stat label="Solde des caisses" value={money(cash)} />}
-        {orders && <Stat label="Commandes en cours" value={openOrders} />}
-        {invoices && <Stat label="Créances clients" value={money(receivable)} tone={receivable ? 'info' : 'neutral'} />}
-        {invoices && <Stat label="Créances échues" value={money(overdue)} tone={overdue ? 'bad' : 'ok'} />}
-        {t && <Stat label="Missions en retard" value={t.overdue} tone={t.overdue ? 'warn' : 'ok'} hint={`${t.to_review} à vérifier`} />}
-        {anomalies && <Stat label="Anomalies de cartographie" value={anomalies.length} tone={anomalies.length ? 'warn' : 'ok'} hint={blocking ? `${blocking} bloquante(s)` : undefined} />}
-        {subs && adgForward && <Stat label="Modules d'exportateurs à transmettre" value={subCount('submitted')} tone={subCount('submitted') ? 'warn' : 'ok'} hint="Aux coachs, en un clic" />}
-        {results && adgForward && <Stat label="Résultats de formation à transmettre" value={results.filter((r) => r.status === 'submitted').length} tone={results.some((r) => r.status === 'submitted') ? 'warn' : 'ok'} hint="Aux exportateurs, en un clic" />}
-        {subs && exporter && <Stat label="Propositions en attente de l'ADG" value={subCount('submitted')} tone={subCount('submitted') ? 'warn' : 'neutral'} />}
-        {subs && exporter && <Stat label="Transmises aux coachs" value={subCount('forwarded')} tone={subCount('forwarded') ? 'ok' : 'neutral'} />}
-        {subs && exporter && <Stat label="Non retenues" value={subCount('declined')} />}
-        {results && exporter && <Stat label="Résultats reçus" value={results.length} tone={results.length ? 'info' : 'neutral'} hint={results.length ? `${results.reduce((a, r) => a + Number(r.participants), 0)} participant(s) au total` : undefined} />}
-        {prefin && <Stat label="Préfinancement à rembourser" value={money(outstanding)} tone={outstanding ? 'warn' : 'neutral'} />}
-        {loans && <Stat label="Prêts à recouvrer" value={money(owed)} tone={owed ? 'warn' : 'neutral'} />}
       </div>
+      <MiniCalendar />
       {exporter && (
         <Card title="Votre espace exportateur">
           <ol style={{ margin: 0, paddingLeft: '1.2rem' }}>
@@ -107,7 +90,6 @@ export default function Dashboard() {
           )}
         </Card>
       )}
-      {!producers && !decls && !accounts && !invoices && !orders && !tasks && !subs && <Card><p className="muted">Votre rôle ne donne accès à aucun indicateur. Contactez l'administrateur de votre coopérative.</p></Card>}
     </>
   );
 }
