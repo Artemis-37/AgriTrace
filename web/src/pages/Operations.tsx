@@ -59,7 +59,7 @@ function Bulletin({ r }: { r: any }) {
 
       <h3>Livraison produit</h3>
       <div className="bp-2 bp-liv">
-        <div>{L('Poids brut (kg)', fmtKg(b.gross))}{L('Sacs acceptés', b.bags_unloaded != null ? b.bags_unloaded - (b.bags_refused ?? 0) : b.bags)}{L('Tare sacs acceptés', fmtKg(b.bag_tare))}{L('Poids net livré', fmtKg(b.net_delivered))}{L('Réfaction', fmtKg(b.refaction))}{L('POIDS NET PAYÉ', fmtKg(b.net), true)}</div>
+        <div>{L('Poids brut (kg)', fmtKg(b.gross))}{L('Sacs acceptés', b.bags_unloaded != null ? b.bags_unloaded - (b.bags_refused ?? 0) : b.bags)}{L('Poids net livré', fmtKg(b.net_delivered))}{L('Réfaction', fmtKg(b.refaction))}{L('POIDS NET PAYÉ', fmtKg(b.net), true)}</div>
         <div>{L('Nb sacs déchargés', b.bags_unloaded)}{L('Sacs refusés', b.bags_refused)}{L('Manquants', b.missing)}{L('Écart / poids déclaré', b.variance == null ? null : `${b.variance} kg`)}{L('Poids moyen sac accepté', fmtKg(b.avg_bag))}{L('Classement', b.grade)}
           <div className="bp-qr"><Qr text={qr} /></div></div>
       </div>
