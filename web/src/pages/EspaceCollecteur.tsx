@@ -5,7 +5,7 @@ import { onFlushed } from '../offline';
 import NewPurchase from './NewPurchase';
 import { Card, ErrorBox, Loading, PageHeader, Stat, StatusBadge, Table, useAsync } from '../ui';
 
-/** Espace du collecteur : « Mes achats » (déclarer), « Mon stock » (acheté, en route, livré, compte) et « Historique ». */
+/** Espace du délégué : « Mes achats » (déclarer), « Mon stock » (acheté, en route, livré, compte) et « Historique ». */
 function useMine() {
   const r = useAsync(async () => {
     const [decls, producers] = await Promise.all([get<any[]>('/purchase-declarations?limit=500'), get<any[]>('/producers?limit=200').catch(() => [] as any[])]);
@@ -62,7 +62,7 @@ export function MonStock() {
   useEffect(() => onFlushed(reload), [reload]);
   if (loading) return <Loading />;
   if (error || !s) return <ErrorBox message={error ?? 'Chargement impossible'} onRetry={reload} />;
-  if (!s.collector) return <p className="empty">Ce compte n'est pas rattaché à un collecteur.</p>;
+  if (!s.collector) return <p className="empty">Ce compte n'est pas rattaché à un délégué.</p>;
   return (
     <>
       <PageHeader title="Mon stock acheté" subtitle="Ce que vous avez acheté, ce qui est en route et ce qui a été livré au magasin central." />

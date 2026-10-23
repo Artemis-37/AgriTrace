@@ -44,7 +44,7 @@ class Repository {
   Future<List<Map<String, Object?>>> producerSections() => db.raw.rawQuery(
       "SELECT section, count(*) AS n FROM producers WHERE status = 'active' AND section IS NOT NULL AND trim(section) <> '' GROUP BY section ORDER BY section");
 
-  /// Filières que ce collecteur peut déclarer pour ce producteur (affectation du collecteur ∩ filières du producteur).
+  /// Filières que ce délégué peut déclarer pour ce producteur (affectation du délégué ∩ filières du producteur).
   Future<List<Map<String, Object?>>> chainsFor(String producerId) async {
     final p = await db.raw.query('producers', where: 'id = ?', whereArgs: [producerId]);
     if (p.isEmpty) return [];
@@ -150,7 +150,7 @@ class Repository {
   /// Convois créés sur l'appareil et pas encore envoyés : sert à prévoir le prochain numéro automatique hors connexion.
   Future<int> pendingConvoys() async => Sqflite.firstIntValue(await db.raw.rawQuery("SELECT count(*) FROM outbox WHERE op_type = 'convoy.create'")) ?? 0;
 
-  /// Achats que le collecteur peut charger dans un convoi : envoyés (ou en attente d'envoi) et pas déjà chargés dans un convoi de cet appareil.
+  /// Achats que le délégué peut charger dans un convoi : envoyés (ou en attente d'envoi) et pas déjà chargés dans un convoi de cet appareil.
   /// [serverAvailableIds] : achats que le serveur déclare libres (null hors connexion) ; un achat déjà parti sur le serveur absent de la liste est écarté.
   Future<List<Map<String, Object?>>> linkableDeclarations({Set<String>? serverAvailableIds}) async {
     final rows = await db.raw.rawQuery('''
@@ -320,7 +320,7 @@ class Repository {
 
   /// Accès révoqué par le serveur (compte suspendu) : on efface tout ce qui vient du serveur (producteurs, parcelles, prix,
   /// déclarations déjà envoyées, droits). Seules les saisies jamais envoyées restent, dans la base chiffrée, pour ne pas
-  /// perdre le travail du collecteur : elles partiront si le compte est réactivé.
+  /// perdre le travail du délégué : elles partiront si le compte est réactivé.
   Future<void> purgeAfterRevocation() async {
     await db.raw.transaction((txn) async {
       for (final t in ['value_chains', 'campaigns', 'unit_conversions', 'price_versions', 'producers', 'my_assignments', 'parcels']) {

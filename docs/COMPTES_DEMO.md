@@ -22,7 +22,7 @@
 | Responsable logistique | Lassina Cissé | `responsable.logistique@demo.agritrace.test` |
 | Auditeur (lecture seule) | Patrick Dago | `auditeur@demo.agritrace.test` |
 | Acheteur / commercial | Fanta Kamara | `acheteur@demo.agritrace.test` |
-| Collecteur (application téléphone) — **application mobile uniquement** | Brahima Sylla | `collecteur@demo.agritrace.test` |
+| Délégué (application téléphone) — **application mobile uniquement** | Brahima Sylla | `collecteur@demo.agritrace.test` |
 | Assistant de direction générale | Mireille Ouattara | `adg@demo.agritrace.test` |
 | Coach / conseiller agricole — **application mobile uniquement** | Gilbert Koffi | `coach@demo.agritrace.test` |
 | Exportateur (partenaire) | Karim Diallo | `exportateur@demo.agritrace.test` |

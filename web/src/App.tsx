@@ -109,7 +109,7 @@ export default function App() {
         <div className="topbar"><ConnectionStatus />{can('messages:use') && <MessageButton unread={msgUnread} />}<Bell unread={unread} onChange={refreshUnread} /></div>
         <OfflineBar />
         {managed && <p className="notice" role="status">Lecture seule : cette coopérative est gérée par son serveur local (« {managed} »). Les modifications se font là-bas ; elles arrivent ici par synchronisation.</p>}
-        {me?.mobile_first && <p className="notice" role="status">Votre compte ({me.account_kind === 'collector' ? 'collecteur' : 'coach'}) est conçu pour l'application mobile, qui fonctionne aussi dans les villages sans réseau. Ce portail affiche uniquement ce qui vous concerne.</p>}
+        {me?.mobile_first && <p className="notice" role="status">Votre compte ({me.account_kind === 'collector' ? 'délégué' : 'coach'}) est conçu pour l'application mobile, qui fonctionne aussi dans les villages sans réseau. Ce portail affiche uniquement ce qui vous concerne.</p>}
         <Routes key={loc.key}>
           <Route path="/" element={<Dashboard />} />
           <Route path="/producteurs" element={<Producers />} />

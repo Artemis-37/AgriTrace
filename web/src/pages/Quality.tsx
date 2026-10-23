@@ -32,7 +32,7 @@ export default function Quality() {
   );
 }
 
-const SUBJECT: Record<string, string> = { producer: 'Producteur', collector: 'Collecteur', lot: 'Lot', weighing: 'Pesée', warehouse: 'Magasin', parcel: 'Parcelle' };
+const SUBJECT: Record<string, string> = { producer: 'Producteur', collector: 'Délégué', lot: 'Lot', weighing: 'Pesée', warehouse: 'Magasin', parcel: 'Parcelle' };
 const KIND: Record<string, string> = { field: 'Terrain', quality: 'Qualité', compliance: 'Conformité' };
 const STATE: Record<string, string> = { planned: 'Planifiée', in_progress: 'En cours', completed: 'Terminée', cancelled: 'Annulée' };
 

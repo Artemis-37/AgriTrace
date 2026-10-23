@@ -43,7 +43,7 @@ Un poste client **continue de fonctionner quand le serveur local est injoignable
 * L'application charge le portail **depuis elle-même** (`agritrace://app`) et relaie les appels vers le serveur ; si le serveur ne répond pas, le portail passe en mode hors connexion (bandeau orange). La session est conservée sur le poste : un redémarrage serveur éteint ne redemande pas la connexion.
 * **Lecture** : les écrans déjà ouverts sont servis depuis la copie du poste (ancienne, mais lisible). Un écran jamais ouvert en ligne n'a pas de copie.
 * **Écriture** : seules deux opérations sont prévues pour le rejeu sûr — la **saisie d'un achat** (création puis soumission) et les **messages**. Elles sont gardées sur le poste (IndexedDB) et envoyées par `/sync/batch` dès que le serveur répond, avec une clé d'idempotence : aucun doublon, même si la liaison coupe en plein envoi. Le serveur **revérifie les droits et les règles** à la réception ; une opération refusée ou à corriger reste dans la liste « Détails » avec le motif.
-* Qui voit quoi : une fois reçues, les opérations suivent les droits habituels (une déclaration n'est visible que de son collecteur et des valideurs ; un message direct, de son expéditeur et de son destinataire seulement).
+* Qui voit quoi : une fois reçues, les opérations suivent les droits habituels (une déclaration n'est visible que de son délégué et des valideurs ; un message direct, de son expéditeur et de son destinataire seulement).
 * Les autres opérations (validation, paiements, stocks…) exigent le serveur : le poste affiche « Hors connexion : action impossible pour le moment ».
 
 **Messagerie** (page *Messages*, droit `messages:use`) : canal général et messages directs entre les postes d'une même coopérative, non lus, rafraîchissement toutes les 8 s. Les messages restent sur le serveur de la coopérative (non répliqués vers le central). Un message écrit hors connexion est marqué « écrit hors connexion » avec son heure de rédaction. Les postes passent par le serveur : si le serveur est éteint, les messages attendent son retour (pas de liaison poste à poste directe).
@@ -52,7 +52,7 @@ Un poste client **continue de fonctionner quand le serveur local est injoignable
 
 **Rôle du poste** : choisi à l'installation (*serveur de la coopérative* ou *poste client*, avec le nom du poste, ex. « Comptabilité »), modifiable dans *Fichier → Changer de mode*.
 
-Limites : la copie de lecture est locale à chaque poste ; l'achat hors connexion exige un compte collecteur (règle du serveur, vérifiée au rejeu) ; le portail embarqué dans le poste client peut être plus ancien ou plus récent que le serveur après une mise à jour (mettre à jour tous les postes) ; la session persistante reste valable 30 jours (`REFRESH_TTL_DAYS`) et le serveur peut la révoquer dès son retour.
+Limites : la copie de lecture est locale à chaque poste ; l'achat hors connexion exige un compte délégué (règle du serveur, vérifiée au rejeu) ; le portail embarqué dans le poste client peut être plus ancien ou plus récent que le serveur après une mise à jour (mettre à jour tous les postes) ; la session persistante reste valable 30 jours (`REFRESH_TTL_DAYS`) et le serveur peut la révoquer dès son retour.
 
 ## Application Windows
 

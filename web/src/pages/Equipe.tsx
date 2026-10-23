@@ -41,6 +41,7 @@ export default function Equipe() {
           {mk.error && <ErrorBox message={mk.error} />}
         </Card>
       )}
+      {can('collectors:manage') && <Delegues users={data?.users ?? []} />}
       {can('workstations:manage') && <Postes />}
       <Card>
         {error && <ErrorBox message={error} onRetry={reload} />}
@@ -129,6 +130,42 @@ function NewCode({ onClose }: { onClose: () => void }) {
   );
 }
 
+/** Profils des délégués (collecteurs) : code intervenant et provenance habituelle, reprise sur chaque bulletin de pesée. */
+function Delegues({ users }: { users: any[] }) {
+  const { data, loading, error, reload } = useAsync(() => get<any[]>('/collectors'), []);
+  const [edit, setEdit] = useState<any | null>(null);
+  const [userId, setUserId] = useState('');
+  const [origin, setOrigin] = useState('');
+  const { busy, error: err, run } = useAction();
+  const have = new Set((data ?? []).map((c) => c.user_id));
+  const candidates = users.filter((u) => u.membership_status === 'active' && !have.has(u.id));
+  return (
+    <Card title="Délégués">
+      <p className="muted">Le profil d'un délégué porte sa <strong>provenance</strong> (localité ou zone des achats), reprise automatiquement sur les bulletins de pesée. Son code se gère dans la liste des utilisateurs ci-dessous.</p>
+      {error && <ErrorBox message={error} onRetry={reload} />}
+      {loading ? <Loading /> : (
+        <Table rows={data ?? []} empty="Aucun délégué." columns={[
+          { header: 'Code', render: (c: any) => <code>{c.member_code ?? '—'}</code> }, { header: 'Nom', render: (c: any) => <strong>{c.full_name}</strong> },
+          { header: 'Provenance', render: (c: any) => c.origin ?? '—' },
+          { header: '', render: (c: any) => <button className="btn btn-small btn-secondary" onClick={() => { setEdit(c); setOrigin(c.origin ?? ''); }}>Provenance</button> },
+        ]} />
+      )}
+      <h4>Créer un profil de délégué</h4>
+      <Field label="Utilisateur"><select value={userId} onChange={(e) => setUserId(e.target.value)}><option value="">—</option>{candidates.map((u) => <option key={u.id} value={u.id}>{u.full_name}{u.member_code ? ` (${u.member_code})` : ''}</option>)}</select></Field>
+      <Field label="Provenance (localité, zone)"><input value={origin} onChange={(e) => setOrigin(e.target.value)} maxLength={80} /></Field>
+      {err && <ErrorBox message={err} />}
+      <button className="btn" disabled={busy || !userId} onClick={() => run(async () => { await post('/collectors', { user_id: userId, ...(origin.trim() && { origin: origin.trim() }) }); setUserId(''); setOrigin(''); reload(); })}>Créer le profil</button>
+      {edit && (
+        <Modal title={`Provenance de ${edit.full_name}`} onClose={() => setEdit(null)}>
+          <Field label="Provenance" hint="S'applique aux prochains bulletins ; les réceptions passées gardent la leur."><input value={origin} onChange={(e) => setOrigin(e.target.value)} maxLength={80} /></Field>
+          <div className="modal-foot"><button className="btn btn-secondary" onClick={() => setEdit(null)}>Annuler</button>
+            <button className="btn" disabled={busy || !origin.trim()} onClick={() => run(async () => { await put(`/collectors/${edit.id}/origin`, { origin: origin.trim() }); setEdit(null); setOrigin(''); reload(); })}>Enregistrer</button></div>
+        </Modal>
+      )}
+    </Card>
+  );
+}
+
 function EditCode({ u, onClose, onDone }: { u: any; onClose: () => void; onDone: () => void }) {
   const [code, setCode] = useState(u.member_code ?? '');
   const { busy, error, run } = useAction();
@@ -151,7 +188,7 @@ function AddUser({ roles, onClose, onDone }: { roles: any[]; onClose: () => void
       <Field label="Nom et prénoms"><input value={f.full_name} onChange={set('full_name')} /></Field>
       <Field label="E-mail (identifiant de connexion)"><input type="email" value={f.email} onChange={set('email')} /></Field>
       <Field label="Mot de passe provisoire" hint="10 caractères au minimum. L'utilisateur pourra le changer."><input type="text" value={f.password} onChange={set('password')} /></Field>
-      <Field label="Code (facultatif)" hint="Identifiant de l'intervenant dans la coopérative (ex. code collecteur). Laissé vide, le logiciel en attribue un."><input value={f.member_code} onChange={(e) => setF({ ...f, member_code: e.target.value.toUpperCase() })} maxLength={30} /></Field>
+      <Field label="Code (facultatif)" hint="Identifiant de l'intervenant dans la coopérative (ex. code délégué). Laissé vide, le logiciel en attribue un."><input value={f.member_code} onChange={(e) => setF({ ...f, member_code: e.target.value.toUpperCase() })} maxLength={30} /></Field>
       <Field label="Rôle"><select value={f.role_id} onChange={set('role_id')}><option value="">—</option>{roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}</select></Field>
       {roles.length === 0 && <p className="muted">Aucun rôle : créez d'abord un rôle type ci-dessus.</p>}
       {error && <ErrorBox message={error} />}
@@ -202,7 +239,7 @@ function ProfileCard() {
         <Field label="Adresse"><input value={v.address ?? ''} maxLength={300} onChange={set('address')} /></Field>
         <Field label="Téléphone"><input value={v.phone ?? ''} maxLength={40} onChange={set('phone')} /></Field>
         <Field label="E-mail"><input type="email" value={v.email ?? ''} onChange={set('email')} /></Field>
-        <Field label="Code CCC de la coopérative" hint="Préfixe du numéro de connaissement des convois : CODE-année-3 lettres du collecteur-n° (ex. SC000000-2026-OUM-1). Sans code, le numéro se saisit à la main."><input value={v.ccc_code ?? ''} maxLength={20} onChange={(e) => setF({ ...(f ?? data), ccc_code: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '') })} /></Field>
+        <Field label="Code CCC de la coopérative" hint="Préfixe du numéro de connaissement des convois : CODE-année-3 lettres du délégué-n° (ex. SC000000-2026-OUM-1). Sans code, le numéro se saisit à la main."><input value={v.ccc_code ?? ''} maxLength={20} onChange={(e) => setF({ ...(f ?? data), ccc_code: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '') })} /></Field>
         <Field label="Devise (code ISO)"><input value={v.currency ?? 'XOF'} maxLength={3} onChange={(e) => setF({ ...(f ?? data), currency: e.target.value.toUpperCase() })} /></Field>
         <Field label="Langue par défaut"><select value={v.default_language ?? 'fr'} onChange={set('default_language')}><option value="fr">Français</option><option value="en">English</option></select></Field>
       </div>}

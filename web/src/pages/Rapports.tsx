@@ -6,9 +6,9 @@ import { kg, money } from '../format';
 import RapportsProgrammes from './RapportsProgrammes';
 import { Card, ErrorBox, Field, Loading, PageHeader, Stat, Table, useAsync } from '../ui';
 
-const GROUPS: [string, string][] = [['section', 'Section'], ['village', 'Village'], ['collector', 'Collecteur'], ['chain', 'Filière'], ['day', 'Jour']];
+const GROUPS: [string, string][] = [['section', 'Section'], ['village', 'Village'], ['collector', 'Délégué'], ['chain', 'Filière'], ['day', 'Jour']];
 
-/** Rapports d'achats filtrables par période, section, collecteur et filière (CDC §26), exportables vers Excel. */
+/** Rapports d'achats filtrables par période, section, délégué et filière (CDC §26), exportables vers Excel. */
 const OUTCOME: Record<string, string> = { compliant: 'Conforme', to_review: 'À revoir', non_compliant: 'Non conforme', pending: 'En cours' };
 const KIND: Record<string, string> = { field: 'Terrain', quality: 'Qualité', compliance: 'Conformité' };
 const MOVE: Record<string, string> = { reception: 'Réception', entry: 'Entrée', exit: 'Sortie', transfer_in: 'Transfert entrant', transfer_out: 'Transfert sortant', loss: 'Perte', adjustment_in: 'Ajustement +', adjustment_out: 'Ajustement −', split_in: 'Scission +', split_out: 'Scission −', merge_in: 'Fusion +', merge_out: 'Fusion −' };
@@ -33,7 +33,7 @@ function Unified({ kind }: { kind: 'finance' | 'stock' | 'quality' }) {
           <div className="stats">
             <Stat label="Trésorerie (comptes)" value={money(d.totals.treasury)} tone="ok" /><Stat label="Facturé sur la période" value={money(d.sales.invoiced)} />
             <Stat label="Créances à encaisser" value={money(d.sales.receivable)} tone="warn" /><Stat label="Dont échues" value={money(d.sales.overdue)} tone={Number(d.sales.overdue) > 0 ? 'bad' : 'neutral'} />
-            <Stat label="Avoirs émis" value={money(d.sales.credited)} /><Stat label="Dû aux collecteurs" value={money(d.totals.owed_to_collectors)} tone="info" />
+            <Stat label="Avoirs émis" value={money(d.sales.credited)} /><Stat label="Dû aux délégués" value={money(d.totals.owed_to_collectors)} tone="info" />
           </div>
           <Card><Table rows={d.accounts} empty="Aucun compte." columns={[{ header: 'Compte', render: (r: any) => <strong>{r.name}</strong> }, { header: 'Entrées', align: 'right', render: (r: any) => money(r.inflow, r.currency) },
             { header: 'Sorties', align: 'right', render: (r: any) => money(r.outflow, r.currency) }, { header: 'Solde', align: 'right', render: (r: any) => money(r.balance, r.currency) }]} /></Card>
@@ -90,7 +90,7 @@ function Achats() {
           <Field label="Du"><input type="date" value={f.from} onChange={set('from')} /></Field>
           <Field label="Au"><input type="date" value={f.to} onChange={set('to')} /></Field>
           <Field label="Section"><select value={f.section} onChange={set('section')}><option value="">Toutes</option>{fl?.sections.map((s: string) => <option key={s}>{s}</option>)}</select></Field>
-          <Field label="Collecteur"><select value={f.collector_id} onChange={set('collector_id')}><option value="">Tous</option>{fl?.collectors.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></Field>
+          <Field label="Délégué"><select value={f.collector_id} onChange={set('collector_id')}><option value="">Tous</option>{fl?.collectors.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></Field>
           <Field label="Filière"><select value={f.chain_id} onChange={set('chain_id')}><option value="">Toutes</option>{fl?.chains.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></Field>
         </div>
       </Card>

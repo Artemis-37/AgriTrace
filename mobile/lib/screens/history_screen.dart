@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../main.dart';
 
-/// Historique des achats du collecteur : tous ses achats enregistrés sur le serveur, du plus récent au plus ancien. Consultation seule (pas d'export).
+/// Historique des achats du délégué : tous ses achats enregistrés sur le serveur, du plus récent au plus ancien. Consultation seule (pas d'export).
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
   @override

@@ -43,7 +43,7 @@ async function ensureSeries(c: PoolClient, orgId: string, cfg: ReceiptConfig, us
     throw new ConflictException(`La série « ${cfg.series} » est en mode « ${s.mode} » : une série ne mélange pas les deux modes. Choisir une autre série dans les paramètres.`);
 }
 
-/** Détermine le numéro de reçu d'une déclaration (saisi par le collecteur ou généré par le serveur). */
+/** Détermine le numéro de reçu d'une déclaration (saisi par le délégué ou généré par le serveur). */
 export async function assignReceipt(c: PoolClient, orgId: string, userId: string, raw: string | undefined, cfg: ReceiptConfig): Promise<ReceiptAssignment> {
   const none: ReceiptAssignment = { series: null, no: null, entered: null, source: null, conflictWith: null };
   await ensureSeries(c, orgId, cfg, userId);

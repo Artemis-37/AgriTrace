@@ -10,20 +10,20 @@ import { Badge, Card, ErrorBox, Field, Loading, Modal, PageHeader, Table, Tabs, 
 const STATUS: Record<string, [string, import('../format').Tone]> = { in_transit: ['En route', 'warn'], received: ['Reçu — en caisse', 'neutral'], settled: ['Réglé', 'ok'] };
 const num = (v: any) => Number(v).toLocaleString('fr-FR', { maximumFractionDigits: 3 });
 
-/** Convois des collecteurs (délégués) vers le magasin central : déclaration, réception et pesée, traitement en caisse. */
+/** Convois des délégués (délégués) vers le magasin central : déclaration, réception et pesée, traitement en caisse. */
 export default function Convois() {
   const { can } = useAuth();
   const tabs: [string, string][] = [];
   if (can('convoys:read')) tabs.push(['list', 'Convois']);
   if (can('convoys:receive')) tabs.push(['receive', 'Réception au magasin'], ['analyses', 'Analyses']);
   if (can('weighings:approve')) tabs.push(['variance', 'Écarts de poids']);
-  if (can('convoys:settle')) tabs.push(['cash', 'Caisse'], ['accounts', 'Comptes collecteurs']);
+  if (can('convoys:settle')) tabs.push(['cash', 'Caisse'], ['accounts', 'Comptes délégués']);
   else if (can('collector:stock')) tabs.push(['mine', 'Ma fiche']);
   const dl = useDeepLink(tabs.map((t) => t[0]));
   const [tab, setTab] = useState(dl.tab ?? tabs[0]?.[0] ?? 'list');
   return (
     <>
-      <PageHeader title="Convois des collecteurs" subtitle="Achats chez les producteurs convoyés vers le magasin central, pesés à la réception puis réglés en caisse." />
+      <PageHeader title="Convois des délégués" subtitle="Achats chez les producteurs convoyés vers le magasin central, pesés à la réception puis réglés en caisse." />
       <Tabs tabs={tabs as any} value={tab as any} onChange={setTab as any} />
       {tab === 'list' && <List />}
       {tab === 'receive' && <Receive />}
@@ -47,7 +47,7 @@ function List() {
       {error && <ErrorBox message={error} onRetry={reload} />}
       {loading ? <Loading /> : (
         <Table rows={data ?? []} empty="Aucun convoi." columns={[
-          { header: 'N° de convoi', render: (v) => v.convoy_no }, { header: 'Collecteur', render: (v) => v.collector_name },
+          { header: 'N° de convoi', render: (v) => v.convoy_no }, { header: 'Délégué', render: (v) => v.collector_name },
           { header: 'Chauffeur', render: (v) => v.driver_name }, { header: 'Camion', render: (v) => v.truck_no },
           { header: 'Poids reçu (kg)', align: 'right', render: (v) => (v.total_kg ? num(v.total_kg) : '—') },
           { header: 'Sacs', align: 'right', render: (v) => v.bags ?? '—' },
@@ -64,14 +64,14 @@ function CreateConvoy({ onClose, onDone }: { onClose: () => void; onDone: () => 
   const { org, can } = useAuth();
   const off = useOffline();
   const act = useAction();
-  const [f, setF] = useState({ convoy_no: '', driver_name: '', truck_no: '', trailer_no: '', origin: '', declared_bags: '', declared_kg: '' });
+  const [f, setF] = useState({ convoy_no: '', driver_name: '', truck_no: '', trailer_no: '', declared_bags: '', declared_kg: '' });
   const set = (k: keyof typeof f) => (e: any) => setF({ ...f, [k]: e.target.value });
   const avail = useAsync(() => (off.offline || !can('convoys:create') ? Promise.resolve([] as any[]) : get<any[]>('/convoys/available-declarations').catch(() => [] as any[])), []);
   const [picked, setPicked] = useState<string[]>([]);
   const list = avail.data ?? [];
   const pickKg = list.filter((d) => picked.includes(d.id)).reduce((a, d) => a + Number(d.kg), 0), pickBags = list.filter((d) => picked.includes(d.id)).reduce((a, d) => a + Number(d.bags ?? 0), 0);
   const toggle = (id: string) => setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
-  // Numéro automatique (coopérative avec code CCC) : aperçu fourni par le serveur ; inconnu hors connexion ou pour un compte sans collecteur.
+  // Numéro automatique (coopérative avec code CCC) : aperçu fourni par le serveur ; inconnu hors connexion ou pour un compte sans délégué.
   const next = useAsync(() => (off.offline || !can('convoys:create') ? Promise.resolve(null) : get<{ auto: boolean; convoy_no: string | null }>('/convoys/next-number').catch(() => null)), []);
   const auto = next.data?.auto === true;
   const noKnown = next.data?.auto === false;
@@ -81,11 +81,10 @@ function CreateConvoy({ onClose, onDone }: { onClose: () => void; onDone: () => 
       {off.offline && <p className="notice" role="status">Hors connexion : le convoi sera enregistré sur ce poste puis envoyé dès que le serveur sera joignable.</p>}
       {auto
         ? <Field label="Numéro de connaissement" hint="Attribué automatiquement par le logiciel (code CCC de la coopérative, année, 3 lettres de votre nom, n° d'ordre). Il accompagne le convoi jusqu'au magasin."><input value={next.data!.convoy_no ?? ''} readOnly aria-readonly="true" /></Field>
-        : <Field label="Numéro de connaissement" hint={noKnown ? 'Saisi par le collecteur ; il accompagne le convoi jusqu\'au magasin.' : 'Laissez vide si la coopérative a renseigné son code CCC : le numéro est alors attribué automatiquement à l\'envoi.'}><input value={f.convoy_no} onChange={set('convoy_no')} maxLength={60} /></Field>}
+        : <Field label="Numéro de connaissement" hint={noKnown ? 'Saisi par le délégué ; il accompagne le convoi jusqu\'au magasin.' : 'Laissez vide si la coopérative a renseigné son code CCC : le numéro est alors attribué automatiquement à l\'envoi.'}><input value={f.convoy_no} onChange={set('convoy_no')} maxLength={60} /></Field>}
       <Field label="Nom du chauffeur"><input value={f.driver_name} onChange={set('driver_name')} maxLength={120} /></Field>
       <Field label="N° du camion"><input value={f.truck_no} onChange={set('truck_no')} maxLength={40} /></Field>
       <Field label="N° de la remorque (facultatif)"><input value={f.trailer_no} onChange={set('trailer_no')} maxLength={40} /></Field>
-      <Field label="Provenance (facultatif)"><input value={f.origin} onChange={set('origin')} maxLength={80} /></Field>
       {list.length > 0 && (
         <fieldset className="field">
           <legend>Achats chargés dans ce convoi (facultatif)</legend>
@@ -104,7 +103,7 @@ function CreateConvoy({ onClose, onDone }: { onClose: () => void; onDone: () => 
         <button className="btn btn-secondary" onClick={onClose}>Annuler</button>
         <button className="btn" disabled={act.busy || !valid || !org} onClick={() => act.run(async () => {
           await enqueue(org!.id, 'convoy.create', {
-            idempotency_key: idem(), ...(!auto && f.convoy_no.trim() && { convoy_no: f.convoy_no.trim() }), driver_name: f.driver_name.trim(), truck_no: f.truck_no.trim(), ...(f.trailer_no.trim() && { trailer_no: f.trailer_no.trim() }), ...(f.origin.trim() && { origin: f.origin.trim() }),
+            idempotency_key: idem(), ...(!auto && f.convoy_no.trim() && { convoy_no: f.convoy_no.trim() }), driver_name: f.driver_name.trim(), truck_no: f.truck_no.trim(), ...(f.trailer_no.trim() && { trailer_no: f.trailer_no.trim() }),
             ...(f.declared_bags && { declared_bags: Number(f.declared_bags) }), ...(f.declared_kg && { declared_kg: f.declared_kg }), ...(picked.length && { declaration_ids: picked }),
           }, `Convoi ${auto ? next.data!.convoy_no : f.convoy_no.trim() || 'à numéroter'}`);
           onDone();
@@ -128,21 +127,21 @@ function Receive() {
   const [bags, setBags] = useState('');
   const [notes, setNotes] = useState('');
   const [done, setDone] = useState('');
-  const [d, setD] = useState({ wIn: '', wOut: '', tare: '', ref: '', grade: '', trailer: '', origin: '', unl: '', refused: '' });
+  const [d, setD] = useState({ wIn: '', wOut: '', tare: '', ref: '', grade: '', trailer: '', unl: '', refused: '' });
   const [an, setAn] = useState<Record<string, string>>({});
   const [m, setM] = useState({ driver: '', truck: '', bags: '', kg: '' });
   const setF = (k: keyof typeof d) => (e: any) => setD((x) => ({ ...x, [k]: e.target.value }));
   const exp0 = data?.expected.find((v) => v.collector_id === collector && v.convoy_no === convoyNo.trim());
   const content = useAsync(() => (exp0?.declaration_count > 0 ? get<any[]>(`/convoys/${exp0.id}/declarations`) : Promise.resolve([] as any[])), [exp0?.id]);
-  // Convoi déclaré par le collecteur : remorque et provenance reprises automatiquement (modifiables).
-  useEffect(() => { if (exp0) setD((x) => ({ ...x, trailer: exp0.trailer_no ?? '', origin: exp0.origin ?? '' })); }, [exp0?.id]);
+  // Convoi déclaré par le délégué : remorque et provenance reprises automatiquement (modifiables).
+  useEffect(() => { if (exp0) setD((x) => ({ ...x, trailer: exp0.trailer_no ?? '' })); }, [exp0?.id]);
   if (loading) return <Loading />;
   if (error || !data) return <ErrorBox message={error ?? 'Chargement impossible'} onRetry={reload} />;
   const collectors = [...new Map(data.expected.map((v) => [v.collector_id, v.collector_code ? `${v.collector_name} (${v.collector_code})` : v.collector_name])).entries()];
   const mine = data.expected.filter((v) => v.collector_id === collector);
   const expected = mine.find((v) => v.convoy_no === convoyNo.trim());
   const W = /^\d+(\.\d{1,3})?$/;
-  // Saisie complète : connaissement non déclaré par le collecteur, informations saisies par le magasinier.
+  // Saisie complète : connaissement non déclaré par le délégué, informations saisies par le magasinier.
   const manual = !!collector && convoyNo.trim().length >= 2 && !expected;
   const declared = expected ? (expected.declared_kg != null ? Number(expected.declared_kg) : 0) : (W.test(m.kg) ? Number(m.kg) : 0);
   const declaredBags = expected ? expected.declared_bags : (/^\d+$/.test(m.bags) ? Number(m.bags) : null);
@@ -157,7 +156,7 @@ function Receive() {
     && optOk(d.tare) && optOk(d.ref) && (!twoWeighings || (W.test(d.wIn) && W.test(d.wOut))) && /^\d*$/.test(d.unl) && /^\d*$/.test(d.refused);
   return (
     <Card title="Réceptionner un convoi">
-      <Field label="Collecteur"><select value={collector} onChange={(e) => { setCollector(e.target.value); setConvoyNo(''); }}><option value="">—</option>{collectors.map(([id, n]) => <option key={id} value={id}>{n}</option>)}</select></Field>
+      <Field label="Délégué"><select value={collector} onChange={(e) => { setCollector(e.target.value); setConvoyNo(''); }}><option value="">—</option>{collectors.map(([id, n]) => <option key={id} value={id}>{n}</option>)}</select></Field>
       <Field label="Numéro de connaissement" hint={mine.length ? `En route : ${mine.map((v) => v.convoy_no).join(', ')}` : undefined}>
         <input list="convois-attendus" value={convoyNo} onChange={(e) => setConvoyNo(e.target.value)} /></Field>
       <datalist id="convois-attendus">{mine.map((v) => <option key={v.id} value={v.convoy_no} />)}</datalist>
@@ -169,15 +168,14 @@ function Receive() {
       <Field label="Magasin"><select value={wh} onChange={(e) => setWh(e.target.value)}><option value="">—</option>{data.whs.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}</select></Field>
       <h3>Indication connaissement</h3>
       {manual && <>
-        <p className="notice" role="status">Ce connaissement n'a pas été déclaré par le collecteur : saisissez les informations du bordereau ; il sera enregistré à la réception.</p>
+        <p className="notice" role="status">Ce connaissement n'a pas été déclaré par le délégué : saisissez les informations du bordereau ; il sera enregistré à la réception.</p>
         <Field label="Nom du chauffeur"><input value={m.driver} onChange={(e) => setM({ ...m, driver: e.target.value })} maxLength={120} /></Field>
         <Field label="N° du camion"><input value={m.truck} onChange={(e) => setM({ ...m, truck: e.target.value })} maxLength={40} /></Field>
         <Field label="Nombre de sacs déclaré (facultatif)"><input inputMode="numeric" value={m.bags} onChange={(e) => setM({ ...m, bags: e.target.value })} /></Field>
         <Field label="Poids déclaré en kg (facultatif)"><input inputMode="decimal" value={m.kg} onChange={(e) => setM({ ...m, kg: e.target.value })} /></Field>
       </>}
-      {expected && <p className="muted">Repris du convoi déclaré par le collecteur : remorque et provenance (modifiables).</p>}
+      {collector && <p className="muted">Provenance (profil du délégué) : <strong>{data.expected.find((v) => v.collector_id === collector)?.collector_origin ?? 'non renseignée'}</strong>{expected ? ' · remorque reprise du convoi déclaré (modifiable).' : ''}</p>}
       <Field label="Remorque"><input value={d.trailer} onChange={setF('trailer')} maxLength={40} /></Field>
-      <Field label="Provenance"><input value={d.origin} onChange={setF('origin')} maxLength={80} /></Field>
       <h3>Livraison produit</h3>
       <Field label="Pesée à l'entrée, camion chargé (kg)"><input inputMode="decimal" value={d.wIn} onChange={setF('wIn')} /></Field>
       <Field label="Pesée à la sortie, camion vide (kg)"><input inputMode="decimal" value={d.wOut} onChange={setF('wOut')} /></Field>
@@ -201,9 +199,9 @@ function Receive() {
           ...(manual && { driver_name: m.driver.trim(), truck_no: m.truck.trim(), ...(m.bags && { declared_bags: Number(m.bags) }), ...(m.kg && { declared_kg: m.kg }) }),
           ...(twoWeighings && { weigh_in_kg: d.wIn, weigh_out_kg: d.wOut }),
           ...(d.tare && { bag_tare_kg: d.tare }), ...(d.ref && { refaction_kg: d.ref }), ...(d.grade.trim() && { grade: d.grade.trim() }), ...(d.trailer.trim() && { trailer_no: d.trailer.trim() }),
-          ...(d.origin.trim() && { origin: d.origin.trim() }), ...(d.unl && { bags_unloaded: Number(d.unl) }), ...(d.refused && { bags_refused: Number(d.refused) }),
+          ...(d.unl && { bags_unloaded: Number(d.unl) }), ...(d.refused && { bags_refused: Number(d.refused) }),
           ...(Object.values(an).some((v) => v.trim()) && { analysis: Object.fromEntries(Object.entries(an).filter(([, v]) => v.trim()).map(([k, v]) => [k, v.trim()])) }) }, `Réception du convoi ${convoyNo.trim()}`);
-        setDone(`Convoi ${convoyNo.trim()} enregistré : il sera transmis à la caisse dès l'envoi au serveur.`); setConvoyNo(''); setKg(''); setBags(''); setNotes(''); setD({ wIn: '', wOut: '', tare: '', ref: '', grade: '', trailer: '', origin: '', unl: '', refused: '' }); setAn({}); setM({ driver: '', truck: '', bags: '', kg: '' }); reload();
+        setDone(`Convoi ${convoyNo.trim()} enregistré : il sera transmis à la caisse dès l'envoi au serveur.`); setConvoyNo(''); setKg(''); setBags(''); setNotes(''); setD({ wIn: '', wOut: '', tare: '', ref: '', grade: '', trailer: '', unl: '', refused: '' }); setAn({}); setM({ driver: '', truck: '', bags: '', kg: '' }); reload();
       })}>Valider la réception et transmettre à la caisse</button></div>
     </Card>
   );
@@ -266,7 +264,7 @@ function Variance() {
       {error && <ErrorBox message={error} onRetry={reload} />}
       {loading ? <Loading /> : (
         <Table rows={data ?? []} empty="Aucun écart en attente." columns={[
-          { header: 'N° de convoi', render: (r) => r.convoy_no }, { header: 'Collecteur', render: (r) => r.collector_name },
+          { header: 'N° de convoi', render: (r) => r.convoy_no }, { header: 'Délégué', render: (r) => r.collector_name },
           { header: 'Déclaré (kg)', align: 'right', render: (r) => num(r.declared_kg) }, { header: 'Pesé (kg)', align: 'right', render: (r) => num(r.total_kg) },
           { header: 'Écart', align: 'right', render: (r) => <Badge tone="warn">{num(r.variance_kg)} kg ({Number(r.variance_pct).toFixed(1)} %)</Badge> },
           { header: 'Cause indiquée', render: (r) => r.notes },
@@ -297,12 +295,12 @@ function Cash() {
   const { can } = useAuth();
   return (
     <Card title="Réceptions à traiter">
-      {can('cash:operate') && <div className="toolbar"><button className="btn btn-secondary" onClick={() => setPaying(true)}>Payer un collecteur en espèces</button></div>}
+      {can('cash:operate') && <div className="toolbar"><button className="btn btn-secondary" onClick={() => setPaying(true)}>Payer un délégué en espèces</button></div>}
       {paying && <Payout onClose={() => setPaying(false)} />}
       {error && <ErrorBox message={error} onRetry={reload} />}
       {loading ? <Loading /> : (
         <Table rows={data ?? []} empty="Aucune réception en attente." columns={[
-          { header: 'N° de convoi', render: (r) => r.convoy_no }, { header: 'Collecteur', render: (r) => r.collector_name },
+          { header: 'N° de convoi', render: (r) => r.convoy_no }, { header: 'Délégué', render: (r) => r.collector_name },
           { header: 'Poids (kg)', align: 'right', render: (r) => num(r.total_kg) }, { header: 'Sacs', align: 'right', render: (r) => r.bags },
           { header: 'Écart vs déclaré (kg)', align: 'right', render: (r) => (r.variance_kg == null ? '—' : num(r.variance_kg)) },
           { header: '', render: (r) => <button className="btn" onClick={() => setSel(r)}>Traiter</button> },
@@ -343,11 +341,11 @@ function Settle({ r, onClose, onDone }: { r: any; onClose: () => void; onDone: (
         <tr><td>Transport (poids × coût unitaire)</td><td className="r">{f(transport)}</td></tr>
         <tr><td>Montant total produit</td><td className="r">{f(gross + transport)}</td></tr>
         <tr><td>Retenue</td><td className="r">− {f(ret)}</td></tr>
-        <tr><td><strong>Net à payer (porté au compte du collecteur)</strong></td><td className="r"><strong>{f(net)}</strong></td></tr></tbody></table>}
+        <tr><td><strong>Net à payer (porté au compte du délégué)</strong></td><td className="r"><strong>{f(net)}</strong></td></tr></tbody></table>}
       {ok && outstanding > 0 && <>
-        <p className="notice">Avances (financements) non soldées de ce collecteur : <strong>{f(outstanding)}</strong>. Elles sont imputées sur ce net à payer (dette 401 compensée par l'avance 409).</p>
+        <p className="notice">Avances (financements) non soldées de ce délégué : <strong>{f(outstanding)}</strong>. Elles sont imputées sur ce net à payer (dette 401 compensée par l'avance 409).</p>
         <Field label="Avances à imputer sur cette livraison (FCFA)"><input aria-label="Avances à imputer" inputMode="numeric" value={nt ?? String(maxNet)} onChange={(e) => setNt(e.target.value)} /></Field>
-        <table><tbody><tr><td><strong>Reste à payer au collecteur après imputation</strong></td><td className="r"><strong>{f(net - netted)}</strong></td></tr></tbody></table></>}
+        <table><tbody><tr><td><strong>Reste à payer au délégué après imputation</strong></td><td className="r"><strong>{f(net - netted)}</strong></td></tr></tbody></table></>}
       {act.error && <ErrorBox message={act.error} />}
       <div className="modal-actions">
         <button className="btn btn-secondary" onClick={onClose}>Annuler</button>
@@ -371,17 +369,17 @@ function Payout({ onClose }: { onClose: () => void }) {
   const acc = data?.accounts.find((a) => a.owner_id === col);
   const ok = col && session && /^\d+(\.\d{1,4})?$/.test(amount) && Number(amount) > 0 && acc && Number(amount) <= Number(acc.balance);
   return (
-    <Modal title="Payer un collecteur en espèces" onClose={onClose}>
+    <Modal title="Payer un délégué en espèces" onClose={onClose}>
       {loading && <Loading />}{error && <ErrorBox message={error} />}
       {data && (
         <>
-          <Field label="Collecteur"><select value={col} onChange={(e) => setCol(e.target.value)}><option value="">—</option>{data.accounts.map((a) => <option key={a.id} value={a.owner_id}>{a.name} — solde {Number(a.balance).toLocaleString('fr-FR')}</option>)}</select></Field>
+          <Field label="Délégué"><select value={col} onChange={(e) => setCol(e.target.value)}><option value="">—</option>{data.accounts.map((a) => <option key={a.id} value={a.owner_id}>{a.name} — solde {Number(a.balance).toLocaleString('fr-FR')}</option>)}</select></Field>
           <Field label="Caisse (session ouverte)"><select value={session} onChange={(e) => setSession(e.target.value)}><option value="">—</option>{data.registers.map((r) => <option key={r.id} value={r.open_session_id}>{r.name}</option>)}</select></Field>
           <Field label="Montant (FCFA)" hint={acc ? `Maximum : ${Number(acc.balance).toLocaleString('fr-FR')}` : undefined}><input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} /></Field>
           {act.error && <ErrorBox message={act.error} />}
           {done && <p className="notice" role="status">{done}</p>}
           <div className="modal-actions"><button className="btn btn-secondary" onClick={onClose}>Fermer</button>
-            <button className="btn" disabled={act.busy || !ok || !!done} onClick={() => act.run(async () => { await post('/convoys/payout', { idempotency_key: key, collector_id: col, cash_session_id: session, amount }); setDone('Paiement enregistré : compte du collecteur et caisse mis à jour.'); })}>Payer</button></div>
+            <button className="btn" disabled={act.busy || !ok || !!done} onClick={() => act.run(async () => { await post('/convoys/payout', { idempotency_key: key, collector_id: col, cash_session_id: session, amount }); setDone('Paiement enregistré : compte du délégué et caisse mis à jour.'); })}>Payer</button></div>
         </>
       )}
     </Modal>
@@ -390,7 +388,7 @@ function Payout({ onClose }: { onClose: () => void }) {
 
 const FR = (v: any) => (v === null || v === undefined || v === '' ? '' : Number(v).toLocaleString('fr-FR', { maximumFractionDigits: 3 }));
 
-/** Fiche de suivi du compte collecteur, dans la présentation de la fiche papier (solde = ce que le collecteur doit à la coopérative). */
+/** Fiche de suivi du compte délégué, dans la présentation de la fiche papier (solde = ce que le délégué doit à la coopérative). */
 function Fiche({ collectorId }: { collectorId?: string }) {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
@@ -416,7 +414,7 @@ function Fiche({ collectorId }: { collectorId?: string }) {
           {!data.rows.length && <tr><td colSpan={13} className="muted">Aucune opération sur la période.</td></tr>}
         </tbody></table></div>
       {Number(data.advance_outstanding) > 0 && <p className="notice">Avances non encore imputées sur une livraison : {FR(data.advance_outstanding)} FCFA.</p>}
-      <p className="notice">{s > 0 ? `Le collecteur doit ${FR(s)} FCFA à la coopérative (financements non encore couverts par ses livraisons).` : s < 0 ? `La coopérative doit ${FR(-s)} FCFA au collecteur.` : 'Compte soldé.'}</p>
+      <p className="notice">{s > 0 ? `Le délégué doit ${FR(s)} FCFA à la coopérative (financements non encore couverts par ses livraisons).` : s < 0 ? `La coopérative doit ${FR(-s)} FCFA au délégué.` : 'Compte soldé.'}</p>
     </>
   );
 }
@@ -432,7 +430,7 @@ function Accounts() {
       {error && <ErrorBox message={error} onRetry={reload} />}
       {loading ? <Loading /> : (
         <div className="toolbar">
-          <select aria-label="Collecteur" value={col} onChange={(e) => setCol(e.target.value)}><option value="">Choisir un collecteur…</option>{(data ?? []).map((c) => <option key={c.id} value={c.id}>{c.name} — solde {FR(c.solde)}</option>)}</select>
+          <select aria-label="Délégué" value={col} onChange={(e) => setCol(e.target.value)}><option value="">Choisir un délégué…</option>{(data ?? []).map((c) => <option key={c.id} value={c.id}>{c.name} — solde {FR(c.solde)}</option>)}</select>
           {col && can('cash:operate') && <button className="btn" onClick={() => setAdv('advance')}>Remettre un financement</button>}
           {col && <button className="btn btn-secondary" onClick={() => setAdv('carry_forward')}>Reporter un solde de campagne</button>}
         </div>

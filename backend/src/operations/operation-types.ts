@@ -82,9 +82,9 @@ export async function applyCancellation(c: PoolClient, orgId: string, approverId
     await c.query(`UPDATE notifications SET read_at = coalesce(read_at, now()) WHERE entity_type = 'convoy' AND entity_id = $1 AND kind IN ('convoy_received','convoy_variance')`, [v.id]);
     return { summary: `Réception supprimée ; le convoi ${v.convoy_no} est de nouveau en transit`, snapshot: r };
   }
-  // convoy_settlement : le compte du collecteur ne doit pas avoir déjà été débité de ce montant.
+  // convoy_settlement : le compte du délégué ne doit pas avoir déjà été débité de ce montant.
   const bal = (await c.query(`SELECT coalesce(sum(CASE direction WHEN 'in' THEN amount ELSE -amount END), 0) AS b FROM financial_transactions WHERE account_id = (SELECT account_id FROM financial_transactions WHERE id = $1)`, [r.tx_id])).rows[0].b;
-  if (Number(bal) < Number(r.amount)) throw new ConflictException(`Le compte du collecteur a déjà été débité (solde ${bal}, règlement ${r.amount}) : annulation impossible tant que ce paiement n'est pas régularisé`);
+  if (Number(bal) < Number(r.amount)) throw new ConflictException(`Le compte du délégué a déjà été débité (solde ${bal}, règlement ${r.amount}) : annulation impossible tant que ce paiement n'est pas régularisé`);
   await reverseFinancialTx(c, orgId, approverId, r.tx_id, why);
   const entries = (await c.query(
     `SELECT e.id FROM accounting_entries e WHERE e.reference_type = 'convoy_reception' AND e.reference_id = $1 AND e.reversal_of IS NULL

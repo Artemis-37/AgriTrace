@@ -52,7 +52,7 @@ JWT court + jeton de renouvellement tournant, argon2id, permissions contrôlées
 - **Chiffrement au repos de la base** : à la charge de l'hébergeur (action 6) ; les documents, eux, sont chiffrés par l'application une fois `DOCUMENTS_KEY` définie (les anciens fichiers restent en clair tant qu'ils ne sont pas redéposés).
 - **Perte de `DOCUMENTS_KEY` ou `SECRETS_KEY`** : documents illisibles / 2FA à réinitialiser. Sauvegardez-les à part.
 - **`/v1/mode` public** révèle le mode, la version de l'application et celle du schéma (nécessaires au jumelage des postes) : information de faible valeur, acceptée.
-- **Authentification à deux facteurs facultative** si `REQUIRE_2FA` n'est pas activé ; les comptes de terrain (collecteurs, coachs) n'y sont pas soumis par la règle.
+- **Authentification à deux facteurs facultative** si `REQUIRE_2FA` n'est pas activé ; les comptes de terrain (délégués, coachs) n'y sont pas soumis par la règle.
 - **Verrouillage global** après 50 échecs toutes adresses confondues : un attaquant très distribué peut encore gêner un compte (déni de service) ; la limite par adresse et la double authentification protègent contre l'intrusion.
 - **Antivirus facultatif** (action 7) ; formats limités à PDF, JPEG, PNG.
 - **Secrets de la CI** (keystore) et clés privées : leur protection dépend de votre organisation.

@@ -16,7 +16,7 @@ Les captures ont été prises sur la version de démonstration ; les libellés d
 
 | Niveau | Profils | Peut… | Ne peut pas… |
 |---|---|---|---|
-| **1 — Opérateur** | Magasinier, caissier, agent de terrain, cartographe, collecteur, coach, acheteur et exportateur (partenaires) | Saisir dans son périmètre, imprimer ses reçus, **demander** une annulation | Approuver une annulation, voir hors de son périmètre |
+| **1 — Opérateur** | Magasinier, caissier, agent de terrain, cartographe, délégué, coach, acheteur et exportateur (partenaires) | Saisir dans son périmètre, imprimer ses reçus, **demander** une annulation | Approuver une annulation, voir hors de son périmètre |
 | **2 — Gestion** | Comptable, responsable magasin, traçabilité, cartographie, qualité, logistique | Valider, ajuster, contrôler dans son domaine | Approuver les prêts et les annulations (sauf droit explicite) |
 | **3 — Pilotage / contrôle** | Direction, responsable financier, ADG, auditeur | Approuver (annulations, prêts, écarts), suivre toute l'activité ; l'auditeur lit seulement | Saisir au quotidien (hors responsable financier) |
 | **4 — Administration** | Administrateur de la coopérative | Tout dans sa coopérative : comptes, rôles, profil, annulations | Voir les autres coopératives |
@@ -48,14 +48,14 @@ Mot de passe commun : `Demo-AgriTrace-2026!` (à changer pour toute utilisation 
 | Responsable logistique | Lassina Cissé | `responsable.logistique@demo.agritrace.test` |
 | Auditeur (lecture seule) | Patrick Dago | `auditeur@demo.agritrace.test` |
 | Acheteur / commercial | Fanta Kamara | `acheteur@demo.agritrace.test` |
-| Collecteur (application téléphone) | Brahima Sylla | `collecteur@demo.agritrace.test` |
+| Délégué (application téléphone) | Brahima Sylla | `collecteur@demo.agritrace.test` |
 | Assistant de direction générale | Mireille Ouattara | `adg@demo.agritrace.test` |
 | Coach / conseiller agricole | Gilbert Koffi | `coach@demo.agritrace.test` |
 | Exportateur (partenaire) | Karim Diallo | `exportateur@demo.agritrace.test` |
 
 ## 4. Parcours conseillés
 
-- **Chaîne d'achat** (demi-journée) : collecteur → magasinier → caissier → comptable → direction.
+- **Chaîne d'achat** (demi-journée) : délégué → magasinier → caissier → comptable → direction.
 - **Contrôle et conformité** (demi-journée) : agent de terrain / cartographe → responsable cartographie → responsable traçabilité → qualité → ADG.
 - **Pilotage** (2 h) : direction, responsable financier, auditeur, administrateur.
 
@@ -90,9 +90,9 @@ Responsable de la coopérative : crée les comptes, attribue les rôles, décide
 
 *Parcelles, superficies déclarées, état de vérification et versions du tracé.*
 
-![Convois des collecteurs : en route, reçus au magasin, réglés en caisse.](captures/formation/coop_admin-convois.png)
+![Convois des délégués : en route, reçus au magasin, réglés en caisse.](captures/formation/coop_admin-convois.png)
 
-*Convois des collecteurs : en route, reçus au magasin, réglés en caisse.*
+*Convois des délégués : en route, reçus au magasin, réglés en caisse.*
 
 ### Pas à pas
 
@@ -139,9 +139,9 @@ Réceptionne et pèse les convois au magasin central, tient les stocks et l'inve
 
 *Tableau de bord : les indicateurs affichés dépendent de vos droits.*
 
-![Convois des collecteurs : en route, reçus au magasin, réglés en caisse.](captures/formation/magasinier-convois.png)
+![Convois des délégués : en route, reçus au magasin, réglés en caisse.](captures/formation/magasinier-convois.png)
 
-*Convois des collecteurs : en route, reçus au magasin, réglés en caisse.*
+*Convois des délégués : en route, reçus au magasin, réglés en caisse.*
 
 ![Stocks par magasin et par lot, traçabilité du lot.](captures/formation/magasinier-stocks.png)
 
@@ -153,8 +153,8 @@ Réceptionne et pèse les convois au magasin central, tient les stocks et l'inve
 
 ### Pas à pas
 
-1. **Voir les convois attendus.** Menu **Convois** → onglet *Réception au magasin* : les convois « en route » des collecteurs apparaissent.
-2. **Réceptionner.** Choisissez le collecteur et le convoi, saisissez le **poids reçu** et le nombre de sacs, indiquez le magasin, puis validez. Le convoi passe à « Reçu — en caisse » et le stock est mis à jour.
+1. **Voir les convois attendus.** Menu **Convois** → onglet *Réception au magasin* : les convois « en route » des délégués apparaissent.
+2. **Réceptionner.** Choisissez le délégué et le convoi, saisissez le **poids reçu** et le nombre de sacs, indiquez le magasin, puis validez. Le convoi passe à « Reçu — en caisse » et le stock est mis à jour.
 3. **Imprimer le reçu.** Menu **Mes opérations** → ligne de l'opération → **Imprimer le reçu**. Une réimpression porte la mention *duplicata* et est tracée.
 4. **Demander une annulation.** Dans **Mes opérations**, sur une opération erronée : demandez l'annulation en précisant le motif. Un responsable décidera ; vous suivez l'avancement dans l'onglet *Mes demandes*.
 
@@ -189,13 +189,13 @@ Réceptionne et pèse les convois au magasin central, tient les stocks et l'inve
 
 **Niveau 1 — Opérateur** · durée indicative : 1 h 30 · compte de démonstration : `caissier@demo.agritrace.test`
 
-Traite les convois reçus, règle les collecteurs, tient la caisse et les comptes des collecteurs.
+Traite les convois reçus, règle les délégués, tient la caisse et les comptes des délégués.
 
 ### Objectifs
 
-- Traiter un convoi reçu (règlement du collecteur)
+- Traiter un convoi reçu (règlement du délégué)
 - Tenir la caisse (entrées/sorties) avec justificatif
-- Consulter les comptes collecteurs
+- Consulter les comptes délégués
 - Imprimer les reçus et demander une annulation
 
 ### Ce que vous voyez
@@ -204,9 +204,9 @@ Traite les convois reçus, règle les collecteurs, tient la caisse et les compte
 
 *Tableau de bord : les indicateurs affichés dépendent de vos droits.*
 
-![Convois des collecteurs : en route, reçus au magasin, réglés en caisse.](captures/formation/caissier-convois.png)
+![Convois des délégués : en route, reçus au magasin, réglés en caisse.](captures/formation/caissier-convois.png)
 
-*Convois des collecteurs : en route, reçus au magasin, réglés en caisse.*
+*Convois des délégués : en route, reçus au magasin, réglés en caisse.*
 
 ![Comptes, caisses et comptabilité (écritures non modifiables, corrigées par écriture inverse).](captures/formation/caissier-finances.png)
 
@@ -219,9 +219,9 @@ Traite les convois reçus, règle les collecteurs, tient la caisse et les compte
 ### Pas à pas
 
 1. **Ouvrir la session de caisse.** Menu **Convois** → onglet *Caisse* : ouvrez la session avec le fonds de caisse initial.
-2. **Régler un convoi.** Onglet *Convois* : sur un convoi « Reçu — en caisse », saisissez le **prix unitaire** du jour. Le montant = poids reçu × prix ; l'écriture de caisse et le compte du collecteur sont créés automatiquement.
+2. **Régler un convoi.** Onglet *Convois* : sur un convoi « Reçu — en caisse », saisissez le **prix unitaire** du jour. Le montant = poids reçu × prix ; l'écriture de caisse et le compte du délégué sont créés automatiquement.
 3. **Saisir une opération de caisse.** Onglet *Caisse* : sens (entrée/sortie), montant, motif obligatoire. Aucune suppression possible : une erreur se corrige par une écriture inverse.
-4. **Suivre les comptes collecteurs.** Onglet *Comptes collecteurs* : soldes, avances et retenues.
+4. **Suivre les comptes délégués.** Onglet *Comptes délégués* : soldes, avances et retenues.
 
 ### Ce que ce profil ne voit pas
 
@@ -241,9 +241,9 @@ Traite les convois reçus, règle les collecteurs, tient la caisse et les compte
 
 ### Acquis (à cocher)
 
-- [ ] Traiter un convoi reçu (règlement du collecteur)
+- [ ] Traiter un convoi reçu (règlement du délégué)
 - [ ] Tenir la caisse (entrées/sorties) avec justificatif
-- [ ] Consulter les comptes collecteurs
+- [ ] Consulter les comptes délégués
 - [ ] Imprimer les reçus et demander une annulation
 
 ---
@@ -428,9 +428,9 @@ Gère les magasins, valide les inventaires et les écarts de pesée, ajuste les 
 
 *Tableau de bord : les indicateurs affichés dépendent de vos droits.*
 
-![Convois des collecteurs : en route, reçus au magasin, réglés en caisse.](captures/formation/responsable_magasin-convois.png)
+![Convois des délégués : en route, reçus au magasin, réglés en caisse.](captures/formation/responsable_magasin-convois.png)
 
-*Convois des collecteurs : en route, reçus au magasin, réglés en caisse.*
+*Convois des délégués : en route, reçus au magasin, réglés en caisse.*
 
 ![Stocks par magasin et par lot, traçabilité du lot.](captures/formation/responsable_magasin-stocks.png)
 
@@ -487,9 +487,9 @@ Valide les déclarations d'achat, suit les lots et les certificats, contrôle la
 
 *Liste des producteurs de la coopérative.*
 
-![Déclarations d'achat des collecteurs, à mettre en vérification puis valider.](captures/formation/responsable_tracabilite-declarations.png)
+![Déclarations d'achat des délégués, à mettre en vérification puis valider.](captures/formation/responsable_tracabilite-declarations.png)
 
-*Déclarations d'achat des collecteurs, à mettre en vérification puis valider.*
+*Déclarations d'achat des délégués, à mettre en vérification puis valider.*
 
 ### Pas à pas
 
@@ -840,7 +840,7 @@ Partenaire autorisé : consulte les commandes, les expéditions et les documents
 
 ---
 
-## 20. Collecteur (délégué)
+## 20. Délégué
 
 **Niveau 1 — Opérateur** · durée indicative : 2 h · compte de démonstration : `collecteur@demo.agritrace.test`
 
@@ -854,18 +854,18 @@ Déclare ses achats chez les producteurs et ses convois, voit son stock, son his
 
 ### Sur le téléphone
 
-<table class="phones"><tr><td><img src="captures/mobile/collecteur-accueil.png" alt="collecteur-accueil"></td><td><img src="captures/mobile/collecteur-nouvel-achat.png" alt="collecteur-nouvel-achat"></td><td><img src="captures/mobile/collecteur-convoi.png" alt="collecteur-convoi"></td><td><img src="captures/mobile/collecteur-fiche.png" alt="collecteur-fiche"></td></tr></table>
+<table class="phones"><tr><td><img src="captures/mobile/délégué-accueil.png" alt="délégué-accueil"></td><td><img src="captures/mobile/délégué-nouvel-achat.png" alt="délégué-nouvel-achat"></td><td><img src="captures/mobile/délégué-convoi.png" alt="délégué-convoi"></td><td><img src="captures/mobile/délégué-fiche.png" alt="délégué-fiche"></td></tr></table>
 
 ### Pas à pas
 
 1. **Se connecter.** **Application mobile uniquement** : ce compte est refusé sur le portail web.
 2. **Déclarer un achat.** Sur le téléphone : **Nouvel achat** → choisir le producteur → quantité, unité, sacs. L'achat se synchronise dès que le réseau est disponible.
-3. **Créer un convoi.** Sur le téléphone : **Convoi** → chauffeur, camion, sacs et poids annoncés. Le **numéro de connaissement est attribué par le logiciel** : `code CCC de la coopérative` - `année` - `3 premières lettres du nom du collecteur` - `n° d'ordre` (ex. `SC000000-2026-BRA-1`). Hors connexion, le numéro définitif est attribué à l'envoi.
+3. **Créer un convoi.** Sur le téléphone : **Convoi** → chauffeur, camion, sacs et poids annoncés. Le **numéro de connaissement est attribué par le logiciel** : `code CCC de la coopérative` - `année` - `3 premières lettres du nom du délégué` - `n° d'ordre` (ex. `SC000000-2026-BRA-1`). Hors connexion, le numéro définitif est attribué à l'envoi.
 4. **Suivre son stock et son compte.** Sur le téléphone : *Mon stock*, *Historique* et *Fiche de compte*.
 
 ### Ce que ce profil ne voit pas
 
-- Tout ce qui concerne les autres collecteurs
+- Tout ce qui concerne les autres délégués
 - Caisse
 - Comptabilité
 - Équipe
@@ -1052,7 +1052,7 @@ Partenaire exportateur : propose des modules de formation à l'ADG et reçoit, p
 
 Scénario commun, à dérouler à plusieurs comptes :
 
-1. **Collecteur** : déclare un achat et crée un convoi (numéro attribué automatiquement).
+1. **Délégué** : déclare un achat et crée un convoi (numéro attribué automatiquement).
 2. **Magasinier** : réceptionne le convoi (poids différent du déclaré) et imprime le reçu.
 3. **Caissier** : règle le convoi au prix du jour.
 4. **Comptable** : passe l'écriture correspondante et pointe le relevé.

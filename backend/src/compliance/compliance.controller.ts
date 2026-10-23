@@ -85,7 +85,7 @@ export class ComplianceController {
       const row = await this.db.tx(req.org.id, async (c) => {
         if (!(await c.query(`SELECT 1 FROM ${DOC_SUBJECT_TABLE[b.subject_type]} WHERE id = $1`, [b.subject_id])).rowCount)
           throw new BadRequestException('Objet rattaché inconnu dans cette coopérative');
-        // Un collecteur ne joint des pièces qu'à ses propres déclarations d'achat.
+        // Un délégué ne joint des pièces qu'à ses propres déclarations d'achat.
         if (b.subject_type === 'declaration' && !req.org.permissions.has('declarations:validate')) {
           const mine = await c.query(`SELECT 1 FROM purchase_declarations d JOIN collectors k ON k.id = d.collector_id WHERE d.id = $1 AND k.user_id = $2`, [b.subject_id, req.user.id]);
           if (!mine.rowCount) throw new ForbiddenException('Vous ne pouvez joindre des pièces qu\'à vos propres déclarations');

@@ -26,7 +26,7 @@ class CreateRoleDto {
   @Matches(/^[a-z0-9_]{2,40}$/) code: string;
   @IsString() @Length(2, 100) name: string;
   @IsArray() @ArrayNotEmpty() @ArrayMaxSize(100) @IsString({ each: true }) permissions: string[];
-  /** Les comptes de ce rôle se connectent uniquement depuis l'application mobile (collecteurs, coachs, agents de terrain). */
+  /** Les comptes de ce rôle se connectent uniquement depuis l'application mobile (délégués, coachs, agents de terrain). */
   @IsOptional() @IsBoolean() mobile_only?: boolean;
 }
 

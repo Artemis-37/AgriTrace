@@ -22,7 +22,7 @@ export class MeController {
   /**
    * Nature du compte : détermine l'interface proposée et le périmètre de données.
    * collector = délégué acheteur ; coach = agent de terrain (missions) ; staff = personnel de la coopérative.
-   * Collecteurs et coachs travaillent sur l'application mobile ; le portail leur reste ouvert mais restreint à leurs droits.
+   * Délégués et coachs travaillent sur l'application mobile ; le portail leur reste ouvert mais restreint à leurs droits.
    */
   @Get()
   async me(@Req() req: any) {

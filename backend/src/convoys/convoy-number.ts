@@ -1,4 +1,4 @@
-/** Numéro de connaissement automatique : <code CCC>-<année>-<3 lettres du collecteur>-<n° d'ordre>. */
+/** Numéro de connaissement automatique : <code CCC>-<année>-<3 lettres du délégué>-<n° d'ordre>. */
 
 /** 3 lettres majuscules sans accent tirées du premier mot du nom ; complétées par X si le nom est trop court. */
 export function collectorPrefix(fullName: string): string {

@@ -67,10 +67,10 @@ export const DEFAULT_TRAINING_MODULES: DefaultModule[] = [
   m('cacao-tracabilite', 'Normes et réglementations de certification', 'Traçabilité : du producteur au magasin',
     'Comment le cacao reste identifié du champ jusqu\'à l\'exportation : déclaration d\'achat, convoi, pesée, reçu, lot.', C, [RA, FT, EUDR, BASE], 'base', 60,
     ['Suivre le trajet d\'un sac de cacao et dire quel document le décrit à chaque étape', 'Expliquer le numéro de connaissement d\'un convoi', 'Reconnaître les erreurs qui cassent la traçabilité'],
-    [['Les étapes', ['Achat chez le producteur : le collecteur déclare l\'achat (producteur, quantité, date) et remet un reçu.', 'Convoi : les achats sont regroupés dans un convoi qui porte un numéro de connaissement unique.', 'Réception au magasin : pesée, comparaison avec le poids annoncé, écart expliqué.', 'Règlement et lot : le convoi est réglé, puis le cacao entre dans un lot suivi (stock, qualité, expédition).']],
-     ['Le numéro de connaissement', ['Format : code CCC de la coopérative – année – 3 premières lettres du nom du collecteur – numéro d\'ordre.', 'Attribué automatiquement ; il accompagne le convoi sur le papier et dans le logiciel.']],
+    [['Les étapes', ['Achat chez le producteur : le délégué déclare l\'achat (producteur, quantité, date) et remet un reçu.', 'Convoi : les achats sont regroupés dans un convoi qui porte un numéro de connaissement unique.', 'Réception au magasin : pesée, comparaison avec le poids annoncé, écart expliqué.', 'Règlement et lot : le convoi est réglé, puis le cacao entre dans un lot suivi (stock, qualité, expédition).']],
+     ['Le numéro de connaissement', ['Format : code CCC de la coopérative – année – 3 premières lettres du nom du délégué – numéro d\'ordre.', 'Attribué automatiquement ; il accompagne le convoi sur le papier et dans le logiciel.']],
      ['Ce qui casse la traçabilité', ['Mélanger du cacao de producteurs ou de parcelles non conformes.', 'Un achat non déclaré ou déclaré au mauvais producteur.', 'Un convoi sans numéro ou modifié après coup (les corrections se font par demande d\'annulation approuvée, jamais par effacement).']]],
-    ['Réécrire un reçu au lieu de demander une annulation', 'Charger dans un convoi des sacs d\'un autre collecteur', 'Peser sans noter le poids'],
+    ['Réécrire un reçu au lieu de demander une annulation', 'Charger dans un convoi des sacs d\'un autre délégué', 'Peser sans noter le poids'],
     ['Quel document décrit l\'achat chez le producteur ?', 'À quoi sert le numéro de connaissement ?', 'Comment corrige-t-on une erreur de saisie ?']),
 
   m('cacao-registres-exploitation', 'Collecte de documents et tenue de registres', 'Tenir le carnet de l\'exploitation',

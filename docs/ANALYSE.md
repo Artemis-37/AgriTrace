@@ -21,7 +21,7 @@ AgriTrace est une plateforme multi-coopératives (Android hors ligne, portail we
 | 2 | Référentiel comptable (SYSCOHADA ?) | Écritures non conformes | Valider avec un comptable ; P4 |
 | 3 | Moyens de paiement (Mobile Money, banque) | Intégration bloquante | Choisir les opérateurs avant P4 |
 | 4 | Volumes (producteurs, appareils) | Dimensionnement | Estimer avant P2 |
-| 5 | Soldes partagés hors ligne | Dépassement de plafond | Réservation centrale ou plafond local par collecteur (§14.9) |
+| 5 | Soldes partagés hors ligne | Dépassement de plafond | Réservation centrale ou plafond local par délégué (§14.9) |
 | 6 | Résolution de conflits de synchro par entité | Perte de données | Matrice par type d'entité (brouillon fusionnable, validé immuable) |
 | 7 | Protection des données personnelles (loi ivoirienne 2013-450, autres pays UEMOA) | Conformité | Registre de traitements, durée de conservation |
 | 8 | Politique de mots de passe / MFA | Sécurité | Argon2id, MFA pour rôles financiers (proposé) |
@@ -53,5 +53,5 @@ Organisations, utilisateurs, rôles, permissions, appartenances, sessions, appar
 ## 7. Prochaines étapes
 
 1. Valider les décisions ouvertes (§3, points 1 à 5).
-2. P1 : producteurs, collecteurs, campagnes, prix, déclarations, caisse, import Excel.
+2. P1 : producteurs, délégués, campagnes, prix, déclarations, caisse, import Excel.
 3. Prototype Flutter + SQLite pour valider le modèle de synchronisation.

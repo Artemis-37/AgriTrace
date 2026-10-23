@@ -33,7 +33,7 @@ export default function Finance() {
 
 function Accounts() {
   const { data, loading, error, reload } = useAsync(() => get<any[]>('/financial-accounts'), []);
-  const OWNER: Record<string, string> = { cash_register: 'Caisse', producer: 'Producteur', collector: 'Collecteur', other: 'Autre' };
+  const OWNER: Record<string, string> = { cash_register: 'Caisse', producer: 'Producteur', collector: 'Délégué', other: 'Autre' };
   return (
     <Card>
       {error && <ErrorBox message={error} onRetry={reload} />}

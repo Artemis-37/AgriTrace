@@ -26,7 +26,7 @@ export class CreateDeclarationDto {
   @Dec(3) quantity: string;
   @IsString() @Length(1, 20) unit: string;
   @IsOptional() @IsString() @Length(0, 1000) notes?: string;
-  /** Numéro du reçu d'achat saisi par le collecteur dès la déclaration (mode « physique »). */
+  /** Numéro du reçu d'achat saisi par le délégué dès la déclaration (mode « physique »). */
   @IsOptional() @IsString() @Length(0, 40) purchase_receipt_no?: string;
 }
 export class ReceiptSettingsDto {
@@ -59,7 +59,7 @@ export class DeclarationsController {
       [orgId, id, from, to, reason ?? null, actor]);
   }
 
-  /** Collecteur de l'utilisateur courant dans cette organisation (null s'il n'en a pas). */
+  /** Délégué de l'utilisateur courant dans cette organisation (null s'il n'en a pas). */
   private async myCollector(c: PoolClient, userId: string) {
     const r = await c.query(`SELECT id FROM collectors WHERE user_id = $1 AND status = 'active'`, [userId]);
     return r.rows[0]?.id as string | undefined;
@@ -77,8 +77,8 @@ export class DeclarationsController {
 
         const mine = await this.myCollector(c, req.user.id);
         const collectorId = canValidate && b.collector_id ? b.collector_id : mine;
-        if (!collectorId) throw new ForbiddenException("Aucun compte collecteur actif pour cet utilisateur dans cette organisation");
-        if (b.collector_id && b.collector_id !== collectorId) throw new ForbiddenException('Déclaration pour un autre collecteur non autorisée');
+        if (!collectorId) throw new ForbiddenException("Aucun compte délégué actif pour cet utilisateur dans cette organisation");
+        if (b.collector_id && b.collector_id !== collectorId) throw new ForbiddenException('Déclaration pour un autre délégué non autorisée');
 
         const checks = await c.query(
           `SELECT
@@ -88,10 +88,10 @@ export class DeclarationsController {
              EXISTS (SELECT 1 FROM collector_assignments WHERE collector_id = $1 AND (value_chain_id IS NULL OR value_chain_id = $4)) AS assigned`,
           [collectorId, b.producer_id, b.campaign_id, b.value_chain_id]);
         const k = checks.rows[0];
-        if (k.collector_status !== 'active') throw new BadRequestException('Collecteur inconnu ou inactif');
+        if (k.collector_status !== 'active') throw new BadRequestException('Délégué inconnu ou inactif');
         if (!k.producer_ok) throw new BadRequestException('Producteur inconnu ou inactif');
         if (k.campaign_status !== 'open') throw new BadRequestException('Campagne inconnue, fermée ou étrangère à la filière');
-        if (!k.assigned) throw new ForbiddenException("Collecteur non affecté à cette filière");
+        if (!k.assigned) throw new ForbiddenException("Délégué non affecté à cette filière");
 
         // Numéro de reçu d'achat : saisi (mode physique) ou attribué (mode généré). Un doublon n'est pas écrasé :
         // la déclaration est enregistrée « en conflit » et ne peut être soumise ni validée avant résolution (CDC §13.4, §27.5).
@@ -191,13 +191,13 @@ export class DeclarationsController {
 
   /**
    * Export Excel des achats déclarés (une ligne par achat). Mêmes règles de visibilité que la liste :
-   * l'export est réservé au personnel (pas aux collecteurs). La disposition des colonnes est définie par COLUMNS (à ajuster au modèle de la coopérative).
+   * l'export est réservé au personnel (pas aux délégués). La disposition des colonnes est définie par COLUMNS (à ajuster au modèle de la coopérative).
    */
   @Get('export/xlsx')
   @RequirePermissions('declarations:read')
   async exportXlsx(@Req() req: any, @Query('from') from?: string, @Query('to') to?: string, @Query('status') status?: string) {
     if ((from && !/^\d{4}-\d{2}-\d{2}$/.test(from)) || (to && !/^\d{4}-\d{2}-\d{2}$/.test(to))) throw new BadRequestException('Dates attendues au format AAAA-MM-JJ');
-    // L'export Excel est réservé au personnel de la coopérative : les collecteurs consultent leurs achats à l'écran, sans exporter.
+    // L'export Excel est réservé au personnel de la coopérative : les délégués consultent leurs achats à l'écran, sans exporter.
     if (!req.org.permissions.has('declarations:validate')) throw new ForbiddenException('L\'export Excel est réservé au personnel de la coopérative.');
     const all = true;
     const rows = await this.db.tx(req.org.id, async (c) => {

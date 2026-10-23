@@ -154,7 +154,7 @@ const sq = (lon, lat, s = 0.0009) => ({ type: 'Polygon', coordinates: [[[lon, la
   const rp = await call('GET', '/reports/purchases?group=section', J(t1, A));
   check('rapport par section : lignes et totaux cohérents', rp.status === 200 && rp.body.rows.length >= 1 && rp.body.total.declarations === rp.body.rows.reduce((a, r) => a + r.declarations, 0), rp.body);
   const day = await call('GET', '/reports/purchases?group=collector&from=2000-01-01&to=2100-01-01', J(t1, A));
-  check('rapport par collecteur sur une période', day.status === 200 && day.body.group_label === 'Collecteur', day.body);
+  check('rapport par collecteur sur une période', day.status === 200 && day.body.group_label === 'Délégué', day.body);
   check('rapport : période hors données = vide', (await call('GET', '/reports/purchases?from=1999-01-01&to=1999-12-31', J(t1, A))).body.rows.length === 0);
   check('rapport : regroupement inconnu refusé', (await call('GET', '/reports/purchases?group=x', J(t1, A))).status === 400);
   const rx = await rawGet('/reports/purchases/xlsx?group=section', t1);

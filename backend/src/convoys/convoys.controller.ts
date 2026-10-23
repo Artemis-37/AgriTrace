@@ -19,9 +19,8 @@ export class CreateConvoyDto {
   @IsOptional() @IsInt() @Min(0) declared_bags?: number;
   @IsOptional() @Dec(3) declared_kg?: string;
   @IsOptional() @IsString() @Length(1, 40) trailer_no?: string;
-  @IsOptional() @IsString() @Length(1, 80) origin?: string;
   @IsOptional() @IsString() @Length(1, 500) notes?: string;
-  /** Achats chargés dans ce convoi (déclarations du collecteur, une seule fois chacune). Sans poids/sacs annoncés, ils sont déduits de ces achats. */
+  /** Achats chargés dans ce convoi (déclarations du délégué, une seule fois chacune). Sans poids/sacs annoncés, ils sont déduits de ces achats. */
   @IsOptional() @IsArray() @ArrayMaxSize(300) @IsUUID('all', { each: true }) declaration_ids?: string[];
 }
 const DECL_KG = `round(d.quantity * coalesce(CASE WHEN d.unit = 'kg' THEN 1 ELSE f.factor END, 0), 3)`;
@@ -37,8 +36,7 @@ export class ReceiveConvoyDto {
   @IsOptional() @IsString() @Length(1, 500) notes?: string;
   // Bulletin de pesée (tout est facultatif)
   @IsOptional() @IsString() @Length(1, 40) trailer_no?: string;
-  @IsOptional() @IsString() @Length(1, 80) origin?: string;
-  /** Saisie complète : si ce connaissement n'a pas été déclaré par le collecteur, le magasinier le crée à la réception avec ces informations. */
+  /** Saisie complète : si ce connaissement n'a pas été déclaré par le délégué, le magasinier le crée à la réception avec ces informations. */
   @IsOptional() @IsString() @Length(2, 120) driver_name?: string;
   @IsOptional() @IsString() @Length(2, 40) truck_no?: string;
   @IsOptional() @IsInt() @Min(0) declared_bags?: number;
@@ -116,9 +114,9 @@ export class ConvoysController {
       if (prev.rowCount) return { row: prev.rows[0], replay: true };
       const own = (await c.query(`SELECT id FROM collectors WHERE user_id = $1 AND status = 'active'`, [req.user.id])).rows[0];
       const collectorId = own?.id ?? b.collector_id;
-      if (!collectorId) throw new BadRequestException('Collecteur requis (le compte connecté n\'est pas un collecteur)');
-      if (own && b.collector_id && b.collector_id !== own.id) throw new BadRequestException('Un collecteur ne peut déclarer que ses propres convois');
-      if (!(await c.query(`SELECT 1 FROM collectors WHERE id = $1 AND status = 'active'`, [collectorId])).rowCount) throw new BadRequestException('Collecteur inconnu ou désactivé');
+      if (!collectorId) throw new BadRequestException('Délégué requis (le compte connecté n\'est pas un délégué)');
+      if (own && b.collector_id && b.collector_id !== own.id) throw new BadRequestException('Un délégué ne peut déclarer que ses propres convois');
+      if (!(await c.query(`SELECT 1 FROM collectors WHERE id = $1 AND status = 'active'`, [collectorId])).rowCount) throw new BadRequestException('Délégué inconnu ou désactivé');
       const auto = await nextConvoyNo(c, req.org.id, collectorId, true);
       const convoyNo = auto ? auto.convoy_no : b.convoy_no?.trim();
       if (!convoyNo || convoyNo.length < 2) throw new BadRequestException('Numéro de connaissement requis (renseignez le code CCC de la coopérative pour le générer automatiquement)');
@@ -131,21 +129,21 @@ export class ConvoysController {
           `SELECT d.id, d.bags, d.status, d.collector_id, ${DECL_KG} AS kg, EXISTS (SELECT 1 FROM convoy_declarations x WHERE x.declaration_id = d.id) AS taken
              FROM purchase_declarations d ${DECL_JOIN} WHERE d.id = ANY($1::uuid[]) FOR UPDATE OF d`, [ids])).rows;
         if (linked.length !== ids.length) throw new BadRequestException('Achat inconnu parmi ceux du convoi');
-        if (linked.some((d) => d.collector_id !== collectorId)) throw new BadRequestException('Un convoi ne peut contenir que les achats de son collecteur');
+        if (linked.some((d) => d.collector_id !== collectorId)) throw new BadRequestException('Un convoi ne peut contenir que les achats de son délégué');
         if (linked.some((d) => !['received', 'in_review', 'accepted'].includes(d.status))) throw new BadRequestException('Seuls les achats reçus par la coopérative (non rejetés) peuvent être chargés');
         if (linked.some((d) => d.taken)) throw new ConflictException('Un des achats est déjà chargé dans un autre convoi');
         if (linked.some((d) => Number(d.kg) <= 0)) throw new BadRequestException('Un des achats n\'a pas de conversion en kg : poids inconnu');
       }
       const linkedKg = linked.reduce((a, d) => a + Number(d.kg), 0), linkedBags = linked.reduce((a, d) => a + Number(d.bags ?? 0), 0);
       const ins = await c.query(
-        `INSERT INTO convoys(organization_id, idempotency_key, convoy_no, collector_id, driver_name, truck_no, declared_bags, declared_kg, notes, created_by, trailer_no, origin)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *`,
+        `INSERT INTO convoys(organization_id, idempotency_key, convoy_no, collector_id, driver_name, truck_no, declared_bags, declared_kg, notes, created_by, trailer_no)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
         [req.org.id, b.idempotency_key, convoyNo, collectorId, b.driver_name.trim(), b.truck_no.trim().toUpperCase(),
-         b.declared_bags ?? (linked.length ? linkedBags : null), b.declared_kg ?? (linked.length ? linkedKg.toFixed(3) : null), b.notes ?? null, req.user.id, b.trailer_no?.trim() || null, b.origin?.trim() || null]);
+         b.declared_bags ?? (linked.length ? linkedBags : null), b.declared_kg ?? (linked.length ? linkedKg.toFixed(3) : null), b.notes ?? null, req.user.id, b.trailer_no?.trim() || null]);
       for (const d of linked) await c.query(`INSERT INTO convoy_declarations(organization_id, convoy_id, declaration_id, kg, bags) VALUES ($1,$2,$3,$4,$5)`, [req.org.id, ins.rows[0].id, d.id, d.kg, d.bags ?? 0]);
       const who = (await c.query(`SELECT u.full_name FROM collectors k JOIN users u ON u.id = k.user_id WHERE k.id = $1`, [collectorId])).rows[0];
       await this.notif.notifyPermission(c, req.org.id, 'convoys:receive', { kind: 'convoy_created', title: `Convoi en route : ${ins.rows[0].convoy_no}`,
-        body: `${who?.full_name ?? 'Collecteur'} · camion ${ins.rows[0].truck_no} · chauffeur ${ins.rows[0].driver_name}`, entityType: 'convoy', entityId: ins.rows[0].id, dedupe: `convoy_created:${ins.rows[0].id}` }, req.user.id);
+        body: `${who?.full_name ?? 'Délégué'} · camion ${ins.rows[0].truck_no} · chauffeur ${ins.rows[0].driver_name}`, entityType: 'convoy', entityId: ins.rows[0].id, dedupe: `convoy_created:${ins.rows[0].id}` }, req.user.id);
       return { row: ins.rows[0], replay: false };
     });
     if (!replay) await this.log(req, 'convoy.create', row.id, { convoy_no: row.convoy_no, truck_no: row.truck_no });
@@ -159,13 +157,13 @@ export class ConvoysController {
     return this.db.tx(req.org.id, async (c) => {
       const own = (await c.query(`SELECT id FROM collectors WHERE user_id = $1 AND status = 'active'`, [req.user.id])).rows[0];
       const id = own?.id ?? collectorId;
-      if (!id) throw new BadRequestException('Collecteur requis');
+      if (!id) throw new BadRequestException('Délégué requis');
       const r = await nextConvoyNo(c, req.org.id, id, false, Math.max(0, Math.min(50, parseInt(pending ?? '0', 10) || 0)));
       return r ? { auto: true, ...r } : { auto: false, convoy_no: null, ccc_code: null };
     });
   }
 
-  /** Achats du collecteur pas encore chargés dans un convoi (reçus, en revue ou acceptés). */
+  /** Achats du délégué pas encore chargés dans un convoi (reçus, en revue ou acceptés). */
   @Get('convoys/available-declarations')
   @RequirePermissions('convoys:create')
   availableDeclarations(@Req() req: any, @Query('collector_id') collectorId?: string) {
@@ -209,12 +207,12 @@ export class ConvoysController {
       [status ?? null, req.org.permissions.has('convoys:receive') || req.org.permissions.has('convoys:settle'), req.user.id])).rows);
   }
 
-  /** Convois en route d'un collecteur donné : aide à la sélection par le magasinier. */
+  /** Convois en route d'un délégué donné : aide à la sélection par le magasinier. */
   @Get('convoys/expected')
   @RequirePermissions('convoys:receive')
   expected(@Req() req: any, @Query('collector_id') collectorId?: string) {
     return this.db.tx(req.org.id, async (c) => (await c.query(
-      `SELECT v.id, v.trailer_no, v.origin, v.convoy_no, v.collector_id, u.full_name AS collector_name, (SELECT mc.code FROM member_codes mc WHERE mc.user_id = k.user_id AND mc.organization_id = k.organization_id) AS collector_code, v.driver_name, v.truck_no, v.declared_bags, v.declared_kg, v.created_at,
+      `SELECT v.id, v.trailer_no, k.origin AS collector_origin, v.convoy_no, v.collector_id, u.full_name AS collector_name, (SELECT mc.code FROM member_codes mc WHERE mc.user_id = k.user_id AND mc.organization_id = k.organization_id) AS collector_code, v.driver_name, v.truck_no, v.declared_bags, v.declared_kg, v.created_at,
               coalesce((SELECT convoy_weight_tolerance_pct FROM org_settings), 2) AS weight_tolerance_pct,
               (SELECT count(*)::int FROM convoy_declarations x WHERE x.convoy_id = v.id) AS declaration_count
          FROM convoys v JOIN collectors k ON k.id = v.collector_id JOIN users u ON u.id = k.user_id WHERE v.status = 'in_transit' AND ($1::uuid IS NULL OR v.collector_id = $1) ORDER BY v.created_at`, [collectorId ?? null])).rows);
@@ -246,7 +244,7 @@ export class ConvoysController {
     return { ok: true };
   }
 
-  /** Stock acheté du collecteur connecté : achats déclarés, convois en route, livré au magasin central et solde du compte. */
+  /** Stock acheté du délégué connecté : achats déclarés, convois en route, livré au magasin central et solde du compte. */
   @Get('convoys/my-stock')
   @RequirePermissions('collector:stock')
   async myStock(@Req() req: any) {
@@ -301,13 +299,13 @@ export class ConvoysController {
       if (b.bags_unloaded != null && b.bags_refused != null && b.bags_unloaded < b.bags_refused) throw new BadRequestException('Sacs refusés supérieurs aux sacs déchargés');
       let v = (await c.query(`SELECT * FROM convoys WHERE collector_id = $1 AND convoy_no = $2 FOR UPDATE`, [b.collector_id, b.convoy_no.trim()])).rows[0];
       if (!v) {
-        // Saisie complète : connaissement non déclaré par le collecteur, créé par le magasinier à la réception.
-        if (!b.driver_name || !b.truck_no) throw new NotFoundException(`Aucun convoi « ${b.convoy_no.trim()} » pour ce collecteur : saisissez le chauffeur et le camion pour l'enregistrer à la réception`);
-        if (!(await c.query(`SELECT 1 FROM collectors WHERE id = $1 AND status = 'active'`, [b.collector_id])).rowCount) throw new BadRequestException('Collecteur inconnu ou désactivé');
+        // Saisie complète : connaissement non déclaré par le délégué, créé par le magasinier à la réception.
+        if (!b.driver_name || !b.truck_no) throw new NotFoundException(`Aucun convoi « ${b.convoy_no.trim()} » pour ce délégué : saisissez le chauffeur et le camion pour l'enregistrer à la réception`);
+        if (!(await c.query(`SELECT 1 FROM collectors WHERE id = $1 AND status = 'active'`, [b.collector_id])).rowCount) throw new BadRequestException('Délégué inconnu ou désactivé');
         if ((await c.query(`SELECT 1 FROM convoys WHERE convoy_no = $1`, [b.convoy_no.trim()])).rowCount) throw new ConflictException(`Le numéro de convoi « ${b.convoy_no.trim()} » existe déjà`);
-        v = (await c.query(`INSERT INTO convoys(organization_id, idempotency_key, convoy_no, collector_id, driver_name, truck_no, declared_bags, declared_kg, created_by, trailer_no, origin)
-            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
-          [req.org.id, `${b.idempotency_key}-cv`, b.convoy_no.trim(), b.collector_id, b.driver_name.trim(), b.truck_no.trim().toUpperCase(), b.declared_bags ?? null, b.declared_kg ?? null, req.user.id, b.trailer_no ?? null, b.origin ?? null])).rows[0];
+        v = (await c.query(`INSERT INTO convoys(organization_id, idempotency_key, convoy_no, collector_id, driver_name, truck_no, declared_bags, declared_kg, created_by, trailer_no)
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
+          [req.org.id, `${b.idempotency_key}-cv`, b.convoy_no.trim(), b.collector_id, b.driver_name.trim(), b.truck_no.trim().toUpperCase(), b.declared_bags ?? null, b.declared_kg ?? null, req.user.id, b.trailer_no ?? null])).rows[0];
       }
       if (v.status !== 'in_transit') throw new ConflictException('Ce convoi a déjà été réceptionné');
       const w = (await c.query(`SELECT status FROM warehouses WHERE id = $1`, [b.warehouse_id])).rows[0];
@@ -329,7 +327,7 @@ export class ConvoysController {
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,
            $12,$13,$14,$15,CASE WHEN $15::numeric IS NULL THEN NULL ELSE now() END,$16,$17,CASE WHEN $17::numeric IS NULL THEN NULL ELSE now() END,$18,$19,$20,$21,$22,$23,$24,$25) RETURNING *`,
         [req.org.id, b.idempotency_key, v.id, b.warehouse_id, b.total_kg, b.bags, variance, vpct, req.user.id, b.notes ?? null, held ? 'pending_variance' : 'pending_cashier',
-         bulletinNo, b.trailer_no ?? v.trailer_no ?? null, b.origin ?? v.origin ?? null, b.weigh_in_kg ?? null, b.scale_in ?? null, b.weigh_out_kg ?? null, b.scale_out ?? null, gross, b.bag_tare_kg ?? null, b.refaction_kg ?? null,
+         bulletinNo, b.trailer_no ?? v.trailer_no ?? null, (await c.query(`SELECT origin FROM collectors WHERE id = $1`, [v.collector_id])).rows[0]?.origin ?? null, b.weigh_in_kg ?? null, b.scale_in ?? null, b.weigh_out_kg ?? null, b.scale_out ?? null, gross, b.bag_tare_kg ?? null, b.refaction_kg ?? null,
          b.grade ?? null, b.bags_unloaded ?? null, b.bags_refused ?? null, JSON.stringify(b.analysis ?? {})])).rows[0];
       await c.query(`UPDATE convoys SET status = 'received' WHERE id = $1`, [v.id]);
       if (held) await this.notif.notifyPermission(c, req.org.id, 'weighings:approve', { kind: 'convoy_variance', severity: 'warning', title: `Écart de poids à valider : convoi ${v.convoy_no}`,
@@ -387,7 +385,7 @@ export class ConvoysController {
         WHERE r.status = 'pending_cashier' ORDER BY r.received_at`)).rows);
   }
 
-  /** La caisse traite la réception : calcule le montant (poids × prix) et crédite le compte du collecteur (écriture immuable). */
+  /** La caisse traite la réception : calcule le montant (poids × prix) et crédite le compte du délégué (écriture immuable). */
   @Post('convoy-receptions/:id/settle')
   @RequirePermissions('convoys:settle')
   async settle(@Param('id', ParseUUIDPipe) id: string, @Body() b: SettleDto, @Req() req: any) {
@@ -402,7 +400,7 @@ export class ConvoysController {
       let acc = (await c.query(`SELECT id, currency, accounting_code FROM financial_accounts WHERE owner_type = 'collector' AND owner_id = $1 AND status = 'active' FOR UPDATE`, [v.collector_id])).rows[0];
       if (!acc) acc = (await c.query(
         `INSERT INTO financial_accounts(organization_id, owner_type, owner_id, name, created_by) VALUES ($1,'collector',$2,$3,$4) RETURNING id, currency, accounting_code`,
-        [req.org.id, v.collector_id, `Compte collecteur — ${u.full_name}`, req.user.id])).rows[0];
+        [req.org.id, v.collector_id, `Compte délégué — ${u.full_name}`, req.user.id])).rows[0];
       const st = (await c.query(`SELECT convoy_transport_unit AS t, convoy_retention_per_kg AS r FROM org_settings`)).rows[0] ?? { t: '0', r: '0' };
       const tu = b.transport_unit ?? st.t, rt = b.retention_per_kg ?? st.r;
       const m = (await c.query(
@@ -420,7 +418,7 @@ export class ConvoysController {
         `INSERT INTO financial_transactions(organization_id, idempotency_key, account_id, direction, amount, currency, reason, reference_type, reference_id, created_by)
          VALUES ($1,$2,$3,'in',$4,$5,$6,'convoy_reception',$7,$8) RETURNING id`,
         [req.org.id, 'convoy-' + b.idempotency_key + (r.settle_attempts ? ':' + r.settle_attempts : ''), acc.id, amt, acc.currency, `Convoi ${v.convoy_no} : ${r.total_kg} kg × ${b.unit_price}`, r.id, req.user.id])).rows[0];
-      await c.query(`INSERT INTO accounting_accounts(organization_id, code, label) VALUES ($1,'4781','Retenues sur règlements des collecteurs') ON CONFLICT DO NOTHING`, [req.org.id]);
+      await c.query(`INSERT INTO accounting_accounts(organization_id, code, label) VALUES ($1,'4781','Retenues sur règlements des délégués') ON CONFLICT DO NOTHING`, [req.org.id]);
       const lines: any[] = [{ code: '601', debit: m.gross }];
       if (Number(m.transport) > 0) lines.push({ code: '605', debit: m.transport, label: 'Transport' });
       lines.push({ code: acc.accounting_code ?? '401', credit: amt });
@@ -452,7 +450,7 @@ export class ConvoysController {
   }
 
 
-  /** Collecteurs actifs avec leur solde de fiche (financements − net à payer) : sélection pour la caisse. */
+  /** Délégués actifs avec leur solde de fiche (financements − net à payer) : sélection pour la caisse. */
   @Get('convoys/collectors')
   @RequirePermissions('convoys:settle')
   collectors(@Req() req: any) {
@@ -484,7 +482,7 @@ export class ConvoysController {
     return b;
   }
 
-  /** Financement remis au collecteur (« Finance cacao ») ou report du solde de campagne : augmente ce que le collecteur doit à la coopérative. */
+  /** Financement remis au délégué (« Finance cacao ») ou report du solde de campagne : augmente ce que le délégué doit à la coopérative. */
   @Post('convoys/advances')
   @RequirePermissions('convoys:settle')
   async advance(@Body() b: AdvanceDto, @Req() req: any) {
@@ -495,11 +493,11 @@ export class ConvoysController {
       const prev = await c.query(`SELECT * FROM collector_advances WHERE idempotency_key = $1`, [b.idempotency_key]);
       if (prev.rowCount) return { row: prev.rows[0], replay: true };
       const k = (await c.query(`SELECT k.id, u.full_name FROM collectors k JOIN users u ON u.id = k.user_id WHERE k.id = $1 AND k.status = 'active'`, [b.collector_id])).rows[0];
-      if (!k) throw new BadRequestException('Collecteur inconnu ou désactivé');
+      if (!k) throw new BadRequestException('Délégué inconnu ou désactivé');
       let acc = (await c.query(`SELECT id, currency, accounting_code FROM financial_accounts WHERE owner_type = 'collector' AND owner_id = $1 AND status = 'active' FOR UPDATE`, [k.id])).rows[0];
       if (!acc) acc = (await c.query(
         `INSERT INTO financial_accounts(organization_id, owner_type, owner_id, name, created_by) VALUES ($1,'collector',$2,$3,$4) RETURNING id, currency, accounting_code`,
-        [req.org.id, k.id, `Compte collecteur — ${k.full_name}`, req.user.id])).rows[0];
+        [req.org.id, k.id, `Compte délégué — ${k.full_name}`, req.user.id])).rows[0];
       const label = b.label ?? (b.kind === 'advance' ? 'Finance cacao' : 'Solde de la campagne précédente');
       const when = b.operation_date ? `${b.operation_date}T12:00:00Z` : new Date().toISOString();
       const t1 = (await c.query(
@@ -541,8 +539,8 @@ export class ConvoysController {
   }
 
   /**
-   * Fiche de suivi du compte collecteur. Convention de la fiche papier : le solde est ce que le collecteur doit à la coopérative
-   * (financements − net à payer des livraisons) ; un solde négatif est une somme due au collecteur.
+   * Fiche de suivi du compte délégué. Convention de la fiche papier : le solde est ce que le délégué doit à la coopérative
+   * (financements − net à payer des livraisons) ; un solde négatif est une somme due au délégué.
    */
   @Get('convoys/statement')
   @RequirePermissions('convoys:read')
@@ -551,10 +549,10 @@ export class ConvoysController {
       const staff = req.org.permissions.has('convoys:settle');
       const mine = (await c.query(`SELECT id FROM collectors WHERE user_id = $1 AND status = 'active'`, [req.user.id])).rows[0];
       const cid = staff ? (collectorId ?? mine?.id) : mine?.id;
-      if (!cid) throw new BadRequestException('Collecteur requis');
+      if (!cid) throw new BadRequestException('Délégué requis');
       if (!staff && collectorId && collectorId !== mine?.id) throw new ForbiddenException('Vous ne pouvez consulter que votre propre fiche');
       const who = (await c.query(`SELECT k.id, u.full_name FROM collectors k JOIN users u ON u.id = k.user_id WHERE k.id = $1`, [cid])).rows[0];
-      if (!who) throw new NotFoundException('Collecteur inconnu');
+      if (!who) throw new NotFoundException('Délégué inconnu');
       const acc = (await c.query(`SELECT id FROM financial_accounts WHERE owner_type = 'collector' AND owner_id = $1`, [cid])).rows[0];
       if (!acc) return { collector: who, opening: '0', rows: [], totals: { finance: '0', net: '0' }, solde: '0', advance_outstanding: '0' };
       const f = from ?? '1900-01-01', t = to ?? '2999-12-31';
@@ -588,7 +586,7 @@ export class ConvoysController {
     });
   }
 
-  /** Paiement en espèces au collecteur : débite son compte et sort la somme de la caisse (session ouverte), avec l'écriture comptable. */
+  /** Paiement en espèces au délégué : débite son compte et sort la somme de la caisse (session ouverte), avec l'écriture comptable. */
   @Post('convoys/payout')
   @RequirePermissions('convoys:settle', 'cash:operate')
   async payout(@Body() b: PayoutDto, @Req() req: any) {
@@ -597,7 +595,7 @@ export class ConvoysController {
       const prev = await c.query(`SELECT id, amount FROM financial_transactions WHERE idempotency_key = $1`, ['payout-c:' + b.idempotency_key]);
       if (prev.rowCount) return { row: prev.rows[0], replay: true };
       const acc = (await c.query(`SELECT * FROM financial_accounts WHERE owner_type = 'collector' AND owner_id = $1 AND status = 'active' FOR UPDATE`, [b.collector_id])).rows[0];
-      if (!acc) throw new NotFoundException('Ce collecteur n\'a pas encore de compte crédité');
+      if (!acc) throw new NotFoundException('Ce délégué n\'a pas encore de compte crédité');
       const sess = (await c.query(
         `SELECT s.id, r.account_id FROM cash_sessions s JOIN cash_registers r ON r.id = s.register_id WHERE s.id = $1 AND s.status = 'open'`, [b.cash_session_id])).rows[0];
       if (!sess) throw new BadRequestException('Session de caisse inconnue ou clôturée');
@@ -606,10 +604,10 @@ export class ConvoysController {
         `SELECT $2::numeric <= coalesce(sum(CASE direction WHEN 'in' THEN amount ELSE -amount END), 0) AS ok, coalesce(sum(CASE direction WHEN 'in' THEN amount ELSE -amount END), 0) AS balance
            FROM financial_transactions WHERE account_id = $1`, [account, b.amount]).then((r) => r.rows[0]);
       const bc = await bal(acc.id);
-      if (!bc.ok) throw new UnprocessableEntityException(`Solde du compte du collecteur insuffisant (${bc.balance})`);
+      if (!bc.ok) throw new UnprocessableEntityException(`Solde du compte du délégué insuffisant (${bc.balance})`);
       const bk = await bal(cash.id);
       if (!bk.ok) throw new UnprocessableEntityException(`Solde de caisse insuffisant (${bk.balance})`);
-      const reason = 'Paiement en espèces au collecteur';
+      const reason = 'Paiement en espèces au délégué';
       const t1 = (await c.query(
         `INSERT INTO financial_transactions(organization_id, idempotency_key, account_id, direction, amount, currency, reason, reference_type, reference_id, created_by)
          VALUES ($1,$2,$3,'out',$4,$5,$6,'collector_payout',$7,$8) RETURNING id, amount`,

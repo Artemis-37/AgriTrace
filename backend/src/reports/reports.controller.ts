@@ -6,7 +6,7 @@ import { DbService } from '../db/db.service';
 
 const GROUPS: Record<string, { sel: string; label: string }> = {
   section: { sel: `coalesce(nullif(p.section, ''), 'Sans section')`, label: 'Section' },
-  collector: { sel: `cu.full_name`, label: 'Collecteur' },
+  collector: { sel: `cu.full_name`, label: 'Délégué' },
   chain: { sel: `vc.name`, label: 'Filière' },
   day: { sel: `to_char(d.operation_date, 'YYYY-MM-DD')`, label: 'Jour' },
   village: { sel: `coalesce(nullif(p.village, ''), 'Sans village')`, label: 'Village' },
@@ -20,7 +20,7 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/;
 export class ReportsController {
   constructor(private readonly db: DbService) {}
 
-  /** Achats déclarés (hors brouillons, rejets et annulations), regroupés selon `group`, filtrables par période, section, collecteur et filière. */
+  /** Achats déclarés (hors brouillons, rejets et annulations), regroupés selon `group`, filtrables par période, section, délégué et filière. */
   private async purchases(orgId: string, q: Record<string, string | undefined>) {
     const g = GROUPS[q.group ?? 'section'];
     if (!g) throw new BadRequestException('Regroupement inconnu');
@@ -48,7 +48,7 @@ export class ReportsController {
   @RequirePermissions('reports:read')
   list(@Req() req: any, @Query() q: Record<string, string>) { return this.purchases(req.org.id, q); }
 
-  /** Listes pour les filtres (sections, collecteurs, filières). */
+  /** Listes pour les filtres (sections, délégués, filières). */
   @Get('filters')
   @RequirePermissions('reports:read')
   async filters(@Req() req: any) {
@@ -89,7 +89,7 @@ export class ReportsController {
     return [q.from || null, q.to || null] as const;
   }
 
-  /** Finance : mouvements par compte sur la période, créances clients, dettes envers les collecteurs, préfinancements à rembourser. */
+  /** Finance : mouvements par compte sur la période, créances clients, dettes envers les délégués, préfinancements à rembourser. */
   private async finance(orgId: string, q: Record<string, string | undefined>) {
     const [f, t] = this.period(q);
     return this.db.tx(orgId, async (c) => {
@@ -185,7 +185,7 @@ export class ReportsController {
     return this.sheet([
       { title: 'Comptes', cols: [['Compte', 'name', 32], ['Type', 'owner_type'], ['Entrées', 'inflow'], ['Sorties', 'outflow'], ['Solde', 'balance']], rows: r.accounts },
       { title: 'Ventes', cols: [['Facturé (période)', 'invoiced'], ['Créances à encaisser', 'receivable'], ['Dont échues', 'overdue'], ['Avoirs (période)', 'credited']], rows: [r.sales] },
-      { title: 'Collecteurs', cols: [['Collecteur', 'name', 32], ['Dû au collecteur (net des avances)', 'owed_to_collector', 34]], rows: r.collectors },
+      { title: 'Délégués', cols: [['Délégué', 'name', 32], ['Dû au délégué (net des avances)', 'owed_to_collector', 34]], rows: r.collectors },
       { title: 'Préfinancement', cols: [['Devise', 'currency'], ['Reste à rembourser', 'outstanding']], rows: r.prefinancing },
     ], 'Rapport_financier.xlsx');
   }

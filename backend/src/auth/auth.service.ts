@@ -70,7 +70,7 @@ export class AuthService {
     await this.db.query(`UPDATE users SET failed_logins = 0, locked_until = NULL WHERE id = $1`, [u.id]);
     await this.db.query(`DELETE FROM login_failures WHERE user_id = $1 AND ip = $2`, [u.id, where]);
 
-    // Coachs, collecteurs et agents de terrain : application mobile uniquement. Refus seulement si TOUS leurs accès le sont (un compte qui administre aussi une autre coopérative peut se connecter).
+    // Coachs, délégués et agents de terrain : application mobile uniquement. Refus seulement si TOUS leurs accès le sont (un compte qui administre aussi une autre coopérative peut se connecter).
     if (webClient) {
       // `roles` est protégée par organisation (RLS) : on lit le drapeau dans le contexte de chaque coopérative du compte.
       const links = await this.db.query<{ organization_id: string; role_id: string }>(`SELECT organization_id, role_id FROM user_organizations WHERE user_id = $1 AND status = 'active'`, [u.id]);

@@ -9,7 +9,7 @@ export const STANDARD_ROLES: Record<string, { name: string; description: string;
   },
   caissier: {
     name: 'Caissier',
-    description: 'Traite les convois reçus, règle les collecteurs, tient la caisse et les comptes des collecteurs.',
+    description: 'Traite les convois reçus, règle les délégués, tient la caisse et les comptes des délégués.',
     permissions: ['convoys:read', 'convoys:settle', 'cash:operate', 'finance:read', 'accounting:read', 'cancellations:request', 'messages:use', 'sync:use'],
     hidden: ['Cartographie', 'Conformité / qualité', 'Équipe', 'Missions', 'Stocks'],
   },
@@ -94,10 +94,10 @@ export const STANDARD_ROLES: Record<string, { name: string; description: string;
   },
   collecteur: {
     mobileOnly: true,
-    name: 'Collecteur (délégué)',
+    name: 'Délégué',
     description: 'Déclare ses achats chez les producteurs et ses convois, voit son stock, son historique et sa fiche de compte.',
     permissions: ['declarations:create', 'declarations:read', 'producers:read', 'convoys:create', 'convoys:read', 'collector:stock', 'documents:upload', 'messages:use', 'sync:use'],
-    hidden: ['Tout ce qui concerne les autres collecteurs', 'Caisse', 'Comptabilité', 'Équipe'],
+    hidden: ['Tout ce qui concerne les autres délégués', 'Caisse', 'Comptabilité', 'Équipe'],
   },
   adg: {
     name: 'Administrateur de groupe (ADG)',

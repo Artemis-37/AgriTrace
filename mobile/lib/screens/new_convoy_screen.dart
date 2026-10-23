@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../main.dart';
 
-/// Déclaration d'un convoi par le collecteur : n° de connaissement intérieur, chauffeur, camion. Fonctionne sans réseau.
+/// Déclaration d'un convoi par le délégué : n° de connaissement intérieur, chauffeur, camion. Fonctionne sans réseau.
 class NewConvoyScreen extends StatefulWidget {
   const NewConvoyScreen({super.key});
   @override

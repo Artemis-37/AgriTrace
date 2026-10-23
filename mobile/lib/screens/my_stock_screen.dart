@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../main.dart';
 
-/// Stock acheté du collecteur : acheté, en route, livré au magasin central et solde du compte. Nécessite le réseau.
+/// Stock acheté du délégué : acheté, en route, livré au magasin central et solde du compte. Nécessite le réseau.
 class MyStockScreen extends StatefulWidget {
   const MyStockScreen({super.key});
   @override

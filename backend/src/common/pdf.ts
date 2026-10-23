@@ -33,7 +33,7 @@ export function receiptPdf(r: any): Promise<Buffer> {
     row(doc, 'Reçu d\'achat n°', r.purchase_receipt_no ?? 'non renseigné');
     row(doc, 'Date', fmtDate(r.weighed_at));
     row(doc, 'Producteur', `${r.producer_name} (${r.producer_code})`);
-    row(doc, 'Collecteur', r.collector_name);
+    row(doc, 'Délégué', r.collector_name);
     row(doc, 'Magasin', r.warehouse_name);
     row(doc, 'Opérateur de pesée', r.operator_name);
     row(doc, 'Lot', r.lot_code);
@@ -64,7 +64,7 @@ export function traceabilityPdf(t: any): Promise<Buffer> {
     for (const o of t.origins) {
       doc.font('Helvetica').fontSize(9).text(
         `${o.producer_code} ${o.producer_name} — ${o.village ?? 'village ?'}, section ${o.section ?? '?'} — ` +
-        `${o.net_kg} kg (déclaré ${o.declared_kg} kg) — reçu de pesée ${o.receipt_number}${o.purchase_receipt_no ? ` (reçu d'achat ${o.purchase_receipt_no})` : ''} — collecteur ${o.collector_name}`);
+        `${o.net_kg} kg (déclaré ${o.declared_kg} kg) — reçu de pesée ${o.receipt_number}${o.purchase_receipt_no ? ` (reçu d'achat ${o.purchase_receipt_no})` : ''} — délégué ${o.collector_name}`);
     }
     if (!t.origins.length) doc.font('Helvetica').fontSize(10).text('Aucune origine trouvée');
 

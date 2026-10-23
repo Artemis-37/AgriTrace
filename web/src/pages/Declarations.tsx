@@ -24,7 +24,7 @@ export default function Declarations() {
 
   return (
     <>
-      <PageHeader title="Déclarations d'achat" subtitle="Achats déclarés par les collecteurs, avant et après réception" actions={<>{<button className="btn btn-secondary" onClick={() => download('/purchase-declarations/export/xlsx', 'achats-declares.xlsx').catch(() => undefined)}>Exporter vers Excel</button>}{can('declarations:create') && <button className="btn" onClick={() => setCreating(true)}>Saisir un achat</button>}</>} />
+      <PageHeader title="Déclarations d'achat" subtitle="Achats déclarés par les délégués, avant et après réception" actions={<>{<button className="btn btn-secondary" onClick={() => download('/purchase-declarations/export/xlsx', 'achats-declares.xlsx').catch(() => undefined)}>Exporter vers Excel</button>}{can('declarations:create') && <button className="btn" onClick={() => setCreating(true)}>Saisir un achat</button>}</>} />
       {creating && <NewPurchase onClose={() => setCreating(false)} onDone={() => setTimeout(reload, 800)} />}
       <Card>
         <div className="toolbar">

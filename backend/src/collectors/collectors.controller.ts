@@ -1,18 +1,23 @@
-import { BadRequestException, Body, ConflictException, Controller, Get, NotFoundException, Param, ParseUUIDPipe, Post, Req } from '@nestjs/common';
+import { BadRequestException, Body, ConflictException, Controller, Get, NotFoundException, Param, ParseUUIDPipe, Post, Put, Req } from '@nestjs/common';
 import { ApiBearerAuth, ApiHeader, ApiTags } from '@nestjs/swagger';
-import { IsOptional, IsString, IsUUID } from 'class-validator';
+import { IsOptional, IsString, IsUUID, Length } from 'class-validator';
 import { RequirePermissions } from '../access/decorators';
 import { AuditService } from '../audit/audit.service';
 import { isUniqueViolation } from '../common/dto';
 import { DbService } from '../db/db.service';
 
-class CreateCollectorDto { @IsUUID() user_id: string; }
+class CreateCollectorDto {
+  @IsUUID() user_id: string;
+  /** Provenance habituelle des achats du délégué (localité, zone) : reprise sur chaque bulletin de pesée. */
+  @IsOptional() @IsString() @Length(1, 80) origin?: string;
+}
+class OriginDto { @IsString() @Length(1, 80) origin: string; }
 class AssignmentDto {
   @IsOptional() @IsUUID() value_chain_id?: string;   // absent = toutes les filières de la coopérative
   @IsOptional() @IsString() zone?: string;
 }
 
-@ApiTags('collecteurs')
+@ApiTags('délégués')
 @ApiBearerAuth()
 @ApiHeader({ name: 'X-Organization-Id', required: true })
 @Controller('collectors')
@@ -24,7 +29,7 @@ export class CollectorsController {
   list(@Req() req: any) {
     return this.db.tx(req.org.id, async (c) =>
       (await c.query(
-        `SELECT c.id, c.user_id, c.status, u.full_name, (SELECT mc.code FROM member_codes mc WHERE mc.user_id = c.user_id AND mc.organization_id = c.organization_id) AS member_code,
+        `SELECT c.id, c.user_id, c.status, c.origin, u.full_name, (SELECT mc.code FROM member_codes mc WHERE mc.user_id = c.user_id AND mc.organization_id = c.organization_id) AS member_code,
                 coalesce((SELECT json_agg(json_build_object('id', a.id, 'value_chain_id', a.value_chain_id, 'zone', a.zone))
                             FROM collector_assignments a WHERE a.collector_id = c.id), '[]') AS assignments
            FROM collectors c JOIN users u ON u.id = c.user_id ORDER BY u.full_name`)).rows);
@@ -37,12 +42,12 @@ export class CollectorsController {
       const row = await this.db.tx(req.org.id, async (c) => {
         const m = await c.query(`SELECT 1 FROM user_organizations WHERE user_id = $1 AND organization_id = $2 AND status = 'active'`, [b.user_id, req.org.id]);
         if (!m.rowCount) throw new BadRequestException("L'utilisateur n'est pas membre de cette organisation");
-        return (await c.query(`INSERT INTO collectors(organization_id, user_id, created_by) VALUES ($1,$2,$3) RETURNING id, user_id, status`, [req.org.id, b.user_id, req.user.id])).rows[0];
+        return (await c.query(`INSERT INTO collectors(organization_id, user_id, created_by, origin) VALUES ($1,$2,$3,$4) RETURNING id, user_id, status, origin`, [req.org.id, b.user_id, req.user.id, b.origin?.trim() || null])).rows[0];
       });
       await this.audit.log({ organizationId: req.org.id, actorUserId: req.user.id, action: 'collector.create', entityType: 'collector', entityId: row.id });
       return row;
     } catch (e) {
-      if (isUniqueViolation(e)) throw new ConflictException('Cet utilisateur est déjà collecteur');
+      if (isUniqueViolation(e)) throw new ConflictException('Cet utilisateur est déjà délégué');
       throw e;
     }
   }
@@ -60,6 +65,16 @@ export class CollectorsController {
     });
     await this.audit.log({ organizationId: req.org.id, actorUserId: req.user.id, action: 'collector.assign', entityType: 'collector', entityId: id, details: b as any });
     return row;
+  }
+
+  /** Modifie la provenance du délégué (reprise sur les prochains bulletins ; les réceptions passées gardent la leur). */
+  @Put(':id/origin')
+  @RequirePermissions('collectors:manage')
+  async setOrigin(@Param('id', ParseUUIDPipe) id: string, @Body() b: OriginDto, @Req() req: any) {
+    const n = await this.db.tx(req.org.id, async (c) => (await c.query(`UPDATE collectors SET origin = $2, updated_at = now(), updated_by = $3, version = version + 1 WHERE id = $1`, [id, b.origin.trim(), req.user.id])).rowCount);
+    if (!n) throw new NotFoundException();
+    await this.audit.log({ organizationId: req.org.id, actorUserId: req.user.id, action: 'collector.origin', entityType: 'collector', entityId: id, details: { origin: b.origin.trim() } });
+    return { id, origin: b.origin.trim() };
   }
 
   @Post(':id/disable')

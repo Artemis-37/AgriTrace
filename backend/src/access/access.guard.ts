@@ -89,7 +89,7 @@ export class AccessGuard implements CanActivate {
     );
     if (!member.length) throw new ForbiddenException('Organisation inaccessible');
 
-    // Comptes réservés au mobile (coachs, collecteurs, agents de terrain) : refusés depuis le portail web, qui s'annonce par « X-Client: web ».
+    // Comptes réservés au mobile (coachs, délégués, agents de terrain) : refusés depuis le portail web, qui s'annonce par « X-Client: web ».
     // C'est une règle d'usage (interface), pas une barrière de sécurité : l'authentification et les droits restent vérifiés comme pour tout compte.
     if (req.headers['x-client'] === 'web' && !req.user.is_platform_admin) {
       const mo = (await this.db.tx(orgId, (c) => c.query(

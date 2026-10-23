@@ -7,7 +7,7 @@ Ce guide présente chaque utilisateur **sur ordinateur** (portail web dans le na
 ## Qui utilise quoi
 | Utilisateur | Ordinateur (portail / bureau) | Téléphone (Android) |
 |---|---|---|
-| Collecteur (délégué) | — (**mobile uniquement** : connexion refusée sur le portail) | **Outil principal** : achats, convois, stock, fiche de compte, hors connexion |
+| Délégué | — (**mobile uniquement** : connexion refusée sur le portail) | **Outil principal** : achats, convois, stock, fiche de compte, hors connexion |
 | Coach / agent de terrain | — (**mobile uniquement** : connexion refusée sur le portail) | **Outil principal** : producteurs (recherche et filtre par section), missions, modules de formation, relevé de parcelle, photos |
 | Exportateur (partenaire) | **Outil principal** : proposer des modules, lire les résultats transmis | — |
 | Administrateur de groupe (ADG) | **Outil principal** : missions, cartographie, qualité, rapports | Consultation (missions, parcelles) |
@@ -49,20 +49,20 @@ Si l'administrateur suspend le compte, le **téléphone efface les données de l
 ![Portail : tableau de bord (commandes, créances, missions en retard, anomalies)](captures/tableau-de-bord.png)
 *Portail : tableau de bord (commandes, créances, missions en retard, anomalies)*
 
-## Collecteur (délégué)
+## Délégué
 
 ### Sur téléphone
 1. **Déclarer un achat** : sur l'accueil (en-tête vert avec date, nom, coopérative, zone et nombre d'achats du jour ; la cloche des notifications est en haut, à côté de l'icône réseau), bouton « Acheter du produit ». Choisir le producteur (recherche par nom ou code) : une fiche « Informations du producteur » s'affiche (nom, prénoms, matricule, contact, localité, section) ; « Continuer » ouvre la saisie : filière, quantité (sacs ou kg), **numéro du reçu d'achat dès la saisie** s'il est exigé, photo du reçu (facultative), date. Le prix vient du barème en vigueur : il ne change pas après coup.
 2. **Suivre** : chaque ligne de l'accueil a une icône d'état (confirmé, en attente d'envoi, à corriger). Une déclaration « à corriger » se rouvre ; le motif est affiché. Un numéro de reçu déjà utilisé est signalé comme conflit.
-3. **Convoi** : regrouper ses achats dans un convoi (chauffeur, camion, sacs et poids annoncés). Le **n° de connaissement est attribué par le logiciel** : `code CCC de la coopérative`-`année`-`3 premières lettres du nom du collecteur`-`n° d'ordre`, par exemple `SC000000-2026-OUM-1` pour le 1er convoi de 2026 d'Oumarou. Hors connexion, le numéro définitif est attribué à l'envoi. Il est envoyé dès que le réseau revient ; le magasinier le réceptionne ensuite.
+3. **Convoi** : regrouper ses achats dans un convoi (chauffeur, camion, sacs et poids annoncés). Le **n° de connaissement est attribué par le logiciel** : `code CCC de la coopérative`-`année`-`3 premières lettres du nom du délégué`-`n° d'ordre`, par exemple `SC000000-2026-OUM-1` pour le 1er convoi de 2026 d'Oumarou. Hors connexion, le numéro définitif est attribué à l'envoi. Il est envoyé dès que le réseau revient ; le magasinier le réceptionne ensuite.
 4. **Historique, Mon stock, Ma fiche de compte** : achats passés avec filtre par état, quantités achetées / en route / livrées, et fiche de suivi du compte (report, financements, livraisons, solde). La fiche et le stock demandent le réseau.
 
-<table class="phones"><tr><td><img src="captures/mobile/collecteur-accueil.png" alt="Accueil collecteur"><br><em>Accueil collecteur</em></td><td><img src="captures/mobile/collecteur-info-producteur.png" alt="Informations du producteur"><br><em>Informations du producteur</em></td><td><img src="captures/mobile/collecteur-nouvel-achat.png" alt="Saisie de l'achat"><br><em>Saisie de l'achat</em></td></tr></table>
+<table class="phones"><tr><td><img src="captures/mobile/délégué-accueil.png" alt="Accueil délégué"><br><em>Accueil délégué</em></td><td><img src="captures/mobile/délégué-info-producteur.png" alt="Informations du producteur"><br><em>Informations du producteur</em></td><td><img src="captures/mobile/délégué-nouvel-achat.png" alt="Saisie de l'achat"><br><em>Saisie de l'achat</em></td></tr></table>
 
-<table class="phones"><tr><td><img src="captures/mobile/collecteur-mon-stock.png" alt="Mon stock"><br><em>Mon stock</em></td><td><img src="captures/mobile/collecteur-fiche.png" alt="Ma fiche de compte"><br><em>Ma fiche de compte</em></td><td><img src="captures/mobile/collecteur-convoi.png" alt="Déclarer un convoi"><br><em>Déclarer un convoi</em></td></tr></table>
+<table class="phones"><tr><td><img src="captures/mobile/délégué-mon-stock.png" alt="Mon stock"><br><em>Mon stock</em></td><td><img src="captures/mobile/délégué-fiche.png" alt="Ma fiche de compte"><br><em>Ma fiche de compte</em></td><td><img src="captures/mobile/délégué-convoi.png" alt="Déclarer un convoi"><br><em>Déclarer un convoi</em></td></tr></table>
 
 ### Sur ordinateur
-Aucun accès : le compte collecteur se connecte **uniquement par l'application mobile** (le portail refuse la connexion avec un message clair). Stock, historique et fiche de compte se consultent sur le téléphone.
+Aucun accès : le compte délégué se connecte **uniquement par l'application mobile** (le portail refuse la connexion avec un message clair). Stock, historique et fiche de compte se consultent sur le téléphone.
 
 ## Coach (agent de terrain)
 
@@ -109,7 +109,7 @@ Responsable de la conformité et de la certification.
 ![Résultats à transmettre (ADG)](captures/formation/adg-resultats-exportateurs.png)
 
 ![Espace de l'exportateur](captures/formation/exportateur-modules-exportateurs.png)
-- **Comptes mobile uniquement** : les rôles standard *collecteur*, *agent de terrain* et *coach* (créés depuis *Équipe*) sont « mobile uniquement ». Leurs titulaires se connectent par l'application ; le portail refuse leur connexion avec un message clair. Ce réglage n'a pas encore d'écran pour les rôles personnalisés (il se pose à la création du rôle par l'API). C'est une règle d'usage de l'interface, pas une barrière de sécurité.
+- **Comptes mobile uniquement** : les rôles standard *délégué*, *agent de terrain* et *coach* (créés depuis *Équipe*) sont « mobile uniquement ». Leurs titulaires se connectent par l'application ; le portail refuse leur connexion avec un message clair. Ce réglage n'a pas encore d'écran pour les rôles personnalisés (il se pose à la création du rôle par l'API). C'est une règle d'usage de l'interface, pas une barrière de sécurité.
 - **Cartographie** : onglets Carte (fond neutre, plan ou satellite), Anomalies, Zones protégées, Importer, Exporter, Tolérances.
   - Une anomalie bloquante empêche la validation de la parcelle : la corriger, ou accepter une **exception motivée** (tracée). « Corrigée » est refusée tant que le problème existe.
   - Doublon : « Remplacer » garde l'historique de l'ancienne parcelle.
@@ -159,13 +159,13 @@ Consultation des missions et des parcelles (mêmes écrans que le coach, selon l
 - **Imprimer le reçu** : **bulletin de pesée** (réception d'un convoi), reçu de règlement, reçu de caisse, pièce comptable ou bon de mouvement, avec l'en-tête de la coopérative (logo, adresse, téléphone), les lignes de l'opération et deux cases de signature. Toute impression est tracée ; à partir de la deuxième, la pièce porte la mention **DUPLICATA n°…**.
 - **Demander l'annulation** : indiquez le motif (5 caractères minimum). L'opération n'est **pas** annulée tout de suite : l'administrateur de la coopérative (ou tout titulaire du droit d'approbation, par exemple la direction ou le responsable financier) reçoit une notification, approuve ou refuse (refus motivé). Le demandeur est averti de la décision. On ne peut pas approuver sa propre demande.
 - **Ce qu'une annulation fait** : rien n'est effacé de l'historique. Un mouvement de caisse ou de stock reçoit une écriture inverse ; une écriture comptable est contre-passée ; une réception non réglée est retirée (le convoi redevient « en transit ») ; un règlement est annulé (écritures inversées, la réception revient dans la file de la caisse pour être réglée à nouveau).
-- **Ce qui ne s'annule pas directement** : une écriture déjà d'annulation, une opération déjà annulée, une écriture générée par un document (annulez le document d'origine), une réception déjà réglée (la caisse demande d'abord l'annulation du règlement), un règlement dont le montant a déjà été payé au collecteur (solde insuffisant).
+- **Ce qui ne s'annule pas directement** : une écriture déjà d'annulation, une opération déjà annulée, une écriture générée par un document (annulez le document d'origine), une réception déjà réglée (la caisse demande d'abord l'annulation du règlement), un règlement dont le montant a déjà été payé au délégué (solde insuffisant).
 
 ![Portail : mes opérations, reçus et demandes d'annulation](captures/operations.png)
 *Portail : mes opérations, reçus et demandes d'annulation*
 
 ## Caissier (ordinateur)
-- **Convois** : traiter les convois reçus et régler les collecteurs ; les avances non soldées sont déduites automatiquement.
+- **Convois** : traiter les convois reçus et régler les délégués ; les avances non soldées sont déduites automatiquement.
 - **Caisse** : ouvrir sa caisse (chaque caissier a sa session), enregistrer les mouvements, clôturer en comptant l'espèce ; l'écart entre le compté et l'attendu est calculé et conservé.
 - **Finances** : consultation des comptes et de la comptabilité selon les droits.
 
@@ -174,8 +174,8 @@ Consultation des missions et des parcelles (mêmes écrans que le coach, selon l
 
 ## Administrateur de coopérative (ordinateur)
 - **Équipe** : créer les comptes, choisir le rôle, suspendre, réactiver, révoquer les sessions, **réinitialiser un mot de passe** (le mot de passe temporaire n'est affiché qu'une fois), **retirer la double authentification** d'un collègue qui a perdu son téléphone, consulter l'historique d'accès.
-- **Profil de la coopérative** (Équipe) : nom commercial, adresse, téléphone, e-mail, devise, langue par défaut ; repris en en-tête des reçus. Le **code CCC** de la coopérative y est saisi une fois : il sert de préfixe au numéro de connaissement des convois (sans code, le collecteur saisit le numéro à la main). Changer le code n'affecte que les convois futurs. Deux collecteurs dont les noms commencent par les mêmes 3 lettres partagent le même compteur : leurs numéros restent distincts.
-- **Rôles types** : 17 modèles prêts (direction, responsables de traçabilité / cartographie / magasin / financier / qualité / logistique, cartographe, agent de terrain, magasinier, caissier, comptable, collecteur, coach, ADG, auditeur, acheteur ou partenaire) à créer en un clic, puis à ajuster.
+- **Profil de la coopérative** (Équipe) : nom commercial, adresse, téléphone, e-mail, devise, langue par défaut ; repris en en-tête des reçus. Le **code CCC** de la coopérative y est saisi une fois : il sert de préfixe au numéro de connaissement des convois (sans code, le délégué saisit le numéro à la main). Changer le code n'affecte que les convois futurs. Deux délégués dont les noms commencent par les mêmes 3 lettres partagent le même compteur : leurs numéros restent distincts.
+- **Rôles types** : 17 modèles prêts (direction, responsables de traçabilité / cartographie / magasin / financier / qualité / logistique, cartographe, agent de terrain, magasinier, caissier, comptable, délégué, coach, ADG, auditeur, acheteur ou partenaire) à créer en un clic, puis à ajuster.
 - **Rapprochement bancaire** (Finances › Rapprochement bancaire) : importer le relevé de la banque en CSV, choisir les colonnes, simuler, importer ; les lignes correspondant à une seule opération du compte sont pointées d'office, les autres se pointent à la main ou s'ignorent avec une note ; les opérations du compte absentes du relevé sont listées pour être expliquées.
 - **Rapports automatiques** (Rapports › Envoi automatique) : choisir le rapport, la fréquence (jour, semaine, mois), l'heure et les destinataires ; chacun reçoit une notification et télécharge le fichier Excel ; envoi par e-mail si le serveur est configuré pour.
 - **Annulations** : traiter les demandes dans « Mes opérations » › « Demandes d'annulation ».
