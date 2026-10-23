@@ -43,9 +43,9 @@ async function actor(role) {
   return { page, go, close: () => ctx.close() };
 }
 /** Enregistre une étape du parcours : capture + texte de guide. */
-async function snap(page, role, slug, title, text) {
+async function snap(page, role, slug, title, text, full = false) {
   n += 1; const file = `${String(n).padStart(2, '0')}-${role}-${slug}.png`;
-  await page.screenshot({ path: path.join(OUT, file) });
+  await page.screenshot({ path: path.join(OUT, file), fullPage: full });
   steps.push({ n, role, who: acc[role]?.name ?? role, title, text, file });
   console.log('  ✓', file);
 }
@@ -104,32 +104,33 @@ console.log('3. Pesées au magasin');
   await page.getByRole('button', { name: 'Enregistrer une pesée' }).click(); await page.waitForTimeout(800);
   const form = page.locator('main');
   const del1 = acc.collecteur;
-  await form.getByLabel('Délégué (recherche par nom)').selectOption({ label: /Brahima/ }.toString() && { index: 1 }).catch(() => undefined);
-  const opts = await form.getByLabel('Délégué (recherche par nom)').locator('option').allInnerTexts();
-  await form.getByLabel('Délégué (recherche par nom)').selectOption({ label: opts.find((o) => o.includes('Brahima')) });
+  const opts = await form.getByLabel(/^Délégué \(recherche par nom\)/).locator('option').allInnerTexts();
+  await form.getByLabel(/^Délégué \(recherche par nom\)/).selectOption({ label: opts.find((o) => o.includes('Brahima')) });
   await page.waitForTimeout(400);
-  await form.getByLabel('Magasin').selectOption({ index: 1 });
-  await form.getByLabel('N° de connaissement').fill(CV); await page.waitForTimeout(600);
-  await form.getByLabel('Poids (kg)').fill('1312'); await form.getByLabel('Nombre de sacs reçus').fill('20'); await form.getByLabel('Sacs déchargés').fill('20'); await form.getByLabel('Qualité / grade').fill('A');
-  await form.getByLabel('Humidité').first().fill('7.2').catch(() => undefined);
+  await form.getByLabel(/^Magasin/).selectOption({ index: 1 });
+  await form.getByLabel(/^Produit/).selectOption({ label: 'Cacao (fèves)' });
+  await form.getByLabel(/^N° de connaissement/).fill(CV); await page.waitForTimeout(600);
+  await form.getByLabel(/^Poids \(kg\)/).fill('1312'); await form.getByLabel(/^Nombre de sacs reçus/).fill('20'); await form.getByLabel(/^Sacs déchargés/).fill('20'); await form.getByLabel(/^Qualité \/ grade/).fill('A');
   await page.waitForTimeout(500);
-  await snap(page, 'magasinier', 'pesee-declaree', 'Pesée d\'un convoi déclaré', 'On choisit le délégué (ou on saisit son code), le n° de connaissement : chauffeur, camion, sacs et poids déclarés sont repris, avec le **contenu déclaré** (achats chargés). On saisit le poids pesé et les sacs déchargés ; le poids net est calculé (poids − sacs déchargés).');
+  await snap(page, 'magasinier', 'pesee-declaree', 'Pesée d\'un convoi déclaré', 'On choisit le délégué (ou on saisit son code), le n° de connaissement : chauffeur, camion, sacs et poids déclarés sont repris, avec le **contenu déclaré** (achats chargés). On saisit le poids pesé et les sacs déchargés ; le poids net est calculé (poids − sacs déchargés).', true);
   await page.getByRole('button', { name: /Valider la réception/ }).click(); await page.waitForTimeout(2500);
-  await snap(page, 'magasinier', 'pesee-enregistree', 'Pesée enregistrée', 'La réception est transmise à la caisse. Elle apparaît dans la liste avec son bulletin de pesée.');
+  await snap(page, 'magasinier', 'pesee-enregistree', 'Pesée enregistrée', 'La réception est transmise à la caisse. Elle apparaît dans la liste avec son bulletin de pesée.', true);
   // Convoi non déclaré : le délégué existe mais n'a pas déclaré ce convoi
   const d2 = demo.delegate2;
-  await go('/pesees'); await page.getByRole('button', { name: 'Enregistrer une pesée' }).click(); await page.waitForTimeout(800);
-  const opts2 = await form.getByLabel('Délégué (recherche par nom)').locator('option').allInnerTexts();
-  await form.getByLabel('Délégué (recherche par nom)').selectOption({ label: opts2.find((o) => o.includes(d2.name)) }); await page.waitForTimeout(400);
-  await form.getByLabel('Magasin').selectOption({ index: 1 });
-  await form.getByLabel('N° de connaissement').fill('CV-NC-001'); await page.waitForTimeout(500);
-  await form.getByLabel('Sacs déclarés').fill('30'); await form.getByLabel('Poids déclaré (kg)').fill('1950');
-  await form.getByLabel('Chauffeur').fill('Ouattara Seydou'); await form.getByLabel('N° du camion').fill('CD 5678 CI');
-  await form.getByLabel('Poids (kg)').fill('1962'); await form.getByLabel('Nombre de sacs reçus').fill('30'); await form.getByLabel('Sacs déchargés').fill('30'); await form.getByLabel('Qualité / grade').fill('A');
+  await page.getByRole('button', { name: /Retour à la liste/ }).click(); await page.waitForTimeout(800);
+  await page.getByRole('button', { name: 'Enregistrer une pesée' }).click(); await page.waitForTimeout(800);
+  const opts2 = await form.getByLabel(/^Délégué \(recherche par nom\)/).locator('option').allInnerTexts();
+  await form.getByLabel(/^Délégué \(recherche par nom\)/).selectOption({ label: opts2.find((o) => o.includes(d2.name)) }); await page.waitForTimeout(400);
+  await form.getByLabel(/^Magasin/).selectOption({ index: 1 });
+  await form.getByLabel(/^Produit/).selectOption({ label: 'Cacao (fèves)' });
+  await form.getByLabel(/^N° de connaissement/).fill('CV-NC-001'); await page.waitForTimeout(500);
+  await form.getByLabel(/^Sacs déclarés/).fill('30'); await form.getByLabel(/^Poids déclaré \(kg\)/).fill('1950');
+  await form.getByLabel(/^Chauffeur/).fill('Ouattara Seydou'); await form.getByLabel(/^N° du camion/).fill('CD 5678 CI');
+  await form.getByLabel(/^Poids \(kg\)/).fill('1962'); await form.getByLabel(/^Nombre de sacs reçus/).fill('30'); await form.getByLabel(/^Sacs déchargés/).fill('30'); await form.getByLabel(/^Qualité \/ grade/).fill('A');
   await page.waitForTimeout(500);
-  await snap(page, 'magasinier', 'pesee-non-declaree', 'Pesée d\'un convoi non déclaré', 'Le délégué existe mais n\'a pas déclaré ce convoi : le magasinier le choisit dans la liste, saisit le n° de connaissement et les informations du bordereau (chauffeur, camion, sacs et poids déclarés). Le convoi est créé à la réception.');
+  await snap(page, 'magasinier', 'pesee-non-declaree', 'Pesée d\'un convoi non déclaré', 'Le délégué existe mais n\'a pas déclaré ce convoi : le magasinier le choisit dans la liste, saisit le n° de connaissement et les informations du bordereau (chauffeur, camion, sacs et poids déclarés). Le convoi est créé à la réception.', true);
   await page.getByRole('button', { name: /Valider la réception/ }).click(); await page.waitForTimeout(2500);
-  await go('/pesees');
+  await page.getByRole('button', { name: /Retour à la liste/ }).click(); await page.waitForTimeout(1200);
   await snap(page, 'magasinier', 'pesees-liste', 'Les deux pesées', 'Le convoi déclaré et le convoi non déclaré figurent dans la liste, en attente de traitement par la caisse.');
   await close();
 }
@@ -146,8 +147,9 @@ console.log('4. Caisse');
   for (const [no, last] of [[CV, false], ['CV-NC-001', true]]) {
     await page.locator('tr', { hasText: no }).getByRole('button', { name: 'Traiter' }).click(); await page.waitForTimeout(600);
     const m = modalOf(page);
-    await m.getByLabel(/P\.U\./).fill('1000'); await m.getByLabel(/Retenue au kg/).fill('10'); await page.waitForTimeout(400);
-    if (!last) await snap(page, 'caissier', 'traiter', 'Règlement d\'une pesée', 'Le P.U. (prix d\'achat au kg, proposé d\'après le produit), le coût de transport et la **retenue au kg** donnent le net à payer, porté au compte du délégué.');
+    must(await m.getByLabel(/P\.U\./).isDisabled(), 'le P.U. ne doit pas être modifiable par le caissier');
+    await m.getByLabel(/Retenue au kg/).fill('10'); await page.waitForTimeout(400);
+    if (!last) await snap(page, 'caissier', 'traiter', 'Règlement d\'une pesée', 'Le P.U. (prix d\'achat au kg) est celui **fixé par l\'administrateur** pour la traite : il s\'affiche mais le caissier ne peut pas le modifier. Avec le coût de transport et la **retenue au kg**, il donne le net à payer, porté au compte du délégué.');
     await m.getByRole('button', { name: 'Enregistrer le net à payer' }).click(); await page.waitForTimeout(1800);
   }
   await page.getByText('Solde et fiche des délégués', { exact: true }).first().click().catch(() => undefined); await page.waitForTimeout(1000);
