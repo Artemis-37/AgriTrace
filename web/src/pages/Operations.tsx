@@ -26,7 +26,7 @@ const fmtKg = (v: string | null | undefined) => (v == null ? '' : `${v} kg`);
 
 /** Bulletin de pesée, présenté par parties : connaissement, pesée, analyse, livraison produit, visas. Les lignes sans donnée ne sont pas imprimées. */
 function Bulletin({ r }: { r: any }) {
-  const b = r.bulletin; const o = r.organization ?? {};
+  const b = r.bulletin;
   const rank = (k: string) => { const i = ANALYSIS.indexOf(k); return i < 0 ? 99 : i; };
   const an = (Object.entries(b.analysis ?? {}) as [string, string][]).sort((x, y) => rank(x[0]) - rank(y[0]));
   const L = (label: string, v: any, strong = false) => (v == null || v === '' ? null : <div className={`bp-l${strong ? ' net' : ''}`}><span>{label}</span><b>{v}</b></div>);
@@ -44,7 +44,7 @@ function Bulletin({ r }: { r: any }) {
 
       <h3>Indication connaissement</h3>
       <div className="bp-2">
-        <div>{L('Propriétaire', o.commercial_name || o.name)}{L('Origine', b.origin)}{L('Chauffeur', b.driver)}{L('N° camion', b.truck)}{L('N° remorque', b.trailer)}{L('Poids déclaré', fmtKg(b.declared))}</div>
+        <div>{L('Origine', b.origin)}{L('Chauffeur', b.driver)}{L('N° camion', b.truck)}{L('N° remorque', b.trailer)}{L('Poids déclaré', fmtKg(b.declared))}</div>
         <div>{L('Fournisseur', b.collector)}{L('Connaissement', b.convoy_no)}{L('Nb sacs déclaré', b.declared_bags)}{L('Destination', b.warehouse)}{L('Date réception', dateTime(b.received_at))}</div>
       </div>
 
