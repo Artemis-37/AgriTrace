@@ -343,3 +343,17 @@ dl.kv dd { margin: 0; }
 .mini-cal td.today { background: var(--forest); color: var(--on-forest); border-radius: 50%; font-weight: 700; }
 @media print { .today-date { display: none; } }
 @media (max-width: 900px) { .today-date { display: none; } }
+
+/* Fenêtres liées (écran ouvert par-dessus un autre) */
+.peek-backdrop { position: fixed; inset: 0; background: rgba(20, 30, 24, .45); z-index: 60; display: flex; align-items: flex-start; justify-content: center; padding: 4vh 2vw; overflow: auto; }
+.peek { background: var(--bg, #efeade); border-radius: 10px; width: min(1100px, 100%); box-shadow: 0 12px 40px rgba(0,0,0,.35); overflow: hidden; }
+.peek-head { display: flex; align-items: center; gap: .75rem; background: var(--forest); color: var(--on-forest); padding: .5rem .9rem; }
+.peek-head .btn-ghost { color: var(--on-forest); border-color: rgba(255,255,255,.4); }
+.peek-crumbs { flex: 1; font-size: .85rem; opacity: .95; }
+.peek-body { padding: .9rem 1rem 1.1rem; max-height: 78vh; overflow: auto; }
+.peek-link { color: inherit; text-decoration: underline dotted; cursor: pointer; font: inherit; font-weight: inherit; background: none; border: 0; padding: 0; text-align: left; }
+.peek-link:hover { text-decoration: underline; color: var(--nature, #2e5e43); }
+.kv { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: .6rem 1.5rem; margin: 0; }
+.kv dt { font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; opacity: .65; }
+.kv dd { margin: 0; font-weight: 600; }
+@media print { .peek-backdrop { display: none; } }

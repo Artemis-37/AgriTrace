@@ -41,6 +41,7 @@ import Quality from './pages/Quality';
 import Stocks from './pages/Stocks';
 import { Loading } from './ui';
 import { MenuBar } from './MenuBar';
+import { PeekProvider } from './peek';
 
 
 const NAV: { to: string; label: string; icon: string; perm: string[]; any?: boolean; only?: 'collector'; notFor?: 'collector' }[] = [
@@ -103,6 +104,7 @@ export default function App() {
   if (me?.must_setup_2fa) return <ForcedTwoFactor />;
 
   return (
+    <PeekProvider origin={NAV.find((n) => n.to === loc.pathname)?.label ?? 'Accueil'} resetKey={loc.pathname}>
     <div className="shell desk">
       <header className="titlebar">
         <button className="btn btn-ghost menu-toggle" aria-label="Ouvrir le menu" aria-expanded={open} onClick={() => setOpen(!open)}>☰</button>
@@ -159,5 +161,6 @@ export default function App() {
         </Routes>
       </main>
     </div>
+    </PeekProvider>
   );
 }

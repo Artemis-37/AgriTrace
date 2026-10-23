@@ -4,6 +4,8 @@ import { Link } from 'react-router-dom';
 import { get, post } from '../api';
 import { useAuth } from '../auth';
 import { LOAN_KIND, date } from '../format';
+import { PeekLink } from '../peek';
+import { Fiche } from './Convois';
 import { Card, ErrorBox, Field, Loading, Modal, PageHeader, Table, useAction, useAsync, soldeClass } from '../ui';
 import { FR, Journal } from './Caisse';
 import { Bic, Dues, PeriodBar, campaignRange } from './Echeances';
@@ -141,6 +143,7 @@ function Loans() {
 }
 
 function Delegates() {
+  const { can } = useAuth();
   const { data, loading, error, reload } = useAsync(() => get<any[]>('/accounting/etats/delegues'), []);
   const [q, setQ] = useState('');
   const rows = (data ?? []).filter((r) => !q.trim() || `${r.member_code ?? ''} ${r.name}`.toLowerCase().includes(q.trim().toLowerCase()));
@@ -149,7 +152,7 @@ function Delegates() {
       <div className="toolbar"><input type="search" placeholder="Saisir le code ou le nom" aria-label="Code ou nom" value={q} onChange={(e) => setQ(e.target.value)} /></div>
       {error && <ErrorBox message={error} onRetry={reload} />}
       {loading ? <Loading /> : <Table rows={rows} empty="Aucun délégué." columns={[
-        { header: 'ID', render: (r) => <code>{r.member_code ?? '—'}</code> }, { header: 'Nom', render: (r) => <strong>{r.name}</strong> }, { header: 'Contact', render: (r) => r.phone ?? '' },
+        { header: 'ID', render: (r) => <code>{r.member_code ?? '—'}</code> }, { header: 'Nom', render: (r) => <strong><PeekLink title={`Fiche du délégué — ${r.name}`} label={r.name} disabled={!can('convoys:read')} render={() => <Fiche collectorId={r.id} />} /></strong> }, { header: 'Contact', render: (r) => r.phone ?? '' },
         { header: 'Localité', render: (r) => r.origin ?? '' }, { header: 'Solde', align: 'right', render: (r) => <strong className={soldeClass(r.solde)}>{FR(Number(r.solde))}</strong> },
       ]} />}
       <p className="muted">Solde positif : <span className="s-doit">rouge</span> — le délégué doit à la coopérative ; <span className="s-du">bleu</span> — la coopérative doit au délégué. Solde positif : le délégué doit ce montant à la coopérative (financements non encore couverts par ses livraisons).</p>

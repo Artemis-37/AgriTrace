@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { download, get, post } from '../api';
 import { useAuth } from '../auth';
 import { DECLARATION_STATUS, NEXT_DECLARATION, date, money } from '../format';
+import { PeekLink } from '../peek';
+import ProducerCard from './ProducerCard';
 import NewPurchase from './NewPurchase';
 import DocumentsPanel from './DocumentsPanel';
 import { onFlushed } from '../offline';
@@ -36,7 +38,7 @@ export default function Declarations() {
         {loading ? <Loading /> : (
           <Table rows={rows} empty="Aucune déclaration." columns={[
             { header: 'Code', render: (d) => <code>{d.producer_code ?? '—'}</code> },
-            { header: 'Nom & prénoms', render: (d) => <strong>{d.producer_name}</strong> },
+            { header: 'Nom & prénoms', render: (d) => <strong><PeekLink title={`Producteur — ${d.producer_name}`} label={d.producer_name} disabled={!can('producers:read') || !d.producer_id} render={() => <ProducerCard id={d.producer_id} />} /></strong> },
             { header: 'Section', render: (d) => d.producer_section ?? '' },
             { header: 'Village', render: (d) => d.producer_village ?? '' },
             { header: 'Téléphone', render: (d) => d.producer_phone ?? '' },

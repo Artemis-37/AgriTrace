@@ -3,6 +3,7 @@ import { get, idem, post } from '../api';
 import { useAuth } from '../auth';
 import { useDeepLink } from '../notifTarget';
 import { Card, ErrorBox, Field, Loading, PageHeader, useAction, useAsync } from '../ui';
+import { PeekLink } from '../peek';
 import { Accounts, Cash, Variance } from './Convois';
 
 export const FR = (v: number | string | null | undefined) => (v === null || v === undefined || v === '' ? '' : Number(v).toLocaleString('fr-FR', { maximumFractionDigits: 0 }));
@@ -220,8 +221,8 @@ export function FundBar() {
   const bank = banks.reduce((t, a) => t + Number(a.balance), 0);
   return (
     <div className="solde-bar" role="status" aria-label="Fonds disponible de la caisse">
-      <span>ESPÈCES <b>{FR(cash)}</b></span>
-      {banks.map((b) => <span key={b.id}>{b.name.toUpperCase()} <b>{FR(b.balance)}</b></span>)}
+      <span><PeekLink title="Mouvements de caisse (espèces)" label="ESPÈCES" render={() => <Journal kind="" />} /> <b>{FR(cash)}</b></span>
+      {banks.map((b) => <span key={b.id}><PeekLink title={`Évolution du compte — ${b.name}`} label={b.name.toUpperCase()} render={() => <BankEvolution accountId={b.id} />} /> <b>{FR(b.balance)}</b></span>)}
       <span className="big">FONDS DISPONIBLE <b>{FR(cash + bank)}</b> FCFA</span>
     </div>
   );

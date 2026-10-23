@@ -6,6 +6,7 @@ import { get, idem, patch, post } from '../api';
 import { useAuth } from '../auth';
 import { enqueue, onFlushed, useOffline } from '../offline';
 import { date, dateTime } from '../format';
+import { PeekLink } from '../peek';
 import { Badge, Card, ErrorBox, Field, Loading, Modal, PageHeader, Table, Tabs, useAction, useAsync, soldeClass } from '../ui';
 
 const STATUS: Record<string, [string, import('../format').Tone]> = { in_transit: ['En route', 'warn'], received: ['Reçu — en caisse', 'neutral'], settled: ['Réglé', 'ok'] };
@@ -42,7 +43,7 @@ function List() {
       {error && <ErrorBox message={error} onRetry={reload} />}
       {loading ? <Loading /> : (
         <Table rows={data ?? []} empty="Aucun convoi." columns={[
-          { header: 'N° de convoi', render: (v) => v.convoy_no }, { header: 'Délégué', render: (v) => v.collector_name },
+          { header: 'N° de convoi', render: (v) => v.convoy_no }, { header: 'Délégué', render: (v) => <PeekLink title={`Fiche du délégué — ${v.collector_name}`} label={v.collector_name} disabled={!can('convoys:read') || !v.collector_id} render={() => <Fiche collectorId={v.collector_id} />} /> },
           { header: 'Chauffeur', render: (v) => v.driver_name }, { header: 'Camion', render: (v) => v.truck_no },
           { header: 'Poids reçu (kg)', align: 'right', render: (v) => (v.total_kg ? num(v.total_kg) : '—') },
           { header: 'Sacs', align: 'right', render: (v) => v.bags ?? '—' },
@@ -315,7 +316,7 @@ export function Cash() {
       {error && <ErrorBox message={error} onRetry={reload} />}
       {loading ? <Loading /> : (
         <Table rows={data ?? []} empty="Aucune réception en attente." columns={[
-          { header: 'N° de convoi', render: (r) => r.convoy_no }, { header: 'Délégué', render: (r) => r.collector_name },
+          { header: 'N° de convoi', render: (r) => r.convoy_no }, { header: 'Délégué', render: (r) => <PeekLink title={`Fiche du délégué — ${r.collector_name}`} label={r.collector_name} disabled={!can('convoys:read') || !r.collector_id} render={() => <Fiche collectorId={r.collector_id} />} /> },
           { header: 'Poids (kg)', align: 'right', render: (r) => num(r.total_kg) }, { header: 'Sacs', align: 'right', render: (r) => r.bags },
           { header: 'Écart vs déclaré (kg)', align: 'right', render: (r) => (r.variance_kg == null ? '—' : num(r.variance_kg)) },
           { header: '', render: (r) => <button className="btn" onClick={() => setSel(r)}>Traiter</button> },
