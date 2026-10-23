@@ -45,7 +45,7 @@ function Bulletin({ r }: { r: any }) {
       <h3>Indication connaissement</h3>
       <div className="bp-2">
         <div>{L('Origine', b.origin)}{L('Chauffeur', b.driver)}{L('N° camion', b.truck)}{L('N° remorque', b.trailer)}{L('Poids déclaré', fmtKg(b.declared))}</div>
-        <div>{L('Fournisseur', b.collector)}{L('Code fournisseur', b.collector_code)}{L('Connaissement', b.convoy_no)}{L('Nb sacs déclaré', b.declared_bags)}</div>
+        <div>{L('Fournisseur', b.collector)}{L('Code fournisseur', b.collector_code)}{L('Connaissement', b.convoy_no)}{L('Nb sacs déclaré', b.declared_bags)}{L('Date de réception', dateTime(b.received_at))}</div>
       </div>
 
       {an.length > 0 && <><h3>Analyse</h3>

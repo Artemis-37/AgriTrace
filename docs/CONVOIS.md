@@ -83,5 +83,5 @@ Barre du haut : quatre icônes carrées comme CentriGest, vert = bon, rouge = co
 
 ### Code intervenant (fournisseur)
 Chaque intervenant de la coopérative (collecteur, magasinier, caissier, coach, administrateur…) a un **code**, identifiant propre à la coopérative : attribué automatiquement à l'arrivée (`<code coopérative>-0001`, `-0002`…) ou saisi à la création du compte (champ « Code »). Il se modifie dans Équipe → « Code » (droit `users:manage`, unicité contrôlée, tracé dans le journal d'audit). Pour un collecteur, ce code est le **code fournisseur** imprimé sur le bulletin de pesée et affiché dans la liste de réception.
-- La partie « Indication connaissement » du bulletin reprend : origine, chauffeur, n° camion, n° remorque, poids déclaré, fournisseur, code fournisseur, connaissement, nombre de sacs déclaré.
+- La partie « Indication connaissement » du bulletin reprend : origine, chauffeur, n° camion, n° remorque, poids déclaré, fournisseur, code fournisseur, connaissement, nombre de sacs déclaré, date de réception.
 - À la réception, le formulaire du magasinier suit les parties du bulletin : indication connaissement, livraison produit (pesées, tare, réfaction, sacs, grade) et analyse.
