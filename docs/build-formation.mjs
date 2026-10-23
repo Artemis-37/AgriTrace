@@ -241,7 +241,7 @@ const MOD = {
     objectifs: ['Déclarer un achat chez un producteur', 'Créer un connaissement', 'Consulter son stock et sa fiche de compte'],
     pas: [
       ['Se connecter', '**Application mobile uniquement** : ce compte est refusé sur le portail web.'],
-      ['Déclarer un achat', 'Sur le téléphone : **Nouvel achat** → choisir le producteur → quantité, unité, sacs. L\'achat se synchronise dès que le réseau est disponible.'],
+      ['Déclarer un achat', 'Sur le téléphone : **Nouvel achat** → choisir le producteur → quantité, unité, sacs → **date de l\'achat** (aujourd\'hui par défaut ; sans date saisie, le système retient la date du jour). L\'achat se synchronise dès que le réseau est disponible.'],
       ['Créer un connaissement', 'Sur le téléphone : **Connaissement** → chauffeur, camion, sacs et poids annoncés. Le **numéro de connaissement est attribué par le logiciel** : `code CCC de la coopérative` - `année` - `3 premières lettres du nom du délégué` - `n° d\'ordre` (ex. `{{CV1}}`). Hors connexion, le numéro définitif est attribué à l\'envoi.'],
       ['Suivre son stock et son compte', 'Sur le téléphone : *Mon stock*, *Historique* et *Fiche de compte*.'],
     ],
