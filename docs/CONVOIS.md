@@ -76,3 +76,7 @@ Barre du haut : quatre icônes carrées comme CentriGest, vert = bon, rouge = co
 - Impression : « Bulletin de pesée » présenté par parties, comme les bulletins d'acheteurs : en-tête (date de pesée, n° de bulletin), **Indication connaissement**, **Pesée** (entrée / sortie), **Analyse** (18 lignes facultatives : humidité, grainage, fèves moisies, etc.), **Livraison produit** (brut, tare, net livré, réfaction, net payé, sacs acceptés/refusés, manquants, écart, poids moyen du sac, classement, QR code), puis trois visas (pont-bascule, fournisseur, responsable). Les lignes sans donnée ne sont pas imprimées ; mention DUPLICATA dès la deuxième édition et « ÉCART À VALIDER — NON PAYABLE » si la réception est retenue.
 - Les poids sont imprimés en **kilogrammes entiers**, avec une espace pour les milliers (`41 780 kg`), sans virgule ni décimales.
 - Limite : le QR code encode le texte du bulletin ; il n'existe pas encore de page publique de vérification en ligne.
+
+### Pont-bascule et analyses
+- Le pont-bascule est le **magasin central** de la réception : « Pont d'entrée » et « Pont de sortie » affichent le nom du magasin, il n'y a plus de champ à saisir.
+- Le magasinier saisit l'analyse (18 lignes facultatives) soit à la réception, soit **après la pesée** dans l'onglet « Analyses » (résultats de laboratoire, correction du grade). Possible tant que la caisse n'a pas réglé ; le poids net n'est jamais modifié. Chaque saisie est tracée dans le journal d'audit (`convoy.analysis`).

@@ -1,4 +1,4 @@
-import { BadRequestException, Body, ConflictException, Controller, Get, NotFoundException, Param, ParseUUIDPipe, Post, Query, Req, UnprocessableEntityException, ForbiddenException } from '@nestjs/common';
+import { BadRequestException, Body, ConflictException, Controller, Get, NotFoundException, Param, ParseUUIDPipe, Patch, Post, Query, Req, UnprocessableEntityException, ForbiddenException } from '@nestjs/common';
 import { ApiBearerAuth, ApiHeader, ApiTags } from '@nestjs/swagger';
 import { ArrayMaxSize, IsArray, IsIn, IsInt, IsObject, IsOptional, Matches, IsString, IsUUID, Length, Min } from 'class-validator';
 import { RequirePermissions } from '../access/decorators';
@@ -47,6 +47,10 @@ export class ReceiveConvoyDto {
   @IsOptional() @IsInt() @Min(0) bags_refused?: number;
   /** Analyse qualité : humidité, grainage, déchets, etc. (clé libre → valeur courte). */
   @IsOptional() @IsObject() analysis?: Record<string, string>;
+}
+class AnalysisDto {
+  @IsObject() analysis: Record<string, string>;
+  @IsOptional() @IsString() @Length(1, 20) grade?: string;
 }
 class SettleDto {
   @IsString() @Length(8, 100) idempotency_key: string;
@@ -207,6 +211,32 @@ export class ConvoysController {
               coalesce((SELECT convoy_weight_tolerance_pct FROM org_settings), 2) AS weight_tolerance_pct,
               (SELECT count(*)::int FROM convoy_declarations x WHERE x.convoy_id = v.id) AS declaration_count
          FROM convoys v JOIN collectors k ON k.id = v.collector_id JOIN users u ON u.id = k.user_id WHERE v.status = 'in_transit' AND ($1::uuid IS NULL OR v.collector_id = $1) ORDER BY v.created_at`, [collectorId ?? null])).rows);
+  }
+
+  /** Réceptions récentes du magasinier (analyses à compléter tant que la caisse n'a pas réglé). */
+  @Get('convoys/receptions/recent')
+  @RequirePermissions('convoys:receive')
+  recentReceptions(@Req() req: any) {
+    return this.db.tx(req.org.id, async (c) => (await c.query(
+      `SELECT r.id, r.bulletin_no, v.convoy_no, r.received_at, r.total_kg, r.status, r.grade, r.analysis
+         FROM convoy_receptions r JOIN convoys v ON v.id = r.convoy_id ORDER BY r.received_at DESC LIMIT 30`)).rows);
+  }
+
+  /** Résultats d'analyse saisis (ou corrigés) après la pesée, tant que la réception n'est pas réglée en caisse. Le poids net n'est pas modifié. */
+  @Patch('convoys/receptions/:id/analysis')
+  @RequirePermissions('convoys:receive')
+  async setAnalysis(@Param('id', ParseUUIDPipe) id: string, @Body() b: AnalysisDto, @Req() req: any) {
+    const an = Object.entries(b.analysis);
+    if (an.length > 30 || an.some(([k, v]) => k.length > 40 || typeof v !== 'string' || v.length > 10)) throw new BadRequestException('Analyse invalide (30 lignes au plus, valeurs de 10 caractères au plus)');
+    const row = await this.db.tx(req.org.id, async (c) => {
+      const r = (await c.query(`SELECT id, status, convoy_id FROM convoy_receptions WHERE id = $1 FOR UPDATE`, [id])).rows[0];
+      if (!r) throw new NotFoundException('Réception introuvable');
+      if (r.status === 'settled') throw new ConflictException('Réception déjà réglée en caisse : le bulletin ne peut plus être modifié');
+      await c.query(`UPDATE convoy_receptions SET analysis = $2::jsonb, grade = coalesce($3, grade) WHERE id = $1`, [id, JSON.stringify(b.analysis), b.grade ?? null]);
+      return r;
+    });
+    await this.log(req, 'convoy.analysis', row.convoy_id, { reception_id: id, lines: an.length });
+    return { ok: true };
   }
 
   /** Stock acheté du collecteur connecté : achats déclarés, convois en route, livré au magasin central et solde du compte. */

@@ -50,8 +50,8 @@ function Bulletin({ r }: { r: any }) {
 
       <h3>Pesée</h3>
       <div className="bp-2">
-        <div>{L("Poids d'entrée", fmtKg(b.weigh_in))}{L("Date d'entrée", b.weigh_in ? dateTime(b.weigh_in_at) : null)}{L("Pont d'entrée", b.scale_in)}</div>
-        <div>{L('Poids de sortie', fmtKg(b.weigh_out))}{L('Date de sortie', b.weigh_out ? dateTime(b.weigh_out_at) : null)}{L('Pont de sortie', b.scale_out)}</div>
+        <div>{L("Poids d'entrée", fmtKg(b.weigh_in))}{L("Date d'entrée", b.weigh_in ? dateTime(b.weigh_in_at) : null)}{L("Pont d'entrée", b.weigh_in ? b.warehouse : null)}</div>
+        <div>{L('Poids de sortie', fmtKg(b.weigh_out))}{L('Date de sortie', b.weigh_out ? dateTime(b.weigh_out_at) : null)}{L('Pont de sortie', b.weigh_out ? b.warehouse : null)}</div>
       </div>
 
       {an.length > 0 && <><h3>Analyse</h3>

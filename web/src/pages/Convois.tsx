@@ -1,10 +1,10 @@
 import { ANALYSIS } from '../analysis';
 import { useEffect, useState } from 'react';
 import { useDeepLink } from '../notifTarget';
-import { get, idem, post } from '../api';
+import { get, idem, patch, post } from '../api';
 import { useAuth } from '../auth';
 import { enqueue, onFlushed, useOffline } from '../offline';
-import { date } from '../format';
+import { date, dateTime } from '../format';
 import { Badge, Card, ErrorBox, Field, Loading, Modal, PageHeader, Table, Tabs, useAction, useAsync } from '../ui';
 
 const STATUS: Record<string, [string, import('../format').Tone]> = { in_transit: ['En route', 'warn'], received: ['Reçu — en caisse', 'neutral'], settled: ['Réglé', 'ok'] };
@@ -15,7 +15,7 @@ export default function Convois() {
   const { can } = useAuth();
   const tabs: [string, string][] = [];
   if (can('convoys:read')) tabs.push(['list', 'Convois']);
-  if (can('convoys:receive')) tabs.push(['receive', 'Réception au magasin']);
+  if (can('convoys:receive')) tabs.push(['receive', 'Réception au magasin'], ['analyses', 'Analyses']);
   if (can('weighings:approve')) tabs.push(['variance', 'Écarts de poids']);
   if (can('convoys:settle')) tabs.push(['cash', 'Caisse'], ['accounts', 'Comptes collecteurs']);
   else if (can('collector:stock')) tabs.push(['mine', 'Ma fiche']);
@@ -27,6 +27,7 @@ export default function Convois() {
       <Tabs tabs={tabs as any} value={tab as any} onChange={setTab as any} />
       {tab === 'list' && <List />}
       {tab === 'receive' && <Receive />}
+      {tab === 'analyses' && <Analyses />}
       {tab === 'variance' && <Variance />}
       {tab === 'cash' && <Cash />}
       {tab === 'accounts' && <Accounts />}
@@ -125,7 +126,7 @@ function Receive() {
   const [bags, setBags] = useState('');
   const [notes, setNotes] = useState('');
   const [done, setDone] = useState('');
-  const [d, setD] = useState({ wIn: '', wOut: '', scaleIn: '', scaleOut: '', tare: '', ref: '', grade: '', trailer: '', origin: '', unl: '', refused: '' });
+  const [d, setD] = useState({ wIn: '', wOut: '', tare: '', ref: '', grade: '', trailer: '', origin: '', unl: '', refused: '' });
   const [an, setAn] = useState<Record<string, string>>({});
   const setF = (k: keyof typeof d) => (e: any) => setD((x) => ({ ...x, [k]: e.target.value }));
   const exp0 = data?.expected.find((v) => v.collector_id === collector && v.convoy_no === convoyNo.trim());
@@ -161,7 +162,6 @@ function Receive() {
       <h3>Pesée au pont-bascule</h3>
       <Field label="Pesée à l'entrée, camion chargé (kg)"><input inputMode="decimal" value={d.wIn} onChange={setF('wIn')} /></Field>
       <Field label="Pesée à la sortie, camion vide (kg)"><input inputMode="decimal" value={d.wOut} onChange={setF('wOut')} /></Field>
-      <Field label="Pont-bascule (ex. Pont 1)"><input value={d.scaleIn} onChange={(e) => setD((x) => ({ ...x, scaleIn: e.target.value, scaleOut: e.target.value }))} maxLength={40} /></Field>
       <Field label="Tare des sacs (kg)"><input inputMode="decimal" value={d.tare} onChange={setF('tare')} /></Field>
       <Field label="Réfaction (kg)"><input inputMode="decimal" value={d.ref} onChange={setF('ref')} /></Field>
       <Field label="Poids net payé (kg)" hint={twoWeighings ? 'Calculé : entrée − sortie − tare − réfaction' : 'Sans double pesée, saisissez directement le poids net'}><input inputMode="decimal" value={twoWeighings ? kgEff : kg} readOnly={twoWeighings} onChange={(e) => setKg(e.target.value)} /></Field>
@@ -181,12 +181,46 @@ function Receive() {
       {done && <p className="notice" role="status">{done}</p>}
       <div className="modal-actions"><button className="btn" disabled={act.busy || !valid || !org} onClick={() => act.run(async () => {
         await enqueue(org!.id, 'convoy.receive', { idempotency_key: idem(), collector_id: collector, convoy_no: convoyNo.trim(), warehouse_id: wh, total_kg: kgEff, bags: Number(bags), ...(notes.trim() && { notes: notes.trim() }),
-          ...(twoWeighings && { weigh_in_kg: d.wIn, weigh_out_kg: d.wOut }), ...(d.scaleIn.trim() && { scale_in: d.scaleIn.trim() }), ...(d.scaleOut.trim() && { scale_out: d.scaleOut.trim() }),
+          ...(twoWeighings && { weigh_in_kg: d.wIn, weigh_out_kg: d.wOut }),
           ...(d.tare && { bag_tare_kg: d.tare }), ...(d.ref && { refaction_kg: d.ref }), ...(d.grade.trim() && { grade: d.grade.trim() }), ...(d.trailer.trim() && { trailer_no: d.trailer.trim() }),
           ...(d.origin.trim() && { origin: d.origin.trim() }), ...(d.unl && { bags_unloaded: Number(d.unl) }), ...(d.refused && { bags_refused: Number(d.refused) }),
           ...(Object.values(an).some((v) => v.trim()) && { analysis: Object.fromEntries(Object.entries(an).filter(([, v]) => v.trim()).map(([k, v]) => [k, v.trim()])) }) }, `Réception du convoi ${convoyNo.trim()}`);
-        setDone(`Convoi ${convoyNo.trim()} enregistré : il sera transmis à la caisse dès l'envoi au serveur.`); setConvoyNo(''); setKg(''); setBags(''); setNotes(''); setD({ wIn: '', wOut: '', scaleIn: '', scaleOut: '', tare: '', ref: '', grade: '', trailer: '', origin: '', unl: '', refused: '' }); setAn({}); reload();
+        setDone(`Convoi ${convoyNo.trim()} enregistré : il sera transmis à la caisse dès l'envoi au serveur.`); setConvoyNo(''); setKg(''); setBags(''); setNotes(''); setD({ wIn: '', wOut: '', tare: '', ref: '', grade: '', trailer: '', origin: '', unl: '', refused: '' }); setAn({}); reload();
       })}>Valider la réception et transmettre à la caisse</button></div>
+    </Card>
+  );
+}
+
+/** Saisie des résultats d'analyse après la pesée (tant que la caisse n'a pas réglé). */
+function Analyses() {
+  const { data, loading, error, reload } = useAsync(() => get<any[]>('/convoys/receptions/recent'), []);
+  const [sel, setSel] = useState<any>(null);
+  const [an, setAn] = useState<Record<string, string>>({});
+  const [grade, setGrade] = useState('');
+  const act = useAction();
+  const open = (r: any) => { setSel(r); setAn(r.analysis ?? {}); setGrade(r.grade ?? ''); };
+  return (
+    <Card title="Résultats d'analyse">
+      <p className="muted">Complétez l'analyse d'une réception déjà pesée : elle apparaît sur le bulletin de pesée. Possible tant que la caisse n'a pas réglé la réception.</p>
+      {error && <ErrorBox message={error} onRetry={reload} />}
+      {loading ? <Loading /> : (
+        <Table rows={data ?? []} empty="Aucune réception récente." columns={[
+          { header: 'Bulletin', render: (r) => r.bulletin_no }, { header: 'Connaissement', render: (r) => r.convoy_no }, { header: 'Reçu le', render: (r) => dateTime(r.received_at) },
+          { header: 'Net payé (kg)', align: 'right', render: (r) => num(r.total_kg) }, { header: 'Analyse', render: (r) => (Object.keys(r.analysis ?? {}).length ? `${Object.keys(r.analysis).length} ligne(s)` : '—') },
+          { header: '', render: (r) => (r.status === 'settled' ? <Badge>Réglée</Badge> : <button className="btn btn-ghost" onClick={() => open(r)}>Saisir l'analyse</button>) },
+        ]} />
+      )}
+      {sel && (
+        <Modal title={`Analyse · ${sel.bulletin_no}`} onClose={() => setSel(null)}>
+          <Field label="Qualité / grade"><input value={grade} onChange={(e) => setGrade(e.target.value)} maxLength={20} /></Field>
+          <div className="grid-2">{ANALYSIS.map((k) => <Field key={k} label={k}><input inputMode="decimal" value={an[k] ?? ''} onChange={(e) => setAn((x) => ({ ...x, [k]: e.target.value }))} maxLength={10} /></Field>)}</div>
+          {act.error && <ErrorBox message={act.error} />}
+          <div className="modal-actions"><button className="btn" disabled={act.busy} onClick={() => act.run(async () => {
+            await patch(`/convoys/receptions/${sel.id}/analysis`, { analysis: Object.fromEntries(Object.entries(an).filter(([, v]) => v.trim()).map(([k, v]) => [k, v.trim()])), ...(grade.trim() && { grade: grade.trim() }) });
+            setSel(null); reload();
+          })}>Enregistrer</button><button className="btn btn-ghost" onClick={() => setSel(null)}>Annuler</button></div>
+        </Modal>
+      )}
     </Card>
   );
 }

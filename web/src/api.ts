@@ -141,6 +141,7 @@ export const staleSince = () => lastStale;
 export const get = <T = any>(p: string) => api<T>('GET', p);
 export const post = <T = any>(p: string, b?: unknown) => api<T>('POST', p, b ?? {});
 export const put = <T = any>(p: string, b?: unknown) => api<T>('PUT', p, b ?? {});
+export const patch = <T = any>(p: string, b?: unknown) => api<T>('PATCH', p, b ?? {});
 
 /** Téléchargement authentifié (PDF, Excel) : le jeton ne transite jamais dans une URL. */
 export async function download(path: string, filename: string) {
