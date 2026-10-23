@@ -118,7 +118,7 @@ const PROFILS = [
   let n = 0;
   for (const [l, f, v] of noms) {
     n++;
-    producers.push((await call('POST', '/producers', { ...U('agent_terrain'), body: { last_name: l, first_names: f, village: v, section: v === 'Hiré' ? 'S1' : v === 'Tiassalé' ? 'S3' : 'S2', phone: '+2250700' + String(10000 + n * 137).slice(0, 5) + String(n).padStart(1, '0'), value_chain_ids: [vc.id] } })).producer);
+    producers.push((await call('POST', '/producers', { ...U('agent_terrain'), body: { last_name: l, first_names: f, village: v, section: v === 'Hiré' ? 'S1' : v === 'Tiassalé' ? 'S3' : 'S2', phone: '+2250700' + String(10000 + n * 137).slice(0, 5) + String(n).padStart(1, '0'), area_ha: String(2 + (n % 7) + 0.5), estimated_kg: String(1500 + n * 250), value_chain_ids: [vc.id] } })).producer);
   }
   const centres = [[-5.9, 7.0], [-5.89, 7.01], [-5.91, 7.02], [-5.88, 7.0], [-5.92, 7.03], [-5.87, 7.02], [-5.93, 7.01], [-5.86, 7.03], [-5.9, 7.04], [-5.88, 7.05]];
   const parcels = [];
