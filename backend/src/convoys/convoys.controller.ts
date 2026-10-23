@@ -457,8 +457,8 @@ export class ConvoysController {
       const st = (await c.query(`SELECT coalesce((SELECT convoy_transport_unit FROM org_settings), 0) AS t, coalesce((SELECT convoy_retention_per_kg FROM org_settings), 0) AS r`)).rows[0];
       for (const r of rows) {
         r.official_price = await effectiveBuyPrice(c, r.product_id, r.campaign_id);
-        const k = (await c.query(`SELECT transport_per_kg AS t, retention_per_kg AS r FROM collectors WHERE id = $1`, [r.collector_id])).rows[0];
-        r.transport_unit = k?.t ?? st.t; r.retention_per_kg = k?.r ?? st.r;
+        const k = (await c.query(`SELECT transport_per_kg AS t, retention_per_kg AS r, retention_type AS rtype FROM collectors WHERE id = $1`, [r.collector_id])).rows[0];
+        r.transport_unit = k?.t ?? st.t; r.retention_per_kg = k?.r ?? st.r; r.retention_type = k?.rtype ?? 'mise_en_compte';
       }
       return rows;
     });
@@ -489,7 +489,7 @@ export class ConvoysController {
         [req.org.id, v.collector_id, `Compte délégué — ${u.full_name}`, req.user.id])).rows[0];
       const st = (await c.query(`SELECT convoy_transport_unit AS t, convoy_retention_per_kg AS r FROM org_settings`)).rows[0] ?? { t: '0', r: '0' };
       // Transport et retenue au kilo : préenregistrés dans le profil du délégué par l'administrateur (sinon tarif de la coopérative) ; la caisse ne les saisit pas.
-      const rates = (await c.query(`SELECT transport_per_kg AS t, retention_per_kg AS r FROM collectors WHERE id = $1`, [v.collector_id])).rows[0];
+      const rates = (await c.query(`SELECT transport_per_kg AS t, retention_per_kg AS r, retention_type AS rtype FROM collectors WHERE id = $1`, [v.collector_id])).rows[0];
       const offT = rates?.t ?? st.t, offR = rates?.r ?? st.r;
       const mayRates = req.org.permissions.has('collectors:rates');
       if (!mayRates && ((b.transport_unit !== undefined && Number(b.transport_unit) !== Number(offT)) || (b.retention_per_kg !== undefined && Number(b.retention_per_kg) !== Number(offR))))
@@ -528,8 +528,8 @@ export class ConvoysController {
       const upd = (await c.query(
         `UPDATE convoy_receptions SET status = 'settled', unit_price = $2, amount = $3, tx_id = $4, settled_by = $5, settled_at = now(),
                 gross_amount = $6, transport_unit = $7, transport_total = $8, retention_per_kg = $9, retention_amount = $10,
-                advance_netted = $11, netting_entry_number = $12 WHERE id = $1 RETURNING *`,
-        [id, unitPrice, amt, tx.id, req.user.id, m.gross, tu, m.transport, rt, m.retention, netted, nettingNo])).rows[0];
+                advance_netted = $11, netting_entry_number = $12, retention_type = $13 WHERE id = $1 RETURNING *`,
+        [id, unitPrice, amt, tx.id, req.user.id, m.gross, tu, m.transport, rt, m.retention, netted, nettingNo, rates?.rtype ?? 'mise_en_compte'])).rows[0];
       await c.query(`UPDATE convoys SET status = 'settled' WHERE id = $1`, [v.id]);
       await c.query(`UPDATE collectors SET account_closed_at = NULL WHERE id = $1`, [v.collector_id]); // une nouvelle livraison rouvre l'accumulation de la mise en compte
       // Le traitement en caisse est fait : l'alerte « réception à traiter » n'a plus lieu d'être pour personne.

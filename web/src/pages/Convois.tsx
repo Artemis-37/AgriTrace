@@ -1,4 +1,5 @@
 import { ANALYSIS } from '../analysis';
+import { RTYPE } from './Rapports';
 import { useEffect, useState } from 'react';
 import { useDeepLink } from '../notifTarget';
 import { get, idem, patch, post } from '../api';
@@ -355,7 +356,7 @@ function Settle({ r, onClose, onDone }: { r: any; onClose: () => void; onDone: (
       <p>{r.collector_name} · {num(r.total_kg)} kg · {r.bags} sacs</p>
       <Field label="P.U. — prix d'achat au kg (FCFA)" hint={mayPrice ? (suggested && priceIn === null ? `Prix de la traite pour ${r.product ?? 'le produit'}, modifiable par vous seul` : undefined) : (suggested ? `Prix fixé par l'administrateur pour ${r.product ?? 'le produit'} (non modifiable en caisse)` : "Prix non fixé : l'administrateur doit le renseigner dans Paramètres")}><input inputMode="decimal" value={price} readOnly={!mayPrice} disabled={!mayPrice} onChange={(e) => setPrice(e.target.value)} /></Field>
       <Field label="Coût de transport au kg (FCFA)" hint={mayRates ? undefined : "Tarif du délégué fixé par l'administrateur (non modifiable en caisse)"}><input inputMode="decimal" value={t} readOnly={!mayRates} disabled={!mayRates} onChange={(e) => setTu(e.target.value)} /></Field>
-      <Field label="Retenue au kg (FCFA)" hint={mayRates ? undefined : "Mise en compte du délégué fixée par l'administrateur (non modifiable en caisse)"}><input inputMode="decimal" value={q} readOnly={!mayRates} disabled={!mayRates} onChange={(e) => setRt(e.target.value)} /></Field>
+      <Field label="Retenue au kg (FCFA)" hint={mayRates ? undefined : `${RTYPE[r.retention_type] ?? 'Mise en compte'} du délégué fixée par l'administrateur (non modifiable en caisse)`}><input inputMode="decimal" value={q} readOnly={!mayRates} disabled={!mayRates} onChange={(e) => setRt(e.target.value)} /></Field>
       {ok && <table><tbody>
         <tr><td>Montant brut (poids × P.U.)</td><td className="r">{f(gross)}</td></tr>
         <tr><td>Transport (poids × coût unitaire)</td><td className="r">{f(transport)}</td></tr>

@@ -353,10 +353,33 @@ function InvoiceDetail({ id, onClose }: { id: string; onClose: () => void }) {
 }
 
 /* ---------------- Acheteurs ---------------- */
+/** Transactions d'un exportateur : factures, encaissements et avoirs, avec solde cumulé sur une période. */
+function BuyerTransactions({ id, onClose }: { id: string; onClose: () => void }) {
+  const [p, setP] = useState({ from: '', to: '' });
+  const qs = new URLSearchParams(Object.entries(p).filter(([, v]) => v)).toString();
+  const { data, loading, error, reload } = useAsync(() => get<any>(`/buyers/${id}/transactions?${qs}`), [id, p.from, p.to]);
+  const F = (n: number) => (n ? n.toLocaleString('fr-FR') : '');
+  const T: Record<string, string> = { invoice: 'Facture', payment: 'Encaissement', credit_note: 'Avoir' };
+  return (
+    <Modal title={`Transactions — ${data?.buyer?.name ?? ''}`} onClose={onClose}>
+      <div className="filters"><Field label="Du"><input type="date" value={p.from} onChange={(e) => setP({ ...p, from: e.target.value })} /></Field><Field label="Au"><input type="date" value={p.to} onChange={(e) => setP({ ...p, to: e.target.value })} /></Field></div>
+      {error && <ErrorBox message={error} onRetry={reload} />}
+      {loading || !data ? <Loading /> : (
+        <>
+          <p className="muted">Solde d'ouverture : <strong>{F(data.opening) || '0'}</strong> · Débit {F(data.totals.debit) || '0'} · Crédit {F(data.totals.credit) || '0'} · <strong>Solde {F(data.totals.balance) || '0'}</strong></p>
+          <Table rows={data.rows} empty="Aucune transaction sur la période." columns={[{ header: 'Date', render: (r: any) => r.date }, { header: 'Type', render: (r: any) => T[r.type] ?? r.type }, { header: 'Pièce', render: (r: any) => r.piece },
+            { header: 'Commande', render: (r: any) => r.order_no }, { header: 'Débit', align: 'right', render: (r: any) => F(r.debit) }, { header: 'Crédit', align: 'right', render: (r: any) => F(r.credit) }, { header: 'Solde', align: 'right', render: (r: any) => F(r.balance) || '0' }]} />
+        </>
+      )}
+    </Modal>
+  );
+}
+
 function Buyers() {
   const { can } = useAuth();
   const [creating, setCreating] = useState(false);
   const [stmt, setStmt] = useState<string | null>(null);
+  const [trx, setTrx] = useState<string | null>(null);
   const [contract, setContract] = useState(false);
   const { data, loading, error, reload } = useAsync(() => get<any[]>('/buyers'), []);
   return (
@@ -370,11 +393,13 @@ function Buyers() {
           { header: 'Délai', render: (b) => `${b.payment_terms_days} j` },
           { header: 'Statut', render: (b) => <Badge tone={b.status === 'active' ? 'ok' : 'warn'}>{b.status === 'active' ? 'Actif' : b.status === 'suspended' ? 'Suspendu' : 'Clôturé'}</Badge> },
           { header: '', render: (b) => can('invoices:read') && <button className="btn btn-small btn-secondary" onClick={() => setStmt(b.id)}>Situation</button> },
+          { header: '', render: (b) => can('invoices:read') && <button className="btn btn-small btn-secondary" onClick={() => setTrx(b.id)}>Transactions</button> },
         ]} />
       )}
       {creating && <CreateBuyer onClose={() => setCreating(false)} onDone={() => { setCreating(false); reload(); }} />}
       {contract && <CreateContract onClose={() => setContract(false)} onDone={() => setContract(false)} />}
       {stmt && <Statement id={stmt} onClose={() => setStmt(null)} />}
+      {trx && <BuyerTransactions id={trx} onClose={() => setTrx(null)} />}
     </Card>
   );
 }

@@ -162,6 +162,38 @@ export class ReportsController {
     });
   }
 
+  /** Journal d'approvisionnement : réceptions au magasin sur la période, par délégué, avec totaux (poids net, sacs, montants, retenues par type de prélèvement). */
+  private async supply(orgId: string, q: Record<string, string | undefined>) {
+    for (const k of ['from', 'to']) if (q[k] && !DATE.test(q[k]!)) throw new BadRequestException('Dates attendues au format AAAA-MM-JJ');
+    const rows = (await this.db.tx(orgId, async (c) => (await c.query(
+      `SELECT r.id, r.bulletin_no, v.convoy_no, r.received_at::date AS date, u.full_name AS collector, (SELECT mc.code FROM member_codes mc WHERE mc.user_id = k.user_id AND mc.organization_id = k.organization_id) AS collector_code,
+              coalesce(p.name, '') AS product, r.bags, r.total_kg::numeric(18,3) AS kg, r.unit_price, r.gross_amount, r.transport_total, r.retention_amount,
+              coalesce(r.retention_type, k.retention_type) AS retention_type, r.amount AS net_paid, r.status
+         FROM convoy_receptions r JOIN convoys v ON v.id = r.convoy_id JOIN collectors k ON k.id = v.collector_id JOIN users u ON u.id = k.user_id
+         LEFT JOIN products p ON p.id = r.product_id
+        WHERE ($1::date IS NULL OR r.received_at::date >= $1) AND ($2::date IS NULL OR r.received_at::date <= $2)
+          AND ($3::uuid IS NULL OR v.collector_id = $3)
+        ORDER BY r.received_at, r.bulletin_no`, [q.from ?? null, q.to ?? null, q.collector_id || null])).rows)).map((r: any) => ({
+      ...r, kg: Number(r.kg), unit_price: r.unit_price == null ? null : Number(r.unit_price), gross_amount: Number(r.gross_amount ?? 0), transport_total: Number(r.transport_total ?? 0),
+      retention_amount: Number(r.retention_amount ?? 0), net_paid: r.status === 'settled' ? Number(r.net_paid ?? 0) : 0 }));
+    const sum = (xs: any[]) => ({ receptions: xs.length, bags: xs.reduce((a, r) => a + (r.bags ?? 0), 0), kg: xs.reduce((a, r) => a + r.kg, 0), gross: xs.reduce((a, r) => a + r.gross_amount, 0),
+      transport: xs.reduce((a, r) => a + r.transport_total, 0), retention: xs.reduce((a, r) => a + r.retention_amount, 0), net_paid: xs.reduce((a, r) => a + r.net_paid, 0) });
+    const byCollector = [...new Set(rows.map((r: any) => r.collector))].map((name) => ({ collector: name, ...sum(rows.filter((r: any) => r.collector === name)) }));
+    const byType: Record<string, number> = {};
+    for (const r of rows) if (r.retention_amount) byType[r.retention_type ?? 'mise_en_compte'] = (byType[r.retention_type ?? 'mise_en_compte'] ?? 0) + r.retention_amount;
+    return { period: { from: q.from ?? null, to: q.to ?? null }, rows, by_collector: byCollector, retention_by_type: byType, total: sum(rows) };
+  }
+  @Get('supply') @RequirePermissions('reports:read', 'convoys:read')
+  supplyReport(@Req() req: any, @Query() q: Record<string, string>) { return this.supply(req.org.id, q); }
+  @Get('supply/xlsx') @RequirePermissions('reports:read', 'convoys:read')
+  async supplyXlsx(@Req() req: any, @Query() q: Record<string, string>) {
+    const r = await this.supply(req.org.id, q);
+    return this.sheet([
+      { title: 'Journal', cols: [['Date', 'date'], ['Bulletin', 'bulletin_no', 20], ['Connaissement', 'convoy_no', 22], ['Délégué', 'collector', 28], ['Produit', 'product'], ['Sacs', 'bags'], ['Poids net (kg)', 'kg'], ['P.U.', 'unit_price'], ['Montant brut', 'gross_amount'], ['Transport', 'transport_total'], ['Retenue', 'retention_amount'], ['Type de prélèvement', 'retention_type', 22], ['Net payé', 'net_paid']], rows: r.rows },
+      { title: 'Par délégué', cols: [['Délégué', 'collector', 28], ['Réceptions', 'receptions'], ['Sacs', 'bags'], ['Poids net (kg)', 'kg'], ['Montant brut', 'gross'], ['Transport', 'transport'], ['Retenue', 'retention'], ['Net payé', 'net_paid']], rows: r.by_collector },
+    ], 'Journal_approvisionnement.xlsx');
+  }
+
   @Get('finance') @RequirePermissions('reports:read', 'finance:read')
   financeReport(@Req() req: any, @Query() q: Record<string, string>) { return this.finance(req.org.id, q); }
   @Get('stock') @RequirePermissions('reports:read', 'warehouses:read')

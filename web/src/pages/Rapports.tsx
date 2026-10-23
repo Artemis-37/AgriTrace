@@ -13,12 +13,14 @@ const OUTCOME: Record<string, string> = { compliant: 'Conforme', to_review: 'À 
 const KIND: Record<string, string> = { field: 'Terrain', quality: 'Qualité', compliance: 'Conformité' };
 const MOVE: Record<string, string> = { reception: 'Réception', entry: 'Entrée', exit: 'Sortie', transfer_in: 'Transfert entrant', transfer_out: 'Transfert sortant', loss: 'Perte', adjustment_in: 'Ajustement +', adjustment_out: 'Ajustement −', split_in: 'Scission +', split_out: 'Scission −', merge_in: 'Fusion +', merge_out: 'Fusion −' };
 
+export const RTYPE: Record<string, string> = { mise_en_compte: 'Mise en compte', epargne: 'Épargne', caution: 'Caution', cotisation: 'Cotisation' };
+
 /** Rapports finance, stock et qualité sur une période, avec export Excel (CDC §26). */
-function Unified({ kind }: { kind: 'finance' | 'stock' | 'quality' }) {
+function Unified({ kind }: { kind: 'finance' | 'stock' | 'quality' | 'supply' }) {
   const [p, setP] = useState({ from: '', to: '' });
   const qs = new URLSearchParams(Object.entries(p).filter(([, v]) => v)).toString();
   const { data: d, loading, error, reload } = useAsync(() => get<any>(`/reports/${kind}?${qs}`), [kind, p.from, p.to]);
-  const file = { finance: 'Rapport_financier.xlsx', stock: 'Rapport_stock.xlsx', quality: 'Rapport_qualite.xlsx' }[kind];
+  const file = { finance: 'Rapport_financier.xlsx', stock: 'Rapport_stock.xlsx', quality: 'Rapport_qualite.xlsx', supply: 'Journal_approvisionnement.xlsx' }[kind];
   return (
     <>
       <Card>
@@ -49,6 +51,19 @@ function Unified({ kind }: { kind: 'finance' | 'stock' | 'quality' }) {
             { header: 'Nombre', align: 'right', render: (r: any) => r.movements }, { header: 'Quantité', align: 'right', render: (r: any) => kg(r.kg) }]} /></Card>
         </>
       )}
+      {!loading && !error && d && kind === 'supply' && (
+        <>
+          <div className="stats"><Stat label="Réceptions" value={d.total.receptions} /><Stat label="Sacs" value={d.total.bags} /><Stat label="Poids net" value={kg(d.total.kg)} tone="ok" /><Stat label="Net payé" value={money(d.total.net_paid)} tone="info" />
+            <Stat label="Retenues" value={money(d.total.retention)} tone="warn" /></div>
+          {Object.keys(d.retention_by_type).length > 0 && <p className="notice">Retenues par type de prélèvement : {Object.entries(d.retention_by_type).map(([k, v]) => `${RTYPE[k] ?? k} ${money(v as number)}`).join(' · ')}.</p>}
+          <Card><Table rows={d.rows} empty="Aucune réception sur la période." columns={[{ header: 'Date', render: (r: any) => String(r.date).slice(0, 10) }, { header: 'Bulletin', render: (r: any) => r.bulletin_no ?? '—' }, { header: 'Connaissement', render: (r: any) => r.convoy_no },
+            { header: 'Délégué', render: (r: any) => <><code>{r.collector_code ?? ''}</code> {r.collector}</> }, { header: 'Sacs', align: 'right', render: (r: any) => r.bags }, { header: 'Poids net', align: 'right', render: (r: any) => kg(r.kg) },
+            { header: 'P.U.', align: 'right', render: (r: any) => (r.unit_price == null ? '—' : money(r.unit_price)) }, { header: 'Retenue', align: 'right', render: (r: any) => money(r.retention_amount) },
+            { header: 'Prélèvement', render: (r: any) => (r.retention_amount ? RTYPE[r.retention_type] ?? r.retention_type : '—') }, { header: 'Net payé', align: 'right', render: (r: any) => (r.status === 'settled' ? money(r.net_paid) : 'À régler') }]} /></Card>
+          <Card title="Par délégué"><Table rows={d.by_collector} empty="—" columns={[{ header: 'Délégué', render: (r: any) => <strong>{r.collector}</strong> }, { header: 'Réceptions', align: 'right', render: (r: any) => r.receptions }, { header: 'Sacs', align: 'right', render: (r: any) => r.bags },
+            { header: 'Poids net', align: 'right', render: (r: any) => kg(r.kg) }, { header: 'Retenue', align: 'right', render: (r: any) => money(r.retention) }, { header: 'Net payé', align: 'right', render: (r: any) => money(r.net_paid) }]} /></Card>
+        </>
+      )}
       {!loading && !error && d && kind === 'quality' && (
         <>
           <div className="stats"><Stat label="Inspections" value={d.totals.inspections} /><Stat label="Conformes" value={d.totals.compliant} tone="ok" /><Stat label="Taux de conformité" value={d.totals.rate === null ? '—' : `${d.totals.rate} %`} tone="info" /></div>
@@ -62,7 +77,7 @@ function Unified({ kind }: { kind: 'finance' | 'stock' | 'quality' }) {
 
 export default function Rapports() {
   const { can } = useAuth();
-  const tabs: [string, string][] = [['purchases', 'Achats'], ...(can('finance:read') ? [['finance', 'Finance'] as [string, string]] : []), ...(can('warehouses:read') ? [['stock', 'Stock'] as [string, string]] : []), ...(can('quality:read') ? [['quality', 'Qualité'] as [string, string]] : []), ['runs', 'Envoi automatique']];
+  const tabs: [string, string][] = [['purchases', 'Achats'], ...(can('finance:read') ? [['finance', 'Finance'] as [string, string]] : []), ...(can('warehouses:read') ? [['stock', 'Stock'] as [string, string]] : []), ...(can('quality:read') ? [['quality', 'Qualité'] as [string, string]] : []), ...(can('convoys:read') ? [['supply', "Journal d'approvisionnement"] as [string, string]] : []), ['runs', 'Envoi automatique']];
   const dl = useDeepLink(tabs.map((t) => t[0]));
   const [tab, setTab] = useState(dl.tab ?? 'purchases');
   return (

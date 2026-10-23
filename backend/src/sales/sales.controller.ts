@@ -118,6 +118,37 @@ export class SalesController {
     await this.log(req, 'buyer.status', 'buyer', id, { status: b.status, reason: b.reason }); return r;
   }
 
+  /** Transactions d'un exportateur (acheteur) : factures (débit), encaissements et avoirs (crédit), avec solde cumulé et solde d'ouverture de la période. */
+  @Get('buyers/:id/transactions') @RequirePermissions('invoices:read')
+  async buyerTransactions(@Param('id', ParseUUIDPipe) id: string, @Req() req: any, @Query('from') from?: string, @Query('to') to?: string) {
+    for (const d of [from, to]) if (d && !/^\d{4}-\d{2}-\d{2}$/.test(d)) throw new BadRequestException('Dates attendues au format AAAA-MM-JJ');
+    return this.db.tx(req.org.id, async (c) => {
+      const b = (await c.query(`SELECT id, code, name, currency FROM buyers WHERE id = $1`, [id])).rows[0];
+      if (!b) throw new NotFoundException();
+      const all = (await c.query(
+        `SELECT * FROM (
+           SELECT i.issue_date AS date, 'invoice' AS type, i.number AS piece, o.number AS order_no, 'Facture ' || i.number AS label, i.total AS debit, 0::numeric AS credit, i.created_at
+             FROM invoices i JOIN sales_orders o ON o.id = i.order_id WHERE i.buyer_id = $1 AND i.status <> 'cancelled'
+           UNION ALL
+           SELECT p.received_on, 'payment', coalesce(p.reference, '—'), o.number, 'Encaissement facture ' || i.number, 0, p.amount, p.created_at
+             FROM invoice_payments p JOIN invoices i ON i.id = p.invoice_id JOIN sales_orders o ON o.id = i.order_id WHERE i.buyer_id = $1 AND i.status <> 'cancelled'
+           UNION ALL
+           SELECT n.issued_on, 'credit_note', n.number, o.number, 'Avoir ' || n.number || ' (' || n.reason || ')', 0, n.amount, n.created_at
+             FROM credit_notes n JOIN invoices i ON i.id = n.invoice_id JOIN sales_orders o ON o.id = i.order_id WHERE n.buyer_id = $1
+         ) t ORDER BY date, created_at`, [id])).rows;
+      let bal = 0, opening = 0; const rows: any[] = [];
+      for (const r of all) {
+        const d = String(r.date instanceof Date ? r.date.toISOString() : r.date).slice(0, 10);
+        bal += Number(r.debit) - Number(r.credit);
+        if (from && d < from) { opening = bal; continue; }
+        if (to && d > to) continue;
+        rows.push({ date: d, type: r.type, piece: r.piece, order_no: r.order_no, label: r.label, debit: Number(r.debit), credit: Number(r.credit), balance: bal });
+      }
+      const debit = rows.reduce((a, r) => a + r.debit, 0), credit = rows.reduce((a, r) => a + r.credit, 0);
+      return { buyer: b, period: { from: from ?? null, to: to ?? null }, opening, rows, totals: { debit, credit, balance: opening + debit - credit } };
+    });
+  }
+
   /** Situation d'un acheteur : facturé, encaissé, solde, échéances dépassées. */
   @Get('buyers/:id/statement') @RequirePermissions('invoices:read')
   async statement(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {

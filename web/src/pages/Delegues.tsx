@@ -3,6 +3,7 @@ import { get, put } from '../api';
 import { useAuth } from '../auth';
 import { Card, ErrorBox, Field, Loading, Modal, PageHeader, Tabs, useAction, useAsync } from '../ui';
 import { Fiche } from './Convois';
+import { RTYPE } from './Rapports';
 
 const DOC: Record<string, string> = { cni: "Carte nationale d'identité", passeport: 'Passeport', attestation: "Attestation d'identité", permis: 'Permis de conduire', autre: 'Autre pièce' };
 type Tab = 'info' | 'id' | 'transport' | 'retenues' | 'account';
@@ -80,6 +81,7 @@ function Rates({ c, kind, onDone }: { c: any; kind: 'transport' | 'retenues'; on
   const field = kind === 'transport' ? 'transport_per_kg' : 'retention_per_kg';
   const cfg = useAsync(() => get<any>('/convoys/settings').catch(() => null), []);
   const [v, setV] = useState<string | null>(null);
+  const [ty, setTy] = useState<string | null>(null);
   const { busy, error, run } = useAction();
   const own = c[field];
   const def = kind === 'transport' ? cfg.data?.transport_unit : cfg.data?.retention_per_kg;
@@ -94,8 +96,9 @@ function Rates({ c, kind, onDone }: { c: any; kind: 'transport' | 'retenues'; on
         : 'La somme retenue au kilo sur chaque règlement de ce délégué s\'accumule en mise en compte ; elle est reversée à la clôture de son compte, après approbation de l\'administrateur.'}</p>
       <Field label={label} hint={own == null ? `Non renseigné : tarif par défaut de la coopérative (${Number(def ?? 0).toLocaleString('fr-FR')})` : undefined}>
         <input inputMode="decimal" value={shown} readOnly={!may} disabled={!may} onChange={(e) => setV(e.target.value)} /></Field>
+      {kind === 'retenues' && <Field label="Type de prélèvement" hint="Nature de la retenue au kilo ; reprise sur chaque règlement et dans le journal d'approvisionnement."><select value={ty ?? c.retention_type ?? 'mise_en_compte'} disabled={!may} onChange={(e) => setTy(e.target.value)}>{Object.entries(RTYPE).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></Field>}
       {error && <ErrorBox message={error} />}
-      {may ? <p><button className="btn" disabled={busy || v === null || !ok} onClick={() => run(async () => { await put(`/collectors/${c.id}/rates`, { [field]: shown === '' ? null : shown }); setV(null); onDone(); })}>Enregistrer</button></p>
+      {may ? <p><button className="btn" disabled={busy || (v === null && ty === null) || !ok} onClick={() => run(async () => { await put(`/collectors/${c.id}/rates`, { ...(v !== null && { [field]: shown === '' ? null : shown }), ...(ty !== null && { retention_type: ty }) }); setV(null); setTy(null); onDone(); })}>Enregistrer</button></p>
         : <p className="muted">Seul l'administrateur de la coopérative saisit ces tarifs.</p>}
     </div>
   );
