@@ -216,6 +216,16 @@ export class ConvoysController {
       [status ?? null, req.org.permissions.has('convoys:receive') || req.org.permissions.has('convoys:settle'), req.user.id])).rows);
   }
 
+  /** Délégués actifs, pour la saisie d'une pesée : un délégué sans convoi déclaré peut aussi être pesé (connaissement saisi par le magasinier). */
+  @Get('convoys/receivable-collectors')
+  @RequirePermissions('convoys:receive')
+  receivableCollectors(@Req() req: any) {
+    return this.db.tx(req.org.id, async (c) => (await c.query(
+      `SELECT k.id AS collector_id, u.full_name AS collector_name, k.origin AS collector_origin,
+              (SELECT mc.code FROM member_codes mc WHERE mc.user_id = k.user_id AND mc.organization_id = k.organization_id) AS collector_code
+         FROM collectors k JOIN users u ON u.id = k.user_id WHERE k.status = 'active' ORDER BY u.full_name`)).rows);
+  }
+
   /** Convois en route d'un délégué donné : aide à la sélection par le magasinier. */
   @Get('convoys/expected')
   @RequirePermissions('convoys:receive')
@@ -497,6 +507,7 @@ export class ConvoysController {
                 advance_netted = $11, netting_entry_number = $12 WHERE id = $1 RETURNING *`,
         [id, b.unit_price, amt, tx.id, req.user.id, m.gross, tu, m.transport, rt, m.retention, netted, nettingNo])).rows[0];
       await c.query(`UPDATE convoys SET status = 'settled' WHERE id = $1`, [v.id]);
+      await c.query(`UPDATE collectors SET account_closed_at = NULL WHERE id = $1`, [v.collector_id]); // une nouvelle livraison rouvre l'accumulation de la mise en compte
       // Le traitement en caisse est fait : l'alerte « réception à traiter » n'a plus lieu d'être pour personne.
       await c.query(`UPDATE notifications SET read_at = coalesce(read_at, now()) WHERE kind = 'convoy_received' AND entity_type = 'convoy' AND entity_id = $1`, [v.id]);
       await this.notif.notifyUsers(c, req.org.id, [(await c.query(`SELECT user_id FROM collectors WHERE id = $1`, [v.collector_id])).rows[0]?.user_id], { kind: 'convoy_settled',

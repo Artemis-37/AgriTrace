@@ -111,7 +111,7 @@ export function Receive() {
   const { org } = useAuth();
   const act = useAction();
   const { data, loading, error, reload } = useAsync(async () => ({
-    expected: await get<any[]>('/convoys/expected'), whs: await get<any[]>('/warehouses').catch(() => [] as any[]),
+    expected: await get<any[]>('/convoys/expected'), people: await get<any[]>('/convoys/receivable-collectors'), whs: await get<any[]>('/warehouses').catch(() => [] as any[]),
     products: (await get<any[]>('/products').catch(() => [] as any[])).filter((p) => p.active), campaigns: (await get<any[]>('/campaigns').catch(() => [] as any[])).filter((c) => c.status === 'open'),
   }), []);
   useEffect(() => onFlushed(reload), [reload]);
@@ -138,7 +138,7 @@ export function Receive() {
   useEffect(() => { if (exp0) setD((x) => ({ ...x, trailer: exp0.trailer_no ?? '' })); }, [exp0?.id]);
   if (loading) return <Loading />;
   if (error || !data) return <ErrorBox message={error ?? 'Chargement impossible'} onRetry={reload} />;
-  const collectors = [...new Map(data.expected.map((v) => [v.collector_id, v.collector_code ? `${v.collector_name} (${v.collector_code})` : v.collector_name])).entries()];
+  const collectors = [...new Map(data.people.map((v: any) => [v.collector_id, v.collector_code ? `${v.collector_name} (${v.collector_code})` : v.collector_name])).entries()] as [string, string][];
   const mine = data.expected.filter((v) => v.collector_id === collector);
   const expected = mine.find((v) => v.convoy_no === convoyNo.trim());
   const W = /^\d+(\.\d{1,3})?$/;
@@ -158,9 +158,9 @@ export function Receive() {
     <Card title="Saisie de pesée">
       <fieldset className="bloc"><legend>Infos délégué</legend>
         <div className="grid-3">
-          <Field label="ID (code) du délégué" hint="Saisissez le code : le délégué est retrouvé"><input value={codeQ} onChange={(e) => { setCodeQ(e.target.value); const hit = data.expected.find((v) => v.collector_code && v.collector_code.toLowerCase() === e.target.value.trim().toLowerCase()); if (hit) { setCollector(hit.collector_id); setConvoyNo(''); } }} /></Field>
-          <Field label="Délégué (recherche par nom)"><select value={collector} onChange={(e) => { setCollector(e.target.value); setConvoyNo(''); setCodeQ(data.expected.find((v) => v.collector_id === e.target.value)?.collector_code ?? ''); }}><option value="">—</option>{collectors.map(([id, n]) => <option key={id} value={id}>{n}</option>)}</select></Field>
-          <Field label="Localité (provenance)"><input readOnly disabled value={collector ? (data.expected.find((v) => v.collector_id === collector)?.collector_origin ?? 'non renseignée') : ''} /></Field>
+          <Field label="ID (code) du délégué" hint="Saisissez le code : le délégué est retrouvé"><input value={codeQ} onChange={(e) => { setCodeQ(e.target.value); const hit = data.people.find((v: any) => v.collector_code && v.collector_code.toLowerCase() === e.target.value.trim().toLowerCase()); if (hit) { setCollector(hit.collector_id); setConvoyNo(''); } }} /></Field>
+          <Field label="Délégué (recherche par nom)"><select value={collector} onChange={(e) => { setCollector(e.target.value); setConvoyNo(''); setCodeQ(data.people.find((v: any) => v.collector_id === e.target.value)?.collector_code ?? ''); }}><option value="">—</option>{collectors.map(([id, n]) => <option key={id} value={id}>{n}</option>)}</select></Field>
+          <Field label="Localité (provenance)"><input readOnly disabled value={collector ? (data.people.find((v: any) => v.collector_id === collector)?.collector_origin ?? 'non renseignée') : ''} /></Field>
         </div>
       </fieldset>
       <fieldset className="bloc"><legend>Infos pesée</legend>

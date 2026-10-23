@@ -15,6 +15,8 @@ class CreateUserDto {
   @IsOptional() @IsString() phone?: string;
   @IsString() @MinLength(10) password: string;
   @IsUUID() role_id: string;
+  /** Rôles supplémentaires (cumul) : les droits de la personne sont la somme de ceux de ses rôles. */
+  @IsOptional() @IsArray() @ArrayMaxSize(10) @IsUUID('all', { each: true }) role_ids?: string[];
   /** Code (identifiant) de l'intervenant ; attribué automatiquement s'il est omis. */
   @IsOptional() @Matches(/^[A-Z0-9][A-Z0-9-]{1,29}$/, { message: 'Code : 2 à 30 caractères, majuscules, chiffres et tirets' }) member_code?: string;
 }
@@ -169,6 +171,14 @@ export class UsersController {
         `INSERT INTO user_organizations(user_id, organization_id, role_id, created_by) VALUES ($1,$2,$3,$4)`,
         [userId, req.org.id, b.role_id, req.user.id],
       );
+      for (const rid of [...new Set(b.role_ids ?? [])].filter((x) => x !== b.role_id)) {
+        const extra = await c.query(`SELECT id FROM roles WHERE id = $1 AND organization_id = $2`, [rid, req.org.id]);
+        if (!extra.rowCount) throw new BadRequestException('Rôle inconnu pour cette organisation');
+        const perms = (await c.query(`SELECT permission_code FROM role_permissions WHERE role_id = $1`, [rid])).rows.map((r) => r.permission_code);
+        const missing = perms.filter((p) => !req.org.permissions.has(p));
+        if (missing.length) throw new ForbiddenException(`Permissions non détenues : ${missing.join(', ')}`);
+        await c.query(`INSERT INTO user_organizations(user_id, organization_id, role_id, created_by) VALUES ($1,$2,$3,$4)`, [userId, req.org.id, rid, req.user.id]);
+      }
       const code = (await c.query(`SELECT code FROM member_codes WHERE organization_id = $1 AND user_id = $2`, [req.org.id, userId])).rows[0]?.code;
       return { id: userId, email, full_name: b.full_name, member_code: code };
     });
@@ -178,7 +188,7 @@ export class UsersController {
       action: 'user.create',
       entityType: 'user',
       entityId: user.id,
-      details: { role_id: b.role_id },
+      details: { role_id: b.role_id, role_ids: b.role_ids ?? [] },
     });
     return user;
   }

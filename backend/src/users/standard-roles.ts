@@ -10,19 +10,19 @@ export const STANDARD_ROLES: Record<string, { name: string; description: string;
   caissier: {
     name: 'Caissier',
     description: 'Traite les convois reçus, règle les délégués, tient la caisse et les comptes des délégués.',
-    permissions: ['products:read', 'partners:read', 'dues:read', 'dues:settle', 'campaigns:read', 'convoys:read', 'convoys:settle', 'cash:operate', 'cash:read', 'finance:read', 'accounting:read', 'cancellations:request', 'messages:use', 'sync:use'],
+    permissions: ['products:read', 'partners:read', 'dues:read', 'dues:settle', 'campaigns:read', 'convoys:read', 'convoys:settle', 'cash:operate', 'cash:read', 'savings:read', 'savings:request', 'finance:read', 'accounting:read', 'cancellations:request', 'messages:use', 'sync:use'],
     hidden: ['Cartographie', 'Conformité / qualité', 'Équipe', 'Missions', 'Stocks'],
   },
   comptable: {
     name: 'Comptable',
     description: 'Passe et consulte les écritures comptables, suit les comptes financiers ; peut demander l\'annulation de ses écritures.',
-    permissions: ['products:read', 'partners:read', 'partners:manage', 'dues:read', 'dues:manage', 'dues:settle', 'loans:read', 'prefinancing:read', 'campaigns:read', 'accounting:read', 'accounting:post', 'finance:read', 'convoys:read', 'cancellations:request', 'messages:use', 'sync:use'],
+    permissions: ['savings:read', 'savings:request', 'products:read', 'partners:read', 'partners:manage', 'dues:read', 'dues:manage', 'dues:settle', 'loans:read', 'prefinancing:read', 'campaigns:read', 'accounting:read', 'accounting:post', 'finance:read', 'convoys:read', 'cancellations:request', 'messages:use', 'sync:use'],
     hidden: ['Cartographie', 'Conformité / qualité', 'Équipe', 'Missions', 'Stocks'],
   },
   direction: {
     name: 'Direction',
     description: 'Suit l\'ensemble de l\'activité (lecture) et approuve les demandes d\'annulation, les prêts et les écarts.',
-    permissions: ['products:read', 'partners:read', 'dues:read', 'dues:settle', 'campaigns:read', 'reports:read', 'alerts:read', 'audit:read', 'finance:read', 'accounting:read', 'cash:read', 'producers:read', 'parcels:read', 'convoys:read', 'warehouses:read', 'lots:read', 'quality:read', 'logistics:read', 'shipments:validate', 'loans:read', 'loans:approve', 'weighings:approve', 'cancellations:decide', 'cancellations:request', 'field_records:read', 'tasks:read_all', 'messages:use', 'sync:use'],
+    permissions: ['savings:read', 'products:read', 'partners:read', 'dues:read', 'dues:settle', 'campaigns:read', 'reports:read', 'alerts:read', 'audit:read', 'finance:read', 'accounting:read', 'cash:read', 'producers:read', 'parcels:read', 'convoys:read', 'warehouses:read', 'lots:read', 'quality:read', 'logistics:read', 'shipments:validate', 'loans:read', 'loans:approve', 'weighings:approve', 'cancellations:decide', 'cancellations:request', 'field_records:read', 'tasks:read_all', 'messages:use', 'sync:use'],
     hidden: ['Paramètres techniques'],
   },
   responsable_tracabilite: {
@@ -59,7 +59,7 @@ export const STANDARD_ROLES: Record<string, { name: string; description: string;
   responsable_financier: {
     name: 'Responsable financier',
     description: 'Supervise la caisse, les comptes et les prêts ; approuve les paiements, les corrections et les demandes d\'annulation.',
-    permissions: ['products:read', 'partners:read', 'partners:manage', 'dues:read', 'dues:manage', 'dues:settle', 'campaigns:read', 'finance:read', 'finance:reverse', 'cash:read', 'cash:manage', 'accounting:read', 'accounting:post', 'accounting:close', 'payments:read', 'payments:confirm', 'loans:read', 'loans:approve', 'loans:disburse', 'prefinancing:read', 'prefinancing:manage', 'reconciliation:manage', 'cancellations:decide', 'cancellations:request', 'reports:read', 'messages:use', 'sync:use'],
+    permissions: ['savings:read', 'savings:request', 'products:read', 'partners:read', 'partners:manage', 'dues:read', 'dues:manage', 'dues:settle', 'campaigns:read', 'finance:read', 'finance:reverse', 'cash:read', 'cash:manage', 'accounting:read', 'accounting:post', 'accounting:close', 'payments:read', 'payments:confirm', 'loans:read', 'loans:approve', 'loans:disburse', 'prefinancing:read', 'prefinancing:manage', 'reconciliation:manage', 'cancellations:decide', 'cancellations:request', 'reports:read', 'messages:use', 'sync:use'],
     hidden: ['Cartographie', 'Missions'],
   },
   responsable_qualite: {
@@ -77,7 +77,7 @@ export const STANDARD_ROLES: Record<string, { name: string; description: string;
   auditeur: {
     name: 'Auditeur',
     description: 'Consulte en lecture seule les opérations, les journaux d\'audit et les états comptables ; ne modifie rien.',
-    permissions: ['audit:read', 'reports:read', 'alerts:read', 'accounting:read', 'finance:read', 'cash:read', 'declarations:read', 'producers:read', 'parcels:read', 'convoys:read', 'warehouses:read', 'lots:read', 'quality:read', 'documents:read', 'certificates:read'],
+    permissions: ['savings:read', 'audit:read', 'reports:read', 'alerts:read', 'accounting:read', 'finance:read', 'cash:read', 'declarations:read', 'producers:read', 'parcels:read', 'convoys:read', 'warehouses:read', 'lots:read', 'quality:read', 'documents:read', 'certificates:read'],
     hidden: ['Tout ce qui permet de saisir ou de modifier'],
   },
   acheteur: {

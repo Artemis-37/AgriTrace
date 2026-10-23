@@ -5,7 +5,7 @@ export interface MenuItem { to: string; label: string; icon: string }
 const GROUP_OF: Record<string, string> = {
   '/producteurs': 'Fichier', '/parcelles': 'Fichier', '/delegues': 'Fichier', '/partenaires': 'Fichier', '/parametres': 'Paramètres',
   '/mes-achats': 'Opérations', '/mon-stock': 'Opérations', '/historique': 'Opérations', '/pesees': 'Opérations', '/convois': 'Opérations', '/caisse': 'Opérations', '/commerce': 'Opérations', '/declarations': 'Opérations', '/operations': 'Opérations', '/missions': 'Opérations', '/terrain': 'Opérations',
-  '/comptabilite': 'Comptabilité', '/finances': 'Comptabilité', '/prefinancement': 'Comptabilité',
+  '/comptabilite': 'Comptabilité', '/mise-en-compte': 'Comptabilité', '/finances': 'Comptabilité', '/prefinancement': 'Comptabilité',
   '/stocks': 'Stock', '/inventaire': 'Stock', '/qualite': 'Stock',
   '/cartographie': 'Suivi', '/rapports': 'Suivi', '/modules-formation': 'Suivi', '/modules-exportateurs': 'Suivi',
   '/equipe': 'Administration', '/synchronisation': 'Administration',

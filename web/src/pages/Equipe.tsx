@@ -180,7 +180,9 @@ function EditCode({ u, onClose, onDone }: { u: any; onClose: () => void; onDone:
 }
 
 function AddUser({ roles, onClose, onDone }: { roles: any[]; onClose: () => void; onDone: () => void }) {
-  const [f, setF] = useState({ full_name: '', email: '', password: '', role_id: '', member_code: '' });
+  const [f, setF] = useState({ full_name: '', email: '', password: '', member_code: '' });
+  const [picked, setPicked] = useState<string[]>([]);
+  const toggle = (id: string) => setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
   const { busy, error, run } = useAction();
   const set = (k: string) => (e: any) => setF({ ...f, [k]: e.target.value });
   return (
@@ -189,11 +191,12 @@ function AddUser({ roles, onClose, onDone }: { roles: any[]; onClose: () => void
       <Field label="E-mail (identifiant de connexion)"><input type="email" value={f.email} onChange={set('email')} /></Field>
       <Field label="Mot de passe provisoire" hint="10 caractères au minimum. L'utilisateur pourra le changer."><input type="text" value={f.password} onChange={set('password')} /></Field>
       <Field label="Code (facultatif)" hint="Identifiant de l'intervenant dans la coopérative (ex. code délégué). Laissé vide, le logiciel en attribue un."><input value={f.member_code} onChange={(e) => setF({ ...f, member_code: e.target.value.toUpperCase() })} maxLength={30} /></Field>
-      <Field label="Rôle"><select value={f.role_id} onChange={set('role_id')}><option value="">—</option>{roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}</select></Field>
+      <Field label="Rôles" hint="Cochez un ou plusieurs rôles : les droits s'additionnent et le menu n'affiche que ce qu'ils permettent.">
+        <div className="role-pick">{roles.map((r) => <label key={r.id} className="check"><input type="checkbox" checked={picked.includes(r.id)} onChange={() => toggle(r.id)} /> {r.name}</label>)}</div></Field>
       {roles.length === 0 && <p className="muted">Aucun rôle : créez d'abord un rôle type ci-dessus.</p>}
       {error && <ErrorBox message={error} />}
       <div className="modal-foot"><button className="btn btn-secondary" onClick={onClose}>Annuler</button>
-        <button className="btn" disabled={busy || !f.full_name.trim() || !f.email.includes('@') || f.password.length < 10 || !f.role_id} onClick={() => run(async () => { await post('/users', { ...f, member_code: f.member_code.trim() || undefined }); onDone(); })}>Créer le compte</button></div>
+        <button className="btn" disabled={busy || !f.full_name.trim() || !f.email.includes('@') || f.password.length < 10 || picked.length === 0} onClick={() => run(async () => { await post('/users', { ...f, role_id: picked[0], role_ids: picked.slice(1), member_code: f.member_code.trim() || undefined }); onDone(); })}>Créer le compte</button></div>
     </Modal>
   );
 }

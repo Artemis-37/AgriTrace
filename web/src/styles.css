@@ -323,3 +323,5 @@ dl.kv dd { margin: 0; }
 .role-chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 12px}
 .chip{display:inline-flex;align-items:center;gap:6px;background:var(--lime,#B5CC8E);color:#1f3a2e;border-radius:12px;padding:3px 4px 3px 10px;font-size:13px}
 .chip .btn{padding:0 6px}
+.role-pick{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:4px 12px}
+.role-pick .check{display:flex;align-items:center;gap:6px;font-weight:normal}

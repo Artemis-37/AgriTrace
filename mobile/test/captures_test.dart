@@ -226,10 +226,21 @@ void main() {
       await t.tap(find.text('KONÉ Awa')); await t.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200))); await t.pump(const Duration(milliseconds: 200));
       await t.tap(find.text('Continuer'));
     });
+    Finder field(String label) => find.byWidgetPredicate((w) => w is TextField && (w.decoration?.labelText ?? '').startsWith(label));
+    void fill(WidgetTester t, String label, String v) => t.widget<TextField>(field(label)).controller!.text = v;
+    await shot(t, 'collecteur-achat-saisi', const NewDeclarationScreen(), after: (t) async {
+      await t.tap(find.text('KONÉ Awa')); await t.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200))); await t.pump(const Duration(milliseconds: 200));
+      await t.tap(find.text('Continuer')); await t.pump(const Duration(milliseconds: 400));
+      fill(t, 'Poids (kg)', '520'); fill(t, 'Nombre de sacs', '8'); fill(t, 'N° du reçu', 'A-000412'); await t.pump(const Duration(milliseconds: 200));
+    });
     await shot(t, 'collecteur-historique', const HistoryScreen());
     await shot(t, 'collecteur-mon-stock', const MyStockScreen());
     await shot(t, 'collecteur-fiche', const FicheScreen());
     await shot(t, 'collecteur-convoi', const NewConvoyScreen());
+    await shot(t, 'collecteur-convoi-saisi', const NewConvoyScreen(), after: (t) async {
+      fill(t, 'N° de connaissement du convoi', 'CV-0007'); fill(t, 'Nom du chauffeur', 'Traoré Moussa'); fill(t, 'N° du camion', 'AB 1234 CI');
+      fill(t, 'Nombre de sacs', '40'); fill(t, 'Poids annoncé', '2600'); await t.pump(const Duration(milliseconds: 200));
+    });
     await shot(t, 'notifications', const NotificationsScreen());
     } finally { debugDisableShadows = true; }
   });
@@ -239,7 +250,7 @@ void main() {
     await shot(t, 'coach-modules-formation', const TrainingLibraryScreen(), perms: _coach);
     await shot(t, 'coach-module-exportateur', TrainingModuleScreen(module: Map<String, dynamic>.from((_routes['/training-modules'] as List)[1] as Map)), perms: _coach);
     await shot(t, 'coach-module-resultats', TrainingResultScreen(module: Map<String, dynamic>.from((_routes['/training-modules'] as List)[1] as Map)), perms: _coach, after: (t) async {
-      await t.enterText(find.byType(TextField).at(0), 'Hiré'); await t.enterText(find.byType(TextField).at(1), '22'); await t.enterText(find.byType(TextField).at(2), '78'); await t.enterText(find.byType(TextField).at(3), 'Séance suivie avec attention ; carnets distribués.');
+      t.widget<TextField>(find.byType(TextField).at(0)).controller!.text = 'Hiré'; t.widget<TextField>(find.byType(TextField).at(1)).controller!.text = '22'; t.widget<TextField>(find.byType(TextField).at(2)).controller!.text = '78'; t.widget<TextField>(find.byType(TextField).at(3)).controller!.text = 'Séance suivie avec attention ; carnets distribués.';
     });
     await shot(t, 'coach-producteurs', const ProducersScreen(), perms: _coach);
     await shot(t, 'coach-producteur-taches', const ProducersScreen(), perms: _coach, after: (t) async { await t.tap(find.textContaining('KONÉ')); await t.pump(const Duration(milliseconds: 300)); await t.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200))); await t.pump(const Duration(milliseconds: 300)); });
