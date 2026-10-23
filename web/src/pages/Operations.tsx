@@ -44,7 +44,7 @@ function Bulletin({ r }: { r: any }) {
 
       <h3>Indication connaissement</h3>
       <div className="bp-2">
-        <div>{L('Propriétaire', o.commercial_name || o.name)}{L('Origine', b.origin)}{L('Chauffeur', b.driver)}{L('N° tracteur', b.truck)}{L('N° remorque', b.trailer)}{L('Poids déclaré', fmtKg(b.declared))}</div>
+        <div>{L('Propriétaire', o.commercial_name || o.name)}{L('Origine', b.origin)}{L('Chauffeur', b.driver)}{L('N° camion', b.truck)}{L('N° remorque', b.trailer)}{L('Poids déclaré', fmtKg(b.declared))}</div>
         <div>{L('Fournisseur', b.collector)}{L('Connaissement', b.convoy_no)}{L('Nb sacs déclaré', b.declared_bags)}{L('Destination', b.warehouse)}{L('Date réception', dateTime(b.received_at))}</div>
       </div>
 
@@ -60,7 +60,7 @@ function Bulletin({ r }: { r: any }) {
       <h3>Livraison produit</h3>
       <div className="bp-2 bp-liv">
         <div>{L('Poids brut (kg)', fmtKg(b.gross))}{L('Sacs acceptés', b.bags_unloaded != null ? b.bags_unloaded - (b.bags_refused ?? 0) : b.bags)}{L('Poids net livré', fmtKg(b.net_delivered))}{L('Réfaction', fmtKg(b.refaction))}{L('POIDS NET PAYÉ', fmtKg(b.net), true)}</div>
-        <div>{L('Nb sacs déchargés', b.bags_unloaded)}{L('Sacs refusés', b.bags_refused)}{L('Manquants', b.missing)}{L('Écart / poids déclaré', b.variance == null ? null : `${b.variance} kg`)}{L('Poids moyen sac accepté', fmtKg(b.avg_bag))}{L('Classement', b.grade)}
+        <div>{L('Nb sacs déchargés', b.bags_unloaded)}{L('Sacs refusés', b.bags_refused)}{L('Manquants', b.missing)}{L('Écart / poids déclaré', b.variance == null ? null : `${b.variance} kg`)}{L('Classement', b.grade)}
           <div className="bp-qr"><Qr text={qr} /></div></div>
       </div>
       {b.notes && <p><strong>Observations :</strong> {b.notes}</p>}
