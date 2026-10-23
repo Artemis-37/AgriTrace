@@ -150,11 +150,11 @@ La **retenue au kilo** (mise en compte) est préenregistrée dans l'onglet **Ret
 
 ![Délégué : onglet Retenues](captures/parcours/14-coop_admin-tarif-retenue.png)
 
-### Étape 15 — Aya Kouamé : Connexion à la caisse
+### Étape 15 — Aya Kouamé : Caisse : fonds disponible
 
-Avant de payer, le caissier se connecte à la caisse (pas de fonds ni de clôture : seul le caissier se connecte et se déconnecte).
+La caissière se connecte par l'écran de connexion du logiciel, comme tout utilisateur : la caisse n'a ni ouverture, ni clôture. Le bandeau du haut affiche en permanence le **fonds disponible** : espèces + comptes bancaires.
 
-![Connexion à la caisse](captures/parcours/15-caissier-session.png)
+![Caisse : fonds disponible](captures/parcours/15-caissier-session.png)
 
 ### Étape 16 — Aya Kouamé : Pesées à traiter
 
@@ -168,91 +168,85 @@ Le P.U. (prix d'achat au kg) est celui **fixé par l'administrateur** pour la tr
 
 ![Règlement d'une pesée](captures/parcours/17-caissier-traiter.png)
 
-### Étape 18 — Aya Kouamé : Fonds global de la caisse
-
-Le fonds de la caisse se compose des **espèces** et des **comptes bancaires** : chaque forme de fonds a son solde, et le total donne le fonds global.
-
-![Fonds global de la caisse](captures/parcours/18-caissier-fonds-global.png)
-
-### Étape 19 — Aya Kouamé : Solde des délégués
+### Étape 18 — Aya Kouamé : Solde des délégués
 
 Après règlement, le compte de chaque délégué est crédité du net à payer ; la fiche détaille livraisons, avances et soldes.
 
-![Solde des délégués](captures/parcours/19-caissier-soldes.png)
+![Solde des délégués](captures/parcours/18-caissier-soldes.png)
 
-### Étape 20 — Aya Kouamé : Mise en compte des délégués
+### Étape 19 — Aya Kouamé : Mise en compte des délégués
 
 Pour chaque délégué : somme retenue, reversée, en attente et disponible. Une fois la campagne terminée, le compte du délégué est **clôturé**.
 
-![Mise en compte des délégués](captures/parcours/20-caissier-mise-en-compte.png)
+![Mise en compte des délégués](captures/parcours/19-caissier-mise-en-compte.png)
 
-### Étape 21 — Aya Kouamé : Clôturer le compte du délégué
+### Étape 20 — Aya Kouamé : Clôturer le compte du délégué
 
 La clôture du compte du délégué (fin de campagne) ouvre la possibilité de reverser sa mise en compte ; une nouvelle livraison rouvre le compte.
 
-![Clôturer le compte du délégué](captures/parcours/21-caissier-cloture.png)
+![Clôturer le compte du délégué](captures/parcours/20-caissier-cloture.png)
 
-### Étape 22 — Aya Kouamé : Reverser la mise en compte
+### Étape 21 — Aya Kouamé : Reverser la mise en compte
 
 Le montant disponible peut être reversé **sur le compte du délégué, par chèque, en espèces ou vers un autre compte**. La demande est soumise à l'administrateur de la coopérative.
 
-![Reverser la mise en compte](captures/parcours/22-caissier-reverser.png)
+![Reverser la mise en compte](captures/parcours/21-caissier-reverser.png)
 
-### Étape 23 — Adjoua Konan : Demande à approuver
+### Étape 22 — Adjoua Konan : Demande à approuver
 
 L'administrateur voit la demande (délégué, montant, destination, demandeur) et l'**approuve ou la refuse** avec un motif. Le demandeur ne peut pas approuver sa propre demande.
 
-![Demande à approuver](captures/parcours/23-coop_admin-demande.png)
+![Demande à approuver](captures/parcours/22-coop_admin-demande.png)
 
-### Étape 24 — Adjoua Konan : Reversement approuvé
+### Étape 23 — Adjoua Konan : Reversement approuvé
 
 À l'approbation, le mouvement financier et l'écriture comptable (débit 4781 « Retenues sur règlements des délégués ») sont passés.
 
-![Reversement approuvé](captures/parcours/24-coop_admin-approuvee.png)
+![Reversement approuvé](captures/parcours/23-coop_admin-approuvee.png)
 
-### Étape 25 — Salif Ouédraogo : Journal des achats
+### Étape 24 — Salif Ouédraogo : Journal des achats
 
 Chaque pesée réglée a passé son écriture d'achat : produit acheté, transport, compte du délégué et retenue.
 
-![Journal des achats](captures/parcours/25-comptable-journal-achats.png)
+![Journal des achats](captures/parcours/24-comptable-journal-achats.png)
 
-### Étape 26 — Salif Ouédraogo : Journal de caisse
+### Étape 25 — Salif Ouédraogo : Journal de caisse
 
 Les mouvements de caisse, y compris les reversements en espèces approuvés.
 
-![Journal de caisse](captures/parcours/26-comptable-journal-caisse.png)
+![Journal de caisse](captures/parcours/25-comptable-journal-caisse.png)
 
-### Étape 27 — Daouda Fofana : Stock mis à jour
+### Étape 26 — Daouda Fofana : Stock mis à jour
 
 Les pesées réglées alimentent le stock du magasin ; chaque lot garde sa traçabilité jusqu'au producteur.
 
-![Stock mis à jour](captures/parcours/27-responsable_magasin-stock.png)
+![Stock mis à jour](captures/parcours/26-responsable_magasin-stock.png)
 
-### Étape 28 — Fanta Kamara : Vente aux acheteurs
+### Étape 27 — Fanta Kamara : Vente aux acheteurs
 
 L'acheteur suit contrats et commandes ; les quantités vendues sortent du stock.
 
-![Vente aux acheteurs](captures/parcours/28-acheteur-commerce.png)
+![Vente aux acheteurs](captures/parcours/27-acheteur-commerce.png)
 
-### Étape 29 — Mireille Ouattara : Modules proposés par l'exportateur
+### Étape 28 — Mireille Ouattara : Modules proposés par l'exportateur
 
 L'exportateur propose ses modules ; l'ADG les transmet aux coachs.
 
-![Modules proposés par l'exportateur](captures/parcours/29-adg-modules.png)
+![Modules proposés par l'exportateur](captures/parcours/28-adg-modules.png)
 
-### Étape 30 — Mireille Ouattara : Résultats des coachs
+### Étape 29 — Mireille Ouattara : Résultats des coachs
 
 Les résultats saisis par les coachs sur le terrain sont transmis à l'exportateur.
 
-![Résultats des coachs](captures/parcours/30-adg-resultats.png)
+![Résultats des coachs](captures/parcours/29-adg-resultats.png)
 
-### Étape 31 — Karim Diallo : Suivi par l'exportateur
+### Étape 30 — Karim Diallo : Suivi par l'exportateur
 
 L'exportateur suit ses propositions et reçoit les résultats transmis : la boucle du terrain à l'exportateur est bouclée.
 
-![Suivi par l'exportateur](captures/parcours/31-exportateur-suivi.png)
+![Suivi par l'exportateur](captures/parcours/30-exportateur-suivi.png)
 
-### Étape 32 — Gilbert Koffi : Résultats saisis sur le terrain
+### Étape 31 — Gilbert Koffi : Résultats saisis sur le terrain
 
 Le coach saisit le résultat de la séance (village, participants, note moyenne) sur son téléphone ; il remonte à l'ADG puis à l'exportateur.
 
@@ -419,12 +413,11 @@ Traite les convois reçus, règle les délégués, tient la caisse et les compte
 
 ### Pas à pas
 
-1. **Se connecter à la caisse.** Menu **Caisse** → rubrique *Mouvements de caisse* → *Connexion à la caisse* : cliquez sur **Se connecter**. Cette caisse n'encaisse pas : elle établit des bons de sortie, des chèques et des paiements en espèces ; il n'y a donc ni fonds de caisse, ni comptage, ni clôture. Seul le caissier se connecte et se déconnecte (l'administrateur ne le peut pas) ; il est aussi déconnecté en quittant l'application.
-2. **Voir le fonds global.** Menu **Caisse** → *Fonds global de la caisse* : les **espèces** et les **comptes bancaires** forment ensemble le fonds de la caisse ; chaque forme a son solde et le total donne le fonds global. Dans *Enregistrer une entrée / sortie*, le **Mode** (Espèces ou Compte bancaire + banque) précise où va le montant.
-3. **Régler un connaissement.** Rubrique *Opérations* → *Traiter une pesée / régler un achat* : sur une pesée « Reçu — en caisse », cliquez **Traiter**. Le **prix unitaire** est celui de la traite, **fixé par l'administrateur** : il s'affiche mais le caissier ne peut pas le modifier. La **retenue au kilo** s'ajoute à la mise en compte du délégué. Le montant = poids net × prix ; l'écriture de caisse et le compte du délégué sont créés automatiquement.
-4. **Saisir une opération de caisse.** Rubrique *Mouvements de caisse* → *Enregistrer une entrée / sortie* : **mode** (*Espèces* ou *Compte bancaire* avec la banque choisie : le compte bancaire est une forme de fonds de la caisse), sens, montant, motif obligatoire. Aucune suppression possible : une erreur se corrige par une écriture inverse. Le résultat apparaît dans *Les entrées* ou *Les sorties de caisse*.
-5. **Suivre les comptes bancaires.** Rubrique *Mouvements de caisse* → *Évolution des comptes bancaires* : choisissez le compte et la période ; vous voyez le solde d'ouverture, ce qui est **ajouté (+)** et **soustrait (−)**, le solde cumulé et la courbe du solde. Le journal de caisse a un sélecteur *Fonds* (espèces ou compte bancaire).
-6. **Suivre les comptes délégués.** Rubrique *Solde délégué* : soldes, avances et retenues. Le transport et la retenue au kilo sont fixés par l'administrateur dans la fiche du délégué (onglets *Transport* et *Retenues*) : la caisse ne les saisit pas.
+1. **Connaître le fonds disponible.** La caissière se connecte comme tout utilisateur, par l'écran de connexion du logiciel : il n'y a ni ouverture, ni clôture de caisse, ni fonds à compter. Le bandeau en haut du menu **Caisse** affiche en permanence le **fonds disponible** : les espèces et chaque compte bancaire, et leur total. Dans *Enregistrer une entrée / sortie*, le **Mode** (Espèces ou Compte bancaire + banque) précise où va le montant.
+2. **Régler un connaissement.** Rubrique *Opérations* → *Traiter une pesée / régler un achat* : sur une pesée « Reçu — en caisse », cliquez **Traiter**. Le **prix unitaire** est celui de la traite, **fixé par l'administrateur** : il s'affiche mais le caissier ne peut pas le modifier. La **retenue au kilo** s'ajoute à la mise en compte du délégué. Le montant = poids net × prix ; l'écriture de caisse et le compte du délégué sont créés automatiquement.
+3. **Saisir une opération de caisse.** Rubrique *Mouvements de caisse* → *Enregistrer une entrée / sortie* : **mode** (*Espèces* ou *Compte bancaire* avec la banque choisie : le compte bancaire est une forme de fonds de la caisse), sens, montant, motif obligatoire. Aucune suppression possible : une erreur se corrige par une écriture inverse. Le résultat apparaît dans *Les entrées* ou *Les sorties de caisse*.
+4. **Suivre les comptes bancaires.** Rubrique *Mouvements de caisse* → *Évolution des comptes bancaires* : choisissez le compte et la période ; vous voyez le solde d'ouverture, ce qui est **ajouté (+)** et **soustrait (−)**, le solde cumulé et la courbe du solde. Le journal de caisse a un sélecteur *Fonds* (espèces ou compte bancaire).
+5. **Suivre les comptes délégués.** Rubrique *Solde délégué* : soldes, avances et retenues. Le transport et la retenue au kilo sont fixés par l'administrateur dans la fiche du délégué (onglets *Transport* et *Retenues*) : la caisse ne les saisit pas.
 
 ### Ce que ce profil ne voit pas
 

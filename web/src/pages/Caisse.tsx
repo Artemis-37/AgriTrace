@@ -17,18 +17,18 @@ const range = (p: Period): [string, string] | null => {
   return null;
 };
 
-type Key = 'cash' | 'variance' | 'accounts' | 'journal' | 'in' | 'out' | 'desk' | 'entry' | 'bank' | 'fund';
+type Key = 'cash' | 'variance' | 'accounts' | 'journal' | 'in' | 'out' | 'desk' | 'entry' | 'bank';
 const GROUPS: { title: string; perm: string; items: [Key, string][] }[] = [
   { title: 'Opérations', perm: 'convoys:settle', items: [['cash', 'Traiter une pesée / régler un achat'], ['variance', 'Écarts de poids à valider']] },
   { title: 'Achats prod. agricole', perm: 'convoys:settle', items: [['cash', 'Journal des achats (pesées à traiter)']] },
   { title: 'Solde délégué', perm: 'convoys:settle', items: [['accounts', 'Solde et fiche des délégués']] },
-  { title: 'Mouvements de caisse', perm: 'finance:read', items: [['fund', 'Fonds global de la caisse'], ['desk', 'Connexion à la caisse'], ['entry', 'Enregistrer une entrée / sortie'], ['journal', 'Mouvements de caisse'], ['in', 'Les entrées en caisse'], ['out', 'Les sorties de caisse'], ['bank', 'Évolution des comptes bancaires']] },
+  { title: 'Mouvements de caisse', perm: 'finance:read', items: [['desk', 'Créer une caisse'], ['entry', 'Enregistrer une entrée / sortie'], ['journal', 'Mouvements de caisse'], ['in', 'Les entrées en caisse'], ['out', 'Les sorties de caisse'], ['bank', 'Évolution des comptes bancaires']] },
 ];
 
 /** Caisse : menu à gauche en rubriques dépliantes, journal de caisse avec solde d'ouverture et solde actuel. */
 export default function Caisse() {
   const { can } = useAuth();
-  const groups = GROUPS.map((g) => ({ ...g, items: g.items.filter(([k]) => (k !== 'variance' || can('weighings:approve')) && (!['desk', 'entry'].includes(k) || can('cash:operate'))) })).filter((g) => can(g.perm) && g.items.length);
+  const groups = GROUPS.map((g) => ({ ...g, items: g.items.filter(([k]) => (k !== 'variance' || can('weighings:approve')) && (k !== 'entry' || can('cash:operate')) && (k !== 'desk' || can('cash:manage'))) })).filter((g) => can(g.perm) && g.items.length);
   const dl = useDeepLink(['cash', 'journal']);
   const first = (dl.tab as Key) ?? groups[0]?.items[0]?.[0] ?? 'journal';
   const [cur, setCur] = useState<Key>(first);
@@ -47,10 +47,10 @@ export default function Caisse() {
           ))}
         </nav>
         <div className="caisse-main">
+          <FundBar />
           {cur === 'cash' && <Cash />}
           {cur === 'variance' && <Variance />}
           {cur === 'accounts' && <Accounts />}
-          {cur === 'fund' && <GlobalFund />}
           {cur === 'desk' && <CashDesk />}
           {cur === 'entry' && <CashEntry />}
           {cur === 'bank' && <BankEvolution />}
@@ -108,36 +108,18 @@ export function Journal({ kind }: { kind: '' | 'in' | 'out' }) {
 const AMT = /^\d{1,12}(\.\d{1,2})?$/;
 /** Connexion du caissier à la caisse. La caisse ne se clôture pas (elle n'encaisse pas : bons de sortie, chèques, paiements en espèces) : le caissier se connecte et se déconnecte, sans fonds d'ouverture ni comptage. */
 function CashDesk() {
-  const { can } = useAuth();
-  const { data, loading, error, reload } = useAsync(async () => ({ regs: await get<any[]>('/cash-registers'), accts: await get<any[]>('/financial-accounts').catch(() => [] as any[]) }), []);
+  const { data, loading, error, reload } = useAsync(() => get<any[]>('/cash-registers'), []);
   const [name, setName] = useState('');
-  const [msg, setMsg] = useState('');
   const act = useAction();
-  const mayConnect = can('cash:session');
   return (
     <Card>
-      <h2 className="win-title">Connexion à la caisse</h2>
-      <p className="muted">La caisse ne se clôture pas : seul le caissier s'y connecte et s'en déconnecte. Aucun fonds d'ouverture ni comptage n'est demandé.</p>
-      {error && <ErrorBox message={error} onRetry={reload} />}{act.error && <ErrorBox message={act.error} />}{msg && <p className="notice" role="status">{msg}</p>}
+      <h2 className="win-title">Créer une caisse</h2>
+      {error && <ErrorBox message={error} onRetry={reload} />}{act.error && <ErrorBox message={act.error} />}
       {loading || !data ? <Loading /> : (
         <>
-          {!data.regs.length && <p className="muted">Aucune caisse n'est créée.</p>}
-          {data.regs.map((r) => {
-            const bal = data.accts.find((a) => a.id === r.account_id)?.balance;
-            return (
-              <fieldset key={r.id} className="bloc"><legend>{r.name} — {r.open_session_id ? `caissier connecté : ${r.open_session_by ?? ''}` : 'aucun caissier connecté'}</legend>
-                {bal !== undefined && <p>Solde de la caisse : <strong>{FR(bal)}</strong> FCFA</p>}
-                {mayConnect ? <button className="btn" disabled={act.busy} onClick={() => act.run(async () => {
-                  if (r.open_session_id) { await post(`/cash-sessions/${r.open_session_id}/close`, {}); setMsg('Vous êtes déconnecté de la caisse.'); }
-                  else { await post(`/cash-registers/${r.id}/sessions`, {}); setMsg('Vous êtes connecté à la caisse.'); }
-                  reload();
-                })}>{r.open_session_id ? 'Se déconnecter de la caisse' : 'Se connecter à la caisse'}</button>
-                  : <p className="muted">Seul le caissier se connecte à la caisse ou s'en déconnecte.</p>}
-              </fieldset>
-            );
-          })}
-          {can('cash:manage') && <div className="toolbar"><input placeholder="Nom de la nouvelle caisse" value={name} maxLength={100} onChange={(e) => setName(e.target.value)} />
-            <button className="btn btn-secondary" disabled={act.busy || name.trim().length < 2} onClick={() => act.run(async () => { await post('/cash-registers', { name: name.trim() }); setName(''); reload(); })}>Créer une caisse</button></div>}
+          <ul>{data.map((r) => <li key={r.id}>{r.name}</li>)}{!data.length && <li className="muted">Aucune caisse n'est créée.</li>}</ul>
+          <div className="toolbar"><input placeholder="Nom de la nouvelle caisse" value={name} maxLength={100} onChange={(e) => setName(e.target.value)} />
+            <button className="btn" disabled={act.busy || name.trim().length < 2} onClick={() => act.run(async () => { await post('/cash-registers', { name: name.trim() }); setName(''); reload(); })}>Créer la caisse</button></div>
         </>
       )}
     </Card>
@@ -229,29 +211,18 @@ function CashEntry() {
   );
 }
 
-/** Fonds global de la caisse = espèces + comptes bancaires. */
-export function GlobalFund() {
-  const { data, loading, error, reload } = useAsync(() => get<any[]>('/financial-accounts'), []);
-  const cash = (data ?? []).filter((a) => a.owner_type === 'cash_register');
-  const banks = (data ?? []).filter((a) => a.owner_type === 'other');
-  const sum = (l: any[]) => l.reduce((t, a) => t + Number(a.balance), 0);
+/** Fonds disponible de la caisse = espèces + comptes bancaires, visible en permanence. */
+export function FundBar() {
+  const { data } = useAsync(() => get<any[]>('/financial-accounts').catch(() => [] as any[]), []);
+  if (!data) return null;
+  const cash = data.filter((a) => a.owner_type === 'cash_register').reduce((t, a) => t + Number(a.balance), 0);
+  const banks = data.filter((a) => a.owner_type === 'other');
+  const bank = banks.reduce((t, a) => t + Number(a.balance), 0);
   return (
-    <Card>
-      <h2 className="win-title">Fonds global de la caisse</h2>
-      {error && <ErrorBox message={error} onRetry={reload} />}
-      {loading || !data ? <Loading /> : (
-        <>
-          <p className="muted">Le fonds de la caisse est composé des espèces et des comptes bancaires.</p>
-          <div className="tw"><table>
-            <thead><tr><th>Forme du fonds</th><th>Compte</th><th>N° de compte</th><th className="r">Solde</th></tr></thead>
-            <tbody>
-              {cash.map((a) => <tr key={a.id}><td>Espèces</td><td>{a.name}</td><td></td><td className="r">{FR(a.balance)}</td></tr>)}
-              {banks.map((a) => <tr key={a.id}><td>Compte bancaire</td><td>{a.name}{a.bank_name ? ` (${a.bank_name})` : ''}</td><td>{a.account_number ?? ''}</td><td className="r">{FR(a.balance)}</td></tr>)}
-            </tbody>
-          </table></div>
-          <div className="solde-bar"><span>ESPÈCES <b>{FR(sum(cash))}</b></span><span>COMPTES BANCAIRES <b>{FR(sum(banks))}</b></span><span className="big">FONDS GLOBAL <b>{FR(sum(cash) + sum(banks))}</b></span></div>
-        </>
-      )}
-    </Card>
+    <div className="solde-bar" role="status" aria-label="Fonds disponible de la caisse">
+      <span>ESPÈCES <b>{FR(cash)}</b></span>
+      {banks.map((b) => <span key={b.id}>{b.name.toUpperCase()} <b>{FR(b.balance)}</b></span>)}
+      <span className="big">FONDS DISPONIBLE <b>{FR(cash + bank)}</b> FCFA</span>
+    </div>
   );
 }
