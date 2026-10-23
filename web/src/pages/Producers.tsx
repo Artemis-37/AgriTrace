@@ -39,6 +39,8 @@ export default function Producers() {
             { header: 'Code', render: (p) => p.internal_code },
             { header: 'Nom', render: (p) => <button className="btn btn-ghost" style={{ fontWeight: 700, textAlign: 'left' }} onClick={() => setProf(p)}>{p.last_name} {p.first_names}</button> },
             { header: 'Village', render: (p) => p.village ?? '—' },
+            { header: 'Superficie (ha)', align: 'right', render: (p) => (p.area_ha != null ? Number(p.area_ha).toLocaleString('fr-FR', { maximumFractionDigits: 2 }) : '') },
+            { header: 'Estimation (kg)', align: 'right', render: (p) => (p.estimated_kg != null ? Number(p.estimated_kg).toLocaleString('fr-FR', { maximumFractionDigits: 0 }) : '') },
             { header: 'Section', render: (p) => p.section ?? '—' },
             { header: 'Téléphone', render: (p) => p.phone ?? '—' },
             { header: 'Statut', render: (p) => <StatusBadge map={PRODUCER_STATUS} value={p.status} /> },
@@ -56,7 +58,7 @@ export default function Producers() {
 
 function NewProducer({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
   const chains = useAsync(() => get<any[]>('/value-chains'), []);
-  const [f, setF] = useState({ last_name: '', first_names: '', phone: '', village: '', section: '', chain: '' });
+  const [f, setF] = useState({ last_name: '', first_names: '', phone: '', village: '', section: '', area: '', est: '', chain: '' });
   const { busy, error, run } = useAction();
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF({ ...f, [k]: e.target.value });
 
@@ -65,7 +67,7 @@ function NewProducer({ onClose, onDone }: { onClose: () => void; onDone: () => v
     run(async () => {
       await post('/producers', {
         last_name: f.last_name.trim(), first_names: f.first_names.trim(),
-        ...(f.phone.trim() && { phone: f.phone.trim() }), ...(f.village.trim() && { village: f.village.trim() }), ...(f.section.trim() && { section: f.section.trim() }),
+        ...(f.phone.trim() && { phone: f.phone.trim() }), ...(f.village.trim() && { village: f.village.trim() }), ...(f.section.trim() && { section: f.section.trim() }), ...(/^\d+(\.\d{1,4})?$/.test(f.area.trim()) && { area_ha: f.area.trim() }), ...(/^\d+(\.\d{1,2})?$/.test(f.est.trim()) && { estimated_kg: f.est.trim() }),
         ...(f.chain && { value_chain_ids: [f.chain] }),
       });
       onDone();
@@ -78,6 +80,8 @@ function NewProducer({ onClose, onDone }: { onClose: () => void; onDone: () => v
         <Field label="Prénoms"><input required value={f.first_names} onChange={set('first_names')} /></Field>
         <Field label="Téléphone" hint="Format international, par exemple +2250701020304"><input inputMode="tel" value={f.phone} onChange={set('phone')} /></Field>
         <Field label="Village"><input value={f.village} onChange={set('village')} /></Field>
+        <Field label="Superficie (ha)"><input inputMode="decimal" value={f.area} onChange={set('area')} /></Field>
+        <Field label="Estimation de production (kg)"><input inputMode="decimal" value={f.est} onChange={set('est')} /></Field>
         <Field label="Section"><input value={f.section} onChange={set('section')} /></Field>
         <Field label="Filière">
           <select value={f.chain} onChange={set('chain')}><option value="">— Aucune —</option>{(chains.data ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select>

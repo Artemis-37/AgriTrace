@@ -2,7 +2,7 @@
 
 export const TARGET_FIELDS = [
   'internal_code', 'last_name', 'first_names', 'phone', 'region', 'department',
-  'section', 'village', 'value_chains', 'joined_on',
+  'section', 'village', 'area_ha', 'estimated_kg', 'value_chains', 'joined_on',
 ] as const;
 export type TargetField = (typeof TARGET_FIELDS)[number];
 
@@ -16,6 +16,8 @@ export const TEMPLATE_HEADERS: Record<TargetField, string> = {
   department: 'Département',
   section: 'Section',
   village: 'Village',
+  area_ha: 'Superficie (ha)',
+  estimated_kg: 'Estimation (kg)',
   value_chains: 'Filières',
   joined_on: "Date d'adhésion",
 };
@@ -60,6 +62,12 @@ export function validateRow(line: number, raw: Record<string, string>, mapping: 
   if (data.phone) {
     data.phone = cleanPhone(data.phone);
     if (!/^\+?\d{8,15}$/.test(data.phone)) errors.push('Téléphone invalide');
+  }
+  for (const [f, label] of [['area_ha', 'Superficie'], ['estimated_kg', 'Estimation']] as const) {
+    if (data[f]) {
+      data[f] = data[f]!.replace(/\s/g, '').replace(',', '.');
+      if (!/^\d+(\.\d{1,4})?$/.test(data[f]!)) errors.push(`${label} invalide (nombre positif)`);
+    }
   }
   if (data.joined_on && !/^\d{4}-\d{2}-\d{2}$/.test(data.joined_on)) errors.push("Date d'adhésion invalide (AAAA-MM-JJ)");
   if (data.internal_code && !/^[A-Za-z0-9_-]{1,30}$/.test(data.internal_code)) errors.push('Code invalide');

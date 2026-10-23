@@ -31,6 +31,8 @@ export class CreateProducerDto {
   @IsOptional() @IsString() department?: string;
   @IsOptional() @IsString() section?: string;
   @IsOptional() @IsString() village?: string;
+  @IsOptional() @Matches(/^\d+(\.\d{1,4})?$/) area_ha?: string;
+  @IsOptional() @Matches(/^\d+(\.\d{1,2})?$/) estimated_kg?: string;
   @IsOptional() @IsDateString() joined_on?: string;
   @IsOptional() @IsArray() @IsUUID('all', { each: true }) value_chain_ids?: string[];
 }
@@ -70,7 +72,7 @@ export class ProducersController {
     const staff = req.org.permissions.has('declarations:validate');
     return this.db.tx(req.org.id, async (c) =>
       (await c.query(
-        `SELECT p.id, p.internal_code, p.last_name, p.first_names, p.phone, p.region, p.department, p.section, p.village, p.joined_on, p.status
+        `SELECT p.id, p.internal_code, p.last_name, p.first_names, p.phone, p.region, p.department, p.section, p.village, p.joined_on, p.status, p.area_ha, p.estimated_kg
            FROM producers p
           WHERE ($1::text IS NULL OR lower(p.internal_code) LIKE $1 OR lower(p.last_name) LIKE $1 OR lower(p.first_names) LIKE $1 OR coalesce(p.phone,'') LIKE $1)
             AND ($2::text IS NULL OR p.section = $2) AND ($3::text IS NULL OR p.village = $3)
@@ -137,12 +139,12 @@ export class ProducersController {
       if (exists.rowCount) throw new ConflictException('Code producteur déjà utilisé');
       const ins = await c.query(
         `INSERT INTO producers(id, organization_id, internal_code, last_name, first_names, phone, region, department, section, village, joined_on, created_by,
-                               gender, birth_date, id_doc_type, id_doc_number, consent_at)
-         VALUES (coalesce($12::uuid, gen_random_uuid()),$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$13,$14,$15,$16, CASE WHEN $17::boolean THEN now() END)
+                               gender, birth_date, id_doc_type, id_doc_number, consent_at, area_ha, estimated_kg)
+         VALUES (coalesce($12::uuid, gen_random_uuid()),$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$13,$14,$15,$16, CASE WHEN $17::boolean THEN now() END, $18, $19)
          ON CONFLICT (id) DO UPDATE SET id = producers.id RETURNING *`,
         [req.org.id, code, b.last_name, b.first_names, b.phone ?? null, b.region ?? null, b.department ?? null,
          b.section ?? null, b.village ?? null, b.joined_on ?? null, req.user.id, b.id ?? null,
-         b.gender ?? null, b.birth_date ?? null, b.id_doc_type ?? null, b.id_doc_number ?? null, b.consent === true]);
+         b.gender ?? null, b.birth_date ?? null, b.id_doc_type ?? null, b.id_doc_number ?? null, b.consent === true, b.area_ha ?? null, b.estimated_kg ?? null]);
       for (const vc of b.value_chain_ids ?? []) {
         const ok = await c.query(`SELECT 1 FROM value_chains WHERE id = $1`, [vc]);
         if (!ok.rowCount) throw new BadRequestException('Filière inconnue');
@@ -231,10 +233,10 @@ export class ProducersController {
         if (!result.dry_run) {
           const code = r.data.internal_code ?? (await this.nextCode(c, req.org.id));
           const ins = await c.query(
-            `INSERT INTO producers(organization_id, internal_code, last_name, first_names, phone, region, department, section, village, joined_on, created_by)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id`,
+            `INSERT INTO producers(organization_id, internal_code, last_name, first_names, phone, region, department, section, village, joined_on, created_by, area_ha, estimated_kg)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING id`,
             [req.org.id, code, r.data.last_name, r.data.first_names, r.data.phone ?? null, r.data.region ?? null,
-             r.data.department ?? null, r.data.section ?? null, r.data.village ?? null, r.data.joined_on ?? null, req.user.id]);
+             r.data.department ?? null, r.data.section ?? null, r.data.village ?? null, r.data.joined_on ?? null, req.user.id, r.data.area_ha ?? null, r.data.estimated_kg ?? null]);
           for (const vc of chainIds)
             await c.query(`INSERT INTO producer_value_chains(producer_id, value_chain_id, organization_id) VALUES ($1,$2,$3)`, [ins.rows[0].id, vc, req.org.id]);
         }

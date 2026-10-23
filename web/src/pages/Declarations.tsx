@@ -12,9 +12,8 @@ export default function Declarations() {
   const [status, setStatus] = useState('');
   const [pending, setPending] = useState<{ id: string; to: string; label: string } | null>(null);
   const { data, loading, error, reload } = useAsync(async () => {
-    const [decls, producers] = await Promise.all([get<any[]>('/purchase-declarations'), get<any[]>('/producers').catch(() => [])]);
-    const names = new Map(producers.map((p) => [p.id, `${p.last_name} ${p.first_names}`]));
-    return decls.map((d) => ({ ...d, producer_name: names.get(d.producer_id) ?? '—' }));
+    // Les informations du producteur (base importée par la coopérative) viennent avec chaque déclaration.
+    return (await get<any[]>('/purchase-declarations')).map((d) => ({ ...d, producer_name: d.producer_name ?? '—' }));
   }, []);
   const rows = (data ?? []).filter((d) => !status || d.status === status);
   const [creating, setCreating] = useState(false);
@@ -36,8 +35,14 @@ export default function Declarations() {
         {error && <ErrorBox message={error} onRetry={reload} />}
         {loading ? <Loading /> : (
           <Table rows={rows} empty="Aucune déclaration." columns={[
+            { header: 'Code', render: (d) => <code>{d.producer_code ?? '—'}</code> },
+            { header: 'Nom & prénoms', render: (d) => <strong>{d.producer_name}</strong> },
+            { header: 'Section', render: (d) => d.producer_section ?? '' },
+            { header: 'Village', render: (d) => d.producer_village ?? '' },
+            { header: 'Téléphone', render: (d) => d.producer_phone ?? '' },
+            { header: 'Superficie (ha)', align: 'right', render: (d) => (d.producer_area_ha != null ? Number(d.producer_area_ha).toLocaleString('fr-FR', { maximumFractionDigits: 2 }) : '') },
+            { header: 'Estimation (kg)', align: 'right', render: (d) => (d.producer_estimated_kg != null ? Number(d.producer_estimated_kg).toLocaleString('fr-FR', { maximumFractionDigits: 0 }) : '') },
             { header: 'Date', render: (d) => date(d.operation_date) },
-            { header: 'Producteur', render: (d) => <strong>{d.producer_name}</strong> },
             { header: 'Quantité', align: 'right', render: (d) => `${Number(d.quantity)} ${d.unit}` },
             { header: 'Montant', align: 'right', render: (d) => money(d.amount, d.currency ?? 'XOF') },
             { header: 'Statut', render: (d) => <StatusBadge map={DECLARATION_STATUS} value={d.status} /> },

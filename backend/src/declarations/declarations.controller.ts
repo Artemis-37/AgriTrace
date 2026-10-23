@@ -252,14 +252,17 @@ export class DeclarationsController {
       const mine = all ? null : await this.myCollector(c, req.user.id);
       if (!all && !mine) return [];
       return (await c.query(
-        `SELECT id, collector_id, producer_id, (SELECT last_name || ' ' || first_names FROM producers WHERE id = producer_id) AS producer_name,
-                value_chain_id, campaign_id, operation_date, bags, quantity, unit,
-                unit_price, currency, amount, status, status_reason, updated_at,
-                purchase_receipt_series, purchase_receipt_no, receipt_conflict_with, receipt_override_by
-           FROM purchase_declarations
-          WHERE ($1::text IS NULL OR status = $1) AND ($2::uuid IS NULL OR collector_id = $2)
-            AND ($5::text IS NULL OR purchase_receipt_no LIKE $5 || '%')
-          ORDER BY operation_date DESC, created_at DESC LIMIT $3 OFFSET $4`,
+        `SELECT d.id, d.collector_id, d.producer_id, pr.last_name || ' ' || pr.first_names AS producer_name,
+                pr.internal_code AS producer_code, pr.section AS producer_section, pr.village AS producer_village, pr.phone AS producer_phone,
+                coalesce(pr.area_ha, (SELECT sum(pc.declared_area_ha) FROM parcels pc WHERE pc.producer_id = pr.id AND pc.status = 'active')) AS producer_area_ha,
+                pr.estimated_kg AS producer_estimated_kg,
+                d.value_chain_id, d.campaign_id, d.operation_date, d.bags, d.quantity, d.unit,
+                d.unit_price, d.currency, d.amount, d.status, d.status_reason, d.updated_at,
+                d.purchase_receipt_series, d.purchase_receipt_no, d.receipt_conflict_with, d.receipt_override_by
+           FROM purchase_declarations d LEFT JOIN producers pr ON pr.id = d.producer_id
+          WHERE ($1::text IS NULL OR d.status = $1) AND ($2::uuid IS NULL OR d.collector_id = $2)
+            AND ($5::text IS NULL OR d.purchase_receipt_no LIKE $5 || '%')
+          ORDER BY d.operation_date DESC, d.created_at DESC LIMIT $3 OFFSET $4`,
         [status ?? null, mine ?? null, Math.min(Number(limit) || 50, 200), Number(offset) || 0, receiptNo ? normalizeReceipt(receiptNo).replace(/[%_\\]/g, '') : null])).rows;
     });
   }
