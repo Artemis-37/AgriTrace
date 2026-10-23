@@ -56,7 +56,9 @@ const MOD = {
     duree: '3 h',
     objectifs: ['Créer les comptes et attribuer les rôles types', 'Renseigner le profil et le logo de la coopérative', 'Traiter les demandes d\'annulation', 'Programmer l\'envoi automatique de rapports', 'Réinitialiser un mot de passe'],
     pas: [
-      ['Créer un compte', 'Menu **Équipe** → section des utilisateurs → créer : nom, e-mail, mot de passe provisoire, **rôle**. Les modèles de rôles (magasinier, caissier…) évitent de cocher des droits un par un.'],
+      ['Créer un compte', 'Menu **Équipe** → section des utilisateurs → créer : nom, e-mail, mot de passe provisoire, **un ou plusieurs rôles** (cases à cocher : les droits s\'additionnent, le menu n\'affiche que ce qu\'ils permettent ; *Rôles* en ajoute ou en retire ensuite). Les modèles de rôles (magasinier, caissier…) évitent de cocher des droits un par un.'],
+      ['Fixer les prix de la traite', 'Menu **Paramètres** → *Produits et campagnes* → **Nouvelle campagne** : à l\'ouverture de la traite, vous indiquez le prix d\'achat et de vente au kilo de chaque produit. Vous seul pouvez les saisir et les actualiser (*Modifier*, *Historique des prix*) ; la caisse, les pesées et les ventes les reprennent tels quels.'],
+      ['Approuver un reversement de mise en compte', 'Menu **Comptabilité** → *Mise en compte des délégués* → onglet *Demandes de reversement* : une fois le compte du délégué clôturé, la caisse demande de reverser sa mise en compte (sur son compte, par chèque, en espèces ou vers un autre compte). Vous **approuvez** (le mouvement et l\'écriture sont passés) ou **refusez** avec un motif.'],
       ['Renseigner le profil', 'Menu **Équipe** → *Profil de la coopérative* : nom commercial, adresse, téléphone, e-mail, devise. Ces informations figurent en tête des reçus imprimés. Ajoutez le **logo** (PNG ou JPEG, 1 Mo maximum).'],
       ['Traiter une annulation', 'Menu **Mes opérations** → onglet *Demandes d\'annulation* → **Traiter** : lisez le motif, puis approuvez ou refusez en justifiant. La personne qui a fait la demande ne peut pas l\'approuver elle-même.'],
       ['Réinitialiser un mot de passe', '**Équipe** → utilisateur → *Réinitialiser le mot de passe*. Un mot de passe temporaire s\'affiche **une seule fois** ; l\'utilisateur devra en choisir un nouveau à la connexion.'],
@@ -88,12 +90,12 @@ const MOD = {
     objectifs: ['Traiter un convoi reçu (règlement du collecteur)', 'Tenir la caisse (entrées/sorties) avec justificatif', 'Consulter les comptes collecteurs', 'Imprimer les reçus et demander une annulation'],
     pas: [
       ['Ouvrir la caisse', 'Menu **Caisse** → rubrique *Mouvements de caisse* → *Ouvrir / fermer la caisse* : saisissez le fonds de caisse et ouvrez la session. En fin de journée, saisissez le montant compté et fermez : l\'écart avec le solde attendu est conservé.'],
-      ['Régler un convoi', 'Rubrique *Opérations* → *Traiter une pesée / régler un achat* : sur une pesée « Reçu — en caisse », cliquez **Traiter**. Le **prix unitaire** est prérempli avec le prix d\'achat du produit (modifiable). Le montant = poids net × prix ; l\'écriture de caisse et le compte du délégué sont créés automatiquement.'],
+      ['Régler un convoi', 'Rubrique *Opérations* → *Traiter une pesée / régler un achat* : sur une pesée « Reçu — en caisse », cliquez **Traiter**. Le **prix unitaire** est celui de la traite, **fixé par l\'administrateur** : il s\'affiche mais le caissier ne peut pas le modifier. La **retenue au kilo** s\'ajoute à la mise en compte du délégué. Le montant = poids net × prix ; l\'écriture de caisse et le compte du délégué sont créés automatiquement.'],
       ['Saisir une opération de caisse', 'Rubrique *Mouvements de caisse* → *Enregistrer une entrée / sortie* : sens, montant, motif obligatoire. Aucune suppression possible : une erreur se corrige par une écriture inverse. Le résultat apparaît dans *Les entrées* ou *Les sorties de caisse*.'],
       ['Suivre les comptes collecteurs', 'Rubrique *Solde délégué* : soldes, avances et retenues.'],
     ],
     exos: [
-      ['Réglez le convoi {{CV3}} (réceptionné par le magasinier à son exercice) au prix de 1 000 F/kg.', 'Montant = poids reçu × 1 000 (ex. 2 080 kg → 2 080 000 F) ; le convoi passe à « Réglé ».'],
+      ['Réglez le convoi {{CV3}} (réceptionné par le magasinier à son exercice) au prix de la traite (fixé par l\'administrateur, ex. 1 000 F/kg).', 'Montant = poids reçu × prix (ex. 2 080 kg × 1 000 → 2 080 000 F) ; le convoi passe à « Réglé ».'],
       ['Enregistrez une sortie de caisse de 15 000 F « Achat de papier ».', 'Le solde de la caisse diminue de 15 000 F ; l\'opération est datée et attribuée à votre compte.'],
       ['Imprimez le reçu de règlement.', 'Le reçu porte l\'en-tête de la coopérative (nom, logo, adresse).'],
     ],
@@ -338,7 +340,22 @@ ${demo.accounts.map((a) => `| ${a.label} | ${a.name} | \`${a.email}\` |`).join('
 
 `;
 
-let n = 5;
+md += `
+## 5. Parcours complet simulé : du terrain à l'exportateur
+
+Ce chapitre déroule **une même chaîne, de bout en bout**, avec les comptes de la démonstration (données fictives). Chaque étape est jouée par le profil concerné ; les formulaires sont remplis. Le téléphone du délégué est simulé par les écrans de l'application.
+
+**Fil conducteur.** Le délégué achète du cacao à deux producteurs et déclare un convoi qui les transporte (n° {{PCV}}). Le responsable traçabilité valide les achats ; le magasinier pèse ce convoi, puis pèse aussi un convoi **non déclaré** d'un autre délégué ({{PNC}}). La caisse règle les deux pesées au **prix de la traite fixé par l'administrateur** et retient une somme au kilo (la *mise en compte*). En fin de campagne le compte du délégué est clôturé ; son reversement (sur son compte, par chèque, en espèces ou vers un autre compte) est **approuvé par l'administrateur**. Le comptable retrouve les écritures, le stock alimente les ventes, et les modules de l'exportateur redescendent jusqu'aux coachs avant de remonter à l'exportateur.
+
+`;
+const P = JSON.parse(fs.readFileSync(path.join(dir, 'captures', 'parcours', 'index.json'), 'utf8'));
+for (const st of P.steps) {
+  md += `### Étape ${st.n} — ${st.who} : ${st.title}\n\n${st.text}\n\n`;
+  if (st.file) md += `![${st.title}](captures/parcours/${st.file})\n\n`;
+  else md += `<p class="phone-one"><img src="captures/mobile/${st.mobile}" alt="${st.title}" width="260"></p>\n\n`;
+}
+md = md.replaceAll('{{PCV}}', P.convoy).replaceAll('{{PNC}}', P.convoy_non_declare);
+let n = 6;
 for (const role of ORDER) {
   const m = MOD[role];
   if (!m) continue;

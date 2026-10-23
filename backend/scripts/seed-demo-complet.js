@@ -149,6 +149,11 @@ const PROFILS = [
   const reg = await call('POST', '/cash-registers', { ...A, body: { name: 'Caisse principale' } });
   const sess = await call('POST', `/cash-registers/${reg.id}/sessions`, { ...U('caissier'), body: { opening_amount: '5000000' } });
   await soft('règlement du convoi', () => call('POST', `/convoy-receptions/${rec.id}/settle`, { ...U('caissier'), body: { idempotency_key: key('st'), retention_per_kg: '10' } }));
+  // Compte bancaire de la coopérative (fictif) : sert aux reversements par chèque
+  await soft('compte bancaire', async () => {
+    const bank = await call('POST', '/financial-accounts', { ...A, body: { owner_type: 'other', name: 'Banque (compte courant) — fictif' } });
+    await call('POST', '/financial-transactions', { ...A, body: { idempotency_key: key('bank'), account_id: bank.id, direction: 'in', amount: '10000000', reason: 'Approvisionnement du compte bancaire' } });
+  });
   const cv2 = (await cv('1800')).convoy_no;
   const rec2 = await soft('2e réception', () => call('POST', '/convoys/receive', { ...U('magasinier'), body: { idempotency_key: key('rc'), collector_id: col.id, convoy_no: cv2, warehouse_id: wh.id, product_id: cacao.id, campaign_id: camp.id, total_kg: '1795', bags: 28 } }));
   const cv3 = (await cv('2100')).convoy_no; // reste « en route » : visible dans les convois attendus du magasin

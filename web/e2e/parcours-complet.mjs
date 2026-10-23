@@ -45,7 +45,13 @@ async function actor(role) {
 /** Enregistre une étape du parcours : capture + texte de guide. */
 async function snap(page, role, slug, title, text, full = false) {
   n += 1; const file = `${String(n).padStart(2, '0')}-${role}-${slug}.png`;
-  await page.screenshot({ path: path.join(OUT, file), fullPage: full });
+  if (full) {
+    // Page entière : on agrandit la fenêtre à la hauteur du contenu (les barres fixes restent en haut et en bas).
+    const h = await page.evaluate(() => document.documentElement.scrollHeight);
+    await page.setViewportSize({ width: 1280, height: Math.min(h, 2600) }); await page.waitForTimeout(400);
+    await page.screenshot({ path: path.join(OUT, file) });
+    await page.setViewportSize({ width: 1280, height: 760 }); await page.waitForTimeout(300);
+  } else await page.screenshot({ path: path.join(OUT, file) });
   steps.push({ n, role, who: acc[role]?.name ?? role, title, text, file });
   console.log('  ✓', file);
 }
@@ -164,10 +170,11 @@ console.log('5. Mise en compte');
   await go('/mise-en-compte');
   await snap(page, 'caissier', 'mise-en-compte', 'Mise en compte des délégués', 'Pour chaque délégué : somme retenue, reversée, en attente et disponible. Une fois la campagne terminée, le compte du délégué est **clôturé**.');
   await page.locator('tr', { hasText: 'Brahima' }).getByRole('button', { name: 'Clôturer le compte' }).click(); await page.waitForTimeout(500);
+  await snap(page, 'caissier', 'cloture', 'Clôturer le compte du délégué', 'La clôture du compte du délégué (fin de campagne) ouvre la possibilité de reverser sa mise en compte ; une nouvelle livraison rouvre le compte.');
   await modalOf(page).getByRole('button', { name: 'Clôturer' }).click(); await page.waitForTimeout(1200);
   await page.locator('tr', { hasText: 'Brahima' }).getByRole('button', { name: 'Reverser…' }).click(); await page.waitForTimeout(700);
   const m = modalOf(page);
-  await m.getByLabel('Chèque').check().catch(() => undefined); await page.waitForTimeout(400);
+  await m.getByRole('radio', { name: 'Chèque' }).check(); await page.waitForTimeout(400);
   const bankSel = m.getByLabel('Compte bancaire débité');
   if (await bankSel.count()) { const o = await bankSel.locator('option').allInnerTexts(); if (o.length > 1) await bankSel.selectOption({ index: 1 }); await m.getByLabel('N° du chèque').fill('CH-004512'); }
   await page.waitForTimeout(400);
