@@ -94,7 +94,7 @@ export class OperationsController {
       const user = (id2: string | null) => id2 ? c.query(`SELECT full_name FROM users WHERE id = $1`, [id2]).then((r) => r.rows[0]?.full_name ?? null) : Promise.resolve(null);
       let number = '', lines: { label: string; value: string }[] = [], extra: any = {};
       if (t === 'convoy_reception' || t === 'convoy_settlement') {
-        const r = (await c.query(`SELECT r.*, v.convoy_no, v.driver_name, v.truck_no, v.declared_kg, v.declared_bags, w.name AS warehouse, ku.full_name AS collector
+        const r = (await c.query(`SELECT r.*, v.convoy_no, v.driver_name, v.truck_no, v.declared_kg, v.declared_bags, w.name AS warehouse, ku.full_name AS collector, (SELECT mc.code FROM member_codes mc WHERE mc.user_id = k.user_id AND mc.organization_id = k.organization_id) AS collector_code
             FROM convoy_receptions r JOIN convoys v ON v.id = r.convoy_id JOIN warehouses w ON w.id = r.warehouse_id JOIN collectors k ON k.id = v.collector_id JOIN users ku ON ku.id = k.user_id WHERE r.id = $1`, [id])).rows[0];
         number = r.convoy_no;
         lines = [{ label: 'Connaissement', value: r.convoy_no }, { label: 'Collecteur', value: r.collector }, { label: 'Chauffeur / camion', value: `${r.driver_name} · ${r.truck_no}` },
@@ -110,7 +110,7 @@ export class OperationsController {
           // Bulletin de pesée : poids en kg entiers (chaînes déjà formatées), champs absents = null (non imprimés).
           const w = (v: any) => (v == null ? null : nb(v));
           extra.bulletin = {
-            no: r.bulletin_no, convoy_no: r.convoy_no, received_at: r.received_at, collector: r.collector, driver: r.driver_name, truck: r.truck_no, trailer: r.trailer_no, origin: r.origin,
+            no: r.bulletin_no, convoy_no: r.convoy_no, received_at: r.received_at, collector: r.collector, collector_code: r.collector_code, driver: r.driver_name, truck: r.truck_no, trailer: r.trailer_no, origin: r.origin,
             warehouse: r.warehouse, grade: r.grade, status: r.status,
             weigh_in: w(r.weigh_in_kg), weigh_in_at: r.weigh_in_at, scale_in: r.scale_in, weigh_out: w(r.weigh_out_kg), weigh_out_at: r.weigh_out_at, scale_out: r.scale_out,
             gross: w(r.gross_kg), bag_tare: w(r.bag_tare_kg), refaction: w(r.refaction_kg), net: w(r.total_kg), declared: w(r.declared_kg), variance: r.variance_kg == null ? null : (Number(r.variance_kg) > 0 ? '+' : '') + nb(r.variance_kg),

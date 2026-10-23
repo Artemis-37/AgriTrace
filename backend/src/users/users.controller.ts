@@ -1,4 +1,4 @@
-import { HttpCode, BadRequestException, Body, ConflictException, Controller, ForbiddenException, Get, NotFoundException, Param, ParseUUIDPipe, Post, Req } from '@nestjs/common';
+import { HttpCode, BadRequestException, Body, ConflictException, Controller, ForbiddenException, Get, NotFoundException, Param, ParseUUIDPipe, Post, Put, Req } from '@nestjs/common';
 import { assertStrongPassword } from '../auth/password-policy';
 import { randomBytes } from 'crypto';
 import { ApiBearerAuth, ApiHeader, ApiTags } from '@nestjs/swagger';
@@ -15,6 +15,11 @@ class CreateUserDto {
   @IsOptional() @IsString() phone?: string;
   @IsString() @MinLength(10) password: string;
   @IsUUID() role_id: string;
+  /** Code (identifiant) de l'intervenant ; attribué automatiquement s'il est omis. */
+  @IsOptional() @Matches(/^[A-Z0-9][A-Z0-9-]{1,29}$/, { message: 'Code : 2 à 30 caractères, majuscules, chiffres et tirets' }) member_code?: string;
+}
+class MemberCodeDto {
+  @Matches(/^[A-Z0-9][A-Z0-9-]{1,29}$/, { message: 'Code : 2 à 30 caractères, majuscules, chiffres et tirets' }) code: string;
 }
 
 class CreateRoleDto {
@@ -41,12 +46,30 @@ export class UsersController {
   list(@Req() req: any) {
     // La table des rôles est protégée par RLS : la lecture doit se faire dans le contexte de l'organisation
     return this.db.tx(req.org.id, async (c) => (await c.query(
-      `SELECT u.id, u.email, u.full_name, u.phone, u.status, r.code AS role_code, uo.status AS membership_status
+      `SELECT u.id, u.email, u.full_name, u.phone, u.status, (SELECT mc.code FROM member_codes mc WHERE mc.organization_id = uo.organization_id AND mc.user_id = u.id) AS member_code, r.code AS role_code, uo.status AS membership_status
          FROM user_organizations uo
          JOIN users u ON u.id = uo.user_id
          JOIN roles r ON r.id = uo.role_id
         WHERE uo.organization_id = $1 ORDER BY u.full_name`,
       [req.org.id])).rows);
+  }
+
+  /** Modifie le code (identifiant) d'un intervenant de la coopérative. */
+  @Put('users/:id/member-code')
+  @RequirePermissions('users:manage')
+  async setMemberCode(@Param('id', ParseUUIDPipe) id: string, @Body() b: MemberCodeDto, @Req() req: any) {
+    try {
+      const n = await this.db.tx(req.org.id, async (c) => {
+        if (!(await c.query(`SELECT 1 FROM user_organizations WHERE user_id = $1 AND organization_id = $2`, [id, req.org.id])).rowCount) throw new NotFoundException('Intervenant introuvable');
+        return (await c.query(`UPDATE member_codes SET code = $3 WHERE user_id = $1 AND organization_id = $2`, [id, req.org.id, b.code])).rowCount;
+      });
+      if (!n) throw new NotFoundException('Intervenant introuvable');
+    } catch (e: any) {
+      if (e.code === '23505') throw new ConflictException('Ce code est déjà attribué à un autre intervenant');
+      throw e;
+    }
+    await this.audit.log({ organizationId: req.org.id, actorUserId: req.user.id, action: 'user.member_code', entityType: 'user', entityId: id, details: { code: b.code } });
+    return { ok: true, code: b.code };
   }
 
   @Get('roles')
@@ -134,11 +157,16 @@ export class UsersController {
         );
         userId = ins.rows[0].id;
       }
+      if (b.member_code) {
+        if ((await c.query(`SELECT 1 FROM member_codes WHERE organization_id = $1 AND code = $2`, [req.org.id, b.member_code])).rowCount) throw new ConflictException('Ce code est déjà attribué à un autre intervenant');
+        await c.query(`INSERT INTO member_codes(organization_id, user_id, code) VALUES ($1,$2,$3)`, [req.org.id, userId, b.member_code]);
+      }
       await c.query(
         `INSERT INTO user_organizations(user_id, organization_id, role_id, created_by) VALUES ($1,$2,$3,$4)`,
         [userId, req.org.id, b.role_id, req.user.id],
       );
-      return { id: userId, email, full_name: b.full_name };
+      const code = (await c.query(`SELECT code FROM member_codes WHERE organization_id = $1 AND user_id = $2`, [req.org.id, userId])).rows[0]?.code;
+      return { id: userId, email, full_name: b.full_name, member_code: code };
     });
     await this.audit.log({
       organizationId: req.org.id,

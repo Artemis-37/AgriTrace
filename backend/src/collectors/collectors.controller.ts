@@ -24,7 +24,7 @@ export class CollectorsController {
   list(@Req() req: any) {
     return this.db.tx(req.org.id, async (c) =>
       (await c.query(
-        `SELECT c.id, c.user_id, c.status, u.full_name,
+        `SELECT c.id, c.user_id, c.status, u.full_name, (SELECT mc.code FROM member_codes mc WHERE mc.user_id = c.user_id AND mc.organization_id = c.organization_id) AS member_code,
                 coalesce((SELECT json_agg(json_build_object('id', a.id, 'value_chain_id', a.value_chain_id, 'zone', a.zone))
                             FROM collector_assignments a WHERE a.collector_id = c.id), '[]') AS assignments
            FROM collectors c JOIN users u ON u.id = c.user_id ORDER BY u.full_name`)).rows);

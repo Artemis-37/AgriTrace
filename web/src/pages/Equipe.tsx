@@ -16,6 +16,7 @@ export default function Equipe() {
   const [role, setRole] = useState<any | null>(null);
   const [hist, setHist] = useState<any | null>(null);
   const [adding, setAdding] = useState(false);
+  const [codeFor, setCodeFor] = useState<any | null>(null);
   const [temp, setTemp] = useState<{ email: string; temporary_password: string } | null>(null);
   const mk = useAction();
   return (
@@ -45,10 +46,11 @@ export default function Equipe() {
         {error && <ErrorBox message={error} onRetry={reload} />}
         {loading ? <Loading /> : (
           <Table rows={data?.users ?? []} empty="Aucun utilisateur." columns={[
-            { header: 'Nom', render: (u) => <strong>{u.full_name}</strong> }, { header: 'E-mail', render: (u) => u.email }, { header: 'Rôle', render: (u) => u.role_code },
+            { header: 'Code', render: (u) => <code>{u.member_code ?? '—'}</code> }, { header: 'Nom', render: (u) => <strong>{u.full_name}</strong> }, { header: 'E-mail', render: (u) => u.email }, { header: 'Rôle', render: (u) => u.role_code },
             { header: 'Accès', render: (u) => <Badge tone={u.membership_status === 'active' ? 'ok' : 'bad'}>{u.membership_status === 'active' ? 'Actif' : 'Suspendu'}</Badge> },
             { header: '', render: (u) => (
               <div className="row-actions">
+                {can('users:manage') && <button className="btn btn-small btn-secondary" onClick={() => setCodeFor(u)}>Code</button>}
                 {can('users:suspend') && u.id !== me?.user.id && (u.membership_status === 'active'
                   ? <button className="btn btn-small btn-secondary" onClick={() => setAsk({ u, what: 'suspend' })}>Suspendre</button>
                   : <button className="btn btn-small btn-secondary" onClick={() => setAsk({ u, what: 'reactivate' })}>Réactiver</button>)}
@@ -64,6 +66,7 @@ export default function Equipe() {
       {ask && <Confirm title={ask.what === 'suspend' ? `Suspendre ${ask.u.full_name}` : ask.what === 'reactivate' ? `Réactiver ${ask.u.full_name}` : `Révoquer les sessions de ${ask.u.full_name}`} reason label="Motif" onClose={() => setAsk(null)}
         intro={ask.what === 'suspend' ? 'L\'accès cesse immédiatement sur cette coopérative, web et mobile. Les données saisies sont conservées.' : undefined}
         onSubmit={async (reason) => { await post(`/users/${ask.u.id}/${ask.what}`, { reason }); setAsk(null); reload(); }} />}
+      {codeFor && <EditCode u={codeFor} onClose={() => setCodeFor(null)} onDone={() => { setCodeFor(null); reload(); }} />}
       {role && <ChangeRole u={role} roles={data?.roles ?? []} onClose={() => setRole(null)} onDone={() => { setRole(null); reload(); }} />}
       {adding && <AddUser roles={data?.roles ?? []} onClose={() => setAdding(false)} onDone={() => { setAdding(false); reload(); }} />}
       {hist && <History u={hist} onClose={() => setHist(null)} />}
@@ -126,8 +129,21 @@ function NewCode({ onClose }: { onClose: () => void }) {
   );
 }
 
+function EditCode({ u, onClose, onDone }: { u: any; onClose: () => void; onDone: () => void }) {
+  const [code, setCode] = useState(u.member_code ?? '');
+  const { busy, error, run } = useAction();
+  return (
+    <Modal title={`Code de ${u.full_name}`} onClose={onClose}>
+      <Field label="Code (identifiant dans la coopérative)" hint="2 à 30 caractères : majuscules, chiffres et tirets. Il figure notamment sur les bulletins de pesée."><input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} maxLength={30} /></Field>
+      {error && <ErrorBox message={error} />}
+      <div className="modal-foot"><button className="btn btn-secondary" onClick={onClose}>Annuler</button>
+        <button className="btn" disabled={busy || !/^[A-Z0-9][A-Z0-9-]{1,29}$/.test(code)} onClick={() => run(async () => { await put(`/users/${u.id}/member-code`, { code }); onDone(); })}>Enregistrer</button></div>
+    </Modal>
+  );
+}
+
 function AddUser({ roles, onClose, onDone }: { roles: any[]; onClose: () => void; onDone: () => void }) {
-  const [f, setF] = useState({ full_name: '', email: '', password: '', role_id: '' });
+  const [f, setF] = useState({ full_name: '', email: '', password: '', role_id: '', member_code: '' });
   const { busy, error, run } = useAction();
   const set = (k: string) => (e: any) => setF({ ...f, [k]: e.target.value });
   return (
@@ -135,11 +151,12 @@ function AddUser({ roles, onClose, onDone }: { roles: any[]; onClose: () => void
       <Field label="Nom et prénoms"><input value={f.full_name} onChange={set('full_name')} /></Field>
       <Field label="E-mail (identifiant de connexion)"><input type="email" value={f.email} onChange={set('email')} /></Field>
       <Field label="Mot de passe provisoire" hint="10 caractères au minimum. L'utilisateur pourra le changer."><input type="text" value={f.password} onChange={set('password')} /></Field>
+      <Field label="Code (facultatif)" hint="Identifiant de l'intervenant dans la coopérative (ex. code collecteur). Laissé vide, le logiciel en attribue un."><input value={f.member_code} onChange={(e) => setF({ ...f, member_code: e.target.value.toUpperCase() })} maxLength={30} /></Field>
       <Field label="Rôle"><select value={f.role_id} onChange={set('role_id')}><option value="">—</option>{roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}</select></Field>
       {roles.length === 0 && <p className="muted">Aucun rôle : créez d'abord un rôle type ci-dessus.</p>}
       {error && <ErrorBox message={error} />}
       <div className="modal-foot"><button className="btn btn-secondary" onClick={onClose}>Annuler</button>
-        <button className="btn" disabled={busy || !f.full_name.trim() || !f.email.includes('@') || f.password.length < 10 || !f.role_id} onClick={() => run(async () => { await post('/users', f); onDone(); })}>Créer le compte</button></div>
+        <button className="btn" disabled={busy || !f.full_name.trim() || !f.email.includes('@') || f.password.length < 10 || !f.role_id} onClick={() => run(async () => { await post('/users', { ...f, member_code: f.member_code.trim() || undefined }); onDone(); })}>Créer le compte</button></div>
     </Modal>
   );
 }

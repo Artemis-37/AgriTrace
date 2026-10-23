@@ -207,7 +207,7 @@ export class ConvoysController {
   @RequirePermissions('convoys:receive')
   expected(@Req() req: any, @Query('collector_id') collectorId?: string) {
     return this.db.tx(req.org.id, async (c) => (await c.query(
-      `SELECT v.id, v.convoy_no, v.collector_id, u.full_name AS collector_name, v.driver_name, v.truck_no, v.declared_bags, v.declared_kg, v.created_at,
+      `SELECT v.id, v.convoy_no, v.collector_id, u.full_name AS collector_name, (SELECT mc.code FROM member_codes mc WHERE mc.user_id = k.user_id AND mc.organization_id = k.organization_id) AS collector_code, v.driver_name, v.truck_no, v.declared_bags, v.declared_kg, v.created_at,
               coalesce((SELECT convoy_weight_tolerance_pct FROM org_settings), 2) AS weight_tolerance_pct,
               (SELECT count(*)::int FROM convoy_declarations x WHERE x.convoy_id = v.id) AS declaration_count
          FROM convoys v JOIN collectors k ON k.id = v.collector_id JOIN users u ON u.id = k.user_id WHERE v.status = 'in_transit' AND ($1::uuid IS NULL OR v.collector_id = $1) ORDER BY v.created_at`, [collectorId ?? null])).rows);

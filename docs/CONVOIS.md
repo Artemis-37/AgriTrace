@@ -80,3 +80,8 @@ Barre du haut : quatre icônes carrées comme CentriGest, vert = bon, rouge = co
 ### Pont-bascule et analyses
 - Le pont-bascule est le **magasin central** de la réception : « Pont d'entrée » et « Pont de sortie » affichent le nom du magasin, il n'y a plus de champ à saisir.
 - Le magasinier saisit l'analyse (18 lignes facultatives) soit à la réception, soit **après la pesée** dans l'onglet « Analyses » (résultats de laboratoire, correction du grade). Possible tant que la caisse n'a pas réglé ; le poids net n'est jamais modifié. Chaque saisie est tracée dans le journal d'audit (`convoy.analysis`).
+
+### Code intervenant (fournisseur)
+Chaque intervenant de la coopérative (collecteur, magasinier, caissier, coach, administrateur…) a un **code**, identifiant propre à la coopérative : attribué automatiquement à l'arrivée (`<code coopérative>-0001`, `-0002`…) ou saisi à la création du compte (champ « Code »). Il se modifie dans Équipe → « Code » (droit `users:manage`, unicité contrôlée, tracé dans le journal d'audit). Pour un collecteur, ce code est le **code fournisseur** imprimé sur le bulletin de pesée et affiché dans la liste de réception.
+- La partie « Indication connaissement » du bulletin reprend : origine, chauffeur, n° camion, n° remorque, poids déclaré, fournisseur, code fournisseur, connaissement, nombre de sacs déclaré.
+- À la réception, le formulaire du magasinier suit les parties du bulletin : indication connaissement, livraison produit (pesées, tare, réfaction, sacs, grade) et analyse.
