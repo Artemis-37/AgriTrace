@@ -1,4 +1,4 @@
-import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import * as client from './api';
 
 export interface Org { id: string; code: string; name: string }
@@ -57,6 +57,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     (async () => { try { for (const r of await client.get<any[]>('/cash-registers')) if (!r.open_session_id) await client.post(`/cash-registers/${r.id}/sessions`, {}); } catch { /* sans incidence */ } })();
   }, [cashierId]);
 
+  // Application de bureau : à la fermeture de la fenêtre, le logiciel demande la déconnexion.
+  const signOutRef = useRef<() => Promise<void>>(async () => undefined);
+  useEffect(() => { (window as any).agritrace?.onSignOut?.(() => signOutRef.current().catch(() => undefined)); }, []);
+
   const value = useMemo<AuthState>(() => ({
     status, orgs, org, me,
     signIn: async (email, password, otp) => {
@@ -69,13 +73,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     chooseOrg: (id) => enter(orgs, id),
     signOut: async () => {
-      // La caissière qui se déconnecte du logiciel quitte aussi la caisse (la caisse ne se clôture pas).
-      if (me?.permissions.includes('cash:session')) {
-        try { for (const r of await client.get<any[]>('/cash-registers')) if (r.open_session_id && r.open_session_by_id === me.user.id) await client.post(`/cash-sessions/${r.open_session_id}/close`, {}); } catch { /* sans incidence sur la déconnexion */ }
-      }
+      // La déconnexion ferme aussi la caisse de la caissière (côté serveur).
       await client.logout(); setStatus('anonymous'); setMe(null); setOrgState(null); },
     can: (...perms) => perms.every((p) => me?.permissions.includes(p)),
   }), [status, orgs, org, me, afterLogin, enter]);
 
+  signOutRef.current = async () => { if (me) await value.signOut(); };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

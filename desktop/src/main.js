@@ -145,7 +145,19 @@ function mainWindow(url) {
   win.webContents.on('did-fail-load', (_e, code, desc, failed, isMain) => {
     if (isMain && code !== -3) win.loadFile(page('error.html'), { query: { url: failed, reason: desc } });
   });
+  let signedOut = false, signingOut = false;
   win.on('close', (e) => {
+    // Avant de fermer, l'interface se déconnecte (ferme la caisse de la caissière) ; au plus 2,5 s d'attente.
+    if (!signedOut && win.webContents && !win.webContents.isDestroyed()) {
+      e.preventDefault();
+      if (signingOut) return;
+      signingOut = true;
+      const go = () => { ipcMain.removeListener('app:signed-out', go); clearTimeout(t); signingOut = false; if (!win || win.isDestroyed()) return; signedOut = true; try { win.close(); } finally { signedOut = false; } };
+      const t = setTimeout(go, 2500);
+      ipcMain.once('app:signed-out', go);
+      win.webContents.send('app:sign-out');
+      return;
+    }
     // Sur le poste serveur, fermer la fenêtre ne coupe pas le serveur : les autres postes en ont besoin.
     if (!quitting && (cfg?.role === 'server' || cfg?.role === 'single')) { e.preventDefault(); win.hide(); tray?.displayBalloon?.({ title: 'AgriTrace', content: 'Le serveur reste actif. Clic droit sur l\'icône pour quitter.' }); }
   });

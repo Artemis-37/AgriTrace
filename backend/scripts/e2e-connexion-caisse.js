@@ -33,5 +33,13 @@ async function call(m, p, { token, org, body } = {}) { const r = await fetch(API
   check('le caissier se déconnecte : aucun comptage, aucun écart', c.status < 300 && c.body.variance == null, c.body);
   const l2 = (await call('GET', '/cash-registers', C)).body.find((x) => x.id === reg.id);
   check('la caisse n\'a plus de session ouverte', !l2.open_session_id, l2);
+  // Déconnexion du logiciel = sortie de la caisse
+  const C3 = { token: (await call('POST', '/auth/login', { body: { email: `cais.${run}@t.test`, password: pw } })).body.access_token, org: org.id };
+  const s3 = await call('POST', `/cash-registers/${reg.id}/sessions`, { ...C3, body: {} });
+  check('nouvelle connexion : la caisse s\'ouvre', s3.status === 201, s3.body);
+  check('l\'autre caissier voit la caisse occupée', (await call('POST', `/cash-registers/${reg.id}/sessions`, { ...C2, body: {} })).status === 409);
+  await fetch(API + '/auth/logout', { method: 'POST', headers: { authorization: 'Bearer ' + C3.token } });
+  const l3 = (await call('GET', '/cash-registers', A)).body.find((x) => x.id === reg.id);
+  check('se déconnecter du logiciel ferme la caisse du caissier', !l3.open_session_id, l3);
   console.log(`${ok} contrôles réussis, ${ko} en échec`); process.exit(ko ? 1 : 0);
 })();

@@ -210,6 +210,11 @@ export class AuthService {
 
   async logout(sessionId: string, userId: string) {
     await this.db.query(`UPDATE user_sessions SET revoked_at = now() WHERE id = $1`, [sessionId]);
+    // La caissière qui se déconnecte du logiciel quitte aussi la caisse (la caisse ne se clôture pas : ni comptage, ni écart).
+    const orgs = await this.db.query<{ organization_id: string }>(`SELECT organization_id FROM user_organizations WHERE user_id = $1`, [userId]);
+    for (const o of orgs) {
+      await this.db.tx(o.organization_id, (c) => c.query(`UPDATE cash_sessions SET status = 'closed', closed_by = $1, closed_at = now() WHERE opened_by = $1 AND status = 'open'`, [userId]));
+    }
     await this.audit.log({ actorUserId: userId, action: 'auth.logout' });
   }
 }

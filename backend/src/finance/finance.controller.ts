@@ -179,8 +179,13 @@ export class FinanceController {
       const r = await c.query(`SELECT id, name, account_id, status FROM cash_registers WHERE id = $1 FOR UPDATE`, [id]);
       if (!r.rowCount) throw new NotFoundException();
       if (r.rows[0].status !== 'active') throw new BadRequestException('Caisse fermée');
+      // Session laissée ouverte par un caissier qui n'est plus connecté au logiciel (arrêt brutal, session expirée) : elle est reprise.
+      await c.query(
+        `UPDATE cash_sessions s SET status = 'closed', closed_by = $2, closed_at = now()
+          WHERE s.register_id = $1 AND s.status = 'open'
+            AND NOT EXISTS (SELECT 1 FROM user_sessions us WHERE us.user_id = s.opened_by AND us.revoked_at IS NULL AND us.expires_at > now())`, [id, req.user.id]);
       if ((await c.query(`SELECT 1 FROM cash_sessions WHERE register_id = $1 AND status = 'open'`, [id])).rowCount)
-        throw new ConflictException('Une session est déjà ouverte sur cette caisse');
+        throw new ConflictException('Un autre caissier est connecté à cette caisse');
       const s = (await c.query(
         `INSERT INTO cash_sessions(organization_id, register_id, opened_by, opening_amount) VALUES ($1,$2,$3,$4) RETURNING id, register_id, opening_amount, opened_at, status`,
         [req.org.id, id, req.user.id, b.opening_amount ?? '0'])).rows[0];
