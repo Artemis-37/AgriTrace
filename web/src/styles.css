@@ -2,7 +2,7 @@
   /* Thème « doux » (par défaut) : fond crème, contrastes adoucis, peu de bleu et pas de blanc pur — pour travailler longtemps sans fatigue. */
   --forest: #35614E; --nature: #5E9B6B; --lime: #B5CC8E; --sun: #D9A441; --carbon: #2E3832;
   --bg: #EFEBE1; --surface: #F8F5EC; --line: #DDD6C5; --muted: #66706A;
-  --ok-bg: #E1EDDF; --ok: #2E5E43; --warn-bg: #F5E8C8; --warn: #7A5410; --bad-bg: #F2DAD5; --bad: #8F2F2A; --info-bg: #DDE7E6; --info: #2F5B67; --neutral-bg: #E8E4D8; --neutral: #4A534D;
+  --coop: #C62828; --due: #1565C0; --ok-bg: #E1EDDF; --ok: #2E5E43; --warn-bg: #F5E8C8; --warn: #7A5410; --bad-bg: #F2DAD5; --bad: #8F2F2A; --info-bg: #DDE7E6; --info: #2F5B67; --neutral-bg: #E8E4D8; --neutral: #4A534D;
   --on-forest: #F3F0E6; --on-lime: #26331F;
   --radius: 12px; --shadow: 0 1px 2px rgba(60, 50, 30, .06), 0 3px 10px rgba(60, 50, 30, .05);
   font-family: 'Poppins', system-ui, -apple-system, 'Segoe UI', sans-serif; color: var(--carbon); color-scheme: light;
@@ -11,7 +11,7 @@
 :root[data-theme="night"] {
   --forest: #2B4A3C; --nature: #7DB28A; --lime: #A9C486; --sun: #D9A441; --carbon: #D8DDD3;
   --bg: #1A201D; --surface: #232B27; --line: #34403A; --muted: #94A196;
-  --ok-bg: #243A2D; --ok: #A5D2B0; --warn-bg: #3C3220; --warn: #E3C078; --bad-bg: #402724; --bad: #EBA9A0; --info-bg: #223841; --info: #9CC6D4; --neutral-bg: #2C3530; --neutral: #BFC9C1;
+  --coop: #FF8A80; --due: #90CAF9; --ok-bg: #243A2D; --ok: #A5D2B0; --warn-bg: #3C3220; --warn: #E3C078; --bad-bg: #402724; --bad: #EBA9A0; --info-bg: #223841; --info: #9CC6D4; --neutral-bg: #2C3530; --neutral: #BFC9C1;
   --on-forest: #E6EBE2; --on-lime: #1B2415;
   --shadow: 0 1px 2px rgba(0, 0, 0, .35); color-scheme: dark;
 }
@@ -325,3 +325,10 @@ dl.kv dd { margin: 0; }
 .chip .btn{padding:0 6px}
 .role-pick{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:4px 12px}
 .role-pick .check{display:flex;align-items:center;gap:6px;font-weight:normal}
+
+/* Soldes des délégués : rouge = ce que fournit la coopérative ; noir = ce qu'apporte le délégué ;
+   solde total : rouge si le délégué doit à la coopérative, bleu si la coopérative doit au délégué. */
+.c-coop { color: var(--coop); }
+.c-del { color: inherit; }
+.s-doit { color: var(--coop); font-weight: 700; }
+.s-du { color: var(--due); font-weight: 700; }

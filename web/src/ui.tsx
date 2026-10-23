@@ -94,3 +94,6 @@ export function Tabs<K extends string>({ tabs, value, onChange }: { tabs: [K, st
     </div>
   );
 }
+
+/** Classe de couleur d'un solde de délégué : positif = le délégué doit à la coopérative (rouge) ; négatif = la coopérative lui doit (bleu). */
+export const soldeClass = (v: number | string | null | undefined) => (Number(v) > 0 ? 's-doit' : Number(v) < 0 ? 's-du' : '');

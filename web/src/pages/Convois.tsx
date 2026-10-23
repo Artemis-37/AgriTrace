@@ -6,7 +6,7 @@ import { get, idem, patch, post } from '../api';
 import { useAuth } from '../auth';
 import { enqueue, onFlushed, useOffline } from '../offline';
 import { date, dateTime } from '../format';
-import { Badge, Card, ErrorBox, Field, Loading, Modal, PageHeader, Table, Tabs, useAction, useAsync } from '../ui';
+import { Badge, Card, ErrorBox, Field, Loading, Modal, PageHeader, Table, Tabs, useAction, useAsync, soldeClass } from '../ui';
 
 const STATUS: Record<string, [string, import('../format').Tone]> = { in_transit: ['En route', 'warn'], received: ['Reçu — en caisse', 'neutral'], settled: ['Réglé', 'ok'] };
 export const num = (v: any) => Number(v).toLocaleString('fr-FR', { maximumFractionDigits: 3 });
@@ -426,16 +426,16 @@ export function Fiche({ collectorId }: { collectorId?: string }) {
       <div className="tw"><table>
         <thead><tr><th>Date</th><th>Libellé</th><th>Pièce</th><th className="r">Poids (A)</th><th className="r">P.U. (B)</th><th className="r">Montant brut (C)</th><th className="r">Coût transport (D)</th><th className="r">Transport total (E)</th><th className="r">Total produit (F)</th><th className="r">Retenue</th><th className="r">Net à payer (I)</th><th className="r">Finance (J)</th><th className="r">Solde (K)</th></tr></thead>
         <tbody>
-          {Number(data.opening) !== 0 && <tr><td colSpan={12}>Report à l'ouverture</td><td className="r">{FR(data.opening)}</td></tr>}
+          {Number(data.opening) !== 0 && <tr><td colSpan={12}>Report à l'ouverture</td><td className={`r ${soldeClass(data.opening)}`}>{FR(data.opening)}</td></tr>}
           {data.rows.map((r: any) => (
-            <tr key={r.id}><td>{date(r.date)}</td><td>{r.label}</td><td>{r.piece ?? ''}</td><td className="r">{FR(r.weight)}</td><td className="r">{FR(r.unit_price)}</td><td className="r">{FR(r.gross_amount)}</td>
+            <tr key={r.id}><td>{date(r.date)}</td><td>{r.label}</td><td>{r.piece ?? ''}</td><td className="r c-del">{FR(r.weight)}</td><td className="r c-del">{FR(r.unit_price)}</td><td className="r c-del">{FR(r.gross_amount)}</td>
               <td className="r">{FR(r.transport_unit)}</td><td className="r">{FR(r.transport_total)}</td><td className="r">{FR(r.product_total)}</td><td className="r">{FR(r.retention_amount)}</td>
-              <td className="r">{FR(r.net_payable)}</td><td className="r">{FR(r.finance)}</td><td className="r"><strong>{FR(r.solde)}</strong></td></tr>
+              <td className="r c-del">{FR(r.net_payable)}</td><td className="r c-coop">{FR(r.finance)}</td><td className={`r ${soldeClass(r.solde)}`}><strong>{FR(r.solde)}</strong></td></tr>
           ))}
           {!data.rows.length && <tr><td colSpan={13} className="muted">Aucune opération sur la période.</td></tr>}
         </tbody></table></div>
       {Number(data.advance_outstanding) > 0 && <p className="notice">Avances non encore imputées sur une livraison : {FR(data.advance_outstanding)} FCFA.</p>}
-      <p className="notice">{s > 0 ? `Le délégué doit ${FR(s)} FCFA à la coopérative (financements non encore couverts par ses livraisons).` : s < 0 ? `La coopérative doit ${FR(-s)} FCFA au délégué.` : 'Compte soldé.'}</p>
+      <p className={`notice ${soldeClass(s)}`}>{s > 0 ? `Le délégué doit ${FR(s)} FCFA à la coopérative (financements non encore couverts par ses livraisons).` : s < 0 ? `La coopérative doit ${FR(-s)} FCFA au délégué.` : 'Compte soldé.'}</p>
     </>
   );
 }
@@ -451,7 +451,7 @@ export function Accounts() {
       {error && <ErrorBox message={error} onRetry={reload} />}
       {loading ? <Loading /> : (
         <div className="toolbar">
-          <select aria-label="Délégué" value={col} onChange={(e) => setCol(e.target.value)}><option value="">Choisir un délégué…</option>{(data ?? []).map((c) => <option key={c.id} value={c.id}>{c.name} — solde {FR(c.solde)}</option>)}</select>
+          <select aria-label="Délégué" className={soldeClass((data ?? []).find((c) => c.id === col)?.solde)} value={col} onChange={(e) => setCol(e.target.value)}><option value="">Choisir un délégué…</option>{(data ?? []).map((c) => <option key={c.id} value={c.id} className={soldeClass(c.solde)}>{c.name} — solde {FR(c.solde)}</option>)}</select>
           {col && can('cash:operate') && <button className="btn" onClick={() => setAdv('advance')}>Remettre un financement</button>}
           {col && <button className="btn btn-secondary" onClick={() => setAdv('carry_forward')}>Reporter un solde de campagne</button>}
         </div>

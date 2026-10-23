@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { get, post } from '../api';
 import { useAuth } from '../auth';
 import { LOAN_KIND, date } from '../format';
-import { Card, ErrorBox, Field, Loading, Modal, PageHeader, Table, useAction, useAsync } from '../ui';
+import { Card, ErrorBox, Field, Loading, Modal, PageHeader, Table, useAction, useAsync, soldeClass } from '../ui';
 import { FR, Journal } from './Caisse';
 import { Bic, Dues, PeriodBar, campaignRange } from './Echeances';
 
@@ -145,14 +145,14 @@ function Delegates() {
   const [q, setQ] = useState('');
   const rows = (data ?? []).filter((r) => !q.trim() || `${r.member_code ?? ''} ${r.name}`.toLowerCase().includes(q.trim().toLowerCase()));
   return (
-    <Frame title="État des soldes des délégués" total={<span>SOLDE <b>{FR(rows.reduce((s, r) => s + Number(r.solde), 0))}</b></span>}>
+    <Frame title="État des soldes des délégués" total={<span>SOLDE <b className={soldeClass(rows.reduce((s, r) => s + Number(r.solde), 0))}>{FR(rows.reduce((s, r) => s + Number(r.solde), 0))}</b></span>}>
       <div className="toolbar"><input type="search" placeholder="Saisir le code ou le nom" aria-label="Code ou nom" value={q} onChange={(e) => setQ(e.target.value)} /></div>
       {error && <ErrorBox message={error} onRetry={reload} />}
       {loading ? <Loading /> : <Table rows={rows} empty="Aucun délégué." columns={[
         { header: 'ID', render: (r) => <code>{r.member_code ?? '—'}</code> }, { header: 'Nom', render: (r) => <strong>{r.name}</strong> }, { header: 'Contact', render: (r) => r.phone ?? '' },
-        { header: 'Localité', render: (r) => r.origin ?? '' }, { header: 'Solde', align: 'right', render: (r) => <strong>{FR(Number(r.solde))}</strong> },
+        { header: 'Localité', render: (r) => r.origin ?? '' }, { header: 'Solde', align: 'right', render: (r) => <strong className={soldeClass(r.solde)}>{FR(Number(r.solde))}</strong> },
       ]} />}
-      <p className="muted">Solde positif : le délégué doit ce montant à la coopérative (financements non encore couverts par ses livraisons).</p>
+      <p className="muted">Solde positif : <span className="s-doit">rouge</span> — le délégué doit à la coopérative ; <span className="s-du">bleu</span> — la coopérative doit au délégué. Solde positif : le délégué doit ce montant à la coopérative (financements non encore couverts par ses livraisons).</p>
     </Frame>
   );
 }
