@@ -60,9 +60,202 @@ Mot de passe commun : `Demo-AgriTrace-2026!` (à changer pour toute utilisation 
 - **Pilotage** (2 h) : direction, responsable financier, auditeur, administrateur.
 
 
+## 5. Parcours complet simulé : du terrain à l'exportateur
+
+Ce chapitre déroule **une même chaîne, de bout en bout**, avec les comptes de la démonstration (données fictives). Chaque étape est jouée par le profil concerné ; les formulaires sont remplis. Le téléphone du délégué est simulé par les écrans de l'application.
+
+**Fil conducteur.** Le délégué achète du cacao à deux producteurs et déclare un convoi qui les transporte (n° SC000000-2026-BRA-4). Le responsable traçabilité valide les achats ; le magasinier pèse ce convoi, puis pèse aussi un convoi **non déclaré** d'un autre délégué (CV-NC-001). La caisse règle les deux pesées au **prix de la traite fixé par l'administrateur** et retient une somme au kilo (la *mise en compte*). En fin de campagne le compte du délégué est clôturé ; son reversement (sur son compte, par chèque, en espèces ou vers un autre compte) est **approuvé par l'administrateur**. Le comptable retrouve les écritures, le stock alimente les ventes, et les modules de l'exportateur redescendent jusqu'aux coachs avant de remonter à l'exportateur.
+
+### Étape 1 — Brahima Sylla : Choisir le producteur
+
+Dans **Acheter**, le délégué cherche le producteur par code ou nom : l'application affiche son code, sa filière et sa campagne.
+
+<p class="phone-one"><img src="captures/mobile/collecteur-choix-producteur.png" alt="Choisir le producteur" width="260"></p>
+
+### Étape 2 — Brahima Sylla : Saisir l'achat
+
+Poids, nombre de sacs et **n° du reçu** remis au producteur. L'achat est enregistré sur le téléphone, même sans réseau.
+
+<p class="phone-one"><img src="captures/mobile/collecteur-achat-saisi.png" alt="Saisir l'achat" width="260"></p>
+
+### Étape 3 — Brahima Sylla : Historique des achats
+
+Après la synchronisation, les achats apparaissent dans l'historique du délégué avec leur état (reçus, en vérification, acceptés).
+
+<p class="phone-one"><img src="captures/mobile/collecteur-historique.png" alt="Historique des achats" width="260"></p>
+
+### Étape 4 — Brahima Sylla : Déclarer le convoi
+
+Le délégué annonce le convoi : n° de connaissement (ou numéro automatique), chauffeur, camion, sacs et poids annoncés.
+
+<p class="phone-one"><img src="captures/mobile/collecteur-convoi-saisi.png" alt="Déclarer le convoi" width="260"></p>
+
+### Étape 5 — Éric Tano : Achats reçus du téléphone
+
+Les achats déclarés par le délégué arrivent dans **Déclarations d'achat** avec le statut « Reçue ».
+
+![Achats reçus du téléphone](captures/parcours/05-responsable_tracabilite-declarations.png)
+
+### Étape 6 — Éric Tano : Mise en vérification
+
+On met l'achat en vérification (confirmation demandée), puis on l'accepte ou on demande une correction.
+
+![Mise en vérification](captures/parcours/06-responsable_tracabilite-verification.png)
+
+### Étape 7 — Éric Tano : Achats acceptés
+
+Les achats acceptés sont désormais reconnus : ils peuvent être pesés au magasin.
+
+![Achats acceptés](captures/parcours/07-responsable_tracabilite-acceptes.png)
+
+### Étape 8 — Mamadou Coulibaly : Pesées du magasin
+
+La liste des pesées (traitées ou non par la caisse). Le bouton **Enregistrer une pesée** ouvre la saisie.
+
+![Pesées du magasin](captures/parcours/08-magasinier-liste.png)
+
+### Étape 9 — Mamadou Coulibaly : Pesée d'un convoi déclaré
+
+On choisit le délégué (ou on saisit son code), le n° de connaissement : chauffeur, camion, sacs et poids déclarés sont repris, avec le **contenu déclaré** (achats chargés). On saisit le poids pesé et les sacs déchargés ; le poids net est calculé (poids − sacs déchargés).
+
+![Pesée d'un convoi déclaré](captures/parcours/09-magasinier-pesee-declaree.png)
+
+### Étape 10 — Mamadou Coulibaly : Pesée enregistrée
+
+La réception est transmise à la caisse. Elle apparaît dans la liste avec son bulletin de pesée.
+
+![Pesée enregistrée](captures/parcours/10-magasinier-pesee-enregistree.png)
+
+### Étape 11 — Mamadou Coulibaly : Pesée d'un convoi non déclaré
+
+Le délégué existe mais n'a pas déclaré ce convoi : le magasinier le choisit dans la liste, saisit le n° de connaissement et les informations du bordereau (chauffeur, camion, sacs et poids déclarés). Le convoi est créé à la réception.
+
+![Pesée d'un convoi non déclaré](captures/parcours/11-magasinier-pesee-non-declaree.png)
+
+### Étape 12 — Mamadou Coulibaly : Les deux pesées
+
+Le convoi déclaré et le convoi non déclaré figurent dans la liste, en attente de traitement par la caisse.
+
+![Les deux pesées](captures/parcours/12-magasinier-pesees-liste.png)
+
+### Étape 13 — Adjoua Konan : Délégué : onglet Transport
+
+Le **coût de transport au kilo** du délégué est préenregistré dans son profil, onglet **Transport**. Seul l'administrateur le saisit ; la caisse le reprend à chaque règlement sans pouvoir le modifier.
+
+![Délégué : onglet Transport](captures/parcours/13-coop_admin-tarif-transport.png)
+
+### Étape 14 — Adjoua Konan : Délégué : onglet Retenues
+
+La **retenue au kilo** (mise en compte) est préenregistrée dans l'onglet **Retenues**, également par l'administrateur seul.
+
+![Délégué : onglet Retenues](captures/parcours/14-coop_admin-tarif-retenue.png)
+
+### Étape 15 — Aya Kouamé : Session de caisse
+
+Avant de payer, la caisse est ouverte avec son fonds de caisse (une session ouverte est exigée pour tout mouvement d'espèces).
+
+![Session de caisse](captures/parcours/15-caissier-session.png)
+
+### Étape 16 — Aya Kouamé : Pesées à traiter
+
+La file des réceptions pesées et non encore réglées.
+
+![Pesées à traiter](captures/parcours/16-caissier-a-traiter.png)
+
+### Étape 17 — Aya Kouamé : Règlement d'une pesée
+
+Le P.U. (prix d'achat au kg) est celui **fixé par l'administrateur** pour la traite : il s'affiche mais le caissier ne peut pas le modifier. Le **coût de transport** et la **retenue au kg** viennent eux aussi du profil du délégué (préenregistrés par l'administrateur) et sont affichés sans pouvoir être saisis ; avec le P.U., ils donnent le net à payer, porté au compte du délégué.
+
+![Règlement d'une pesée](captures/parcours/17-caissier-traiter.png)
+
+### Étape 18 — Aya Kouamé : Solde des délégués
+
+Après règlement, le compte de chaque délégué est crédité du net à payer ; la fiche détaille livraisons, avances et soldes.
+
+![Solde des délégués](captures/parcours/18-caissier-soldes.png)
+
+### Étape 19 — Aya Kouamé : Mise en compte des délégués
+
+Pour chaque délégué : somme retenue, reversée, en attente et disponible. Une fois la campagne terminée, le compte du délégué est **clôturé**.
+
+![Mise en compte des délégués](captures/parcours/19-caissier-mise-en-compte.png)
+
+### Étape 20 — Aya Kouamé : Clôturer le compte du délégué
+
+La clôture du compte du délégué (fin de campagne) ouvre la possibilité de reverser sa mise en compte ; une nouvelle livraison rouvre le compte.
+
+![Clôturer le compte du délégué](captures/parcours/20-caissier-cloture.png)
+
+### Étape 21 — Aya Kouamé : Reverser la mise en compte
+
+Le montant disponible peut être reversé **sur le compte du délégué, par chèque, en espèces ou vers un autre compte**. La demande est soumise à l'administrateur de la coopérative.
+
+![Reverser la mise en compte](captures/parcours/21-caissier-reverser.png)
+
+### Étape 22 — Adjoua Konan : Demande à approuver
+
+L'administrateur voit la demande (délégué, montant, destination, demandeur) et l'**approuve ou la refuse** avec un motif. Le demandeur ne peut pas approuver sa propre demande.
+
+![Demande à approuver](captures/parcours/22-coop_admin-demande.png)
+
+### Étape 23 — Adjoua Konan : Reversement approuvé
+
+À l'approbation, le mouvement financier et l'écriture comptable (débit 4781 « Retenues sur règlements des délégués ») sont passés.
+
+![Reversement approuvé](captures/parcours/23-coop_admin-approuvee.png)
+
+### Étape 24 — Salif Ouédraogo : Journal des achats
+
+Chaque pesée réglée a passé son écriture d'achat : produit acheté, transport, compte du délégué et retenue.
+
+![Journal des achats](captures/parcours/24-comptable-journal-achats.png)
+
+### Étape 25 — Salif Ouédraogo : Journal de caisse
+
+Les mouvements de caisse, y compris les reversements en espèces approuvés.
+
+![Journal de caisse](captures/parcours/25-comptable-journal-caisse.png)
+
+### Étape 26 — Daouda Fofana : Stock mis à jour
+
+Les pesées réglées alimentent le stock du magasin ; chaque lot garde sa traçabilité jusqu'au producteur.
+
+![Stock mis à jour](captures/parcours/26-responsable_magasin-stock.png)
+
+### Étape 27 — Fanta Kamara : Vente aux acheteurs
+
+L'acheteur suit contrats et commandes ; les quantités vendues sortent du stock.
+
+![Vente aux acheteurs](captures/parcours/27-acheteur-commerce.png)
+
+### Étape 28 — Mireille Ouattara : Modules proposés par l'exportateur
+
+L'exportateur propose ses modules ; l'ADG les transmet aux coachs.
+
+![Modules proposés par l'exportateur](captures/parcours/28-adg-modules.png)
+
+### Étape 29 — Mireille Ouattara : Résultats des coachs
+
+Les résultats saisis par les coachs sur le terrain sont transmis à l'exportateur.
+
+![Résultats des coachs](captures/parcours/29-adg-resultats.png)
+
+### Étape 30 — Karim Diallo : Suivi par l'exportateur
+
+L'exportateur suit ses propositions et reçoit les résultats transmis : la boucle du terrain à l'exportateur est bouclée.
+
+![Suivi par l'exportateur](captures/parcours/30-exportateur-suivi.png)
+
+### Étape 31 — Gilbert Koffi : Résultats saisis sur le terrain
+
+Le coach saisit le résultat de la séance (village, participants, note moyenne) sur son téléphone ; il remonte à l'ADG puis à l'exportateur.
+
+<p class="phone-one"><img src="captures/mobile/coach-module-resultats.png" alt="Résultats saisis sur le terrain" width="260"></p>
+
+
 ---
 
-## 5. Administrateur de la coopérative
+## 6. Administrateur de la coopérative
 
 **Niveau 4 — Administration** · durée indicative : 3 h · compte de démonstration : `admin@demo.agritrace.test`
 
@@ -96,11 +289,13 @@ Responsable de la coopérative : crée les comptes, attribue les rôles, décide
 
 ### Pas à pas
 
-1. **Créer un compte.** Menu **Équipe** → section des utilisateurs → créer : nom, e-mail, mot de passe provisoire, **rôle**. Les modèles de rôles (magasinier, caissier…) évitent de cocher des droits un par un.
-2. **Renseigner le profil.** Menu **Équipe** → *Profil de la coopérative* : nom commercial, adresse, téléphone, e-mail, devise. Ces informations figurent en tête des reçus imprimés. Ajoutez le **logo** (PNG ou JPEG, 1 Mo maximum).
-3. **Traiter une annulation.** Menu **Mes opérations** → onglet *Demandes d'annulation* → **Traiter** : lisez le motif, puis approuvez ou refusez en justifiant. La personne qui a fait la demande ne peut pas l'approuver elle-même.
-4. **Réinitialiser un mot de passe.** **Équipe** → utilisateur → *Réinitialiser le mot de passe*. Un mot de passe temporaire s'affiche **une seule fois** ; l'utilisateur devra en choisir un nouveau à la connexion.
-5. **Programmer un rapport.** Menu **Rapports** → onglet *Envoi automatique* : choisissez le rapport, la fréquence et les destinataires (ils doivent avoir le droit de voir ce rapport).
+1. **Créer un compte.** Menu **Équipe** → section des utilisateurs → créer : nom, e-mail, mot de passe provisoire, **un ou plusieurs rôles** (cases à cocher : les droits s'additionnent, le menu n'affiche que ce qu'ils permettent ; *Rôles* en ajoute ou en retire ensuite). Les modèles de rôles (magasinier, caissier…) évitent de cocher des droits un par un.
+2. **Fixer les prix de la traite.** Menu **Paramètres** → *Produits et campagnes* → **Nouvelle campagne** : à l'ouverture de la traite, vous indiquez le prix d'achat et de vente au kilo de chaque produit. Vous seul pouvez les saisir et les actualiser (*Modifier*, *Historique des prix*) ; la caisse, les pesées et les ventes les reprennent tels quels.
+3. **Approuver un reversement de mise en compte.** Menu **Comptabilité** → *Mise en compte des délégués* → onglet *Demandes de reversement* : une fois le compte du délégué clôturé, la caisse demande de reverser sa mise en compte (sur son compte, par chèque, en espèces ou vers un autre compte). Vous **approuvez** (le mouvement et l'écriture sont passés) ou **refusez** avec un motif.
+4. **Renseigner le profil.** Menu **Équipe** → *Profil de la coopérative* : nom commercial, adresse, téléphone, e-mail, devise. Ces informations figurent en tête des reçus imprimés. Ajoutez le **logo** (PNG ou JPEG, 1 Mo maximum).
+5. **Traiter une annulation.** Menu **Mes opérations** → onglet *Demandes d'annulation* → **Traiter** : lisez le motif, puis approuvez ou refusez en justifiant. La personne qui a fait la demande ne peut pas l'approuver elle-même.
+6. **Réinitialiser un mot de passe.** **Équipe** → utilisateur → *Réinitialiser le mot de passe*. Un mot de passe temporaire s'affiche **une seule fois** ; l'utilisateur devra en choisir un nouveau à la connexion.
+7. **Programmer un rapport.** Menu **Rapports** → onglet *Envoi automatique* : choisissez le rapport, la fréquence et les destinataires (ils doivent avoir le droit de voir ce rapport).
 
 ### Exercices
 
@@ -120,7 +315,7 @@ Responsable de la coopérative : crée les comptes, attribue les rôles, décide
 
 ---
 
-## 6. Magasinier
+## 7. Magasinier
 
 **Niveau 1 — Opérateur** · durée indicative : 1 h 30 · compte de démonstration : `magasinier@demo.agritrace.test`
 
@@ -185,7 +380,7 @@ Réceptionne et pèse les convois au magasin central, tient les stocks et l'inve
 
 ---
 
-## 7. Caissier
+## 8. Caissier
 
 **Niveau 1 — Opérateur** · durée indicative : 1 h 30 · compte de démonstration : `caissier@demo.agritrace.test`
 
@@ -219,7 +414,7 @@ Traite les convois reçus, règle les délégués, tient la caisse et les compte
 ### Pas à pas
 
 1. **Ouvrir la caisse.** Menu **Caisse** → rubrique *Mouvements de caisse* → *Ouvrir / fermer la caisse* : saisissez le fonds de caisse et ouvrez la session. En fin de journée, saisissez le montant compté et fermez : l'écart avec le solde attendu est conservé.
-2. **Régler un convoi.** Rubrique *Opérations* → *Traiter une pesée / régler un achat* : sur une pesée « Reçu — en caisse », cliquez **Traiter**. Le **prix unitaire** est prérempli avec le prix d'achat du produit (modifiable). Le montant = poids net × prix ; l'écriture de caisse et le compte du délégué sont créés automatiquement.
+2. **Régler un convoi.** Rubrique *Opérations* → *Traiter une pesée / régler un achat* : sur une pesée « Reçu — en caisse », cliquez **Traiter**. Le **prix unitaire** est celui de la traite, **fixé par l'administrateur** : il s'affiche mais le caissier ne peut pas le modifier. La **retenue au kilo** s'ajoute à la mise en compte du délégué. Le montant = poids net × prix ; l'écriture de caisse et le compte du délégué sont créés automatiquement.
 3. **Saisir une opération de caisse.** Rubrique *Mouvements de caisse* → *Enregistrer une entrée / sortie* : sens, montant, motif obligatoire. Aucune suppression possible : une erreur se corrige par une écriture inverse. Le résultat apparaît dans *Les entrées* ou *Les sorties de caisse*.
 4. **Suivre les comptes collecteurs.** Rubrique *Solde délégué* : soldes, avances et retenues.
 
@@ -235,7 +430,7 @@ Traite les convois reçus, règle les délégués, tient la caisse et les compte
 
 | # | À faire | Résultat attendu |
 |---|---|---|
-| 1 | Réglez le convoi SC000000-2026-BRA-3 (réceptionné par le magasinier à son exercice) au prix de 1 000 F/kg. | Montant = poids reçu × 1 000 (ex. 2 080 kg → 2 080 000 F) ; le convoi passe à « Réglé ». |
+| 1 | Réglez le convoi SC000000-2026-BRA-3 (réceptionné par le magasinier à son exercice) au prix de la traite (fixé par l'administrateur, ex. 1 000 F/kg). | Montant = poids reçu × prix (ex. 2 080 kg × 1 000 → 2 080 000 F) ; le convoi passe à « Réglé ». |
 | 2 | Enregistrez une sortie de caisse de 15 000 F « Achat de papier ». | Le solde de la caisse diminue de 15 000 F ; l'opération est datée et attribuée à votre compte. |
 | 3 | Imprimez le reçu de règlement. | Le reçu porte l'en-tête de la coopérative (nom, logo, adresse). |
 
@@ -248,7 +443,7 @@ Traite les convois reçus, règle les délégués, tient la caisse et les compte
 
 ---
 
-## 8. Comptable
+## 9. Comptable
 
 **Niveau 2 — Gestion** · durée indicative : 2 h · compte de démonstration : `comptable@demo.agritrace.test`
 
@@ -306,7 +501,7 @@ Passe et consulte les écritures comptables, suit les comptes financiers ; peut 
 
 ---
 
-## 9. Direction
+## 10. Direction
 
 **Niveau 3 — Pilotage** · durée indicative : 1 h 30 · compte de démonstration : `direction@demo.agritrace.test`
 
@@ -361,7 +556,7 @@ Suit l'ensemble de l'activité (lecture) et approuve les demandes d'annulation, 
 
 ---
 
-## 10. Responsable financier
+## 11. Responsable financier
 
 **Niveau 3 — Pilotage** · durée indicative : 2 h · compte de démonstration : `responsable.financier@demo.agritrace.test`
 
@@ -419,7 +614,7 @@ Supervise la caisse, les comptes et les prêts ; approuve les paiements, les cor
 
 ---
 
-## 11. Responsable de magasin
+## 12. Responsable de magasin
 
 **Niveau 2 — Gestion** · durée indicative : 1 h 30 · compte de démonstration : `responsable.magasin@demo.agritrace.test`
 
@@ -474,7 +669,7 @@ Gère les magasins, valide les inventaires et les écarts de pesée, ajuste les 
 
 ---
 
-## 12. Responsable de traçabilité
+## 13. Responsable de traçabilité
 
 **Niveau 2 — Gestion** · durée indicative : 1 h 30 · compte de démonstration : `responsable.tracabilite@demo.agritrace.test`
 
@@ -525,7 +720,7 @@ Valide les déclarations d'achat, suit les lots et les certificats, contrôle la
 
 ---
 
-## 13. Responsable cartographie
+## 14. Responsable cartographie
 
 **Niveau 2 — Gestion** · durée indicative : 1 h 30 · compte de démonstration : `responsable.cartographie@demo.agritrace.test`
 
@@ -578,7 +773,7 @@ Vérifie les parcelles, traite les anomalies géographiques, gère les couches e
 
 ---
 
-## 14. Cartographe
+## 15. Cartographe
 
 **Niveau 1 — Opérateur** · durée indicative : 1 h · compte de démonstration : `cartographe@demo.agritrace.test`
 
@@ -628,7 +823,7 @@ Relève et saisit les parcelles, importe les tracés, consulte les anomalies.
 
 ---
 
-## 15. Agent de terrain
+## 16. Agent de terrain
 
 **Niveau 1 — Opérateur** · durée indicative : 1 h 30 · compte de démonstration : `agent.terrain@demo.agritrace.test`
 
@@ -673,7 +868,7 @@ Enregistre les producteurs et les données de terrain, exécute les missions qui
 
 ---
 
-## 16. Responsable qualité
+## 17. Responsable qualité
 
 **Niveau 2 — Gestion** · durée indicative : 1 h 30 · compte de démonstration : `responsable.qualite@demo.agritrace.test`
 
@@ -719,7 +914,7 @@ Gère les contrôles qualité, les inspections et les documents de conformité.
 
 ---
 
-## 17. Responsable logistique
+## 18. Responsable logistique
 
 **Niveau 2 — Gestion** · durée indicative : 1 h · compte de démonstration : `responsable.logistique@demo.agritrace.test`
 
@@ -762,7 +957,7 @@ Planifie les transports et les expéditions, suit les documents d'export.
 
 ---
 
-## 18. Auditeur
+## 19. Auditeur
 
 **Niveau 3 — Contrôle** · durée indicative : 1 h · compte de démonstration : `auditeur@demo.agritrace.test`
 
@@ -809,7 +1004,7 @@ Consulte en lecture seule les opérations, les journaux d'audit et les états co
 
 ---
 
-## 19. Acheteur / partenaire externe
+## 20. Acheteur / partenaire externe
 
 **Niveau 1 — Partenaire externe** · durée indicative : 45 min · compte de démonstration : `acheteur@demo.agritrace.test`
 
@@ -849,7 +1044,7 @@ Partenaire autorisé : consulte les commandes, les expéditions et les documents
 
 ---
 
-## 20. Délégué
+## 21. Délégué
 
 **Niveau 1 — Opérateur** · durée indicative : 2 h · compte de démonstration : `collecteur@demo.agritrace.test`
 
@@ -894,7 +1089,7 @@ Déclare ses achats chez les producteurs et ses convois, voit son stock, son his
 
 ---
 
-## 21. Administrateur de groupe (ADG)
+## 22. Administrateur de groupe (ADG)
 
 **Niveau 3 — Pilotage** · durée indicative : 2 h · compte de démonstration : `adg@demo.agritrace.test`
 
@@ -958,7 +1153,7 @@ Responsable de la conformité et de la certification : suit les certificats, les
 
 ---
 
-## 22. Coach
+## 23. Coach
 
 **Niveau 1 — Opérateur** · durée indicative : 2 h · compte de démonstration : `coach@demo.agritrace.test`
 
@@ -1009,7 +1204,7 @@ Agent de terrain suivi par l'ADG : exécute ses missions, enregistre des product
 
 ---
 
-## 23. Exportateur (partenaire)
+## 24. Exportateur (partenaire)
 
 **Niveau 1 — Opérateur** · durée indicative : 1 h · compte de démonstration : `exportateur@demo.agritrace.test`
 
@@ -1057,7 +1252,7 @@ Partenaire exportateur : propose des modules de formation à l'ADG et reçoit, p
 
 ---
 
-## 24. Évaluation finale (30 min)
+## 25. Évaluation finale (30 min)
 
 Scénario commun, à dérouler à plusieurs comptes :
 
