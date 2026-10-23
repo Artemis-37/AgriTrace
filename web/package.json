@@ -11,11 +11,13 @@
     "test:ui": "node e2e/parcours-vente.mjs && node e2e/parcours-terrain.mjs && node e2e/parcours-central.mjs && node e2e/parcours-hors-ligne.mjs && node e2e/parcours-convois.mjs && node e2e/parcours-postes.mjs && node e2e/parcours-rapports.mjs && node e2e/parcours-messages-icone.mjs"
   },
   "dependencies": {
+    "qrcode": "^1.5.4",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "react-router-dom": "6.28.0"
   },
   "devDependencies": {
+    "@types/qrcode": "^1.5.6",
     "@types/react": "18.3.12",
     "@types/react-dom": "18.3.1",
     "@vitejs/plugin-react": "4.3.4",

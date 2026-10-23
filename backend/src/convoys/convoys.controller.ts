@@ -1,6 +1,6 @@
 import { BadRequestException, Body, ConflictException, Controller, Get, NotFoundException, Param, ParseUUIDPipe, Post, Query, Req, UnprocessableEntityException, ForbiddenException } from '@nestjs/common';
 import { ApiBearerAuth, ApiHeader, ApiTags } from '@nestjs/swagger';
-import { ArrayMaxSize, IsArray, IsIn, IsInt, IsOptional, Matches, IsString, IsUUID, Length, Min } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsIn, IsInt, IsObject, IsOptional, Matches, IsString, IsUUID, Length, Min } from 'class-validator';
 import { RequirePermissions } from '../access/decorators';
 import { AuditService } from '../audit/audit.service';
 import { accountingCodeOf, postEntry, today } from '../accounting/accounting.helpers';
@@ -29,9 +29,24 @@ export class ReceiveConvoyDto {
   @IsUUID() collector_id: string;
   @IsString() @Length(2, 60) convoy_no: string;
   @IsUUID() warehouse_id: string;
-  @Dec(3) total_kg: string;
+  /** Poids net retenu pour le paiement. Omis si la double pesée est fournie : calculé = entrée − sortie − tare des sacs − réfaction. */
+  @IsOptional() @Dec(3) total_kg?: string;
   @IsInt() @Min(1) bags: number;
   @IsOptional() @IsString() @Length(1, 500) notes?: string;
+  // Bulletin de pesée (tout est facultatif)
+  @IsOptional() @IsString() @Length(1, 40) trailer_no?: string;
+  @IsOptional() @IsString() @Length(1, 80) origin?: string;
+  @IsOptional() @Dec(3) weigh_in_kg?: string;
+  @IsOptional() @IsString() @Length(1, 40) scale_in?: string;
+  @IsOptional() @Dec(3) weigh_out_kg?: string;
+  @IsOptional() @IsString() @Length(1, 40) scale_out?: string;
+  @IsOptional() @Dec(3) bag_tare_kg?: string;
+  @IsOptional() @Dec(3) refaction_kg?: string;
+  @IsOptional() @IsString() @Length(1, 20) grade?: string;
+  @IsOptional() @IsInt() @Min(0) bags_unloaded?: number;
+  @IsOptional() @IsInt() @Min(0) bags_refused?: number;
+  /** Analyse qualité : humidité, grainage, déchets, etc. (clé libre → valeur courte). */
+  @IsOptional() @IsObject() analysis?: Record<string, string>;
 }
 class SettleDto {
   @IsString() @Length(8, 100) idempotency_key: string;
@@ -229,7 +244,22 @@ export class ConvoysController {
     const { row, replay } = await this.db.tx(req.org.id, async (c) => {
       const prev = await c.query(`SELECT * FROM convoy_receptions WHERE idempotency_key = $1`, [b.idempotency_key]);
       if (prev.rowCount) return { row: prev.rows[0], replay: true };
-      if (Number(b.total_kg) <= 0) throw new BadRequestException('Poids total doit être supérieur à zéro');
+      // Double pesée : brut = entrée − sortie ; net payé = brut − tare des sacs − réfaction (calculs exacts en SQL).
+      let gross: string | null = null;
+      let net = b.total_kg ?? null;
+      if (b.weigh_in_kg != null || b.weigh_out_kg != null) {
+        if (b.weigh_in_kg == null || b.weigh_out_kg == null) throw new BadRequestException('Double pesée : indiquez le poids à l’entrée et à la sortie');
+        const g = (await c.query(`SELECT $1::numeric - $2::numeric AS g`, [b.weigh_in_kg, b.weigh_out_kg])).rows[0].g;
+        if (Number(g) <= 0) throw new BadRequestException('Le poids à l’entrée doit dépasser le poids à la sortie');
+        gross = g;
+        const n = (await c.query(`SELECT $1::numeric - coalesce($2::numeric,0) - coalesce($3::numeric,0) AS n`, [g, b.bag_tare_kg ?? null, b.refaction_kg ?? null])).rows[0].n;
+        if (Number(n) <= 0) throw new BadRequestException('Le poids net doit être supérieur à zéro (tare et réfaction trop élevées)');
+        if (b.total_kg != null && Number(b.total_kg) !== Number(n)) throw new BadRequestException(`Poids net incohérent : la double pesée donne ${Number(n)} kg`);
+        net = n;
+      }
+      if (net == null || Number(net) <= 0) throw new BadRequestException('Poids total doit être supérieur à zéro');
+      b.total_kg = net;
+      if (b.bags_unloaded != null && b.bags_refused != null && b.bags_unloaded < b.bags_refused) throw new BadRequestException('Sacs refusés supérieurs aux sacs déchargés');
       const v = (await c.query(`SELECT * FROM convoys WHERE collector_id = $1 AND convoy_no = $2 FOR UPDATE`, [b.collector_id, b.convoy_no.trim()])).rows[0];
       if (!v) throw new NotFoundException(`Aucun convoi « ${b.convoy_no.trim()} » pour ce collecteur`);
       if (v.status !== 'in_transit') throw new ConflictException('Ce convoi a déjà été réceptionné');
@@ -241,10 +271,19 @@ export class ConvoysController {
       const vpct = variance == null || Number(v.declared_kg) <= 0 ? null : (await c.query(`SELECT round(abs($1::numeric) * 100 / $2::numeric, 3) AS p`, [variance, v.declared_kg])).rows[0].p;
       const held = vpct != null && Number(vpct) > Number(tol);
       if (held && (!b.notes || b.notes.trim().length < 5)) throw new BadRequestException(`Écart de poids de ${vpct} % (tolérance ${Number(tol)} %) : précisez la cause dans les observations`);
+      // N° de bulletin séquentiel par coopérative et par année (BP-2026-000001).
+      const yr = new Date().getFullYear();
+      const cnt = (await c.query(`INSERT INTO bulletin_counters(organization_id, year, last_no) VALUES ($1,$2,1)
+        ON CONFLICT (organization_id, year) DO UPDATE SET last_no = bulletin_counters.last_no + 1 RETURNING last_no`, [req.org.id, yr])).rows[0].last_no;
+      const bulletinNo = `BP-${yr}-${String(cnt).padStart(6, '0')}`;
       const ins = (await c.query(
-        `INSERT INTO convoy_receptions(organization_id, idempotency_key, convoy_id, warehouse_id, total_kg, bags, variance_kg, variance_pct, received_by, notes, status)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
-        [req.org.id, b.idempotency_key, v.id, b.warehouse_id, b.total_kg, b.bags, variance, vpct, req.user.id, b.notes ?? null, held ? 'pending_variance' : 'pending_cashier'])).rows[0];
+        `INSERT INTO convoy_receptions(organization_id, idempotency_key, convoy_id, warehouse_id, total_kg, bags, variance_kg, variance_pct, received_by, notes, status,
+           bulletin_no, trailer_no, origin, weigh_in_kg, weigh_in_at, scale_in, weigh_out_kg, weigh_out_at, scale_out, gross_kg, bag_tare_kg, refaction_kg, grade, bags_unloaded, bags_refused, analysis)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,
+           $12,$13,$14,$15,CASE WHEN $15::numeric IS NULL THEN NULL ELSE now() END,$16,$17,CASE WHEN $17::numeric IS NULL THEN NULL ELSE now() END,$18,$19,$20,$21,$22,$23,$24,$25) RETURNING *`,
+        [req.org.id, b.idempotency_key, v.id, b.warehouse_id, b.total_kg, b.bags, variance, vpct, req.user.id, b.notes ?? null, held ? 'pending_variance' : 'pending_cashier',
+         bulletinNo, b.trailer_no ?? null, b.origin ?? null, b.weigh_in_kg ?? null, b.scale_in ?? null, b.weigh_out_kg ?? null, b.scale_out ?? null, gross, b.bag_tare_kg ?? null, b.refaction_kg ?? null,
+         b.grade ?? null, b.bags_unloaded ?? null, b.bags_refused ?? null, JSON.stringify(b.analysis ?? {})])).rows[0];
       await c.query(`UPDATE convoys SET status = 'received' WHERE id = $1`, [v.id]);
       if (held) await this.notif.notifyPermission(c, req.org.id, 'weighings:approve', { kind: 'convoy_variance', severity: 'warning', title: `Écart de poids à valider : convoi ${v.convoy_no}`,
         body: `${variance} kg (${vpct} %) · ${b.notes}`, entityType: 'convoy', entityId: v.id, dedupe: `convoy_variance:${v.id}` });

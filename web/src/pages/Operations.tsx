@@ -1,3 +1,4 @@
+import QRCode from 'qrcode';
 import { FormEvent, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { get, post } from '../api';
@@ -14,6 +15,52 @@ const TYPE_LABEL: Record<string, string> = {
 };
 
 /** Reçu prêt à imprimer : rendu hors de l'application (portail) pour que seule cette feuille sorte à l'impression. */
+function Qr({ text }: { text: string }) {
+  const [src, setSrc] = useState('');
+  useEffect(() => { QRCode.toDataURL(text, { margin: 0, width: 160, errorCorrectionLevel: 'M' }).then(setSrc).catch(() => setSrc('')); }, [text]);
+  return src ? <img src={src} alt="QR code du bulletin" width={90} height={90} /> : null;
+}
+
+const fmtKg = (v: string | null | undefined) => (v == null ? '' : `${v} kg`);
+
+/** Bulletin de pesée : double pesée, tare, réfaction, poids net payé, analyse, visas. Les lignes sans donnée ne sont pas imprimées. */
+function Bulletin({ r }: { r: any }) {
+  const b = r.bulletin; const o = r.organization ?? {};
+  const an = Object.entries(b.analysis ?? {}) as [string, string][];
+  const row = (label: string, v: any, strong = false) => (v == null || v === '' ? null : <tr className={strong ? 'net' : ''}><th>{label}</th><td>{v}</td></tr>);
+  const qr = `AGRITRACE|${b.no}|${b.convoy_no}|NET ${b.net} kg|${String(b.received_at).slice(0, 10)}`;
+  return (
+    <>
+      <div className="bp-head"><div><h2>BULLETIN DE PESÉE <span className="receipt-no">n° {b.no}</span></h2>
+        <p>{o.commercial_name || o.name} · Magasin : {b.warehouse}</p></div><Qr text={qr} /></div>
+      {r.duplicate && <p className="receipt-dup">DUPLICATA n°{r.copy_no}</p>}
+      {r.cancelled && <p className="receipt-dup">OPÉRATION ANNULÉE</p>}
+      {b.status === 'pending_variance' && <p className="receipt-dup">ÉCART À VALIDER — NON PAYABLE</p>}
+      <div className="bp-cols">
+        <table><tbody>
+          {row('Date de réception', dateTime(b.received_at))}{row('Convoi n°', b.convoy_no)}{row('Collecteur', b.collector)}
+          {row('Chauffeur', b.driver)}{row('Camion', b.truck)}{row('Remorque', b.trailer)}{row('Provenance', b.origin)}{row('Qualité / grade', b.grade)}
+        </tbody></table>
+        <table><tbody>
+          {row('Poids annoncé', fmtKg(b.declared))}
+          {row(`Pesée entrée${b.scale_in ? ` (${b.scale_in})` : ''}`, fmtKg(b.weigh_in))}
+          {row(`Pesée sortie${b.scale_out ? ` (${b.scale_out})` : ''}`, fmtKg(b.weigh_out))}
+          {row('Poids brut', fmtKg(b.gross))}{row('Tare des sacs', fmtKg(b.bag_tare))}{row('Réfaction', fmtKg(b.refaction))}
+          {row('POIDS NET PAYÉ', fmtKg(b.net), true)}{row('Écart / annoncé', b.variance == null ? null : `${b.variance} kg`)}
+        </tbody></table>
+      </div>
+      <table><tbody>
+        <tr><th>Sacs annoncés</th><td>{b.declared_bags ?? '—'}</td><th>Sacs reçus</th><td>{b.bags}</td><th>Déchargés</th><td>{b.bags_unloaded ?? '—'}</td><th>Refusés</th><td>{b.bags_refused ?? '—'}</td></tr>
+      </tbody></table>
+      {an.length > 0 && <table><tbody><tr>{an.map(([k]) => <th key={k}>{k}</th>)}</tr><tr>{an.map(([k, v]) => <td key={k}>{v}</td>)}</tr></tbody></table>}
+      {b.notes && <p><strong>Observations :</strong> {b.notes}</p>}
+      <footer className="bp-visas">
+        <div><span>Magasinier : {r.operator ?? ''}</span></div><div><span>Chauffeur</span></div><div><span>Collecteur</span></div><div><span>Responsable</span></div>
+      </footer>
+    </>
+  );
+}
+
 function Receipt({ r, onClose }: { r: any; onClose: () => void }) {
   useEffect(() => { document.body.classList.add('printing-receipt'); return () => document.body.classList.remove('printing-receipt'); }, []);
   const o = r.organization ?? {};
@@ -30,6 +77,7 @@ function Receipt({ r, onClose }: { r: any; onClose: () => void }) {
             <div><h1>{o.commercial_name || o.name}</h1>
               <small>{[o.address, o.phone, o.email].filter(Boolean).join(' · ')}</small></div>
           </header>
+          {r.bulletin ? <Bulletin r={r} /> : <>
           <h2>{r.title} <span className="receipt-no">n° {r.number}</span></h2>
           {r.duplicate && <p className="receipt-dup">DUPLICATA n°{r.copy_no}</p>}
           {r.cancelled && <p className="receipt-dup">OPÉRATION ANNULÉE</p>}
@@ -39,7 +87,7 @@ function Receipt({ r, onClose }: { r: any; onClose: () => void }) {
           <p>Date de l'opération : {dateTime(r.at)} · Opérateur : {r.operator ?? '—'}</p>
           <footer>
             <div><span>Opérateur</span></div><div><span>Responsable / contre-signature</span></div>
-          </footer>
+          </footer></>}
           <small>Édité le {dateTime(new Date().toISOString())} par {r.printed_by ?? '—'}</small>
         </div>, document.body)}
     </>

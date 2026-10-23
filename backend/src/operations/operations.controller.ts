@@ -19,6 +19,10 @@ class DecideDto {
 
 const can = (req: any, perms: string[]) => perms.some((p) => req.org.permissions?.has?.(p) ?? req.org.permissions?.includes?.(p));
 
+/** Poids sans zéros inutiles : 1795.000 → « 1795 kg », 12.500 → « 12.5 kg ». */
+/** Poids en kg entiers, séparateur de milliers = espace insécable fine (39 880), jamais de virgule ni de « .000 ». */
+const nb = (v: any) => String(Math.round(Number(v))).replace(/\B(?=(\d{3})+(?!\d))/g, '\u202f');
+const kg = (v: any) => `${nb(v)} kg`;
 @ApiTags('operations')
 @ApiBearerAuth()
 @ApiHeader({ name: 'X-Organization-Id', required: true })
@@ -44,7 +48,7 @@ export class OperationsController {
       const q = (sql: string, col: string) => c.query(sql.replace('{who}', who.replace('{col}', col)), everyone ? [n] : [u, n]);
       const lim = everyone ? '$1' : '$2';
       add('convoy_reception', (await q(
-        `SELECT r.id AS entity_id, 'Réception du convoi ' || v.convoy_no || ' · ' || r.total_kg || ' kg' AS label, r.received_at AS at, ru.full_name AS by
+        `SELECT r.id AS entity_id, 'Réception du convoi ' || v.convoy_no || ' · ' || trim_scale(r.total_kg)::text || ' kg' AS label, r.received_at AS at, ru.full_name AS by
            FROM convoy_receptions r JOIN convoys v ON v.id = r.convoy_id LEFT JOIN users ru ON ru.id = r.received_by WHERE true {who} ORDER BY r.received_at DESC LIMIT ${lim}`, 'r.received_by')).rows);
       add('convoy_settlement', (await q(
         `SELECT r.id AS entity_id, 'Règlement du convoi ' || v.convoy_no || ' · ' || r.amount AS label, r.settled_at AS at, su.full_name AS by
@@ -56,7 +60,7 @@ export class OperationsController {
         `SELECT e.id AS entity_id, 'Écriture ' || e.number || ' · ' || e.label AS label, e.created_at AS at, cu.full_name AS by
            FROM accounting_entries e LEFT JOIN users cu ON cu.id = e.created_by WHERE true {who} ORDER BY e.created_at DESC LIMIT ${lim}`, 'e.created_by')).rows);
       add('warehouse_movement', (await q(
-        `SELECT m.id AS entity_id, m.reference || ' · ' || CASE m.direction WHEN 'in' THEN 'entrée ' ELSE 'sortie ' END || m.quantity_kg || ' kg' AS label, m.created_at AS at, cu.full_name AS by
+        `SELECT m.id AS entity_id, m.reference || ' · ' || CASE m.direction WHEN 'in' THEN 'entrée ' ELSE 'sortie ' END || trim_scale(m.quantity_kg)::text || ' kg' AS label, m.created_at AS at, cu.full_name AS by
            FROM warehouse_movements m LEFT JOIN users cu ON cu.id = m.created_by WHERE true {who} ORDER BY m.created_at DESC LIMIT ${lim}`, 'm.created_by')).rows);
       out.sort((a, b) => +new Date(b.at) - +new Date(a.at));
       const top = out.slice(0, n);
@@ -94,14 +98,25 @@ export class OperationsController {
             FROM convoy_receptions r JOIN convoys v ON v.id = r.convoy_id JOIN warehouses w ON w.id = r.warehouse_id JOIN collectors k ON k.id = v.collector_id JOIN users ku ON ku.id = k.user_id WHERE r.id = $1`, [id])).rows[0];
         number = r.convoy_no;
         lines = [{ label: 'Convoi', value: r.convoy_no }, { label: 'Collecteur', value: r.collector }, { label: 'Chauffeur / camion', value: `${r.driver_name} · ${r.truck_no}` },
-          { label: 'Magasin', value: r.warehouse }, { label: 'Poids annoncé', value: r.declared_kg == null ? '—' : `${r.declared_kg} kg` }, { label: 'Poids reçu', value: `${r.total_kg} kg` },
-          { label: 'Sacs', value: String(r.bags) }, { label: 'Écart', value: r.variance_kg == null ? '—' : `${r.variance_kg} kg` }];
+          { label: 'Magasin', value: r.warehouse }, { label: 'Poids annoncé', value: r.declared_kg == null ? '—' : kg(r.declared_kg) }, { label: 'Poids reçu', value: kg(r.total_kg) },
+          { label: 'Sacs', value: String(r.bags) }, { label: 'Écart', value: r.variance_kg == null ? '—' : kg(r.variance_kg) }];
         if (t === 'convoy_settlement') {
           if (r.status !== 'settled') throw new NotFoundException("Ce convoi n'est pas réglé");
           lines.push({ label: 'Prix unitaire', value: String(r.unit_price) }, { label: 'Montant brut', value: String(r.gross_amount ?? '') }, { label: 'Transport', value: String(r.transport_total ?? 0) },
             { label: 'Retenue', value: String(r.retention_amount ?? 0) }, { label: 'Avance compensée', value: String(r.advance_netted ?? 0) }, { label: 'Net payé', value: String(r.amount) });
         }
         extra = { operator: await user(t === 'convoy_settlement' ? r.settled_by : r.received_by), notes: r.notes };
+        if (t === 'convoy_reception') {
+          // Bulletin de pesée : poids en kg entiers (chaînes déjà formatées), champs absents = null (non imprimés).
+          const w = (v: any) => (v == null ? null : nb(v));
+          extra.bulletin = {
+            no: r.bulletin_no, convoy_no: r.convoy_no, received_at: r.received_at, collector: r.collector, driver: r.driver_name, truck: r.truck_no, trailer: r.trailer_no, origin: r.origin,
+            warehouse: r.warehouse, grade: r.grade, status: r.status,
+            weigh_in: w(r.weigh_in_kg), weigh_in_at: r.weigh_in_at, scale_in: r.scale_in, weigh_out: w(r.weigh_out_kg), weigh_out_at: r.weigh_out_at, scale_out: r.scale_out,
+            gross: w(r.gross_kg), bag_tare: w(r.bag_tare_kg), refaction: w(r.refaction_kg), net: w(r.total_kg), declared: w(r.declared_kg), variance: r.variance_kg == null ? null : (Number(r.variance_kg) > 0 ? '+' : '') + nb(r.variance_kg),
+            bags: r.bags, bags_unloaded: r.bags_unloaded, bags_refused: r.bags_refused, declared_bags: r.declared_bags, analysis: r.analysis ?? {}, notes: r.notes,
+          };
+        }
       } else if (t === 'financial_transaction') {
         const x = (await c.query(`SELECT t.*, a.name AS account FROM financial_transactions t JOIN financial_accounts a ON a.id = t.account_id WHERE t.id = $1`, [id])).rows[0];
         number = x.id.slice(0, 8).toUpperCase();
@@ -118,7 +133,7 @@ export class OperationsController {
         const m = (await c.query(`SELECT m.*, w.name AS warehouse, l.code AS lot FROM warehouse_movements m JOIN warehouses w ON w.id = m.warehouse_id JOIN lots l ON l.id = m.lot_id WHERE m.id = $1`, [id])).rows[0];
         number = m.reference;
         lines = [{ label: 'Magasin', value: m.warehouse }, { label: 'Lot', value: m.lot }, { label: 'Type', value: m.movement_type }, { label: 'Sens', value: m.direction === 'in' ? 'Entrée' : 'Sortie' },
-          { label: 'Quantité', value: `${m.quantity_kg} kg` }, { label: 'Motif', value: m.reason ?? '—' }];
+          { label: 'Quantité', value: kg(m.quantity_kg) }, { label: 'Motif', value: m.reason ?? '—' }];
         extra = { operator: await user(m.created_by) };
       }
       const prints = (await c.query(`SELECT count(*)::int AS n FROM audit_logs WHERE organization_id = $1 AND action = 'receipt.print' AND entity_id = $2::text`, [req.org.id, id])).rows[0].n;

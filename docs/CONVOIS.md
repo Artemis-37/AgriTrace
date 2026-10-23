@@ -65,3 +65,14 @@ Barre du haut : quatre icônes carrées comme CentriGest, vert = bon, rouge = co
 - **Association obligatoire** (case à cocher) : un appareil inconnu ou révoqué est refusé, même avec un bon mot de passe ; elle ne peut être activée que depuis un poste déjà associé (pas d'auto-verrouillage).
 - **Révoquer** : effet immédiat ; le poste doit être réassocié. Dernière activité visible par poste.
 - Ces tables restent sur le serveur qui les crée (jamais répliquées vers le central). Testé par `e2e-postes.js` (15 contrôles) et `parcours-postes.mjs` ; l'écran mobile n'est compilé que par la CI.
+
+
+## Bulletin de pesée (réception au magasin)
+
+À la réception, le magasinier peut renseigner, dans « Détails de la pesée », la **double pesée** (entrée camion chargé, sortie camion vide, pont-bascule), la tare des sacs, la réfaction, le grade, la remorque, la provenance, les sacs déchargés/refusés et l'analyse (humidité, déchets). Tout est facultatif.
+
+- Poids brut = entrée − sortie ; **poids net payé = brut − tare des sacs − réfaction**. Ce net devient le poids de la réception : c'est lui que la caisse règle et que l'écart avec le poids annoncé compare. Si la double pesée est fournie, le serveur calcule le net et refuse un `total_kg` incohérent.
+- Numéro de bulletin séquentiel par coopérative et par année : `BP-2026-000001`.
+- Impression : « Bulletin de pesée » avec QR code (n° de bulletin, convoi, poids net, date), tableau des pesées, analyse et quatre visas (magasinier, chauffeur, collecteur, responsable). Les lignes sans donnée ne sont pas imprimées ; mention DUPLICATA dès la deuxième édition et « ÉCART À VALIDER — NON PAYABLE » si la réception est retenue.
+- Les poids sont imprimés en **kilogrammes entiers**, avec une espace pour les milliers (`41 780 kg`), sans virgule ni décimales.
+- Limite : le QR code encode le texte du bulletin ; il n'existe pas encore de page publique de vérification en ligne.

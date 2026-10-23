@@ -124,6 +124,8 @@ function Receive() {
   const [bags, setBags] = useState('');
   const [notes, setNotes] = useState('');
   const [done, setDone] = useState('');
+  const [d, setD] = useState({ wIn: '', wOut: '', scaleIn: '', scaleOut: '', tare: '', ref: '', grade: '', trailer: '', origin: '', unl: '', refused: '', humidity: '', waste: '' });
+  const setF = (k: keyof typeof d) => (e: any) => setD((x) => ({ ...x, [k]: e.target.value }));
   const exp0 = data?.expected.find((v) => v.collector_id === collector && v.convoy_no === convoyNo.trim());
   const content = useAsync(() => (exp0?.declaration_count > 0 ? get<any[]>(`/convoys/${exp0.id}/declarations`) : Promise.resolve([] as any[])), [exp0?.id]);
   if (loading) return <Loading />;
@@ -132,10 +134,16 @@ function Receive() {
   const mine = data.expected.filter((v) => v.collector_id === collector);
   const expected = mine.find((v) => v.convoy_no === convoyNo.trim());
   const declared = expected?.declared_kg != null ? Number(expected.declared_kg) : 0;
-  const gapPct = declared > 0 && /^\d+(\.\d{1,3})?$/.test(kg) ? Math.abs(Number(kg) - declared) * 100 / declared : 0;
+  const W = /^\d+(\.\d{1,3})?$/;
+  const twoWeighings = d.wIn !== '' || d.wOut !== '';
+  const net = twoWeighings && W.test(d.wIn) && W.test(d.wOut) ? Number(d.wIn) - Number(d.wOut) - Number(W.test(d.tare) ? d.tare : 0) - Number(W.test(d.ref) ? d.ref : 0) : NaN;
+  const kgEff = twoWeighings ? (Number.isFinite(net) && net > 0 ? String(Math.round(net * 1000) / 1000) : '') : kg;
+  const optOk = (v: string) => v === '' || W.test(v);
+  const gapPct = declared > 0 && /^\d+(\.\d{1,3})?$/.test(kgEff) ? Math.abs(Number(kgEff) - declared) * 100 / declared : 0;
   const tol = Number(expected?.weight_tolerance_pct ?? 2);
   const blocked = gapPct > tol;
-  const valid = collector && convoyNo.trim().length >= 2 && wh && (!blocked || notes.trim().length >= 5) && /^\d+(\.\d{1,3})?$/.test(kg) && Number(kg) > 0 && /^[1-9]\d*$/.test(bags);
+  const valid = collector && convoyNo.trim().length >= 2 && wh && (!blocked || notes.trim().length >= 5) && /^\d+(\.\d{1,3})?$/.test(kgEff) && Number(kgEff) > 0 && /^[1-9]\d*$/.test(bags)
+    && optOk(d.tare) && optOk(d.ref) && (!twoWeighings || (W.test(d.wIn) && W.test(d.wOut))) && /^\d*$/.test(d.unl) && /^\d*$/.test(d.refused);
   return (
     <Card title="Réceptionner un convoi">
       <Field label="Collecteur"><select value={collector} onChange={(e) => { setCollector(e.target.value); setConvoyNo(''); }}><option value="">—</option>{collectors.map(([id, n]) => <option key={id} value={id}>{n}</option>)}</select></Field>
@@ -148,15 +156,31 @@ function Receive() {
           <ul className="list">{(content.data ?? []).map((d) => <li key={d.id}>{d.producer_name} · {date(d.operation_date)} · {num(d.kg)} kg · {d.bags} sacs</li>)}</ul></details>
       )}
       <Field label="Magasin"><select value={wh} onChange={(e) => setWh(e.target.value)}><option value="">—</option>{data.whs.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}</select></Field>
-      <Field label="Poids total pesé (kg)"><input inputMode="decimal" value={kg} onChange={(e) => setKg(e.target.value)} /></Field>
+      <Field label="Poids total pesé (kg)" hint={twoWeighings ? 'Calculé à partir de la double pesée ci-dessous' : undefined}><input inputMode="decimal" value={twoWeighings ? kgEff : kg} readOnly={twoWeighings} onChange={(e) => setKg(e.target.value)} /></Field>
+      <details><summary>Détails de la pesée (bulletin de pesée) — facultatif</summary>
+        <Field label="Pesée à l'entrée, camion chargé (kg)"><input inputMode="decimal" value={d.wIn} onChange={setF('wIn')} /></Field>
+        <Field label="Pesée à la sortie, camion vide (kg)"><input inputMode="decimal" value={d.wOut} onChange={setF('wOut')} /></Field>
+        <Field label="Pont-bascule entrée / sortie (ex. Pont 1)"><span style={{ display: 'flex', gap: '.5rem' }}><input value={d.scaleIn} onChange={setF('scaleIn')} maxLength={40} /><input value={d.scaleOut} onChange={setF('scaleOut')} maxLength={40} /></span></Field>
+        <Field label="Tare des sacs (kg)"><input inputMode="decimal" value={d.tare} onChange={setF('tare')} /></Field>
+        <Field label="Réfaction (kg)"><input inputMode="decimal" value={d.ref} onChange={setF('ref')} /></Field>
+        <Field label="Qualité / grade"><input value={d.grade} onChange={setF('grade')} maxLength={20} /></Field>
+        <Field label="Remorque"><input value={d.trailer} onChange={setF('trailer')} maxLength={40} /></Field>
+        <Field label="Provenance"><input value={d.origin} onChange={setF('origin')} maxLength={80} /></Field>
+        <Field label="Sacs déchargés / refusés"><span style={{ display: 'flex', gap: '.5rem' }}><input inputMode="numeric" value={d.unl} onChange={setF('unl')} /><input inputMode="numeric" value={d.refused} onChange={setF('refused')} /></span></Field>
+        <Field label="Humidité (%) / déchets (%)"><span style={{ display: 'flex', gap: '.5rem' }}><input value={d.humidity} onChange={setF('humidity')} maxLength={10} /><input value={d.waste} onChange={setF('waste')} maxLength={10} /></span></Field>
+      </details>
       <Field label="Nombre de sacs"><input inputMode="numeric" value={bags} onChange={(e) => setBags(e.target.value)} /></Field>
       {blocked && <p className="notice" role="status">Écart de {gapPct.toFixed(1)} % avec le poids annoncé (tolérance {tol} %) : la réception sera retenue jusqu'à validation par un responsable, et la cause est obligatoire.</p>}
       <Field label={blocked ? 'Cause de l\'écart (obligatoire)' : 'Observations (facultatif)'}><textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={500} /></Field>
       {act.error && <ErrorBox message={act.error} />}
       {done && <p className="notice" role="status">{done}</p>}
       <div className="modal-actions"><button className="btn" disabled={act.busy || !valid || !org} onClick={() => act.run(async () => {
-        await enqueue(org!.id, 'convoy.receive', { idempotency_key: idem(), collector_id: collector, convoy_no: convoyNo.trim(), warehouse_id: wh, total_kg: kg, bags: Number(bags), ...(notes.trim() && { notes: notes.trim() }) }, `Réception du convoi ${convoyNo.trim()}`);
-        setDone(`Convoi ${convoyNo.trim()} enregistré : il sera transmis à la caisse dès l'envoi au serveur.`); setConvoyNo(''); setKg(''); setBags(''); setNotes(''); reload();
+        await enqueue(org!.id, 'convoy.receive', { idempotency_key: idem(), collector_id: collector, convoy_no: convoyNo.trim(), warehouse_id: wh, total_kg: kgEff, bags: Number(bags), ...(notes.trim() && { notes: notes.trim() }),
+          ...(twoWeighings && { weigh_in_kg: d.wIn, weigh_out_kg: d.wOut }), ...(d.scaleIn.trim() && { scale_in: d.scaleIn.trim() }), ...(d.scaleOut.trim() && { scale_out: d.scaleOut.trim() }),
+          ...(d.tare && { bag_tare_kg: d.tare }), ...(d.ref && { refaction_kg: d.ref }), ...(d.grade.trim() && { grade: d.grade.trim() }), ...(d.trailer.trim() && { trailer_no: d.trailer.trim() }),
+          ...(d.origin.trim() && { origin: d.origin.trim() }), ...(d.unl && { bags_unloaded: Number(d.unl) }), ...(d.refused && { bags_refused: Number(d.refused) }),
+          ...((d.humidity.trim() || d.waste.trim()) && { analysis: { ...(d.humidity.trim() && { 'Humidité %': d.humidity.trim() }), ...(d.waste.trim() && { 'Déchets %': d.waste.trim() }) } }) }, `Réception du convoi ${convoyNo.trim()}`);
+        setDone(`Convoi ${convoyNo.trim()} enregistré : il sera transmis à la caisse dès l'envoi au serveur.`); setConvoyNo(''); setKg(''); setBags(''); setNotes(''); setD({ wIn: '', wOut: '', scaleIn: '', scaleOut: '', tare: '', ref: '', grade: '', trailer: '', origin: '', unl: '', refused: '', humidity: '', waste: '' }); reload();
       })}>Valider la réception et transmettre à la caisse</button></div>
     </Card>
   );

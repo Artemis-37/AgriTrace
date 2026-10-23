@@ -194,6 +194,12 @@ dl.kv dd { margin: 0; }
 .receipt-sheet table { width: 100%; border-collapse: collapse; margin: .6rem 0; }
 .receipt-sheet th, .receipt-sheet td { border: 1px solid #444; padding: .3rem .5rem; text-align: left; }
 .receipt-sheet th { width: 40%; background: #f0f0f0; }
+.receipt-sheet .bp-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
+.receipt-sheet .bp-head h2 { font-size: 1.3rem; letter-spacing: .04em; }
+.receipt-sheet .bp-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.receipt-sheet .bp-cols th { width: 48%; }
+.receipt-sheet tr.net th, .receipt-sheet tr.net td { font-weight: 800; font-size: 1.15rem; background: #e6e6e6; }
+.receipt-sheet .bp-visas { gap: 1rem; }
 .receipt-sheet footer { display: flex; gap: 2rem; margin: 2.5rem 0 1rem; }
 .receipt-sheet footer div { flex: 1; border-top: 1px solid #000; padding-top: .3rem; text-align: center; }
 .receipt-dup { font-weight: 700; border: 2px solid #000; display: inline-block; padding: .1rem .6rem; }
