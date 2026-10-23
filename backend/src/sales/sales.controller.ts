@@ -10,6 +10,7 @@ import { AuditService } from '../audit/audit.service';
 import { accountingCodeOf, postEntry, reverseEntry, today } from '../accounting/accounting.helpers';
 import { Dec, isUniqueViolation } from '../common/dto';
 import { DbService } from '../db/db.service';
+import { effectiveSellPrice } from '../products/price';
 import { addLotEvent, nextNumber, pad } from '../stock/stock.helpers';
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -39,7 +40,7 @@ class ContractDto {
   @IsOptional() @Matches(CUR) currency?: string;
   @IsOptional() @IsInt() @Min(0) @Max(365) payment_terms_days?: number;
 }
-class LineDto { @IsOptional() @IsString() @Length(1, 200) description?: string; @Dec(3) quantity_kg: string; @Dec(4) unit_price: string; }
+class LineDto { @IsOptional() @IsUUID() product_id?: string; @IsOptional() @IsString() @Length(1, 200) description?: string; @Dec(3) quantity_kg: string; @Dec(4) unit_price: string; }
 class OrderDto {
   @IsString() @Length(8, 100) idempotency_key: string;
   @IsUUID() buyer_id: string;
@@ -169,6 +170,17 @@ export class SalesController {
       if (!by) throw new BadRequestException('Acheteur inconnu');
       if (by.status !== 'active') throw new ConflictException('Acheteur suspendu ou clôturé');
       if (!(await c.query(`SELECT 1 FROM value_chains WHERE id = $1`, [b.value_chain_id])).rowCount) throw new BadRequestException('Filière inconnue');
+      // Ligne liée à un produit : le prix de vente au kilo est celui fixé par l'administrateur de la coopérative.
+      const mayPrice = req.org.permissions.has('products:manage') || req.org.permissions.has('prices:manage');
+      for (const l of b.lines) {
+        if (!l.product_id) continue;
+        const prod = (await c.query(`SELECT name FROM products WHERE id = $1`, [l.product_id])).rows[0];
+        if (!prod) throw new BadRequestException('Produit inconnu');
+        const official = await effectiveSellPrice(c, l.product_id, b.campaign_id ?? null);
+        if (!mayPrice && official == null) throw new ConflictException("Prix de vente non fixé pour ce produit : l'administrateur doit le renseigner dans Paramètres");
+        if (!mayPrice && Number(l.unit_price) !== Number(official)) throw new ForbiddenException("Le prix de vente au kilo est fixé par l'administrateur de la coopérative");
+        l.description = l.description ?? prod.name;
+      }
       let currency = by.currency, terms = b.payment_terms_days ?? by.payment_terms_days;
       if (b.contract_id) {
         const k = (await c.query(`SELECT * FROM sales_contracts WHERE id = $1`, [b.contract_id])).rows[0];

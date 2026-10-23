@@ -8,6 +8,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { Dec } from '../common/dto';
 import { DbService } from '../db/db.service';
 import { nextConvoyNo } from './convoy-number';
+import { effectiveBuyPrice } from '../products/price';
 
 export class CreateConvoyDto {
   @IsString() @Length(8, 100) idempotency_key: string;
@@ -67,7 +68,7 @@ class AnalysisDto {
 class SettleDto {
   @IsString() @Length(8, 100) idempotency_key: string;
   /** P.U. : prix d'achat au kg. */
-  @Dec(4) unit_price: string;
+  @IsOptional() @Dec(4) unit_price?: string;
   /** Coût unitaire de transport au kg (par défaut : réglage de la coopérative). Ajouté au produit. */
   @IsOptional() @Dec(4) transport_unit?: string;
   /** Retenue au kg (par défaut : réglage de la coopérative). Déduite du total. */
@@ -446,22 +447,34 @@ export class ConvoysController {
   @Get('convoys/cashier-queue')
   @RequirePermissions('convoys:settle')
   queue(@Req() req: any) {
-    return this.db.tx(req.org.id, async (c) => (await c.query(
-      `SELECT r.id, r.convoy_id, v.convoy_no, v.driver_name, v.truck_no, v.collector_id, u.full_name AS collector_name,
-              r.total_kg, r.bags, r.variance_kg, r.received_at
-         FROM convoy_receptions r JOIN convoys v ON v.id = r.convoy_id JOIN collectors k ON k.id = v.collector_id JOIN users u ON u.id = k.user_id
-        WHERE r.status = 'pending_cashier' ORDER BY r.received_at`)).rows);
+    return this.db.tx(req.org.id, async (c) => {
+      const rows = (await c.query(
+        `SELECT r.id, r.convoy_id, v.convoy_no, v.driver_name, v.truck_no, v.collector_id, u.full_name AS collector_name,
+                r.total_kg, r.bags, r.variance_kg, r.received_at, r.product_id, r.campaign_id, (SELECT name FROM products WHERE id = r.product_id) AS product
+           FROM convoy_receptions r JOIN convoys v ON v.id = r.convoy_id JOIN collectors k ON k.id = v.collector_id JOIN users u ON u.id = k.user_id
+          WHERE r.status = 'pending_cashier' ORDER BY r.received_at`)).rows;
+      // Prix au kilo fixé par l'administrateur (traite en cours) : repris tel quel par la caisse.
+      for (const r of rows) r.official_price = await effectiveBuyPrice(c, r.product_id, r.campaign_id);
+      return rows;
+    });
   }
 
   /** La caisse traite la réception : calcule le montant (poids × prix) et crédite le compte du délégué (écriture immuable). */
   @Post('convoy-receptions/:id/settle')
   @RequirePermissions('convoys:settle')
   async settle(@Param('id', ParseUUIDPipe) id: string, @Body() b: SettleDto, @Req() req: any) {
-    if (Number(b.unit_price) <= 0) throw new BadRequestException('Prix unitaire doit être supérieur à zéro');
     const { row, replay } = await this.db.tx(req.org.id, async (c) => {
       const r = (await c.query(`SELECT * FROM convoy_receptions WHERE id = $1 FOR UPDATE`, [id])).rows[0];
       if (!r) throw new NotFoundException();
       if (r.status === 'settled') return { row: r, replay: true };
+      // Le prix au kilo est celui de la traite, fixé par l'administrateur : le caissier ne le saisit pas.
+      const official = await effectiveBuyPrice(c, r.product_id, r.campaign_id);
+      const mayPrice = req.org.permissions.has('prices:manage') || req.org.permissions.has('products:manage');
+      if (b.unit_price !== undefined && Number(b.unit_price) !== Number(official ?? NaN) && !mayPrice)
+        throw new ForbiddenException("Le prix au kilo est fixé par l'administrateur de la coopérative : il ne peut pas être saisi en caisse");
+      const unitPrice = mayPrice && b.unit_price !== undefined ? b.unit_price : official;
+      if (unitPrice == null) throw new ConflictException("Prix au kilo non fixé pour ce produit et cette traite : l'administrateur doit le renseigner dans Paramètres → Produits et campagnes");
+      if (Number(unitPrice) <= 0) throw new BadRequestException('Prix unitaire doit être supérieur à zéro');
       if (r.status === 'pending_variance') throw new ConflictException('Écart de poids non validé : la réception doit d\'abord être validée par un responsable');
       const v = (await c.query(`SELECT * FROM convoys WHERE id = $1`, [r.convoy_id])).rows[0];
       const u = (await c.query(`SELECT u.full_name FROM collectors k JOIN users u ON u.id = k.user_id WHERE k.id = $1`, [v.collector_id])).rows[0];
@@ -473,7 +486,7 @@ export class ConvoysController {
       const tu = b.transport_unit ?? st.t, rt = b.retention_per_kg ?? st.r;
       const m = (await c.query(
         `SELECT round($1::numeric * $2::numeric, 4) AS gross, round($1::numeric * $3::numeric, 4) AS transport, round($1::numeric * $4::numeric, 4) AS retention`,
-        [r.total_kg, b.unit_price, tu, rt])).rows[0];
+        [r.total_kg, unitPrice, tu, rt])).rows[0];
       const amt = (await c.query(`SELECT $1::numeric + $2::numeric - $3::numeric AS n`, [m.gross, m.transport, m.retention])).rows[0].n;
       if (Number(amt) <= 0) throw new BadRequestException('La retenue dépasse le produit : net à payer nul ou négatif');
       const outstanding = (await c.query(
@@ -485,7 +498,7 @@ export class ConvoysController {
       const tx = (await c.query(
         `INSERT INTO financial_transactions(organization_id, idempotency_key, account_id, direction, amount, currency, reason, reference_type, reference_id, created_by)
          VALUES ($1,$2,$3,'in',$4,$5,$6,'convoy_reception',$7,$8) RETURNING id`,
-        [req.org.id, 'convoy-' + b.idempotency_key + (r.settle_attempts ? ':' + r.settle_attempts : ''), acc.id, amt, acc.currency, `Convoi ${v.convoy_no} : ${r.total_kg} kg × ${b.unit_price}`, r.id, req.user.id])).rows[0];
+        [req.org.id, 'convoy-' + b.idempotency_key + (r.settle_attempts ? ':' + r.settle_attempts : ''), acc.id, amt, acc.currency, `Convoi ${v.convoy_no} : ${r.total_kg} kg × ${unitPrice}`, r.id, req.user.id])).rows[0];
       await c.query(`INSERT INTO accounting_accounts(organization_id, code, label) VALUES ($1,'4781','Retenues sur règlements des délégués') ON CONFLICT DO NOTHING`, [req.org.id]);
       const lines: any[] = [{ code: '601', debit: m.gross }];
       if (Number(m.transport) > 0) lines.push({ code: '605', debit: m.transport, label: 'Transport' });
@@ -505,7 +518,7 @@ export class ConvoysController {
         `UPDATE convoy_receptions SET status = 'settled', unit_price = $2, amount = $3, tx_id = $4, settled_by = $5, settled_at = now(),
                 gross_amount = $6, transport_unit = $7, transport_total = $8, retention_per_kg = $9, retention_amount = $10,
                 advance_netted = $11, netting_entry_number = $12 WHERE id = $1 RETURNING *`,
-        [id, b.unit_price, amt, tx.id, req.user.id, m.gross, tu, m.transport, rt, m.retention, netted, nettingNo])).rows[0];
+        [id, unitPrice, amt, tx.id, req.user.id, m.gross, tu, m.transport, rt, m.retention, netted, nettingNo])).rows[0];
       await c.query(`UPDATE convoys SET status = 'settled' WHERE id = $1`, [v.id]);
       await c.query(`UPDATE collectors SET account_closed_at = NULL WHERE id = $1`, [v.collector_id]); // une nouvelle livraison rouvre l'accumulation de la mise en compte
       // Le traitement en caisse est fait : l'alerte « réception à traiter » n'a plus lieu d'être pour personne.

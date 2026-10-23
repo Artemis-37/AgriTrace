@@ -80,6 +80,10 @@ const PROFILS = [
   await call('POST', `/price-schedules/${sched.id}/versions`, { ...A, body: { unit_price: '1000', valid_from: '2026-10-01' } });
   const wh = await call('POST', '/warehouses', { ...A, body: { code: 'MAG1', name: 'Magasin central' } });
 
+  // ── Produits et prix de la traite : fixés par l'administrateur de la coopérative seul
+  const cacao = await call('POST', '/products', { ...A, body: { name: 'Cacao (fèves)', buy_price_per_kg: '1000', sell_price_per_kg: '1500', campaign_id: camp.id } });
+  await call('POST', '/products', { ...A, body: { name: 'Café (cerises sèches)', buy_price_per_kg: '600', sell_price_per_kg: '900', campaign_id: camp.id } });
+
   // ── Comptes : un par profil
   const accounts = [{ role: 'coop_admin', label: 'Administrateur de la coopérative', name: 'Adjoua Konan', email: adminEmail }];
   const users = {};
@@ -95,6 +99,13 @@ const PROFILS = [
   // ── Collecteurs (le compte « collecteur » + un second pour les rapprochements)
   const col = await call('POST', '/collectors', { ...A, body: { user_id: users.collecteur.id } });
   await call('POST', `/collectors/${col.id}/assignments`, { ...A, body: { value_chain_id: vc.id } });
+  // Second délégué (sans convoi déclaré) : sert à la pesée d'un convoi non déclaré, saisi par le magasinier.
+  const r2 = await call('POST', '/roles/standard', { ...A, body: { code: 'collecteur' } });
+  const email2 = `collecteur2@${DOMAIN}`;
+  const u2 = await call('POST', '/users', { ...A, body: { email: email2, full_name: 'Yao Kouassi', password: PASSWORD, role_id: r2.id } });
+  const col2 = await call('POST', '/collectors', { ...A, body: { user_id: u2.id } });
+  await call('POST', `/collectors/${col2.id}/assignments`, { ...A, body: { value_chain_id: vc.id } });
+  const delegate2 = { name: 'Yao Kouassi', email: email2, collector_id: col2.id };
 
   // ── Producteurs et parcelles (coordonnées fictives)
   const noms = [['KONE', 'Awa', 'Hiré'], ['TRAORE', 'Moussa', 'Zoukougbeu'], ['YAO', 'Kouadio', 'Hiré'], ['KOUASSI', 'Adjoua', 'Tiassalé'], ['BAMBA', 'Seydou', 'Hiré'],
@@ -134,12 +145,12 @@ const PROFILS = [
   // ── Convois : l'un réceptionné et réglé, l'autre seulement en route
   const cv = (kg) => call('POST', '/convoys', { ...U('collecteur'), body: { idempotency_key: key('cv'), driver_name: 'Traoré Moussa', truck_no: 'AB 1234 CI', declared_bags: 40, declared_kg: kg } });
   const cv1 = (await cv('2600')).convoy_no; // numéro généré : SC000000-<année>-BRA-1
-  const rec = await call('POST', '/convoys/receive', { ...U('magasinier'), body: { idempotency_key: key('rc'), collector_id: col.id, convoy_no: cv1, warehouse_id: wh.id, total_kg: '2587.500', bags: 40 } });
+  const rec = await call('POST', '/convoys/receive', { ...U('magasinier'), body: { idempotency_key: key('rc'), collector_id: col.id, convoy_no: cv1, warehouse_id: wh.id, product_id: cacao.id, campaign_id: camp.id, total_kg: '2587.500', bags: 40 } });
   const reg = await call('POST', '/cash-registers', { ...A, body: { name: 'Caisse principale' } });
   const sess = await call('POST', `/cash-registers/${reg.id}/sessions`, { ...U('caissier'), body: { opening_amount: '5000000' } });
-  await soft('règlement du convoi', () => call('POST', `/convoy-receptions/${rec.id}/settle`, { ...U('caissier'), body: { idempotency_key: key('st'), unit_price: '1000' } }));
+  await soft('règlement du convoi', () => call('POST', `/convoy-receptions/${rec.id}/settle`, { ...U('caissier'), body: { idempotency_key: key('st'), retention_per_kg: '10' } }));
   const cv2 = (await cv('1800')).convoy_no;
-  const rec2 = await soft('2e réception', () => call('POST', '/convoys/receive', { ...U('magasinier'), body: { idempotency_key: key('rc'), collector_id: col.id, convoy_no: cv2, warehouse_id: wh.id, total_kg: '1795', bags: 28 } }));
+  const rec2 = await soft('2e réception', () => call('POST', '/convoys/receive', { ...U('magasinier'), body: { idempotency_key: key('rc'), collector_id: col.id, convoy_no: cv2, warehouse_id: wh.id, product_id: cacao.id, campaign_id: camp.id, total_kg: '1795', bags: 28 } }));
   const cv3 = (await cv('2100')).convoy_no; // reste « en route » : visible dans les convois attendus du magasin
 
   // ── Caisse, comptabilité
@@ -224,7 +235,7 @@ const PROFILS = [
     const out = path.join(__dirname, '..', '..', 'docs', 'COMPTES_DEMO.md');
     fs.writeFileSync(out, doc);
   }
-  fs.writeFileSync(process.env.DEMO_JSON || '/tmp/demo-accounts.json', JSON.stringify({ org: org.id, password: PASSWORD, accounts, convoys: [cv1, cv2, cv3] }, null, 2));
+  fs.writeFileSync(process.env.DEMO_JSON || '/tmp/demo-accounts.json', JSON.stringify({ org: org.id, password: PASSWORD, accounts, convoys: [cv1, cv2, cv3], delegate2 }, null, 2));
   console.log(`\nCoopérative de démonstration prête : ${org.name}\n  ${accounts.length} comptes (mot de passe : ${PASSWORD})`);
   if (warnings.length) console.log(`\n${warnings.length} étape(s) facultative(s) ignorée(s) :\n - ` + warnings.join('\n - '));
 })().catch((e) => { console.error(e.message); process.exit(1); });

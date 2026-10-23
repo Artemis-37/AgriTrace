@@ -2,7 +2,7 @@
 
 Fichier généré par `backend/scripts/gen-matrice-roles.js` à partir du code : ne pas le modifier à la main. Les menus du portail et les routes de l'API se règlent sur les **permissions**, jamais sur le nom du rôle. Une coopérative crée ses propres rôles en combinant ces permissions ; les cinq rôles ci-dessous sont des modèles proposés.
 
-139 permissions, 344 routes protégées. Les droits sensibles (paiements, ajustements, exports de noms) peuvent en plus exiger une seconde approbation, réglée par rôle.
+142 permissions, 353 routes protégées. Les droits sensibles (paiements, ajustements, exports de noms) peuvent en plus exiger une seconde approbation, réglée par rôle.
 
 ## Rôles types
 - **Magasinier** (`magasinier`) : Réceptionne et pèse les convois au magasin central, tient les stocks et l'inventaire.
@@ -96,7 +96,7 @@ Colonnes : ✓ = accordé par le rôle type. Les rôles Administrateur de coopé
 |---|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|---|
 | `convoys:create` | Déclarer un convoi (collecteur : n° de convoi, chauffeur, camion) |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | ✓ |  |  | `POST /convoys`<br>`GET /convoys/next-number`<br>`GET /convoys/available-declarations` |
 | `convoys:read` | Consulter les convois | ✓ | ✓ | ✓ | ✓ |  |  |  |  | ✓ |  |  |  | ✓ |  |  | ✓ |  |  | `GET /convoys/:id/declarations`<br>`GET /convoys`<br>`GET /convoys/receptions`<br>… +1 |
-| `convoys:receive` | Réceptionner un convoi au magasin central (poids total, sacs) | ✓ |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | `GET /convoys/expected`<br>`GET /convoys/receptions/recent`<br>`PATCH /convoys/receptions/:id/analysis`<br>… +1 |
+| `convoys:receive` | Réceptionner un convoi au magasin central (poids total, sacs) | ✓ |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | `GET /convoys/receivable-collectors`<br>`GET /convoys/expected`<br>`GET /convoys/receptions/recent`<br>… +2 |
 | `convoys:settle` | Traiter un convoi en caisse et créditer le compte du collecteur |  | ✓ |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | `GET /convoys/cashier-queue`<br>`POST /convoy-receptions/:id/settle`<br>`GET /convoys/collectors`<br>… +4 |
 
 ### declarations
@@ -257,8 +257,8 @@ Colonnes : ✓ = accordé par le rôle type. Les rôles Administrateur de coopé
 ### products
 | Permission | Rôle du droit | Magasinier | Caissier | Comptable | Direction | Responsable de traçabilité | Responsable cartographie | Cartographe | Agent de terrain | Responsable de magasin | Responsable financier | Responsable qualité | Responsable logistique | Auditeur | Acheteur / partenaire externe | Exportateur | Délégué | Administrateur de groupe | Coach | Routes |
 |---|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|---|
-| `products:manage` | Gérer les produits (prix d'achat et de vente au kilo) |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | `POST /products`<br>`PUT /products/:id`<br>`DELETE /products/:id` |
-| `products:read` | Consulter les produits et leurs prix d'achat et de vente | ✓ | ✓ | ✓ | ✓ |  |  |  |  | ✓ | ✓ |  |  |  |  |  | ✓ |  |  | `GET /products` |
+| `products:manage` | Gérer les produits (prix d'achat et de vente au kilo) |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | `POST /products`<br>`PUT /products/:id`<br>`POST /products/:id/prices`<br>… +1 |
+| `products:read` | Consulter les produits et leurs prix d'achat et de vente | ✓ | ✓ | ✓ | ✓ |  |  |  |  | ✓ | ✓ |  |  |  |  |  | ✓ |  |  | `GET /products`<br>`GET /products/:id/prices` |
 
 ### quality
 | Permission | Rôle du droit | Magasinier | Caissier | Comptable | Direction | Responsable de traçabilité | Responsable cartographie | Cartographe | Agent de terrain | Responsable de magasin | Responsable financier | Responsable qualité | Responsable logistique | Auditeur | Acheteur / partenaire externe | Exportateur | Délégué | Administrateur de groupe | Coach | Routes |
@@ -294,6 +294,13 @@ Colonnes : ✓ = accordé par le rôle type. Les rôles Administrateur de coopé
 | Permission | Rôle du droit | Magasinier | Caissier | Comptable | Direction | Responsable de traçabilité | Responsable cartographie | Cartographe | Agent de terrain | Responsable de magasin | Responsable financier | Responsable qualité | Responsable logistique | Auditeur | Acheteur / partenaire externe | Exportateur | Délégué | Administrateur de groupe | Coach | Routes |
 |---|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|---|
 | `roles:manage` | Gérer les rôles et permissions |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | `POST /roles/standard`<br>`POST /roles` |
+
+### savings
+| Permission | Rôle du droit | Magasinier | Caissier | Comptable | Direction | Responsable de traçabilité | Responsable cartographie | Cartographe | Agent de terrain | Responsable de magasin | Responsable financier | Responsable qualité | Responsable logistique | Auditeur | Acheteur / partenaire externe | Exportateur | Délégué | Administrateur de groupe | Coach | Routes |
+|---|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|---|
+| `savings:approve` | Approuver ou refuser le reversement de la mise en compte d'un délégué |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | `POST /collector-savings/requests/:id/reject`<br>`POST /collector-savings/requests/:id/approve` |
+| `savings:read` | Consulter la mise en compte (retenues) des délégués |  | ✓ | ✓ | ✓ |  |  |  |  |  | ✓ |  |  | ✓ |  |  |  |  |  | `GET /collector-savings`<br>`GET /collector-savings/requests` |
+| `savings:request` | Clôturer le compte d'un délégué et demander le reversement de sa mise en compte |  | ✓ | ✓ |  |  |  |  |  |  | ✓ |  |  |  |  |  |  |  |  | `POST /collector-savings/collectors/:id/close`<br>`POST /collector-savings/requests` |
 
 ### settings
 | Permission | Rôle du droit | Magasinier | Caissier | Comptable | Direction | Responsable de traçabilité | Responsable cartographie | Cartographe | Agent de terrain | Responsable de magasin | Responsable financier | Responsable qualité | Responsable logistique | Auditeur | Acheteur / partenaire externe | Exportateur | Délégué | Administrateur de groupe | Coach | Routes |

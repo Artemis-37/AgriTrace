@@ -33,11 +33,13 @@ const login = async (email) => (await call('POST', '/auth/login', { body: { emai
   const wh = (await call('POST', '/warehouses', { ...A, body: { code: 'M1', name: 'Magasin' } })).body;
   const k = (await call('POST', '/collectors', { ...A, body: { user_id: col.id } })).body;
   await call('POST', '/convoys/settings', { ...A, body: { transport_unit: '0', retention_per_kg: '10' } });
-  const rec = (await call('POST', '/convoys/receive', { ...M, body: { idempotency_key: 'rv-' + run + '-1', collector_id: k.id, convoy_no: 'ME-001', warehouse_id: wh.id, campaign_id: camp.id, gross_kg: '1000', bags: 10, bags_unloaded: 0, driver_name: 'Chauffeur', truck_no: 'AB 1 CI' } })).body;
+  const prod = (await call('POST', '/products', { ...A, body: { name: 'Cacao', buy_price_per_kg: '1000', sell_price_per_kg: '1500', campaign_id: camp.id } })).body;
+  const rec = (await call('POST', '/convoys/receive', { ...M, body: { idempotency_key: 'rv-' + run + '-1', collector_id: k.id, convoy_no: 'ME-001', warehouse_id: wh.id, campaign_id: camp.id, product_id: prod.id, gross_kg: '1000', bags: 10, bags_unloaded: 0, driver_name: 'Chauffeur', truck_no: 'AB 1 CI' } })).body;
   check('pesée d\'un convoi non déclaré pour un délégué existant', !!(rec.id || rec.reception?.id), rec);
   const rid = rec.id ?? rec.reception?.id;
   await call('POST', '/cash-registers', { ...A, body: { name: 'Caisse' } });
-  const settle = await call('POST', `/convoy-receptions/${rid}/settle`, { ...C, body: { idempotency_key: 'st-' + run, unit_price: '1000', retention_per_kg: '10' } });
+  check('le caissier ne peut pas saisir un autre prix au kilo', (await call('POST', `/convoy-receptions/${rid}/settle`, { ...C, body: { idempotency_key: 'st0-' + run, unit_price: '500' } })).status === 403);
+  const settle = await call('POST', `/convoy-receptions/${rid}/settle`, { ...C, body: { idempotency_key: 'st-' + run, retention_per_kg: '10' } });
   check('réception réglée (retenue 10 000)', settle.status < 300 && Number(settle.body.retention_amount) === 10000, settle.body);
   const sav = async () => (await call('GET', '/collector-savings', C)).body.find((x) => x.collector_id === k.id);
   check('mise en compte visible : 10 000 retenus', Number((await sav()).available) === 10000, await sav());

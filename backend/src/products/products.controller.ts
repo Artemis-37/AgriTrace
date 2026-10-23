@@ -13,6 +13,13 @@ class ProductDto {
   @IsOptional() @Matches(PRICE) buy_price_per_kg?: string;
   @IsOptional() @Matches(PRICE) sell_price_per_kg?: string;
   @IsOptional() @IsBoolean() active?: boolean;
+  /** Campagne (traite) à laquelle s'applique le prix saisi ; sans campagne, le prix est général. */
+  @IsOptional() @IsUUID() campaign_id?: string;
+}
+class PriceDto {
+  @IsOptional() @IsUUID() campaign_id?: string;
+  @IsOptional() @Matches(PRICE) buy_price_per_kg?: string;
+  @IsOptional() @Matches(PRICE) sell_price_per_kg?: string;
 }
 @ApiTags('produits et campagnes')
 @ApiBearerAuth()
@@ -37,6 +44,7 @@ export class ProductsController {
       const row = await this.db.tx(req.org.id, async (c) => (await c.query(
         `INSERT INTO products(organization_id, name, buy_price_per_kg, sell_price_per_kg, active, created_by) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id, name, buy_price_per_kg, sell_price_per_kg, active`,
         [req.org.id, b.name.trim(), b.buy_price_per_kg ?? null, b.sell_price_per_kg ?? null, b.active ?? true, req.user.id])).rows[0]);
+      if (row.buy_price_per_kg != null || row.sell_price_per_kg != null) await this.db.tx(req.org.id, (c) => c.query(`INSERT INTO product_prices(organization_id, product_id, campaign_id, buy_price_per_kg, sell_price_per_kg, created_by) VALUES ($1,$2,$3,$4,$5,$6)`, [req.org.id, row.id, b.campaign_id ?? null, row.buy_price_per_kg, row.sell_price_per_kg, req.user.id]));
       await this.log(req, 'product.create', 'product', row.id, { name: row.name });
       return row;
     } catch (e) { if (isUniqueViolation(e)) throw new ConflictException('Ce produit existe déjà'); throw e; }
@@ -46,13 +54,45 @@ export class ProductsController {
   @RequirePermissions('products:manage')
   async updateProduct(@Param('id', ParseUUIDPipe) id: string, @Body() b: ProductDto, @Req() req: any) {
     try {
-      const row = await this.db.tx(req.org.id, async (c) => (await c.query(
+      const row = await this.db.tx(req.org.id, async (c) => {
+        const before = (await c.query(`SELECT buy_price_per_kg AS b, sell_price_per_kg AS s FROM products WHERE id = $1`, [id])).rows[0];
+        const u = (await c.query(
         `UPDATE products SET name = $2, buy_price_per_kg = $3, sell_price_per_kg = $4, active = coalesce($5, active), updated_at = now(), updated_by = $6 WHERE id = $1
-         RETURNING id, name, buy_price_per_kg, sell_price_per_kg, active`, [id, b.name.trim(), b.buy_price_per_kg ?? null, b.sell_price_per_kg ?? null, b.active ?? null, req.user.id])).rows[0]);
+         RETURNING id, name, buy_price_per_kg, sell_price_per_kg, active`, [id, b.name.trim(), b.buy_price_per_kg ?? null, b.sell_price_per_kg ?? null, b.active ?? null, req.user.id])).rows[0];
+        if (u && before && (String(before.b ?? '') !== String(u.buy_price_per_kg ?? '') || String(before.s ?? '') !== String(u.sell_price_per_kg ?? '')))
+          await c.query(`INSERT INTO product_prices(organization_id, product_id, campaign_id, buy_price_per_kg, sell_price_per_kg, created_by) VALUES ($1,$2,$3,$4,$5,$6)`, [req.org.id, id, b.campaign_id ?? null, u.buy_price_per_kg, u.sell_price_per_kg, req.user.id]);
+        return u;
+      });
       if (!row) throw new NotFoundException();
       await this.log(req, 'product.update', 'product', id, { buy: row.buy_price_per_kg, sell: row.sell_price_per_kg, active: row.active });
       return row;
     } catch (e) { if (isUniqueViolation(e)) throw new ConflictException('Ce produit existe déjà'); throw e; }
+  }
+
+  /** Historique des prix d'un produit (campagne, prix d'achat et de vente, date, auteur). */
+  @Get('products/:id/prices')
+  @RequirePermissions('products:read')
+  prices(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
+    return this.db.tx(req.org.id, async (c) => (await c.query(
+      `SELECT p.id, p.campaign_id, k.name AS campaign_name, p.buy_price_per_kg, p.sell_price_per_kg, p.valid_from, p.created_at, u.full_name AS set_by
+         FROM product_prices p LEFT JOIN campaigns k ON k.id = p.campaign_id LEFT JOIN users u ON u.id = p.created_by
+        WHERE p.product_id = $1 ORDER BY p.created_at DESC`, [id])).rows);
+  }
+
+  /** Fixe ou actualise le prix au kilo (à l'ouverture de la traite, puis à chaque révision) : seul l'administrateur de la coopérative. */
+  @Post('products/:id/prices')
+  @RequirePermissions('products:manage')
+  async setPrice(@Param('id', ParseUUIDPipe) id: string, @Body() b: PriceDto, @Req() req: any) {
+    if (b.buy_price_per_kg === undefined && b.sell_price_per_kg === undefined) throw new BadRequestException("Indiquez un prix d'achat ou de vente");
+    const row = await this.db.tx(req.org.id, async (c) => {
+      const p = (await c.query(`SELECT id, buy_price_per_kg AS b, sell_price_per_kg AS s FROM products WHERE id = $1 FOR UPDATE`, [id])).rows[0];
+      if (!p) throw new NotFoundException();
+      const buy = b.buy_price_per_kg ?? p.b, sell = b.sell_price_per_kg ?? p.s;
+      await c.query(`INSERT INTO product_prices(organization_id, product_id, campaign_id, buy_price_per_kg, sell_price_per_kg, created_by) VALUES ($1,$2,$3,$4,$5,$6)`, [req.org.id, id, b.campaign_id ?? null, buy, sell, req.user.id]);
+      return (await c.query(`UPDATE products SET buy_price_per_kg = $2, sell_price_per_kg = $3, updated_at = now(), updated_by = $4 WHERE id = $1 RETURNING id, name, buy_price_per_kg, sell_price_per_kg, active`, [id, buy, sell, req.user.id])).rows[0];
+    });
+    await this.log(req, 'product.price', 'product', id, { campaign_id: b.campaign_id ?? null, buy: b.buy_price_per_kg, sell: b.sell_price_per_kg });
+    return row;
   }
 
   /** Suppression possible tant qu'aucune pesée n'utilise le produit ; sinon on le désactive. */

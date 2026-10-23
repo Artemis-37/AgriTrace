@@ -66,7 +66,11 @@ function Orders() {
 function CreateOrder({ buyers, onClose, onDone }: { buyers: any[]; onClose: () => void; onDone: () => void }) {
   const chains = useAsync(() => get<any[]>('/value-chains'), []);
   const [key] = useState(idem());
-  const [f, setF] = useState({ buyer_id: '', value_chain_id: '', quantity_kg: '', unit_price: '', description: '' });
+  const { can } = useAuth();
+  const prods = useAsync(() => get<any[]>('/products'), []);
+  const mayPrice = can('products:manage') || can('prices:manage');
+  const [f, setF] = useState({ buyer_id: '', value_chain_id: '', product_id: '', quantity_kg: '', unit_price: '', description: '' });
+  const pickProduct = (id: string) => { const p = (prods.data ?? []).find((x) => x.id === id); setF({ ...f, product_id: id, unit_price: p?.sell_price_per_kg != null ? String(Number(p.sell_price_per_kg)) : '', description: p?.name ?? f.description }); };
   const { busy, error, run } = useAction();
   const set = (k: string) => (e: { target: { value: string } }) => setF({ ...f, [k]: e.target.value });
   return (
@@ -75,11 +79,12 @@ function CreateOrder({ buyers, onClose, onDone }: { buyers: any[]; onClose: () =
       <Field label="Filière"><select value={f.value_chain_id} onChange={set('value_chain_id')}><option value="">—</option>{(chains.data ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></Field>
       <Field label="Désignation"><input value={f.description} onChange={set('description')} /></Field>
       <Field label="Quantité (kg)"><input inputMode="decimal" value={f.quantity_kg} onChange={set('quantity_kg')} /></Field>
-      <Field label="Prix unitaire (par kg)"><input inputMode="decimal" value={f.unit_price} onChange={set('unit_price')} /></Field>
+      <Field label="Produit" hint="Le prix de vente au kilo est celui fixé par l'administrateur de la coopérative."><select value={f.product_id} onChange={(e) => pickProduct(e.target.value)}><option value="">—</option>{(prods.data ?? []).filter((p) => p.active).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></Field>
+      <Field label="Prix unitaire (par kg)" hint={f.product_id && !mayPrice ? 'Prix fixé par l\'administrateur (non modifiable)' : undefined}><input inputMode="decimal" value={f.unit_price} readOnly={!!f.product_id && !mayPrice} onChange={set('unit_price')} /></Field>
       {error && <ErrorBox message={error} />}
       <div className="modal-foot"><button className="btn btn-secondary" onClick={onClose}>Annuler</button>
         <button className="btn" disabled={busy || !f.buyer_id || !f.value_chain_id || !f.quantity_kg || !f.unit_price} onClick={() => run(async () => {
-          await post('/sales-orders', { idempotency_key: key, buyer_id: f.buyer_id, value_chain_id: f.value_chain_id, lines: [{ description: f.description || undefined, quantity_kg: f.quantity_kg, unit_price: f.unit_price }] }); onDone();
+          await post('/sales-orders', { idempotency_key: key, buyer_id: f.buyer_id, value_chain_id: f.value_chain_id, lines: [{ ...(f.product_id && { product_id: f.product_id }), description: f.description || undefined, quantity_kg: f.quantity_kg, unit_price: f.unit_price }] }); onDone();
         })}>Créer</button></div>
     </Modal>
   );
