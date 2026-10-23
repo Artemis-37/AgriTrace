@@ -14,10 +14,10 @@ const demo = JSON.parse(fs.readFileSync(process.env.DEMO_JSON ?? '/tmp/demo-acco
 // Coach, agent de terrain et collecteur se connectent uniquement par l'application mobile : pas de capture du portail pour eux.
 // Pages à photographier par profil : [nom du fichier, route, onglet facultatif]
 const PAGES = {
-  coop_admin: [['accueil', '/'], ['producteurs', '/producteurs'], ['parcelles', '/parcelles'], ['convois', '/convois'], ['finances', '/finances'], ['equipe', '/equipe'], ['operations', '/operations'], ['rapports', '/rapports'], ['rapprochement', '/finances', 'Rapprochement bancaire'], ['envoi-auto', '/rapports', 'Envoi automatique'], ['compte', '/compte']],
-  magasinier: [['accueil', '/'], ['convois', '/convois'], ['stocks', '/stocks'], ['inventaire', '/inventaire'], ['operations', '/operations'], ['compte', '/compte']],
-  caissier: [['accueil', '/'], ['convois', '/convois'], ['finances', '/finances'], ['operations', '/operations']],
-  comptable: [['accueil', '/'], ['finances', '/finances'], ['rapports', '/rapports']],
+  coop_admin: [['accueil', '/'], ['pesees', '/pesees'], ['parametres', '/parametres'], ['producteurs', '/producteurs'], ['parcelles', '/parcelles'], ['convois', '/convois'], ['finances', '/finances'], ['equipe', '/equipe'], ['operations', '/operations'], ['rapports', '/rapports'], ['rapprochement', '/finances', 'Rapprochement bancaire'], ['envoi-auto', '/rapports', 'Envoi automatique'], ['compte', '/compte']],
+  magasinier: [['accueil', '/'], ['pesees', '/pesees'], ['convois', '/convois'], ['stocks', '/stocks'], ['inventaire', '/inventaire'], ['operations', '/operations'], ['compte', '/compte']],
+  caissier: [['accueil', '/'], ['caisse', '/caisse'], ['convois', '/convois'], ['finances', '/finances'], ['operations', '/operations']],
+  comptable: [['accueil', '/'], ['comptabilite', '/comptabilite'], ['partenaires', '/partenaires'], ['finances', '/finances'], ['rapports', '/rapports']],
   direction: [['accueil', '/'], ['finances', '/finances'], ['prefinancement', '/prefinancement'], ['rapports', '/rapports'], ['operations', '/operations']],
   responsable_tracabilite: [['accueil', '/'], ['producteurs', '/producteurs'], ['declarations', '/declarations'], ['missions', '/missions'], ['stocks', '/stocks']],
   responsable_cartographie: [['accueil', '/'], ['parcelles', '/parcelles'], ['cartographie', '/cartographie']],

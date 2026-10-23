@@ -8,6 +8,20 @@
       "visible": true
     },
     {
+      "name": "pesees",
+      "route": "/pesees",
+      "tab": null,
+      "file": "coop_admin-pesees.png",
+      "visible": true
+    },
+    {
+      "name": "parametres",
+      "route": "/parametres",
+      "tab": null,
+      "file": "coop_admin-parametres.png",
+      "visible": true
+    },
+    {
       "name": "producteurs",
       "route": "/producteurs",
       "tab": null,
@@ -87,6 +101,13 @@
       "visible": true
     },
     {
+      "name": "pesees",
+      "route": "/pesees",
+      "tab": null,
+      "file": "magasinier-pesees.png",
+      "visible": true
+    },
+    {
       "name": "convois",
       "route": "/convois",
       "tab": null,
@@ -131,6 +152,13 @@
       "visible": true
     },
     {
+      "name": "caisse",
+      "route": "/caisse",
+      "tab": null,
+      "file": "caissier-caisse.png",
+      "visible": true
+    },
+    {
       "name": "convois",
       "route": "/convois",
       "tab": null,
@@ -158,6 +186,20 @@
       "route": "/",
       "tab": null,
       "file": "comptable-accueil.png",
+      "visible": true
+    },
+    {
+      "name": "comptabilite",
+      "route": "/comptabilite",
+      "tab": null,
+      "file": "comptable-comptabilite.png",
+      "visible": true
+    },
+    {
+      "name": "partenaires",
+      "route": "/partenaires",
+      "tab": null,
+      "file": "comptable-partenaires.png",
       "visible": true
     },
     {
