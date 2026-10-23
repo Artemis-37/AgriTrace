@@ -22,7 +22,8 @@ export class CreateDeclarationDto {
   @IsUUID() producer_id: string;
   @IsUUID() value_chain_id: string;
   @IsUUID() campaign_id: string;
-  @IsDateString() operation_date: string;
+  /** Date de l'achat saisie par le délégué ; à défaut, la date du jour de l'enregistrement. */
+  @IsOptional() @IsDateString() operation_date?: string;
   @IsOptional() @IsInt() @Min(0) bags?: number;
   @Dec(3) quantity: string;
   @IsString() @Length(1, 20) unit: string;
@@ -76,6 +77,10 @@ export class DeclarationsController {
         const prev = await c.query(`SELECT * FROM purchase_declarations WHERE idempotency_key = $1`, [b.idempotency_key]);
         if (prev.rowCount) return { row: prev.rows[0], replay: true };
 
+        // Date de l'achat : celle saisie par le délégué, sinon le jour de l'enregistrement. Une date future est refusée.
+        const today = new Date().toISOString().slice(0, 10);
+        const opDate = b.operation_date ? b.operation_date.slice(0, 10) : today;
+        if (opDate > new Date(Date.now() + 86400000).toISOString().slice(0, 10)) throw new BadRequestException("La date de l'achat ne peut pas être dans le futur");
         const mine = await this.myCollector(c, req.user.id);
         const collectorId = canValidate && b.collector_id ? b.collector_id : mine;
         if (!collectorId) throw new ForbiddenException("Aucun compte délégué actif pour cet utilisateur dans cette organisation");
@@ -103,7 +108,7 @@ export class DeclarationsController {
                                               purchase_receipt_series, purchase_receipt_no, purchase_receipt_entered, purchase_receipt_source, receipt_conflict_with)
            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18) RETURNING *`;
         const args = (conflict: string | null) => [b.id, req.org.id, b.idempotency_key, collectorId, b.producer_id, b.value_chain_id, b.campaign_id,
-           b.operation_date, b.bags ?? null, b.quantity, b.unit, b.notes ?? null, req.user.id, rc.series, rc.no, rc.entered, rc.source, conflict];
+           opDate, b.bags ?? null, b.quantity, b.unit, b.notes ?? null, req.user.id, rc.series, rc.no, rc.entered, rc.source, conflict];
         await c.query('SAVEPOINT ins');
         let ins;
         try { ins = await c.query(insertSql, args(rc.conflictWith)); }

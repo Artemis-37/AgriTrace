@@ -57,7 +57,7 @@ export default function NewPurchase({ onClose, onDone }: { onClose: () => void; 
           <Field label="Poids (kg)"><input inputMode="decimal" value={f.kg} onChange={set('kg')} placeholder="ex. 650" autoFocus /></Field>
           <Field label="Nombre de sacs"><input inputMode="numeric" value={f.bags} onChange={set('bags')} placeholder="ex. 10" /></Field>
           <Field label="N° du reçu"><input value={f.receipt} onChange={set('receipt')} maxLength={40} /></Field>
-          <Field label="Date de l'achat"><input type="date" value={f.operation_date} onChange={set('operation_date')} /></Field>
+          <Field label="Date de l'achat" hint="Laissée vide, la date du jour est retenue."><input type="date" max={new Date().toISOString().slice(0, 10)} value={f.operation_date} onChange={set('operation_date')} /></Field>
         </>
       )}
       {act.error && <ErrorBox message={act.error} />}
@@ -66,7 +66,7 @@ export default function NewPurchase({ onClose, onDone }: { onClose: () => void; 
         <button className="btn" disabled={act.busy || !valid || !org} onClick={() => act.run(async () => {
           const id = crypto.randomUUID ? crypto.randomUUID() : idem();
           await enqueue(org!.id, 'purchase_declaration.create', {
-            id, producer_id: f.producer_id, value_chain_id: chainId, campaign_id: campId, operation_date: f.operation_date,
+            id, producer_id: f.producer_id, value_chain_id: chainId, campaign_id: campId, operation_date: f.operation_date || new Date().toISOString().slice(0, 10),
             quantity: f.kg, unit: 'kg', bags: Number(f.bags), purchase_receipt_no: f.receipt.trim(),
           }, `Achat de ${f.kg} kg — ${producer?.last_name ?? ''}`);
           await enqueue(org!.id, 'purchase_declaration.submit', { id }, `Soumission de l'achat — ${producer?.last_name ?? ''}`);

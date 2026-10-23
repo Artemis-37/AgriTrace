@@ -37,5 +37,14 @@ async function call(m, p, { token, org, body, form } = {}) { const r = await fet
   check('la liste porte code, nom, section, village, téléphone', row && row.producer_code === 'P-001' && /BAMBA/.test(row.producer_name) && row.producer_section === 'Hiré' && row.producer_village === 'Zakoua' && row.producer_phone === '0701020304', row);
   check('la liste porte superficie et estimation', row && Number(row.producer_area_ha) === 4.5 && Number(row.producer_estimated_kg) === 3200, row);
   check('le délégué voit aussi les informations du producteur', Array.isArray(listCol) && listCol[0]?.producer_code === 'P-001' && listCol[0]?.producer_village === 'Zakoua', listCol);
+  // date de l'achat : saisie, sinon la date du jour ; une date future est refusée
+  const mk = (extra, k) => call('POST', '/purchase-declarations', { token: tc, org: org.id, body: { id: require('crypto').randomUUID(), idempotency_key: 'decl-' + k + '-' + run, producer_id: pr.id, value_chain_id: vc.id, campaign_id: camp.id, bags: 1, quantity: '1', unit: 'sac', ...extra } });
+  const today = new Date().toISOString().slice(0, 10);
+  const noDate = await mk({}, 'nodate');
+  check('sans date saisie : la date du jour est retenue', noDate.status === 201 && String(noDate.body.operation_date ?? noDate.body.row?.operation_date).slice(0, 10) === today, noDate.body);
+  const withDate = await mk({ operation_date: '2026-02-12' }, 'date');
+  check('date saisie par le délégué : conservée', withDate.status === 201 && String(withDate.body.operation_date ?? withDate.body.row?.operation_date).slice(0, 10) === '2026-02-12', withDate.body);
+  const fut = await mk({ operation_date: '2099-01-01' }, 'fut');
+  check('date future refusée', fut.status === 400, fut.body);
   console.log(`${ok} contrôles réussis, ${ko} en échec`); process.exit(ko ? 1 : 0);
 })();
