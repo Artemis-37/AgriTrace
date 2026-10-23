@@ -1,3 +1,4 @@
+import { ANALYSIS } from '../analysis';
 import QRCode from 'qrcode';
 import { FormEvent, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -23,39 +24,50 @@ function Qr({ text }: { text: string }) {
 
 const fmtKg = (v: string | null | undefined) => (v == null ? '' : `${v} kg`);
 
-/** Bulletin de pesée : double pesée, tare, réfaction, poids net payé, analyse, visas. Les lignes sans donnée ne sont pas imprimées. */
+/** Bulletin de pesée, présenté par parties : connaissement, pesée, analyse, livraison produit, visas. Les lignes sans donnée ne sont pas imprimées. */
 function Bulletin({ r }: { r: any }) {
   const b = r.bulletin; const o = r.organization ?? {};
-  const an = Object.entries(b.analysis ?? {}) as [string, string][];
-  const row = (label: string, v: any, strong = false) => (v == null || v === '' ? null : <tr className={strong ? 'net' : ''}><th>{label}</th><td>{v}</td></tr>);
+  const rank = (k: string) => { const i = ANALYSIS.indexOf(k); return i < 0 ? 99 : i; };
+  const an = (Object.entries(b.analysis ?? {}) as [string, string][]).sort((x, y) => rank(x[0]) - rank(y[0]));
+  const L = (label: string, v: any, strong = false) => (v == null || v === '' ? null : <div className={`bp-l${strong ? ' net' : ''}`}><span>{label}</span><b>{v}</b></div>);
   const qr = `AGRITRACE|${b.no}|${b.convoy_no}|NET ${b.net} kg|${String(b.received_at).slice(0, 10)}`;
   return (
-    <>
-      <div className="bp-head"><div><h2>BULLETIN DE PESÉE <span className="receipt-no">n° {b.no}</span></h2>
-        <p>{o.commercial_name || o.name} · Magasin : {b.warehouse}</p></div><Qr text={qr} /></div>
+    <div className="bp">
+      <div className="bp-top">
+        <div><small>Date pesée</small><b>{dateTime(b.weigh_in_at ?? b.received_at)}</b></div>
+        <div className="bp-title">BULLETIN DE PESÉE</div>
+        <div className="bp-no"><small>N° Bulletin</small><b>{b.no}</b></div>
+      </div>
       {r.duplicate && <p className="receipt-dup">DUPLICATA n°{r.copy_no}</p>}
       {r.cancelled && <p className="receipt-dup">OPÉRATION ANNULÉE</p>}
       {b.status === 'pending_variance' && <p className="receipt-dup">ÉCART À VALIDER — NON PAYABLE</p>}
-      <table><tbody>
-        <tr className="sect"><th colSpan={2}>1. Identification</th></tr>
-        {row('Date de réception', dateTime(b.received_at))}{row('Connaissement n°', b.convoy_no)}{row('Collecteur', b.collector)}
-        {row('Chauffeur', b.driver)}{row('Camion', b.truck)}{row('Remorque', b.trailer)}{row('Provenance', b.origin)}{row('Qualité / grade', b.grade)}
-        <tr className="sect"><th colSpan={2}>2. Pesées</th></tr>
-        {row('Poids déclaré', fmtKg(b.declared))}
-        {row(`Pesée entrée, camion chargé${b.scale_in ? ` (${b.scale_in})` : ''}`, fmtKg(b.weigh_in))}
-        {row(`Pesée sortie, camion vide${b.scale_out ? ` (${b.scale_out})` : ''}`, fmtKg(b.weigh_out))}
-        {row('Poids brut (entrée − sortie)', fmtKg(b.gross))}{row('Tare des sacs', fmtKg(b.bag_tare))}{row('Réfaction', fmtKg(b.refaction))}
-        {row('POIDS NET PAYÉ', fmtKg(b.net), true)}{row('Écart / poids déclaré', b.variance == null ? null : `${b.variance} kg`)}
-        <tr className="sect"><th colSpan={2}>3. Sacs</th></tr>
-        {row('Sacs déclarés', b.declared_bags)}{row('Sacs reçus', b.bags)}{row('Sacs déchargés', b.bags_unloaded)}{row('Sacs refusés', b.bags_refused)}
-        {an.length > 0 && <tr className="sect"><th colSpan={2}>4. Analyse</th></tr>}
-        {an.map(([k, v]) => row(k, v))}
-      </tbody></table>
+
+      <h3>Indication connaissement</h3>
+      <div className="bp-2">
+        <div>{L('Propriétaire', o.commercial_name || o.name)}{L('Origine', b.origin)}{L('Chauffeur', b.driver)}{L('N° tracteur', b.truck)}{L('N° remorque', b.trailer)}{L('Poids déclaré', fmtKg(b.declared))}</div>
+        <div>{L('Fournisseur', b.collector)}{L('Connaissement', b.convoy_no)}{L('Nb sacs déclaré', b.declared_bags)}{L('Destination', b.warehouse)}{L('Date réception', dateTime(b.received_at))}</div>
+      </div>
+
+      <h3>Pesée</h3>
+      <div className="bp-2">
+        <div>{L("Poids d'entrée", fmtKg(b.weigh_in))}{L("Date d'entrée", b.weigh_in ? dateTime(b.weigh_in_at) : null)}{L("Pont d'entrée", b.scale_in)}</div>
+        <div>{L('Poids de sortie', fmtKg(b.weigh_out))}{L('Date de sortie', b.weigh_out ? dateTime(b.weigh_out_at) : null)}{L('Pont de sortie', b.scale_out)}</div>
+      </div>
+
+      {an.length > 0 && <><h3>Analyse</h3>
+        <div className="bp-3">{an.map(([k, v]) => L(k, v))}</div></>}
+
+      <h3>Livraison produit</h3>
+      <div className="bp-2 bp-liv">
+        <div>{L('Poids brut (kg)', fmtKg(b.gross))}{L('Sacs acceptés', b.bags_unloaded != null ? b.bags_unloaded - (b.bags_refused ?? 0) : b.bags)}{L('Tare sacs acceptés', fmtKg(b.bag_tare))}{L('Poids net livré', fmtKg(b.net_delivered))}{L('Réfaction', fmtKg(b.refaction))}{L('POIDS NET PAYÉ', fmtKg(b.net), true)}</div>
+        <div>{L('Nb sacs déchargés', b.bags_unloaded)}{L('Sacs refusés', b.bags_refused)}{L('Manquants', b.missing)}{L('Écart / poids déclaré', b.variance == null ? null : `${b.variance} kg`)}{L('Poids moyen sac accepté', fmtKg(b.avg_bag))}{L('Classement', b.grade)}
+          <div className="bp-qr"><Qr text={qr} /></div></div>
+      </div>
       {b.notes && <p><strong>Observations :</strong> {b.notes}</p>}
       <footer className="bp-visas">
-        <div><span>Magasinier : {r.operator ?? ''}</span></div><div><span>Chauffeur</span></div><div><span>Collecteur</span></div><div><span>Responsable</span></div>
+        <div><span>Visa pont-bascule : {r.operator ?? ''}</span></div><div><span>Visa fournisseur</span></div><div><span>Visa responsable</span></div>
       </footer>
-    </>
+    </div>
   );
 }
 

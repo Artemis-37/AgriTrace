@@ -1,3 +1,4 @@
+import { ANALYSIS } from '../analysis';
 import { useEffect, useState } from 'react';
 import { useDeepLink } from '../notifTarget';
 import { get, idem, post } from '../api';
@@ -124,7 +125,8 @@ function Receive() {
   const [bags, setBags] = useState('');
   const [notes, setNotes] = useState('');
   const [done, setDone] = useState('');
-  const [d, setD] = useState({ wIn: '', wOut: '', scaleIn: '', scaleOut: '', tare: '', ref: '', grade: '', trailer: '', origin: '', unl: '', refused: '', humidity: '', waste: '' });
+  const [d, setD] = useState({ wIn: '', wOut: '', scaleIn: '', scaleOut: '', tare: '', ref: '', grade: '', trailer: '', origin: '', unl: '', refused: '' });
+  const [an, setAn] = useState<Record<string, string>>({});
   const setF = (k: keyof typeof d) => (e: any) => setD((x) => ({ ...x, [k]: e.target.value }));
   const exp0 = data?.expected.find((v) => v.collector_id === collector && v.convoy_no === convoyNo.trim());
   const content = useAsync(() => (exp0?.declaration_count > 0 ? get<any[]>(`/convoys/${exp0.id}/declarations`) : Promise.resolve([] as any[])), [exp0?.id]);
@@ -168,8 +170,8 @@ function Receive() {
       <Field label="Nombre de sacs reçus"><input inputMode="numeric" value={bags} onChange={(e) => setBags(e.target.value)} /></Field>
       <Field label="Sacs déchargés"><input inputMode="numeric" value={d.unl} onChange={setF('unl')} /></Field>
       <Field label="Sacs refusés"><input inputMode="numeric" value={d.refused} onChange={setF('refused')} /></Field>
-      <Field label="Humidité (%)"><input value={d.humidity} onChange={setF('humidity')} maxLength={10} /></Field>
-      <Field label="Déchets (%)"><input value={d.waste} onChange={setF('waste')} maxLength={10} /></Field>
+      <h3>Analyse</h3>
+      <div className="grid-2">{ANALYSIS.map((k) => <Field key={k} label={k}><input inputMode="decimal" value={an[k] ?? ''} onChange={(e) => setAn((x) => ({ ...x, [k]: e.target.value }))} maxLength={10} /></Field>)}</div>
       <h3>Transport</h3>
       <Field label="Remorque"><input value={d.trailer} onChange={setF('trailer')} maxLength={40} /></Field>
       <Field label="Provenance"><input value={d.origin} onChange={setF('origin')} maxLength={80} /></Field>
@@ -182,8 +184,8 @@ function Receive() {
           ...(twoWeighings && { weigh_in_kg: d.wIn, weigh_out_kg: d.wOut }), ...(d.scaleIn.trim() && { scale_in: d.scaleIn.trim() }), ...(d.scaleOut.trim() && { scale_out: d.scaleOut.trim() }),
           ...(d.tare && { bag_tare_kg: d.tare }), ...(d.ref && { refaction_kg: d.ref }), ...(d.grade.trim() && { grade: d.grade.trim() }), ...(d.trailer.trim() && { trailer_no: d.trailer.trim() }),
           ...(d.origin.trim() && { origin: d.origin.trim() }), ...(d.unl && { bags_unloaded: Number(d.unl) }), ...(d.refused && { bags_refused: Number(d.refused) }),
-          ...((d.humidity.trim() || d.waste.trim()) && { analysis: { ...(d.humidity.trim() && { 'Humidité %': d.humidity.trim() }), ...(d.waste.trim() && { 'Déchets %': d.waste.trim() }) } }) }, `Réception du convoi ${convoyNo.trim()}`);
-        setDone(`Convoi ${convoyNo.trim()} enregistré : il sera transmis à la caisse dès l'envoi au serveur.`); setConvoyNo(''); setKg(''); setBags(''); setNotes(''); setD({ wIn: '', wOut: '', scaleIn: '', scaleOut: '', tare: '', ref: '', grade: '', trailer: '', origin: '', unl: '', refused: '', humidity: '', waste: '' }); reload();
+          ...(Object.values(an).some((v) => v.trim()) && { analysis: Object.fromEntries(Object.entries(an).filter(([, v]) => v.trim()).map(([k, v]) => [k, v.trim()])) }) }, `Réception du convoi ${convoyNo.trim()}`);
+        setDone(`Convoi ${convoyNo.trim()} enregistré : il sera transmis à la caisse dès l'envoi au serveur.`); setConvoyNo(''); setKg(''); setBags(''); setNotes(''); setD({ wIn: '', wOut: '', scaleIn: '', scaleOut: '', tare: '', ref: '', grade: '', trailer: '', origin: '', unl: '', refused: '' }); setAn({}); reload();
       })}>Valider la réception et transmettre à la caisse</button></div>
     </Card>
   );

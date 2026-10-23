@@ -259,6 +259,8 @@ export class ConvoysController {
       }
       if (net == null || Number(net) <= 0) throw new BadRequestException('Poids total doit être supérieur à zéro');
       b.total_kg = net;
+      const an = Object.entries(b.analysis ?? {});
+      if (an.length > 30 || an.some(([k, v]) => k.length > 40 || typeof v !== 'string' || v.length > 10)) throw new BadRequestException('Analyse invalide (30 lignes au plus, valeurs de 10 caractères au plus)');
       if (b.bags_unloaded != null && b.bags_refused != null && b.bags_unloaded < b.bags_refused) throw new BadRequestException('Sacs refusés supérieurs aux sacs déchargés');
       const v = (await c.query(`SELECT * FROM convoys WHERE collector_id = $1 AND convoy_no = $2 FOR UPDATE`, [b.collector_id, b.convoy_no.trim()])).rows[0];
       if (!v) throw new NotFoundException(`Aucun convoi « ${b.convoy_no.trim()} » pour ce collecteur`);

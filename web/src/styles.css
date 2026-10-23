@@ -194,13 +194,17 @@ dl.kv dd { margin: 0; }
 .receipt-sheet table { width: 100%; border-collapse: collapse; margin: .6rem 0; }
 .receipt-sheet th, .receipt-sheet td { border: 1px solid #444; padding: .3rem .5rem; text-align: left; }
 .receipt-sheet th { width: 40%; background: #f0f0f0; }
-.receipt-sheet .bp-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
-.receipt-sheet .bp-head h2 { font-size: 1.3rem; letter-spacing: .04em; }
-.receipt-sheet .bp-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-.receipt-sheet .bp-cols th { width: 48%; }
-.receipt-sheet tr.sect th { background: #fff; color: #000; width: auto; font-size: .85rem; letter-spacing: .05em; border-top: 2px solid #000; border-bottom: 2px solid #000; text-align: left; }
-.receipt-sheet tr.net th, .receipt-sheet tr.net td { font-weight: 800; font-size: 1.15rem; background: #e6e6e6; }
-.receipt-sheet .bp-visas { gap: 1rem; }
+.receipt-sheet .bp-top { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 1rem; margin: .5rem 0 .2rem; }
+.receipt-sheet .bp-top small { display: block; font-size: .7rem; text-transform: uppercase; }
+.receipt-sheet .bp-no { text-align: right; }
+.receipt-sheet .bp-title { border: 3px solid #000; padding: .35rem 1.4rem; font-weight: 800; font-size: 1.2rem; letter-spacing: .08em; }
+.receipt-sheet .bp h3 { text-align: center; text-transform: uppercase; font-size: .85rem; letter-spacing: .08em; margin: .5rem 0 .2rem; padding: .1rem 0; border-top: 2px solid #000; border-bottom: 1px solid #000; }
+.receipt-sheet .bp-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 2rem; }
+.receipt-sheet .bp-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0 1.5rem; }
+.receipt-sheet .bp-l { display: flex; justify-content: space-between; gap: .5rem; padding: .04rem 0; font-size: .88rem; border-bottom: 1px dotted #999; }
+.receipt-sheet .bp-l.net { font-size: 1.1rem; border-bottom: 2px solid #000; border-top: 1px solid #000; margin-top: .2rem; }
+.receipt-sheet .bp-qr { text-align: right; margin-top: .2rem; }
+.receipt-sheet .bp-visas { margin: .8rem 0 .3rem; gap: 1rem; }
 .receipt-sheet footer { display: flex; gap: 2rem; margin: 2.5rem 0 1rem; }
 .receipt-sheet footer div { flex: 1; border-top: 1px solid #000; padding-top: .3rem; text-align: center; }
 .receipt-dup { font-weight: 700; border: 2px solid #000; display: inline-block; padding: .1rem .6rem; }
@@ -212,8 +216,5 @@ dl.kv dd { margin: 0; }
 /* Missions validées : grisées, non cliquables (retirées de la liste après le délai réglé par l'ADG) */
 .row-done { opacity: .5; filter: grayscale(1); pointer-events: none; }
 .row-done-open { pointer-events: auto; } /* les responsables gardent l'accès (clôture, historique) */
-.receipt-sheet .bp-head + * , .receipt-sheet table { font-size: .9rem; }
-.receipt-sheet table th, .receipt-sheet table td { padding: .08rem .45rem; }
-.receipt-sheet table { margin: .3rem 0; }
-.receipt-sheet .bp-visas { margin-bottom: .3rem; }
-.receipt-sheet .bp-visas { margin-top: 1.5rem; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 1rem; }
+@media (max-width: 600px) { .grid-2 { grid-template-columns: 1fr; } }

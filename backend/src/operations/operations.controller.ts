@@ -114,6 +114,9 @@ export class OperationsController {
             warehouse: r.warehouse, grade: r.grade, status: r.status,
             weigh_in: w(r.weigh_in_kg), weigh_in_at: r.weigh_in_at, scale_in: r.scale_in, weigh_out: w(r.weigh_out_kg), weigh_out_at: r.weigh_out_at, scale_out: r.scale_out,
             gross: w(r.gross_kg), bag_tare: w(r.bag_tare_kg), refaction: w(r.refaction_kg), net: w(r.total_kg), declared: w(r.declared_kg), variance: r.variance_kg == null ? null : (Number(r.variance_kg) > 0 ? '+' : '') + nb(r.variance_kg),
+            net_delivered: r.gross_kg == null ? null : w(Number(r.gross_kg) - Number(r.bag_tare_kg ?? 0)),
+            avg_bag: r.bags > 0 ? nb(Number(r.total_kg) / r.bags) : null,
+            missing: r.declared_bags != null && r.bags_unloaded != null ? r.declared_bags - r.bags_unloaded : null,
             bags: r.bags, bags_unloaded: r.bags_unloaded, bags_refused: r.bags_refused, declared_bags: r.declared_bags, analysis: r.analysis ?? {}, notes: r.notes,
           };
         }
