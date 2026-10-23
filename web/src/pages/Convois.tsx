@@ -395,7 +395,7 @@ function Payout({ onClose }: { onClose: () => void }) {
       {data && (
         <>
           <Field label="Délégué"><select value={col} onChange={(e) => setCol(e.target.value)}><option value="">—</option>{data.accounts.map((a) => <option key={a.id} value={a.owner_id}>{a.name} — solde {Number(a.balance).toLocaleString('fr-FR')}</option>)}</select></Field>
-          <Field label="Caisse (session ouverte)"><select value={session} onChange={(e) => setSession(e.target.value)}><option value="">—</option>{data.registers.map((r) => <option key={r.id} value={r.open_session_id}>{r.name}</option>)}</select></Field>
+          <Field label="Caisse (caissier connecté)"><select value={session} onChange={(e) => setSession(e.target.value)}><option value="">—</option>{data.registers.map((r) => <option key={r.id} value={r.open_session_id}>{r.name}</option>)}</select></Field>
           <Field label="Montant (FCFA)" hint={acc ? `Maximum : ${Number(acc.balance).toLocaleString('fr-FR')}` : undefined}><input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} /></Field>
           {act.error && <ErrorBox message={act.error} />}
           {done && <p className="notice" role="status">{done}</p>}
@@ -473,7 +473,7 @@ function Advance({ kind, collectorId, onClose, onDone }: { kind: 'advance' | 'ca
       <Field label="Montant (FCFA)"><input inputMode="decimal" value={f.amount} onChange={(e) => setF({ ...f, amount: e.target.value })} /></Field>
       <Field label="N° de pièce"><input value={f.piece} onChange={(e) => setF({ ...f, piece: e.target.value })} maxLength={60} /></Field>
       <Field label="Date de l'opération (laisser vide : aujourd'hui)"><input type="date" value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} /></Field>
-      {kind === 'advance' && <Field label="Caisse (session ouverte)"><select value={f.session} onChange={(e) => setF({ ...f, session: e.target.value })}><option value="">—</option>{(regs.data ?? []).map((r: any) => <option key={r.id} value={r.open_session_id}>{r.name}</option>)}</select></Field>}
+      {kind === 'advance' && <Field label="Caisse (caissier connecté)"><select value={f.session} onChange={(e) => setF({ ...f, session: e.target.value })}><option value="">—</option>{(regs.data ?? []).map((r: any) => <option key={r.id} value={r.open_session_id}>{r.name}</option>)}</select></Field>}
       {act.error && <ErrorBox message={act.error} />}
       <div className="modal-actions"><button className="btn btn-secondary" onClick={onClose}>Annuler</button>
         <button className="btn" disabled={act.busy || !ok} onClick={() => act.run(async () => {

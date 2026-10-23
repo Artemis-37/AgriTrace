@@ -24,8 +24,10 @@ class AccountDto {
   /** Solde initial à l'ouverture du compte dans AgriTrace (entrée tracée « Solde initial »). */
   @IsOptional() @Dec(4) opening_balance?: string;
 }
-class OpenSessionDto { @Dec(4) opening_amount: string; }
-class CloseSessionDto { @Dec(4) counted_amount: string; }
+/** Connexion du caissier à la caisse : pas de fonds d'ouverture exigé (la caisse n'encaisse pas). */
+class OpenSessionDto { @IsOptional() @Dec(4) opening_amount?: string; }
+/** Déconnexion : aucun comptage exigé ; un montant compté reste accepté (régularisation d'écart facultative). */
+class CloseSessionDto { @IsOptional() @Dec(4) counted_amount?: string; }
 export class TransactionDto {
   @IsString() @Length(8, 100) idempotency_key: string;
   @IsUUID() account_id: string;
@@ -144,7 +146,9 @@ export class FinanceController {
   registers(@Req() req: any) {
     return this.db.tx(req.org.id, async (c) => (await c.query(
       `SELECT r.id, r.name, r.currency, r.status, r.account_id,
-              (SELECT id FROM cash_sessions s WHERE s.register_id = r.id AND s.status = 'open') AS open_session_id
+              (SELECT id FROM cash_sessions s WHERE s.register_id = r.id AND s.status = 'open') AS open_session_id,
+              (SELECT u.full_name FROM cash_sessions s JOIN users u ON u.id = s.opened_by WHERE s.register_id = r.id AND s.status = 'open') AS open_session_by,
+              (SELECT s.opened_by FROM cash_sessions s WHERE s.register_id = r.id AND s.status = 'open') AS open_session_by_id
          FROM cash_registers r ORDER BY r.name`)).rows);
   }
 
@@ -168,7 +172,7 @@ export class FinanceController {
   }
 
   @Post('cash-registers/:id/sessions')
-  @RequirePermissions('cash:operate')
+  @RequirePermissions('cash:session')
   async openSession(@Param('id', ParseUUIDPipe) id: string, @Body() b: OpenSessionDto, @Req() req: any) {
     const row = await this.db.tx(req.org.id, async (c) => {
       const r = await c.query(`SELECT id, name, account_id, status FROM cash_registers WHERE id = $1 FOR UPDATE`, [id]);
@@ -178,19 +182,19 @@ export class FinanceController {
         throw new ConflictException('Une session est déjà ouverte sur cette caisse');
       const s = (await c.query(
         `INSERT INTO cash_sessions(organization_id, register_id, opened_by, opening_amount) VALUES ($1,$2,$3,$4) RETURNING id, register_id, opening_amount, opened_at, status`,
-        [req.org.id, id, req.user.id, b.opening_amount])).rows[0];
+        [req.org.id, id, req.user.id, b.opening_amount ?? '0'])).rows[0];
       // Le fonds de caisse d'ouverture est une entrée tracée du compte de la caisse
-      if (Number(b.opening_amount) > 0)
+      if (Number(b.opening_amount ?? 0) > 0)
         await c.query(
           `INSERT INTO financial_transactions(organization_id, idempotency_key, account_id, cash_session_id, direction, amount, currency, reason, created_by)
            SELECT $1::uuid, $2::text, a.id, $3::uuid, 'in', $4::numeric, a.currency, 'Fonds de caisse à l''ouverture', $5::uuid FROM financial_accounts a WHERE a.id = $6::uuid`,
           [req.org.id, `opening:${s.id}`, s.id, b.opening_amount, req.user.id, r.rows[0].account_id]);
       // Écriture comptable correspondante : débit caisse, crédit 585 « Virements de fonds » (compte de passage, à affecter par le comptable)
-      if (Number(b.opening_amount) > 0) {
+      if (Number(b.opening_amount ?? 0) > 0) {
         const acc = (await c.query(`SELECT owner_type, accounting_code FROM financial_accounts WHERE id = $1`, [r.rows[0].account_id])).rows[0];
         await postEntry(c, {
           orgId: req.org.id, userId: req.user.id, journal: 'CAI', date: today(), label: `Fonds de caisse à l'ouverture (${r.rows[0].name ?? 'caisse'})`,
-          lines: [{ code: accountingCodeOf(acc), debit: b.opening_amount }, { code: '585', credit: b.opening_amount }],
+          lines: [{ code: accountingCodeOf(acc), debit: b.opening_amount! }, { code: '585', credit: b.opening_amount! }],
           idempotencyKey: `opening-entry:${s.id}`, referenceType: 'cash_session', referenceId: s.id,
         });
       }
@@ -202,7 +206,7 @@ export class FinanceController {
 
   /** Clôture : montant attendu = solde du compte de la caisse ; l'écart compté − attendu est conservé. */
   @Post('cash-sessions/:id/close')
-  @RequirePermissions('cash:operate')
+  @RequirePermissions('cash:session')
   async closeSession(@Param('id', ParseUUIDPipe) id: string, @Body() b: CloseSessionDto, @Req() req: any) {
     const row = await this.db.tx(req.org.id, async (c) => {
       const s = await c.query(
@@ -211,10 +215,12 @@ export class FinanceController {
       if (s.rows[0].status !== 'open') throw new BadRequestException('Session déjà clôturée');
       await c.query(`SELECT 1 FROM financial_accounts WHERE id = $1 FOR UPDATE`, [s.rows[0].account_id]);
       const exp = (await c.query(BALANCE_SQL, [s.rows[0].account_id])).rows[0].balance;
+      // Sans comptage (cas normal : la caisse ne se clôture pas), ni écart ni montant attendu ne sont enregistrés.
       return (await c.query(
-        `UPDATE cash_sessions SET status = 'closed', closed_by = $2, closed_at = now(), counted_amount = $3, expected_amount = $4, variance = $3::numeric - $4::numeric
+        `UPDATE cash_sessions SET status = 'closed', closed_by = $2, closed_at = now(), counted_amount = $3::numeric, expected_amount = CASE WHEN $3::numeric IS NULL THEN NULL ELSE $4::numeric END,
+                variance = CASE WHEN $3::numeric IS NULL THEN NULL ELSE $3::numeric - $4::numeric END
           WHERE id = $1 RETURNING id, status, counted_amount, expected_amount, variance, closed_at`,
-        [id, req.user.id, b.counted_amount, exp])).rows[0];
+        [id, req.user.id, b.counted_amount ?? null, exp])).rows[0];
     });
     await this.log(req, 'cash_session.close', 'cash_session', id, { variance: row.variance });
     return row;
@@ -244,9 +250,9 @@ export class FinanceController {
         const s = await c.query(
           `SELECT 1 FROM cash_sessions s JOIN cash_registers r ON r.id = s.register_id WHERE s.id = $1 AND s.status = 'open' AND ($3::boolean OR r.account_id = $2)`,
           [b.cash_session_id, b.account_id, a.rows[0].owner_type === 'other']);
-        if (!s.rowCount) throw new BadRequestException("Session de caisse inconnue, clôturée, ou étrangère à ce compte");
+        if (!s.rowCount) throw new BadRequestException("Caisse inconnue, caissier déconnecté, ou caisse étrangère à ce compte");
       } else if (a.rows[0].owner_type === 'cash_register') {
-        throw new BadRequestException('Une opération de caisse exige une session ouverte');
+        throw new BadRequestException('Une opération de caisse exige que le caissier soit connecté à la caisse');
       }
       if (b.direction === 'out' && a.rows[0].owner_type === 'cash_register') {
         // Comparaison exacte en base (numeric), sans passer par des flottants

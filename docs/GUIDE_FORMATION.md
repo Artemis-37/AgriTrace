@@ -16,7 +16,7 @@ Les captures ont été prises sur la version de démonstration ; les libellés d
 
 | Niveau | Profils | Peut… | Ne peut pas… |
 |---|---|---|---|
-| **1 — Opérateur** | Magasinier, caissier, agent de terrain, cartographe, collecteur, coach, acheteur et exportateur (partenaires) | Saisir dans son périmètre, imprimer ses reçus, **demander** une annulation | Approuver une annulation, voir hors de son périmètre |
+| **1 — Opérateur** | Magasinier, caissier, agent de terrain, cartographe, délégué, coach, acheteur et exportateur (partenaires) | Saisir dans son périmètre, imprimer ses reçus, **demander** une annulation | Approuver une annulation, voir hors de son périmètre |
 | **2 — Gestion** | Comptable, responsable magasin, traçabilité, cartographie, qualité, logistique | Valider, ajuster, contrôler dans son domaine | Approuver les prêts et les annulations (sauf droit explicite) |
 | **3 — Pilotage / contrôle** | Direction, responsable financier, ADG, auditeur | Approuver (annulations, prêts, écarts), suivre toute l'activité ; l'auditeur lit seulement | Saisir au quotidien (hors responsable financier) |
 | **4 — Administration** | Administrateur de la coopérative | Tout dans sa coopérative : comptes, rôles, profil, annulations | Voir les autres coopératives |
@@ -55,7 +55,7 @@ Mot de passe commun : `Demo-AgriTrace-2026!` (à changer pour toute utilisation 
 
 ## 4. Parcours conseillés
 
-- **Chaîne d'achat** (demi-journée) : collecteur → magasinier → caissier → comptable → direction.
+- **Chaîne d'achat** (demi-journée) : délégué → magasinier → caissier → comptable → direction.
 - **Contrôle et conformité** (demi-journée) : agent de terrain / cartographe → responsable cartographie → responsable traçabilité → qualité → ADG.
 - **Pilotage** (2 h) : direction, responsable financier, auditeur, administrateur.
 
@@ -64,7 +64,7 @@ Mot de passe commun : `Demo-AgriTrace-2026!` (à changer pour toute utilisation 
 
 Ce chapitre déroule **une même chaîne, de bout en bout**, avec les comptes de la démonstration (données fictives). Chaque étape est jouée par le profil concerné ; les formulaires sont remplis. Le téléphone du délégué est simulé par les écrans de l'application.
 
-**Fil conducteur.** Le délégué achète du cacao à deux producteurs et déclare un convoi qui les transporte (n° SC000000-2026-BRA-4). Le responsable traçabilité valide les achats ; le magasinier pèse ce convoi, puis pèse aussi un convoi **non déclaré** d'un autre délégué (CV-NC-001). La caisse règle les deux pesées au **prix de la traite fixé par l'administrateur** et retient une somme au kilo (la *mise en compte*). En fin de campagne le compte du délégué est clôturé ; son reversement (sur son compte, par chèque, en espèces ou vers un autre compte) est **approuvé par l'administrateur**. Le comptable retrouve les écritures, le stock alimente les ventes, et les modules de l'exportateur redescendent jusqu'aux coachs avant de remonter à l'exportateur.
+**Fil conducteur.** Le délégué achète du cacao à deux producteurs et déclare un connaissement qui les transporte (n° SC000000-2026-BRA-4). Le responsable traçabilité valide les achats ; le magasinier pèse ce connaissement, puis pèse aussi un connaissement **non déclaré** d'un autre délégué (CV-NC-001). La caisse règle les deux pesées au **prix de la traite fixé par l'administrateur** et retient une somme au kilo (la *mise en compte*). En fin de campagne le compte du délégué est clôturé ; son reversement (sur son compte, par chèque, en espèces ou vers un autre compte) est **approuvé par l'administrateur**. Le comptable retrouve les écritures, le stock alimente les ventes, et les modules de l'exportateur redescendent jusqu'aux coachs avant de remonter à l'exportateur.
 
 ### Étape 1 — Brahima Sylla : Choisir le producteur
 
@@ -323,7 +323,7 @@ Réceptionne et pèse les convois au magasin central, tient les stocks et l'inve
 
 ### Objectifs
 
-- Réceptionner un convoi et peser
+- Réceptionner un connaissement et peser
 - Imprimer le reçu
 - Demander l'annulation d'une réception faite par erreur
 - Consulter les stocks
@@ -338,9 +338,9 @@ Réceptionne et pèse les convois au magasin central, tient les stocks et l'inve
 
 *Pesées : liste, saisie d'une pesée (délégué, campagne, produit, poids net automatique), analyses et bulletin.*
 
-![Convois des collecteurs : en route, reçus au magasin, réglés en caisse.](captures/formation/magasinier-convois.png)
+![convois](captures/formation/magasinier-convois.png)
 
-*Convois des collecteurs : en route, reçus au magasin, réglés en caisse.*
+*convois*
 
 ![Stocks par magasin et par lot, traçabilité du lot.](captures/formation/magasinier-stocks.png)
 
@@ -348,8 +348,8 @@ Réceptionne et pèse les convois au magasin central, tient les stocks et l'inve
 
 ### Pas à pas
 
-1. **Ouvrir la saisie de pesée.** Menu **Pesées** → *Enregistrer une pesée*. Saisissez le code du délégué (ou choisissez-le par son nom) : ses convois « en route » et la localité de provenance apparaissent.
-2. **Peser.** Choisissez la **campagne** et le **produit** (le produit annoncé par le délégué est proposé, vous pouvez toujours le changer). Les informations d'arrivée (déclaré) sont reprises ; saisissez le **poids**, les sacs reçus et les **sacs déchargés** : le **poids net se calcule seul** (poids − sacs déchargés). L'analyse est facultative. Le convoi passe à « Reçu — en caisse » et le stock est mis à jour.
+1. **Ouvrir la saisie de pesée.** Menu **Pesées** → *Enregistrer une pesée*. Saisissez le code du délégué (ou choisissez-le par son nom) : ses connaissements « en route » et la localité de provenance apparaissent.
+2. **Peser.** Choisissez la **campagne** et le **produit** (le produit annoncé par le délégué est proposé, vous pouvez toujours le changer). Les informations d'arrivée (déclaré) sont reprises ; saisissez le **poids**, les sacs reçus et les **sacs déchargés** : le **poids net se calcule seul** (poids − sacs déchargés). L'analyse est facultative. Le connaissement passe à « Reçu — en caisse » et le stock est mis à jour.
 3. **Imprimer le reçu.** Menu **Mes opérations** → ligne de l'opération → **Imprimer le reçu**. Une réimpression porte la mention *duplicata* et est tracée.
 4. **Demander une annulation.** Dans **Mes opérations**, sur une opération erronée : demandez l'annulation en précisant le motif. Un responsable décidera ; vous suivez l'avancement dans l'onglet *Mes demandes*.
 
@@ -367,13 +367,13 @@ Réceptionne et pèse les convois au magasin central, tient les stocks et l'inve
 
 | # | À faire | Résultat attendu |
 |---|---|---|
-| 1 | Pesez le convoi SC000000-2026-BRA-3 (poids : 2 112 kg, 32 sacs reçus, 32 sacs déchargés). | Le poids net affiché est 2 080 kg (2 112 − 32) ; le convoi passe à « Reçu — en caisse » et le stock du lot augmente de 2 080 kg. |
+| 1 | Pesez le connaissement SC000000-2026-BRA-3 (poids : 2 112 kg, 32 sacs reçus, 32 sacs déchargés). | Le poids net affiché est 2 080 kg (2 112 − 32) ; le connaissement passe à « Reçu — en caisse » et le stock du lot augmente de 2 080 kg. |
 | 2 | Imprimez le reçu de cette réception, puis réimprimez-le. | La seconde impression porte « duplicata ». |
 | 3 | Demandez l'annulation de cette réception (motif : poids saisi par erreur). | La demande apparaît « en attente » ; l'opération reste valable tant qu'elle n'est pas approuvée. |
 
 ### Acquis (à cocher)
 
-- [ ] Réceptionner un convoi et peser
+- [ ] Réceptionner un connaissement et peser
 - [ ] Imprimer le reçu
 - [ ] Demander l'annulation d'une réception faite par erreur
 - [ ] Consulter les stocks
@@ -388,9 +388,9 @@ Traite les convois reçus, règle les délégués, tient la caisse et les compte
 
 ### Objectifs
 
-- Traiter un convoi reçu (règlement du collecteur)
+- Traiter un connaissement reçu (règlement du délégué)
 - Tenir la caisse (entrées/sorties) avec justificatif
-- Consulter les comptes collecteurs
+- Consulter les comptes délégués
 - Imprimer les reçus et demander une annulation
 
 ### Ce que vous voyez
@@ -403,9 +403,9 @@ Traite les convois reçus, règle les délégués, tient la caisse et les compte
 
 *Caisse : menu à rubriques dépliantes, pesées à traiter, opérations et journal de caisse.*
 
-![Convois des collecteurs : en route, reçus au magasin, réglés en caisse.](captures/formation/caissier-convois.png)
+![convois](captures/formation/caissier-convois.png)
 
-*Convois des collecteurs : en route, reçus au magasin, réglés en caisse.*
+*convois*
 
 ![Comptes, caisses et comptabilité (écritures non modifiables, corrigées par écriture inverse).](captures/formation/caissier-finances.png)
 
@@ -414,9 +414,10 @@ Traite les convois reçus, règle les délégués, tient la caisse et les compte
 ### Pas à pas
 
 1. **Ouvrir la caisse.** Menu **Caisse** → rubrique *Mouvements de caisse* → *Ouvrir / fermer la caisse* : saisissez le fonds de caisse et ouvrez la session. En fin de journée, saisissez le montant compté et fermez : l'écart avec le solde attendu est conservé.
-2. **Régler un convoi.** Rubrique *Opérations* → *Traiter une pesée / régler un achat* : sur une pesée « Reçu — en caisse », cliquez **Traiter**. Le **prix unitaire** est celui de la traite, **fixé par l'administrateur** : il s'affiche mais le caissier ne peut pas le modifier. La **retenue au kilo** s'ajoute à la mise en compte du délégué. Le montant = poids net × prix ; l'écriture de caisse et le compte du délégué sont créés automatiquement.
-3. **Saisir une opération de caisse.** Rubrique *Mouvements de caisse* → *Enregistrer une entrée / sortie* : sens, montant, motif obligatoire. Aucune suppression possible : une erreur se corrige par une écriture inverse. Le résultat apparaît dans *Les entrées* ou *Les sorties de caisse*.
-4. **Suivre les comptes collecteurs.** Rubrique *Solde délégué* : soldes, avances et retenues.
+2. **Régler un connaissement.** Rubrique *Opérations* → *Traiter une pesée / régler un achat* : sur une pesée « Reçu — en caisse », cliquez **Traiter**. Le **prix unitaire** est celui de la traite, **fixé par l'administrateur** : il s'affiche mais le caissier ne peut pas le modifier. La **retenue au kilo** s'ajoute à la mise en compte du délégué. Le montant = poids net × prix ; l'écriture de caisse et le compte du délégué sont créés automatiquement.
+3. **Saisir une opération de caisse.** Rubrique *Mouvements de caisse* → *Enregistrer une entrée / sortie* : **mode** (*Espèces* ou *Compte bancaire* avec la banque choisie : le compte bancaire est une forme de fonds de la caisse), sens, montant, motif obligatoire. Aucune suppression possible : une erreur se corrige par une écriture inverse. Le résultat apparaît dans *Les entrées* ou *Les sorties de caisse*.
+4. **Suivre les comptes bancaires.** Rubrique *Mouvements de caisse* → *Évolution des comptes bancaires* : choisissez le compte et la période ; vous voyez le solde d'ouverture, ce qui est **ajouté (+)** et **soustrait (−)**, le solde cumulé et la courbe du solde. Le journal de caisse a un sélecteur *Fonds* (espèces ou compte bancaire).
+5. **Suivre les comptes délégués.** Rubrique *Solde délégué* : soldes, avances et retenues. Le transport et la retenue au kilo sont fixés par l'administrateur dans la fiche du délégué (onglets *Transport* et *Retenues*) : la caisse ne les saisit pas.
 
 ### Ce que ce profil ne voit pas
 
@@ -430,15 +431,15 @@ Traite les convois reçus, règle les délégués, tient la caisse et les compte
 
 | # | À faire | Résultat attendu |
 |---|---|---|
-| 1 | Réglez le convoi SC000000-2026-BRA-3 (réceptionné par le magasinier à son exercice) au prix de la traite (fixé par l'administrateur, ex. 1 000 F/kg). | Montant = poids reçu × prix (ex. 2 080 kg × 1 000 → 2 080 000 F) ; le convoi passe à « Réglé ». |
+| 1 | Réglez le connaissement SC000000-2026-BRA-3 (réceptionné par le magasinier à son exercice) au prix de la traite (fixé par l'administrateur, ex. 1 000 F/kg). | Montant = poids reçu × prix (ex. 2 080 kg × 1 000 → 2 080 000 F) ; le connaissement passe à « Réglé ». |
 | 2 | Enregistrez une sortie de caisse de 15 000 F « Achat de papier ». | Le solde de la caisse diminue de 15 000 F ; l'opération est datée et attribuée à votre compte. |
 | 3 | Imprimez le reçu de règlement. | Le reçu porte l'en-tête de la coopérative (nom, logo, adresse). |
 
 ### Acquis (à cocher)
 
-- [ ] Traiter un convoi reçu (règlement du collecteur)
+- [ ] Traiter un connaissement reçu (règlement du délégué)
 - [ ] Tenir la caisse (entrées/sorties) avec justificatif
-- [ ] Consulter les comptes collecteurs
+- [ ] Consulter les comptes délégués
 - [ ] Imprimer les reçus et demander une annulation
 
 ---
@@ -477,7 +478,7 @@ Passe et consulte les écritures comptables, suit les comptes financiers ; peut 
 
 1. **Consulter les états.** Menu **Comptabilité** : mouvements de caisse, dépenses, journal des achats, prêts, soldes des délégués, exportateurs, comptes, factures des fournisseurs, emprunts, prestations, ventes d'autres produits, impôts et estimation du BIC.
 2. **Passer une écriture.** Menu **Finances** → onglet *Comptabilité* → nouvelle écriture : journal, date, libellé, lignes (compte, débit ou crédit). Elle doit être **équilibrée**.
-3. **Consulter les comptes.** Onglet *Comptes et caisses* : soldes et mouvements. Le **rapprochement bancaire** n'est pas dans les droits du comptable : il est tenu par le responsable financier ou l'administrateur.
+3. **Consulter les comptes.** Onglet *Comptes et caisses* : soldes et mouvements ; le bouton **Évolution** d'un compte bancaire montre ce qui y est ajouté et soustrait, avec le solde cumulé. Le **rapprochement bancaire** n'est pas dans les droits du comptable : il est tenu par le responsable financier ou l'administrateur.
 
 ### Ce que ce profil ne voit pas
 
@@ -632,9 +633,9 @@ Gère les magasins, valide les inventaires et les écarts de pesée, ajuste les 
 
 *Tableau de bord : les indicateurs affichés dépendent de vos droits.*
 
-![Convois des collecteurs : en route, reçus au magasin, réglés en caisse.](captures/formation/responsable_magasin-convois.png)
+![convois](captures/formation/responsable_magasin-convois.png)
 
-*Convois des collecteurs : en route, reçus au magasin, réglés en caisse.*
+*convois*
 
 ![Stocks par magasin et par lot, traçabilité du lot.](captures/formation/responsable_magasin-stocks.png)
 
@@ -691,14 +692,14 @@ Valide les déclarations d'achat, suit les lots et les certificats, contrôle la
 
 *Liste des producteurs de la coopérative.*
 
-![Déclarations d'achat des collecteurs, à mettre en vérification puis valider.](captures/formation/responsable_tracabilite-declarations.png)
+![Déclarations d'achat des délégués, à mettre en vérification puis valider.](captures/formation/responsable_tracabilite-declarations.png)
 
-*Déclarations d'achat des collecteurs, à mettre en vérification puis valider.*
+*Déclarations d'achat des délégués, à mettre en vérification puis valider.*
 
 ### Pas à pas
 
 1. **Vérifier les déclarations.** Menu **Déclarations d'achat** : les déclarations « Reçue » attendent une mise en vérification, puis validation.
-2. **Tracer un lot.** Menu **Stocks et lots** (si accessible) ou la fiche du lot : bouton *Traçabilité* pour voir producteurs, parcelles, convois et pesées.
+2. **Tracer un lot.** Menu **Stocks et lots** (si accessible) ou la fiche du lot : bouton *Traçabilité* pour voir producteurs, parcelles, connaissements et pesées.
 
 ### Ce que ce profil ne voit pas
 
@@ -1044,52 +1045,7 @@ Partenaire autorisé : consulte les commandes, les expéditions et les documents
 
 ---
 
-## 21. Délégué
-
-**Niveau 1 — Opérateur** · durée indicative : 2 h · compte de démonstration : `collecteur@demo.agritrace.test`
-
-Déclare ses achats chez les producteurs et ses convois, voit son stock, son historique et sa fiche de compte.
-
-### Objectifs
-
-- Déclarer un achat chez un producteur
-- Créer un convoi
-- Consulter son stock et sa fiche de compte
-
-### Sur le téléphone
-
-<table class="phones"><tr><td><img src="captures/mobile/collecteur-accueil.png" alt="collecteur-accueil"></td><td><img src="captures/mobile/collecteur-nouvel-achat.png" alt="collecteur-nouvel-achat"></td><td><img src="captures/mobile/collecteur-convoi.png" alt="collecteur-convoi"></td><td><img src="captures/mobile/collecteur-fiche.png" alt="collecteur-fiche"></td></tr></table>
-
-### Pas à pas
-
-1. **Se connecter.** **Application mobile uniquement** : ce compte est refusé sur le portail web.
-2. **Déclarer un achat.** Sur le téléphone : **Nouvel achat** → choisir le producteur → quantité, unité, sacs. L'achat se synchronise dès que le réseau est disponible.
-3. **Créer un convoi.** Sur le téléphone : **Convoi** → chauffeur, camion, sacs et poids annoncés. Le **numéro de connaissement est attribué par le logiciel** : `code CCC de la coopérative` - `année` - `3 premières lettres du nom du collecteur` - `n° d'ordre` (ex. `SC000000-2026-BRA-1`). Hors connexion, le numéro définitif est attribué à l'envoi.
-4. **Suivre son stock et son compte.** Sur le téléphone : *Mon stock*, *Historique* et *Fiche de compte*.
-
-### Ce que ce profil ne voit pas
-
-- Tout ce qui concerne les autres délégués
-- Caisse
-- Comptabilité
-- Équipe
-
-### Exercices
-
-| # | À faire | Résultat attendu |
-|---|---|---|
-| 1 | Déclarez un achat de 3 sacs chez TRAORE Moussa. | L'achat apparaît « Soumis » dans Mes achats. |
-| 2 | Créez un convoi (28 sacs, 1 800 kg annoncés) sans saisir de numéro. | Le logiciel attribue le numéro : code CCC, année, 3 premières lettres de votre nom, n° d'ordre (ex. SC000000-2026-BRA-1 pour le 1er convoi de Brahima). Le convoi apparaît « En route » côté magasin. |
-
-### Acquis (à cocher)
-
-- [ ] Déclarer un achat chez un producteur
-- [ ] Créer un convoi
-- [ ] Consulter son stock et sa fiche de compte
-
----
-
-## 22. Administrateur de groupe (ADG)
+## 21. Administrateur de groupe (ADG)
 
 **Niveau 3 — Pilotage** · durée indicative : 2 h · compte de démonstration : `adg@demo.agritrace.test`
 
@@ -1153,7 +1109,7 @@ Responsable de la conformité et de la certification : suit les certificats, les
 
 ---
 
-## 23. Coach
+## 22. Coach
 
 **Niveau 1 — Opérateur** · durée indicative : 2 h · compte de démonstration : `coach@demo.agritrace.test`
 
@@ -1204,7 +1160,7 @@ Agent de terrain suivi par l'ADG : exécute ses missions, enregistre des product
 
 ---
 
-## 24. Exportateur (partenaire)
+## 23. Exportateur (partenaire)
 
 **Niveau 1 — Opérateur** · durée indicative : 1 h · compte de démonstration : `exportateur@demo.agritrace.test`
 
@@ -1252,13 +1208,13 @@ Partenaire exportateur : propose des modules de formation à l'ADG et reçoit, p
 
 ---
 
-## 25. Évaluation finale (30 min)
+## 24. Évaluation finale (30 min)
 
 Scénario commun, à dérouler à plusieurs comptes :
 
-1. **Collecteur** : déclare un achat et crée un convoi (numéro attribué automatiquement).
-2. **Magasinier** : réceptionne le convoi (poids différent du déclaré) et imprime le reçu.
-3. **Caissier** : règle le convoi au prix du jour.
+1. **Délégué** : déclare un achat et crée un connaissement (numéro attribué automatiquement).
+2. **Magasinier** : réceptionne le connaissement (poids différent du déclaré) et imprime le reçu.
+3. **Caissier** : règle le connaissement au prix du jour.
 4. **Comptable** : passe l'écriture correspondante et pointe le relevé.
 5. **Magasinier** : constate une erreur de poids et demande l'annulation.
 6. **Direction ou administrateur** : décide de la demande.

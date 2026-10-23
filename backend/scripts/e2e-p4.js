@@ -42,7 +42,10 @@ const num = (x) => Number(x);
   const prod = (await call('POST', '/producers', { ...J(t1, A), body: { last_name: 'KONE', first_names: 'Awa', village: 'Hiré', section: 'S1', value_chain_ids: [vc.id] } })).body.producer;
   const wh = (await call('POST', '/warehouses', { ...J(t1, A), body: { code: 'MAG1', name: 'Magasin 1' } })).body;
   const reg = (await call('POST', '/cash-registers', { ...J(t1, A), body: { name: 'Caisse principale' } })).body;
-  const sess = (await call('POST', `/cash-registers/${reg.id}/sessions`, { ...J(t1, A), body: { opening_amount: '100000' } })).body;
+  const rCS = (await call('POST', '/roles/standard', { ...J(t1, A), body: { code: 'caissier' } })).body;
+  await call('POST', '/users', { ...J(t1, A), body: { email: `cs.${run}@t.test`, full_name: 'Caissier', password: pw, role_id: rCS.id } });
+  const tcs = await login(`cs.${run}@t.test`, pw);
+  const sess = (await call('POST', `/cash-registers/${reg.id}/sessions`, { ...J(tcs, A), body: { opening_amount: '100000' } })).body;
   check('mise en place terminée', !!(vc.id && camp.id && prod.id && reg.id && sess.id && wh.id));
 
   console.log('Plan comptable SYSCOHADA');
@@ -162,7 +165,7 @@ const num = (x) => Number(x);
   check('paiement d\'une autre coopérative introuvable', (await call('GET', `/payments/${pid}`, J(tb, B))).status === 404);
 
   console.log('Écart de caisse et rapprochements');
-  const cl = (await call('POST', `/cash-sessions/${sess.id}/close`, { ...J(t1, A), body: { counted_amount: '64000' } })).body;
+  const cl = (await call('POST', `/cash-sessions/${sess.id}/close`, { ...J(tcs, A), body: { counted_amount: '64000' } })).body;
   check('clôture avec écart −1 000', num(cl.variance) === -1000, cl);
   check('rapprochement avec écart sans explication → 422', (await call('POST', '/reconciliations', { ...J(t1, A), body: { account_id: reg.account_id, statement_date: addDays(0), statement_balance: '64000' } })).status === 422);
   const rc = await call('POST', '/reconciliations', { ...J(t1, A), body: { account_id: reg.account_id, statement_date: addDays(0), statement_balance: '64000', note: 'Écart constaté au comptage' } });

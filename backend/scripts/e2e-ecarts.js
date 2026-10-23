@@ -73,7 +73,10 @@ async function upload(path, { token, org, file, fields }) {
 
   console.log('Relevé bancaire');
   const reg = (await call('POST', '/cash-registers', { ...J(t0), body: { name: 'Banque principale' } })).body;
-  const sess = (await call('POST', `/cash-registers/${reg.id}/sessions`, { ...J(t0), body: { opening_amount: '0' } })).body;
+  const rCS = (await call('POST', '/roles/standard', { ...J(t0), body: { code: 'caissier' } })).body;
+  await call('POST', '/users', { ...J(t0), body: { email: `cs.${run}@t.test`, full_name: 'Caissier', password: pw, role_id: rCS.id } });
+  const tcs = await login(`cs.${run}@t.test`, pw);
+  const sess = (await call('POST', `/cash-registers/${reg.id}/sessions`, { ...J(tcs), body: { opening_amount: '0' } })).body;
   const tx = async (direction, amount, reason) => (await call('POST', '/financial-transactions', { ...J(t0), body: { idempotency_key: key('tx'), account_id: reg.account_id, cash_session_id: sess.id, direction, amount, reason } })).body;
   const t1 = await tx('in', '500000', 'Versement client A'), t2 = await tx('in', '120000', 'Versement client B'), t3 = await tx('out', '75000', 'Achat fournitures');
   const t4 = await tx('in', '30000', 'Doublon possible 1'), t5 = await tx('in', '30000', 'Doublon possible 2'), t6 = await tx('in', '999000', 'Opération absente du relevé');

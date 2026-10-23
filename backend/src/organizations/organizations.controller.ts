@@ -80,7 +80,7 @@ export class OrganizationsController {
         [org.id],
       );
       await c.query(
-        `INSERT INTO role_permissions(role_id, permission_code) SELECT $1, code FROM permissions`,
+        `INSERT INTO role_permissions(role_id, permission_code) SELECT $1, code FROM permissions WHERE code <> 'cash:session'`,
         [r.rows[0].id],
       );
     });

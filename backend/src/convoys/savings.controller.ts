@@ -81,7 +81,7 @@ export class SavingsController {
     if (Number(b.amount) <= 0) throw new BadRequestException('Montant doit être supérieur à zéro');
     if (b.mode === 'transfer' && !b.target_account_id) throw new BadRequestException("Choisissez l'autre compte de destination");
     if (b.mode === 'cheque' && (!b.cheque_no || !b.target_account_id)) throw new BadRequestException('Chèque : numéro du chèque et compte bancaire débité requis');
-    if (b.mode === 'cash' && !b.cash_session_id) throw new BadRequestException('Espèces : choisissez la caisse (session ouverte)');
+    if (b.mode === 'cash' && !b.cash_session_id) throw new BadRequestException('Espèces : choisissez la caisse (caissier connecté)');
     const row = await this.db.tx(req.org.id, async (c) => {
       await c.query(`SELECT 1 FROM collectors WHERE id = $1 FOR UPDATE`, [b.collector_id]); // évite deux demandes simultanées sur la même somme
       const s = (await c.query(`SELECT s.*, s.retained - s.released - s.pending AS available FROM (${SavingsController.SUMMARY} AND k.id = $1) s`, [b.collector_id])).rows[0];
@@ -139,7 +139,7 @@ export class SavingsController {
         tx = r.tx; destAccount = r.account;
       } else {
         const sess = (await c.query(`SELECT s.id, r.account_id FROM cash_sessions s JOIN cash_registers r ON r.id = s.register_id WHERE s.id = $1 AND s.status = 'open'`, [q.cash_session_id])).rows[0];
-        if (!sess) throw new ConflictException('La session de caisse choisie est clôturée : le demandeur doit refaire la demande sur une caisse ouverte');
+        if (!sess) throw new ConflictException('Le caissier s\'est déconnecté de la caisse choisie : le demandeur doit refaire la demande sur une caisse où un caissier est connecté');
         const r = await postFinancialTx(c, { orgId: req.org.id, userId: req.user.id, accountId: sess.account_id, direction: 'out', amount: q.amount, reason: `${label} (espèces)`, idempotencyKey: key, referenceType: 'collector_release', referenceId: id });
         tx = r.tx; destAccount = r.account;
       }

@@ -22,7 +22,7 @@ const GROUPS: { title: string; perm: string; items: [Key, string][] }[] = [
   { title: 'Opérations', perm: 'convoys:settle', items: [['cash', 'Traiter une pesée / régler un achat'], ['variance', 'Écarts de poids à valider']] },
   { title: 'Achats prod. agricole', perm: 'convoys:settle', items: [['cash', 'Journal des achats (pesées à traiter)']] },
   { title: 'Solde délégué', perm: 'convoys:settle', items: [['accounts', 'Solde et fiche des délégués']] },
-  { title: 'Mouvements de caisse', perm: 'finance:read', items: [['desk', 'Ouvrir / fermer la caisse'], ['entry', 'Enregistrer une entrée / sortie'], ['journal', 'Mouvements de caisse'], ['in', 'Les entrées en caisse'], ['out', 'Les sorties de caisse'], ['bank', 'Évolution des comptes bancaires']] },
+  { title: 'Mouvements de caisse', perm: 'finance:read', items: [['desk', 'Connexion à la caisse'], ['entry', 'Enregistrer une entrée / sortie'], ['journal', 'Mouvements de caisse'], ['in', 'Les entrées en caisse'], ['out', 'Les sorties de caisse'], ['bank', 'Évolution des comptes bancaires']] },
 ];
 
 /** Caisse : menu à gauche en rubriques dépliantes, journal de caisse avec solde d'ouverture et solde actuel. */
@@ -105,35 +105,33 @@ export function Journal({ kind }: { kind: '' | 'in' | 'out' }) {
 }
 
 const AMT = /^\d{1,12}(\.\d{1,2})?$/;
-/** Ouverture (fonds de caisse) et fermeture (montant compté) de la session de caisse. */
+/** Connexion du caissier à la caisse. La caisse ne se clôture pas (elle n'encaisse pas : bons de sortie, chèques, paiements en espèces) : le caissier se connecte et se déconnecte, sans fonds d'ouverture ni comptage. */
 function CashDesk() {
   const { can } = useAuth();
   const { data, loading, error, reload } = useAsync(async () => ({ regs: await get<any[]>('/cash-registers'), accts: await get<any[]>('/financial-accounts').catch(() => [] as any[]) }), []);
-  const [amount, setAmount] = useState<Record<string, string>>({});
   const [name, setName] = useState('');
   const [msg, setMsg] = useState('');
   const act = useAction();
+  const mayConnect = can('cash:session');
   return (
     <Card>
-      <h2 className="win-title">Ouverture et fermeture de la caisse</h2>
+      <h2 className="win-title">Connexion à la caisse</h2>
+      <p className="muted">La caisse ne se clôture pas : seul le caissier s'y connecte et s'en déconnecte. Aucun fonds d'ouverture ni comptage n'est demandé.</p>
       {error && <ErrorBox message={error} onRetry={reload} />}{act.error && <ErrorBox message={act.error} />}{msg && <p className="notice" role="status">{msg}</p>}
       {loading || !data ? <Loading /> : (
         <>
           {!data.regs.length && <p className="muted">Aucune caisse n'est créée.</p>}
           {data.regs.map((r) => {
             const bal = data.accts.find((a) => a.id === r.account_id)?.balance;
-            const v = amount[r.id] ?? '';
             return (
-              <fieldset key={r.id} className="bloc"><legend>{r.name} — {r.open_session_id ? 'session ouverte' : 'fermée'}</legend>
-                {r.open_session_id && bal !== undefined && <p>Solde attendu : <strong>{FR(bal)}</strong> FCFA</p>}
-                <div className="grid-2">
-                  <Field label={r.open_session_id ? 'Montant compté en caisse (FCFA)' : 'Fonds de caisse à l\'ouverture (FCFA)'}><input inputMode="decimal" value={v} onChange={(e) => setAmount({ ...amount, [r.id]: e.target.value })} /></Field>
-                  <div className="field-btn"><button className="btn" disabled={act.busy || !AMT.test(v)} onClick={() => act.run(async () => {
-                    if (r.open_session_id) { const c = await post<any>(`/cash-sessions/${r.open_session_id}/close`, { counted_amount: v }); setMsg(`Caisse fermée. Écart compté − attendu : ${FR(c.variance ?? c.difference ?? 0)} FCFA.`); }
-                    else { await post(`/cash-registers/${r.id}/sessions`, { opening_amount: v }); setMsg('Caisse ouverte.'); }
-                    setAmount({ ...amount, [r.id]: '' }); reload();
-                  })}>{r.open_session_id ? 'Fermer la caisse' : 'Ouvrir la caisse'}</button></div>
-                </div>
+              <fieldset key={r.id} className="bloc"><legend>{r.name} — {r.open_session_id ? `caissier connecté : ${r.open_session_by ?? ''}` : 'aucun caissier connecté'}</legend>
+                {bal !== undefined && <p>Solde de la caisse : <strong>{FR(bal)}</strong> FCFA</p>}
+                {mayConnect ? <button className="btn" disabled={act.busy} onClick={() => act.run(async () => {
+                  if (r.open_session_id) { await post(`/cash-sessions/${r.open_session_id}/close`, {}); setMsg('Vous êtes déconnecté de la caisse.'); }
+                  else { await post(`/cash-registers/${r.id}/sessions`, {}); setMsg('Vous êtes connecté à la caisse.'); }
+                  reload();
+                })}>{r.open_session_id ? 'Se déconnecter de la caisse' : 'Se connecter à la caisse'}</button>
+                  : <p className="muted">Seul le caissier se connecte à la caisse ou s'en déconnecte.</p>}
               </fieldset>
             );
           })}
@@ -208,7 +206,7 @@ function CashEntry() {
     <Card>
       <h2 className="win-title">Enregistrer une entrée ou une sortie de caisse</h2>
       {error && <ErrorBox message={error} onRetry={reload} />}{act.error && <ErrorBox message={act.error} />}{msg && <p className="notice" role="status">{msg}</p>}
-      {loading ? <Loading /> : !open.length ? <p className="muted">Aucune caisse ouverte : ouvrez d'abord la caisse.</p> : (
+      {loading ? <Loading /> : !open.length ? <p className="muted">Aucune caisse connectée : le caissier doit d'abord se connecter à la caisse.</p> : (
         <fieldset className="bloc"><legend>Mouvement</legend>
           <div className="grid-2">
             <Field label="Caisse"><select value={regId} onChange={(e) => setReg(e.target.value)}>{open.map((r: any) => <option key={r.id} value={r.id}>{r.name}</option>)}</select></Field>

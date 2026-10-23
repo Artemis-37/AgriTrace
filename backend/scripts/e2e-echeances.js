@@ -100,7 +100,7 @@ const key = (p) => `${p}-${run}-${crypto.randomBytes(4).toString('hex')}`;
   const r2 = await call('POST', '/convoys/receive', { ...J(mag.t), body: { idempotency_key: key('rc'), collector_id: colr.id, convoy_no: 'DU-2', warehouse_id: wh.id, bags: 10, gross_kg: '1000', bags_unloaded: 10 } });
   check('sans choix, le produit annoncé est retenu', r2.status === 201 && r2.body.product_id === prod.id, r2.body);
   console.log('Caisse : session et mouvements');
-  const rCai = await role('caissier', ['cash:operate', 'cash:read', 'finance:read']);
+  const rCai = (await call('POST', '/roles/standard', { ...J(t0), body: { code: 'caissier' } })).body;
   const cai = await user('caissier', rCai);
   const reg = (await call('POST', '/cash-registers', { ...J(t0), body: { name: 'Principale' } })).body;
   const regs = await call('GET', '/cash-registers', J(cai.t));

@@ -100,7 +100,8 @@ export class UsersController {
   async createStandard(@Body() b: { code: string }, @Req() req: any) {
     const t = STANDARD_ROLES[b?.code];
     if (!t) throw new BadRequestException('Rôle type inconnu');
-    const missing = t.permissions.filter((p) => !req.org.permissions.has(p));
+    // cash:session (connexion à la caisse) n'est jamais détenue par l'administrateur : seul le rôle caissier la porte
+    const missing = t.permissions.filter((p) => p !== 'cash:session' && !req.org.permissions.has(p));
     if (missing.length) throw new ForbiddenException(`Permissions non détenues : ${missing.join(', ')}`);
     const role = await this.db.tx(req.org.id, async (c) => {
       const ex = await c.query(`SELECT id, code, name FROM roles WHERE organization_id = $1 AND code = $2`, [req.org.id, b.code]);

@@ -118,9 +118,12 @@ const login = async (email, password) => (await call('POST', '/auth/login', { bo
 
   console.log('Caisse et finances');
   const reg = (await call('POST', '/cash-registers', { token: ta, org: A.id, body: { name: 'Caisse principale' } })).body;
-  const sess = (await call('POST', `/cash-registers/${reg.id}/sessions`, { token: ta, org: A.id, body: { opening_amount: '100000' } })).body;
+  const rCS = (await call('POST', '/roles/standard', { token: ta, org: A.id, body: { code: 'caissier' } })).body;
+  await call('POST', '/users', { token: ta, org: A.id, body: { email: `cs.${run}@t.test`, full_name: 'Caissier', password: pw, role_id: rCS.id } });
+  const tcs = await login(`cs.${run}@t.test`, pw);
+  const sess = (await call('POST', `/cash-registers/${reg.id}/sessions`, { token: tcs, org: A.id, body: { opening_amount: '100000' } })).body;
   check('session ouverte avec fonds', !!sess.id, sess);
-  check('2e session sur la même caisse refusée', (await call('POST', `/cash-registers/${reg.id}/sessions`, { token: ta, org: A.id, body: { opening_amount: '0' } })).status === 409);
+  check('2e session sur la même caisse refusée', (await call('POST', `/cash-registers/${reg.id}/sessions`, { token: tcs, org: A.id, body: { opening_amount: '0' } })).status === 409);
   const out1 = await call('POST', '/financial-transactions', { token: ta, org: A.id, body: { idempotency_key: 'tx-1-' + run, account_id: reg.account_id, cash_session_id: sess.id, direction: 'out', amount: '60000', reason: 'Paiement producteur' } });
   check('sortie 60 000 acceptée', out1.status === 201, out1.body);
   const out1b = await call('POST', '/financial-transactions', { token: ta, org: A.id, body: { idempotency_key: 'tx-1-' + run, account_id: reg.account_id, cash_session_id: sess.id, direction: 'out', amount: '60000', reason: 'Paiement producteur' } });
@@ -130,7 +133,7 @@ const login = async (email, password) => (await call('POST', '/auth/login', { bo
   const rev = await call('POST', `/financial-transactions/${out1.body.id}/reverse`, { token: ta, org: A.id, body: { reason: 'Erreur de saisie' } });
   check('écriture compensatoire créée', rev.status === 201 && rev.body.direction === 'in', rev.body);
   check('double compensation refusée', (await call('POST', `/financial-transactions/${out1.body.id}/reverse`, { token: ta, org: A.id, body: { reason: 'Encore' } })).status === 409);
-  const closed = (await call('POST', `/cash-sessions/${sess.id}/close`, { token: ta, org: A.id, body: { counted_amount: '99000' } })).body;
+  const closed = (await call('POST', `/cash-sessions/${sess.id}/close`, { token: tcs, org: A.id, body: { counted_amount: '99000' } })).body;
   check('clôture : attendu 100 000, écart −1 000', Number(closed.expected_amount) === 100000 && Number(closed.variance) === -1000, closed);
   const accts = (await call('GET', '/financial-accounts', { token: tb, org: B.id })).body;
   check('autre coopérative ne voit aucun compte', accts.length === 0, accts);

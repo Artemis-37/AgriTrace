@@ -27,7 +27,7 @@ const key = (p) => `${p}-${run}-${crypto.randomBytes(4).toString('hex')}`;
   const role = async (code, permissions) => (await call('POST', '/roles', { ...J(t0), body: { code, name: code, permissions } })).body;
   const rCol = await role('collecteur', ['convoys:create', 'convoys:read', 'sync:use', 'collector:stock', 'producers:read']);
   const rMag = await role('magasinier', ['convoys:receive', 'convoys:read', 'sync:use']);
-  const rCai = await role('caissier', ['convoys:settle', 'convoys:read', 'finance:read', 'cash:operate']);
+  const rCai = (await call('POST', '/roles/standard', { ...J(t0), body: { code: 'caissier' } })).body;
   const user = async (tag, r) => { const email = `${tag}.${run}@t.test`; const u = (await call('POST', '/users', { ...J(t0), body: { email, full_name: tag, password: pw, role_id: r.id } })).body; return { id: u.id, t: await login(email, pw) }; };
   const c1 = await user('kouame', rCol), c2 = await user('yao', rCol), mag = await user('magasinier', rMag), cai = await user('caissier', rCai);
   const col1 = (await call('POST', '/collectors', { ...J(t0), body: { user_id: c1.id } })).body;
@@ -82,7 +82,7 @@ const key = (p) => `${p}-${run}-${crypto.randomBytes(4).toString('hex')}`;
 
   console.log('Paiement en espèces au collecteur');
   const reg = (await call('POST', '/cash-registers', { ...J(t0), body: { name: 'Caisse principale' } })).body;
-  const sess = (await call('POST', `/cash-registers/${reg.id}/sessions`, { ...J(t0), body: { opening_amount: '5000000' } })).body;
+  const sess = (await call('POST', `/cash-registers/${reg.id}/sessions`, { ...J(cai.t), body: { opening_amount: '5000000' } })).body;
   const payBody = { idempotency_key: key('po'), collector_id: col1.id, cash_session_id: sess.id, amount: '1000000' };
   check('le magasinier ne peut pas payer', (await call('POST', '/convoys/payout', { ...J(mag.t), body: payBody })).status === 403);
   const po = await call('POST', '/convoys/payout', { ...J(t0), body: payBody });

@@ -62,7 +62,10 @@ const days = (n) => new Date(Date.now() + n * 86400000).toISOString().slice(0, 1
   }
 
   const reg = await call('POST', '/cash-registers', { ...J, body: { name: 'principale' } });
-  const sess = await call('POST', `/cash-registers/${reg.id}/sessions`, { ...J, body: { opening_amount: '500000' } });
+  const rCS = await call('POST', '/roles/standard', { ...J, body: { code: 'caissier' } });
+  await call('POST', '/users', { ...J, body: { email: `caisse.${run.toLowerCase()}@agritrace.test`, full_name: 'Caissier Démo', password: DEMO_PASSWORD, role_id: rCS.id } });
+  const tCS = (await call('POST', '/auth/login', { body: { email: `caisse.${run.toLowerCase()}@agritrace.test`, password: DEMO_PASSWORD } })).access_token;
+  const sess = await call('POST', `/cash-registers/${reg.id}/sessions`, { token: tCS, org: org.id, body: { opening_amount: '500000' } });
   const loan = await call('POST', '/loans', { ...J, body: { idempotency_key: key('loan'), kind: 'prefinancing', borrower_type: 'producer', borrower_id: producers[0].id, amount: '90000', purpose: 'Intrants et main-d\'œuvre' } });
   console.log('Prêt demandé (approbation par un second utilisateur requise)', loan.id);
   const pay = await call('POST', '/payments', { ...J, body: { idempotency_key: key('pay'), source_account_id: reg.account_id, payee_type: 'producer', payee_id: producers[1].id, amount: '130000', method: 'cash' } });

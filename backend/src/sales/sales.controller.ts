@@ -508,7 +508,7 @@ export class SalesController {
         const isCash = a.owner_type === 'cash_register';
         if (isCash) {
           const ok = b.cash_session_id && (await c.query(`SELECT 1 FROM cash_sessions s JOIN cash_registers r ON r.id = s.register_id WHERE s.id = $1 AND s.status = 'open' AND r.account_id = $2`, [b.cash_session_id, a.id])).rowCount;
-          if (!ok) throw new BadRequestException('Un encaissement en caisse exige une session ouverte de cette caisse');
+          if (!ok) throw new BadRequestException('Un encaissement en caisse exige que le caissier soit connecté à cette caisse');
         }
         const reason = `Encaissement facture ${i.number}`;
         const tx = (await c.query(

@@ -81,7 +81,7 @@ function Release({ r, onClose, onDone }: { r: any; onClose: () => void; onDone: 
       {mode === 'cheque' && <>
         <Field label="Compte bancaire débité"><select value={target} onChange={(e) => setTarget(e.target.value)}><option value="">—</option>{banks.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</select></Field>
         <Field label="N° du chèque"><input value={cheque} onChange={(e) => setCheque(e.target.value)} maxLength={40} /></Field></>}
-      {mode === 'cash' && <Field label="Caisse (session ouverte)"><select value={session} onChange={(e) => setSession(e.target.value)}><option value="">—</option>{open.map((x) => <option key={x.id} value={x.open_session_id}>{x.name}</option>)}</select></Field>}
+      {mode === 'cash' && <Field label="Caisse (caissier connecté)"><select value={session} onChange={(e) => setSession(e.target.value)}><option value="">—</option>{open.map((x) => <option key={x.id} value={x.open_session_id}>{x.name}</option>)}</select></Field>}
       {mode === 'transfer' && <Field label="Autre compte"><select value={target} onChange={(e) => setTarget(e.target.value)}><option value="">—</option>{(data?.accounts ?? []).filter((a) => a.status === 'active' && a.owner_type !== 'cash_register').map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</select></Field>}
       <Field label="Observation (facultatif)"><input value={reason} onChange={(e) => setReason(e.target.value)} maxLength={300} /></Field>
       {error && <ErrorBox message={error} />}

@@ -123,7 +123,7 @@ export class ReplicationController {
     });
     await this.db.tx(orgId, async (c) => {
       const role = (await c.query(`INSERT INTO roles(organization_id, code, name) VALUES ($1,'coop_admin','Administrateur de coopérative') RETURNING id`, [orgId])).rows[0];
-      await c.query(`INSERT INTO role_permissions(role_id, permission_code) SELECT $1, code FROM permissions`, [role.id]);
+      await c.query(`INSERT INTO role_permissions(role_id, permission_code) SELECT $1, code FROM permissions WHERE code <> 'cash:session'`, [role.id]);
       const u = (await c.query(`INSERT INTO users(email, full_name, password_hash) VALUES ($1,$2,$3) RETURNING id`, [b.admin_email.toLowerCase(), b.admin_name, hash])).rows[0];
       await c.query(`INSERT INTO user_organizations(user_id, organization_id, role_id, created_by) VALUES ($1,$2,$3,$1)`, [u.id, orgId, role.id]);
     });

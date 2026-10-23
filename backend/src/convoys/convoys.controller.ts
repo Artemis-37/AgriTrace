@@ -604,9 +604,9 @@ export class ConvoysController {
         [req.org.id, 'adv-c:' + b.idempotency_key, acc.id, b.amount, acc.currency, label + (b.piece_no ? ` — pièce ${b.piece_no}` : ''),
          b.kind === 'advance' ? 'collector_advance' : 'collector_carry', k.id, req.user.id, when])).rows[0];
       if (b.kind === 'advance') {
-        if (!b.cash_session_id) throw new BadRequestException('Un financement exige une session de caisse ouverte');
+        if (!b.cash_session_id) throw new BadRequestException('Un financement exige que le caissier soit connecté à la caisse');
         const sess = (await c.query(`SELECT s.id, r.account_id FROM cash_sessions s JOIN cash_registers r ON r.id = s.register_id WHERE s.id = $1 AND s.status = 'open'`, [b.cash_session_id])).rows[0];
-        if (!sess) throw new BadRequestException('Session de caisse inconnue ou clôturée');
+        if (!sess) throw new BadRequestException('Caisse inconnue ou caissier déconnecté');
         const cash = (await c.query(`SELECT * FROM financial_accounts WHERE id = $1 FOR UPDATE`, [sess.account_id])).rows[0];
         const ok = (await c.query(
           `SELECT $2::numeric <= coalesce(sum(CASE direction WHEN 'in' THEN amount ELSE -amount END), 0) AS ok, coalesce(sum(CASE direction WHEN 'in' THEN amount ELSE -amount END), 0) AS balance
@@ -696,7 +696,7 @@ export class ConvoysController {
       if (!acc) throw new NotFoundException('Ce délégué n\'a pas encore de compte crédité');
       const sess = (await c.query(
         `SELECT s.id, r.account_id FROM cash_sessions s JOIN cash_registers r ON r.id = s.register_id WHERE s.id = $1 AND s.status = 'open'`, [b.cash_session_id])).rows[0];
-      if (!sess) throw new BadRequestException('Session de caisse inconnue ou clôturée');
+      if (!sess) throw new BadRequestException('Caisse inconnue ou caissier déconnecté');
       const cash = (await c.query(`SELECT * FROM financial_accounts WHERE id = $1 FOR UPDATE`, [sess.account_id])).rows[0];
       const bal = (account: string) => c.query(
         `SELECT $2::numeric <= coalesce(sum(CASE direction WHEN 'in' THEN amount ELSE -amount END), 0) AS ok, coalesce(sum(CASE direction WHEN 'in' THEN amount ELSE -amount END), 0) AS balance

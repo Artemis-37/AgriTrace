@@ -18,7 +18,7 @@ export async function postFinancialTx(c: PoolClient, t: TxInput) {
   if (a.owner_type === 'cash_register') {
     const s = await c.query(
       `SELECT s.id FROM cash_sessions s JOIN cash_registers r ON r.id = s.register_id WHERE r.account_id = $1 AND s.status = 'open'`, [t.accountId]);
-    if (!s.rowCount) throw new UnprocessableEntityException('Aucune session de caisse ouverte pour ce compte');
+    if (!s.rowCount) throw new UnprocessableEntityException('Aucun caissier connecté à la caisse de ce compte');
     sessionId = s.rows[0].id;
     if (t.direction === 'out') {
       const chk = (await c.query(

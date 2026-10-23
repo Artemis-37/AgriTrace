@@ -61,7 +61,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     },
     chooseOrg: (id) => enter(orgs, id),
-    signOut: async () => { await client.logout(); setStatus('anonymous'); setMe(null); setOrgState(null); },
+    signOut: async () => {
+      // Le caissier qui se déconnecte de l'application se déconnecte aussi de la caisse (la caisse ne se clôture pas).
+      if (me?.permissions.includes('cash:session')) {
+        try { for (const r of await client.get<any[]>('/cash-registers')) if (r.open_session_id && r.open_session_by_id === me.user.id) await client.post(`/cash-sessions/${r.open_session_id}/close`, {}); } catch { /* sans incidence sur la déconnexion */ }
+      }
+      await client.logout(); setStatus('anonymous'); setMe(null); setOrgState(null); },
     can: (...perms) => perms.every((p) => me?.permissions.includes(p)),
   }), [status, orgs, org, me, afterLogin, enter]);
 

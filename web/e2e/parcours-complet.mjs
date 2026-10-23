@@ -159,8 +159,9 @@ console.log('4. Caisse');
 {
   const { page, go, close } = await actor('caissier');
   await go('/caisse');
-  await page.getByText('Ouvrir / fermer la caisse', { exact: true }).first().click().catch(() => undefined); await page.waitForTimeout(800);
-  await snap(page, 'caissier', 'session', 'Session de caisse', 'Avant de payer, la caisse est ouverte avec son fonds de caisse (une session ouverte est exigée pour tout mouvement d\'espèces).');
+  await page.getByText('Connexion à la caisse', { exact: true }).first().click().catch(() => undefined); await page.waitForTimeout(800);
+  await snap(page, 'caissier', 'session', 'Connexion à la caisse', 'Avant de payer, le caissier se connecte à la caisse (pas de fonds ni de clôture : seul le caissier se connecte et se déconnecte).');
+  await page.getByRole('button', { name: 'Se connecter' }).first().click().catch(() => undefined); await page.waitForTimeout(1200);
   await page.getByText('Traiter une pesée / régler un achat', { exact: true }).first().click().catch(() => undefined); await page.waitForTimeout(900);
   await snap(page, 'caissier', 'a-traiter', 'Pesées à traiter', 'La file des réceptions pesées et non encore réglées.');
   for (const [no, last] of [[CV, false], ['CV-NC-001', true]]) {

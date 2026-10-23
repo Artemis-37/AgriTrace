@@ -20,7 +20,7 @@ const LEGENDE = {
   producteurs: 'Liste des producteurs de la coopérative.',
   parcelles: 'Parcelles, superficies déclarées, état de vérification et versions du tracé.',
   cartographie: 'Carte, anomalies géographiques et couches de référence.',
-  convois: 'Convois des collecteurs : en route, reçus au magasin, réglés en caisse.',
+  connaissements: 'Connaissements des délégués : en route, reçus au magasin, réglés en caisse.',
   pesees: 'Pesées : liste, saisie d\'une pesée (délégué, campagne, produit, poids net automatique), analyses et bulletin.',
   caisse: 'Caisse : menu à rubriques dépliantes, pesées à traiter, opérations et journal de caisse.',
   comptabilite: 'Comptabilité : états et journaux, fournisseurs, emprunts, prestations, ventes, impôts.',
@@ -36,14 +36,14 @@ const LEGENDE = {
   'envoi-auto': 'Envoi automatique : rapports programmés (quotidien, hebdomadaire, mensuel).',
   equipe: 'Équipe : comptes, rôles, profil de la coopérative et logo.',
   prefinancement: 'Prêts et préfinancements : demande, approbation, décaissement, remboursements.',
-  declarations: 'Déclarations d\'achat des collecteurs, à mettre en vérification puis valider.',
+  declarations: 'Déclarations d\'achat des délégués, à mettre en vérification puis valider.',
   missions: 'Missions (tâches de terrain) : création, suivi, validation.',
   terrain: 'Relevés de terrain : formations, infrastructures sociales, distributions.',
   qualite: 'Qualité : règles, inspections, certificats.',
   commerce: 'Commerce : acheteurs, contrats, commandes.',
-  'mes-achats': 'Mes achats : achats déclarés par le collecteur.',
-  'mon-stock': 'Mon stock : stock du collecteur et solde de son compte.',
-  historique: 'Historique du collecteur.',
+  'mes-achats': 'Mes achats : achats déclarés par le délégué.',
+  'mon-stock': 'Mon stock : stock du délégué et solde de son compte.',
+  historique: 'Historique du délégué.',
   'modules-exportateurs': 'Modules des exportateurs : propositions à transmettre aux coachs, ou suivi de ses propres propositions.',
   'resultats-exportateurs': 'Résultats saisis par les coachs, à transmettre à l\'exportateur.',
   'modules-formation': 'Modules de formation : bibliothèque préchargée (cacao puis café), à conserver, modifier ou supprimer.',
@@ -72,30 +72,31 @@ const MOD = {
   },
   magasinier: {
     niveau: 'Niveau 1 — Opérateur', duree: '1 h 30',
-    objectifs: ['Réceptionner un convoi et peser', 'Imprimer le reçu', 'Demander l\'annulation d\'une réception faite par erreur', 'Consulter les stocks'],
+    objectifs: ['Réceptionner un connaissement et peser', 'Imprimer le reçu', 'Demander l\'annulation d\'une réception faite par erreur', 'Consulter les stocks'],
     pas: [
-      ['Ouvrir la saisie de pesée', 'Menu **Pesées** → *Enregistrer une pesée*. Saisissez le code du délégué (ou choisissez-le par son nom) : ses convois « en route » et la localité de provenance apparaissent.'],
-      ['Peser', 'Choisissez la **campagne** et le **produit** (le produit annoncé par le délégué est proposé, vous pouvez toujours le changer). Les informations d\'arrivée (déclaré) sont reprises ; saisissez le **poids**, les sacs reçus et les **sacs déchargés** : le **poids net se calcule seul** (poids − sacs déchargés). L\'analyse est facultative. Le convoi passe à « Reçu — en caisse » et le stock est mis à jour.'],
+      ['Ouvrir la saisie de pesée', 'Menu **Pesées** → *Enregistrer une pesée*. Saisissez le code du délégué (ou choisissez-le par son nom) : ses connaissements « en route » et la localité de provenance apparaissent.'],
+      ['Peser', 'Choisissez la **campagne** et le **produit** (le produit annoncé par le délégué est proposé, vous pouvez toujours le changer). Les informations d\'arrivée (déclaré) sont reprises ; saisissez le **poids**, les sacs reçus et les **sacs déchargés** : le **poids net se calcule seul** (poids − sacs déchargés). L\'analyse est facultative. Le connaissement passe à « Reçu — en caisse » et le stock est mis à jour.'],
       ['Imprimer le reçu', 'Menu **Mes opérations** → ligne de l\'opération → **Imprimer le reçu**. Une réimpression porte la mention *duplicata* et est tracée.'],
       ['Demander une annulation', 'Dans **Mes opérations**, sur une opération erronée : demandez l\'annulation en précisant le motif. Un responsable décidera ; vous suivez l\'avancement dans l\'onglet *Mes demandes*.'],
     ],
     exos: [
-      ['Pesez le convoi {{CV3}} (poids : 2 112 kg, 32 sacs reçus, 32 sacs déchargés).', 'Le poids net affiché est 2 080 kg (2 112 − 32) ; le convoi passe à « Reçu — en caisse » et le stock du lot augmente de 2 080 kg.'],
+      ['Pesez le connaissement {{CV3}} (poids : 2 112 kg, 32 sacs reçus, 32 sacs déchargés).', 'Le poids net affiché est 2 080 kg (2 112 − 32) ; le connaissement passe à « Reçu — en caisse » et le stock du lot augmente de 2 080 kg.'],
       ['Imprimez le reçu de cette réception, puis réimprimez-le.', 'La seconde impression porte « duplicata ».'],
       ['Demandez l\'annulation de cette réception (motif : poids saisi par erreur).', 'La demande apparaît « en attente » ; l\'opération reste valable tant qu\'elle n\'est pas approuvée.'],
     ],
   },
   caissier: {
     niveau: 'Niveau 1 — Opérateur', duree: '1 h 30',
-    objectifs: ['Traiter un convoi reçu (règlement du collecteur)', 'Tenir la caisse (entrées/sorties) avec justificatif', 'Consulter les comptes collecteurs', 'Imprimer les reçus et demander une annulation'],
+    objectifs: ['Traiter un connaissement reçu (règlement du délégué)', 'Tenir la caisse (entrées/sorties) avec justificatif', 'Consulter les comptes délégués', 'Imprimer les reçus et demander une annulation'],
     pas: [
-      ['Ouvrir la caisse', 'Menu **Caisse** → rubrique *Mouvements de caisse* → *Ouvrir / fermer la caisse* : saisissez le fonds de caisse et ouvrez la session. En fin de journée, saisissez le montant compté et fermez : l\'écart avec le solde attendu est conservé.'],
-      ['Régler un convoi', 'Rubrique *Opérations* → *Traiter une pesée / régler un achat* : sur une pesée « Reçu — en caisse », cliquez **Traiter**. Le **prix unitaire** est celui de la traite, **fixé par l\'administrateur** : il s\'affiche mais le caissier ne peut pas le modifier. La **retenue au kilo** s\'ajoute à la mise en compte du délégué. Le montant = poids net × prix ; l\'écriture de caisse et le compte du délégué sont créés automatiquement.'],
-      ['Saisir une opération de caisse', 'Rubrique *Mouvements de caisse* → *Enregistrer une entrée / sortie* : sens, montant, motif obligatoire. Aucune suppression possible : une erreur se corrige par une écriture inverse. Le résultat apparaît dans *Les entrées* ou *Les sorties de caisse*.'],
-      ['Suivre les comptes collecteurs', 'Rubrique *Solde délégué* : soldes, avances et retenues.'],
+      ['Se connecter à la caisse', 'Menu **Caisse** → rubrique *Mouvements de caisse* → *Connexion à la caisse* : cliquez sur **Se connecter**. Cette caisse n\'encaisse pas : elle établit des bons de sortie, des chèques et des paiements en espèces ; il n\'y a donc ni fonds de caisse, ni comptage, ni clôture. Seul le caissier se connecte et se déconnecte (l\'administrateur ne le peut pas) ; il est aussi déconnecté en quittant l\'application.'],
+      ['Régler un connaissement', 'Rubrique *Opérations* → *Traiter une pesée / régler un achat* : sur une pesée « Reçu — en caisse », cliquez **Traiter**. Le **prix unitaire** est celui de la traite, **fixé par l\'administrateur** : il s\'affiche mais le caissier ne peut pas le modifier. La **retenue au kilo** s\'ajoute à la mise en compte du délégué. Le montant = poids net × prix ; l\'écriture de caisse et le compte du délégué sont créés automatiquement.'],
+      ['Saisir une opération de caisse', 'Rubrique *Mouvements de caisse* → *Enregistrer une entrée / sortie* : **mode** (*Espèces* ou *Compte bancaire* avec la banque choisie : le compte bancaire est une forme de fonds de la caisse), sens, montant, motif obligatoire. Aucune suppression possible : une erreur se corrige par une écriture inverse. Le résultat apparaît dans *Les entrées* ou *Les sorties de caisse*.'],
+      ['Suivre les comptes bancaires', 'Rubrique *Mouvements de caisse* → *Évolution des comptes bancaires* : choisissez le compte et la période ; vous voyez le solde d\'ouverture, ce qui est **ajouté (+)** et **soustrait (−)**, le solde cumulé et la courbe du solde. Le journal de caisse a un sélecteur *Fonds* (espèces ou compte bancaire).'],
+      ['Suivre les comptes délégués', 'Rubrique *Solde délégué* : soldes, avances et retenues. Le transport et la retenue au kilo sont fixés par l\'administrateur dans la fiche du délégué (onglets *Transport* et *Retenues*) : la caisse ne les saisit pas.'],
     ],
     exos: [
-      ['Réglez le convoi {{CV3}} (réceptionné par le magasinier à son exercice) au prix de la traite (fixé par l\'administrateur, ex. 1 000 F/kg).', 'Montant = poids reçu × prix (ex. 2 080 kg × 1 000 → 2 080 000 F) ; le convoi passe à « Réglé ».'],
+      ['Réglez le connaissement {{CV3}} (réceptionné par le magasinier à son exercice) au prix de la traite (fixé par l\'administrateur, ex. 1 000 F/kg).', 'Montant = poids reçu × prix (ex. 2 080 kg × 1 000 → 2 080 000 F) ; le connaissement passe à « Réglé ».'],
       ['Enregistrez une sortie de caisse de 15 000 F « Achat de papier ».', 'Le solde de la caisse diminue de 15 000 F ; l\'opération est datée et attribuée à votre compte.'],
       ['Imprimez le reçu de règlement.', 'Le reçu porte l\'en-tête de la coopérative (nom, logo, adresse).'],
     ],
@@ -106,7 +107,7 @@ const MOD = {
     pas: [
       ['Consulter les états', 'Menu **Comptabilité** : mouvements de caisse, dépenses, journal des achats, prêts, soldes des délégués, exportateurs, comptes, factures des fournisseurs, emprunts, prestations, ventes d\'autres produits, impôts et estimation du BIC.'],
       ['Passer une écriture', 'Menu **Finances** → onglet *Comptabilité* → nouvelle écriture : journal, date, libellé, lignes (compte, débit ou crédit). Elle doit être **équilibrée**.'],
-      ['Consulter les comptes', 'Onglet *Comptes et caisses* : soldes et mouvements. Le **rapprochement bancaire** n\'est pas dans les droits du comptable : il est tenu par le responsable financier ou l\'administrateur.'],
+      ['Consulter les comptes', 'Onglet *Comptes et caisses* : soldes et mouvements ; le bouton **Évolution** d\'un compte bancaire montre ce qui y est ajouté et soustrait, avec le solde cumulé. Le **rapprochement bancaire** n\'est pas dans les droits du comptable : il est tenu par le responsable financier ou l\'administrateur.'],
     ],
     exos: [
       ['Passez une écriture « Cotisation » : 571 Caisse au débit, 758 Produits divers au crédit, 20 000 F.', 'L\'écriture apparaît au journal ; une écriture déséquilibrée est refusée.'],
@@ -130,7 +131,7 @@ const MOD = {
     objectifs: ['Contrôler les déclarations d\'achat', 'Remonter la chaîne de traçabilité d\'un lot', 'Suivre les producteurs'],
     pas: [
       ['Vérifier les déclarations', 'Menu **Déclarations d\'achat** : les déclarations « Reçue » attendent une mise en vérification, puis validation.'],
-      ['Tracer un lot', 'Menu **Stocks et lots** (si accessible) ou la fiche du lot : bouton *Traçabilité* pour voir producteurs, parcelles, convois et pesées.'],
+      ['Tracer un lot', 'Menu **Stocks et lots** (si accessible) ou la fiche du lot : bouton *Traçabilité* pour voir producteurs, parcelles, connaissements et pesées.'],
     ],
     exos: [
       ['Mettez en vérification la déclaration de TAPE Joséphine.', 'Son statut passe à « En vérification ».'],
@@ -237,16 +238,16 @@ const MOD = {
   },
   collecteur: {
     niveau: 'Niveau 1 — Opérateur', duree: '2 h', mobile: ['collecteur'],
-    objectifs: ['Déclarer un achat chez un producteur', 'Créer un convoi', 'Consulter son stock et sa fiche de compte'],
+    objectifs: ['Déclarer un achat chez un producteur', 'Créer un connaissement', 'Consulter son stock et sa fiche de compte'],
     pas: [
       ['Se connecter', '**Application mobile uniquement** : ce compte est refusé sur le portail web.'],
       ['Déclarer un achat', 'Sur le téléphone : **Nouvel achat** → choisir le producteur → quantité, unité, sacs. L\'achat se synchronise dès que le réseau est disponible.'],
-      ['Créer un convoi', 'Sur le téléphone : **Convoi** → chauffeur, camion, sacs et poids annoncés. Le **numéro de connaissement est attribué par le logiciel** : `code CCC de la coopérative` - `année` - `3 premières lettres du nom du collecteur` - `n° d\'ordre` (ex. `{{CV1}}`). Hors connexion, le numéro définitif est attribué à l\'envoi.'],
+      ['Créer un connaissement', 'Sur le téléphone : **Connaissement** → chauffeur, camion, sacs et poids annoncés. Le **numéro de connaissement est attribué par le logiciel** : `code CCC de la coopérative` - `année` - `3 premières lettres du nom du délégué` - `n° d\'ordre` (ex. `{{CV1}}`). Hors connexion, le numéro définitif est attribué à l\'envoi.'],
       ['Suivre son stock et son compte', 'Sur le téléphone : *Mon stock*, *Historique* et *Fiche de compte*.'],
     ],
     exos: [
       ['Déclarez un achat de 3 sacs chez TRAORE Moussa.', 'L\'achat apparaît « Soumis » dans Mes achats.'],
-      ['Créez un convoi (28 sacs, 1 800 kg annoncés) sans saisir de numéro.', 'Le logiciel attribue le numéro : code CCC, année, 3 premières lettres de votre nom, n° d\'ordre (ex. {{CV1}} pour le 1er convoi de Brahima). Le convoi apparaît « En route » côté magasin.'],
+      ['Créez un connaissement (28 sacs, 1 800 kg annoncés) sans saisir de numéro.', 'Le logiciel attribue le numéro : code CCC, année, 3 premières lettres de votre nom, n° d\'ordre (ex. {{CV1}} pour le 1er connaissement de Brahima). Le connaissement apparaît « En route » côté magasin.'],
     ],
   },
   exportateur: {
@@ -290,7 +291,7 @@ const MOD = {
   },
 };
 
-const ORDER = ['coop_admin', 'magasinier', 'caissier', 'comptable', 'direction', 'responsable_financier', 'responsable_magasin', 'responsable_tracabilite', 'responsable_cartographie', 'cartographe', 'agent_terrain', 'responsable_qualite', 'responsable_logistique', 'auditeur', 'acheteur', 'collecteur', 'adg', 'coach', 'exportateur'];
+const ORDER = ['coop_admin', 'magasinier', 'caissier', 'comptable', 'direction', 'responsable_financier', 'responsable_magasin', 'responsable_tracabilite', 'responsable_cartographie', 'cartographe', 'agent_terrain', 'responsable_qualite', 'responsable_logistique', 'auditeur', 'acheteur', 'délégué', 'adg', 'coach', 'exportateur'];
 const rel = (f) => `captures/formation/${f}`;
 const mob = (f) => `captures/mobile/${f}`;
 const hasMobile = (f) => fs.existsSync(path.join(dir, 'captures', 'mobile', f));
@@ -313,7 +314,7 @@ Les captures ont été prises sur la version de démonstration ; les libellés d
 
 | Niveau | Profils | Peut… | Ne peut pas… |
 |---|---|---|---|
-| **1 — Opérateur** | Magasinier, caissier, agent de terrain, cartographe, collecteur, coach, acheteur et exportateur (partenaires) | Saisir dans son périmètre, imprimer ses reçus, **demander** une annulation | Approuver une annulation, voir hors de son périmètre |
+| **1 — Opérateur** | Magasinier, caissier, agent de terrain, cartographe, délégué, coach, acheteur et exportateur (partenaires) | Saisir dans son périmètre, imprimer ses reçus, **demander** une annulation | Approuver une annulation, voir hors de son périmètre |
 | **2 — Gestion** | Comptable, responsable magasin, traçabilité, cartographie, qualité, logistique | Valider, ajuster, contrôler dans son domaine | Approuver les prêts et les annulations (sauf droit explicite) |
 | **3 — Pilotage / contrôle** | Direction, responsable financier, ADG, auditeur | Approuver (annulations, prêts, écarts), suivre toute l'activité ; l'auditeur lit seulement | Saisir au quotidien (hors responsable financier) |
 | **4 — Administration** | Administrateur de la coopérative | Tout dans sa coopérative : comptes, rôles, profil, annulations | Voir les autres coopératives |
@@ -334,7 +335,7 @@ ${demo.accounts.map((a) => `| ${a.label} | ${a.name} | \`${a.email}\` |`).join('
 
 ## 4. Parcours conseillés
 
-- **Chaîne d'achat** (demi-journée) : collecteur → magasinier → caissier → comptable → direction.
+- **Chaîne d'achat** (demi-journée) : délégué → magasinier → caissier → comptable → direction.
 - **Contrôle et conformité** (demi-journée) : agent de terrain / cartographe → responsable cartographie → responsable traçabilité → qualité → ADG.
 - **Pilotage** (2 h) : direction, responsable financier, auditeur, administrateur.
 
@@ -345,7 +346,7 @@ md += `
 
 Ce chapitre déroule **une même chaîne, de bout en bout**, avec les comptes de la démonstration (données fictives). Chaque étape est jouée par le profil concerné ; les formulaires sont remplis. Le téléphone du délégué est simulé par les écrans de l'application.
 
-**Fil conducteur.** Le délégué achète du cacao à deux producteurs et déclare un convoi qui les transporte (n° {{PCV}}). Le responsable traçabilité valide les achats ; le magasinier pèse ce convoi, puis pèse aussi un convoi **non déclaré** d'un autre délégué ({{PNC}}). La caisse règle les deux pesées au **prix de la traite fixé par l'administrateur** et retient une somme au kilo (la *mise en compte*). En fin de campagne le compte du délégué est clôturé ; son reversement (sur son compte, par chèque, en espèces ou vers un autre compte) est **approuvé par l'administrateur**. Le comptable retrouve les écritures, le stock alimente les ventes, et les modules de l'exportateur redescendent jusqu'aux coachs avant de remonter à l'exportateur.
+**Fil conducteur.** Le délégué achète du cacao à deux producteurs et déclare un connaissement qui les transporte (n° {{PCV}}). Le responsable traçabilité valide les achats ; le magasinier pèse ce connaissement, puis pèse aussi un connaissement **non déclaré** d'un autre délégué ({{PNC}}). La caisse règle les deux pesées au **prix de la traite fixé par l'administrateur** et retient une somme au kilo (la *mise en compte*). En fin de campagne le compte du délégué est clôturé ; son reversement (sur son compte, par chèque, en espèces ou vers un autre compte) est **approuvé par l'administrateur**. Le comptable retrouve les écritures, le stock alimente les ventes, et les modules de l'exportateur redescendent jusqu'aux coachs avant de remonter à l'exportateur.
 
 `;
 const P = JSON.parse(fs.readFileSync(path.join(dir, 'captures', 'parcours', 'index.json'), 'utf8'));
@@ -381,7 +382,7 @@ for (const role of ORDER) {
   md += `### Acquis (à cocher)\n\n${m.objectifs.map((o) => `- [ ] ${o}`).join('\n')}\n`;
 }
 
-md += `\n---\n\n## ${n}. Évaluation finale (30 min)\n\nScénario commun, à dérouler à plusieurs comptes :\n\n1. **Collecteur** : déclare un achat et crée un convoi (numéro attribué automatiquement).\n2. **Magasinier** : réceptionne le convoi (poids différent du déclaré) et imprime le reçu.\n3. **Caissier** : règle le convoi au prix du jour.\n4. **Comptable** : passe l'écriture correspondante et pointe le relevé.\n5. **Magasinier** : constate une erreur de poids et demande l'annulation.\n6. **Direction ou administrateur** : décide de la demande.\n7. **Auditeur** : retrouve l'ensemble des traces (reçus, demande, décision).\n\nCritères : respect du circuit, aucune suppression, motifs renseignés, reçus imprimés, demandeur ≠ approbateur.\n`;
+md += `\n---\n\n## ${n}. Évaluation finale (30 min)\n\nScénario commun, à dérouler à plusieurs comptes :\n\n1. **Délégué** : déclare un achat et crée un connaissement (numéro attribué automatiquement).\n2. **Magasinier** : réceptionne le connaissement (poids différent du déclaré) et imprime le reçu.\n3. **Caissier** : règle le connaissement au prix du jour.\n4. **Comptable** : passe l'écriture correspondante et pointe le relevé.\n5. **Magasinier** : constate une erreur de poids et demande l'annulation.\n6. **Direction ou administrateur** : décide de la demande.\n7. **Auditeur** : retrouve l'ensemble des traces (reçus, demande, décision).\n\nCritères : respect du circuit, aucune suppression, motifs renseignés, reçus imprimés, demandeur ≠ approbateur.\n`;
 md = md.replaceAll('{{CV1}}', CV1).replaceAll('{{CV2}}', CV2).replaceAll('{{CV3}}', CV3);
 fs.writeFileSync(path.join(dir, 'GUIDE_FORMATION.md'), md);
 console.log('GUIDE_FORMATION.md :', md.length, 'caractères');

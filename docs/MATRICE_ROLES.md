@@ -2,7 +2,7 @@
 
 Fichier généré par `backend/scripts/gen-matrice-roles.js` à partir du code : ne pas le modifier à la main. Les menus du portail et les routes de l'API se règlent sur les **permissions**, jamais sur le nom du rôle. Une coopérative crée ses propres rôles en combinant ces permissions ; les cinq rôles ci-dessous sont des modèles proposés.
 
-143 permissions, 359 routes protégées. Les droits sensibles (paiements, ajustements, exports de noms) peuvent en plus exiger une seconde approbation, réglée par rôle.
+143 permissions, 360 routes protégées. Les droits sensibles (paiements, ajustements, exports de noms) peuvent en plus exiger une seconde approbation, réglée par rôle.
 
 ## Rôles types
 - **Magasinier** (`magasinier`) : Réceptionne et pèse les convois au magasin central, tient les stocks et l'inventaire.
@@ -136,7 +136,7 @@ Colonnes : ✓ = accordé par le rôle type. Les rôles Administrateur de coopé
 ### finance
 | Permission | Rôle du droit | Magasinier | Caissier | Comptable | Direction | Responsable de traçabilité | Responsable cartographie | Cartographe | Agent de terrain | Responsable de magasin | Responsable financier | Responsable qualité | Responsable logistique | Auditeur | Acheteur / partenaire externe | Exportateur | Délégué | Administrateur de groupe | Coach | Routes |
 |---|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|---|
-| `finance:read` | Consulter les comptes et transactions |  | ✓ | ✓ | ✓ |  |  |  |  |  | ✓ |  |  | ✓ |  |  |  |  |  | `POST /dues/:id/payments`<br>`GET /financial-accounts`<br>`GET /financial-accounts/:id/transactions`<br>… +3 |
+| `finance:read` | Consulter les comptes et transactions |  | ✓ | ✓ | ✓ |  |  |  |  |  | ✓ |  |  | ✓ |  |  |  |  |  | `POST /dues/:id/payments`<br>`GET /financial-accounts`<br>`GET /financial-accounts/:id/transactions`<br>… +4 |
 | `finance:reverse` | Passer une écriture compensatoire |  |  |  |  |  |  |  |  |  | ✓ |  |  |  |  |  |  |  |  | `POST /financial-transactions/:id/reverse`<br>`POST /loan-repayments/:id/reverse` |
 
 ### geo
