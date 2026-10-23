@@ -124,3 +124,7 @@ Chaque intervenant de la coopérative (délégué, magasinier, caissier, coach, 
 ## Produit convoyé annoncé par le délégué (application mobile)
 
 À la déclaration d'un convoi, le délégué choisit le **produit convoyé** (liste des produits actifs, gardée en cache pour la saisie hors connexion). Le magasinier le voit à la pesée : le produit est **proposé d'office mais toujours modifiable**. Sans choix du magasinier, le produit annoncé est retenu. Le règlement en caisse reprend le prix d'achat du produit.
+
+## Interface « logiciel de bureau » aux couleurs AgriTrace
+
+Le menu latéral est remplacé par une présentation de logiciel de bureau : **barre de titre** verte (logo, coopérative, connexion, messages, cloche, compte), **barre de menus** vert clair — *Accueil, Fichier* (producteurs, plantations, délégués, partenaires, produits et campagnes), *Opérations* (pesées, convois, caisse, ventes, déclarations…), *Comptabilité*, *Stock*, *Suivi*, *Administration* —, **bandeau de titre** vert sur chaque écran et **barre d'état** (coopérative, utilisateur, date). Les menus ne montrent que ce que les droits de l'utilisateur permettent ; sur téléphone, la barre de menus s'ouvre par le bouton ☰.

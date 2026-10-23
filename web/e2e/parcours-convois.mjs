@@ -107,11 +107,11 @@ await step('cloche : l\'administrateur voit les alertes de gestion', async () =>
 });
 await step('espace du collecteur : Mes achats, Mon stock, Historique, sans menus de gestion', async () => {
   await login(colEmail);
-  const nav = await page.locator('aside').innerText();
+  const nav = await page.locator('nav[aria-label="Menus"]').evaluate((e) => e.textContent);
   for (const t of ['Mes achats', 'Mon stock', 'Historique']) must(nav.includes(t), `menu ${t} absent`);
   must(!nav.includes('Finances') && !nav.includes('Équipe') && !nav.includes('Déclarations d\'achat'), 'menu de gestion visible pour le collecteur');
   must((await page.innerText('main')).includes('application mobile'), 'bandeau mobile absent');
-  await page.getByRole('link', { name: /Mon stock/ }).click(); await page.waitForTimeout(1200);
+  await page.goto(page.url().split('/').slice(0, 3).join('/') + '/mon-stock'); await page.waitForTimeout(1200);
   const t = (await page.innerText('main')).replace(/\s/g, ' ');
   must(/2\s?588\s?kg|2\s?587\s?kg/.test(t) && t.includes('Livré au magasin'), 'stock livré absent : ' + t.slice(0, 300));
   must(/334\s?150/.test(t), 'solde de la fiche absent : ' + t.slice(0, 400));

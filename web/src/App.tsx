@@ -39,6 +39,7 @@ import Producers from './pages/Producers';
 import Quality from './pages/Quality';
 import Stocks from './pages/Stocks';
 import { Loading } from './ui';
+import { MenuBar, StatusBar } from './MenuBar';
 
 
 const NAV: { to: string; label: string; icon: string; perm: string[]; any?: boolean; only?: 'collector'; notFor?: 'collector' }[] = [
@@ -100,25 +101,20 @@ export default function App() {
   if (me?.must_setup_2fa) return <ForcedTwoFactor />;
 
   return (
-    <div className="shell">
-      <div className="topbar-mobile">
-        <button className="btn btn-ghost" aria-label="Ouvrir le menu" aria-expanded={open} onClick={() => setOpen(!open)}>☰</button>
-        <strong>AgriTrace</strong>
-      </div>
-      <aside className={`sidebar ${open ? 'open' : ''}`}>
-        <div className="brand"><strong>Agri<span>Trace</span></strong><small>La traçabilité agricole, de la parcelle au marché.</small></div>
-        <nav className="nav" aria-label="Navigation principale" onClick={() => setOpen(false)}>
-          {NAV.filter((n) => (n.any ? n.perm.some((p) => can(p)) : can(...n.perm)) && (!n.only || me?.account_kind === n.only) && (!n.notFor || me?.account_kind !== n.notFor)).map((n) => (
-            <NavLink key={n.to} to={n.to} end={n.to === '/'}><span aria-hidden="true">{n.icon}</span>{n.label}{n.to === '/messages' && msgUnread > 0 && <span className="badge badge-bad" style={{ marginLeft: 'auto' }} aria-label={`${msgUnread} message(s) non lu(s)`}>{msgUnread}</span>}</NavLink>
-          ))}
-        </nav>
-        <div className="who">
-          <strong>{org?.name}</strong><br />{me?.user.full_name}<br /><NavLink to="/compte" className="muted">Mon compte</NavLink>
-          <div><button className="btn btn-ghost btn-small" onClick={signOut}>Se déconnecter</button></div>
+    <div className="shell desk">
+      <header className="titlebar">
+        <button className="btn btn-ghost menu-toggle" aria-label="Ouvrir le menu" aria-expanded={open} onClick={() => setOpen(!open)}>☰</button>
+        <div className="brand"><strong>Agri<span>Trace</span></strong></div>
+        <span className="coop">{org?.name}</span>
+        <div className="title-right">
+          <ConnectionStatus />{can('messages:use') && <MessageButton unread={msgUnread} />}<Bell unread={unread} onChange={refreshUnread} />
+          <span className="who-inline">{me?.user.full_name} · <NavLink to="/compte">Mon compte</NavLink></span>
+          <button className="btn btn-ghost btn-small" onClick={signOut}>Se déconnecter</button>
         </div>
-      </aside>
+      </header>
+      <MenuBar open={open} onNavigate={() => setOpen(false)}
+        items={NAV.filter((n) => (n.any ? n.perm.some((p) => can(p)) : can(...n.perm)) && (!n.only || me?.account_kind === n.only) && (!n.notFor || me?.account_kind !== n.notFor)).map(({ to, label, icon }) => ({ to, label, icon }))} />
       <main className="main">
-        <div className="topbar"><ConnectionStatus />{can('messages:use') && <MessageButton unread={msgUnread} />}<Bell unread={unread} onChange={refreshUnread} /></div>
         <OfflineBar />
         {managed && <p className="notice" role="status">Lecture seule : cette coopérative est gérée par son serveur local (« {managed} »). Les modifications se font là-bas ; elles arrivent ici par synchronisation.</p>}
         {me?.mobile_first && <p className="notice" role="status">Votre compte ({me.account_kind === 'collector' ? 'délégué' : 'coach'}) est conçu pour l'application mobile, qui fonctionne aussi dans les villages sans réseau. Ce portail affiche uniquement ce qui vous concerne.</p>}
@@ -158,6 +154,7 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
+      <StatusBar><span>{org?.name}</span><span>{me?.user.full_name}</span><span>{new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span></StatusBar>
     </div>
   );
 }

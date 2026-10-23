@@ -264,3 +264,39 @@ dl.kv dd { margin: 0; }
 
 .bloc { border: 1px solid var(--line, #d9d4c8); border-radius: .6rem; margin: 0 0 1rem; padding: .5rem 1rem .25rem; }
 .bloc legend { padding: 0 .5rem; font-weight: 700; color: var(--brand, #2f6b3a); }
+
+/* ---- Coque « logiciel de bureau » : barre de titre, barre de menus, zone de travail, barre d'état (couleurs AgriTrace) ---- */
+.shell.desk { display: flex; flex-direction: column; min-height: 100vh; }
+.titlebar { background: var(--forest); color: var(--on-forest); display: flex; align-items: center; gap: 1rem; padding: .35rem 1rem; min-height: 46px; }
+.titlebar .brand { display: flex; align-items: baseline; gap: .4rem; font-size: 1.15rem; }
+.titlebar .brand span { color: var(--lime); }
+.titlebar .coop { opacity: .85; font-size: .85rem; border-left: 1px solid rgba(255,255,255,.3); padding-left: 1rem; }
+.title-right { margin-left: auto; display: flex; align-items: center; gap: .6rem; font-size: .85rem; }
+.title-right a { color: var(--lime); }
+.titlebar .btn-ghost { color: var(--on-forest); border-color: rgba(255,255,255,.4); }
+.menu-toggle { display: none; }
+.menubar { background: var(--lime); color: var(--on-lime); display: flex; flex-wrap: wrap; gap: 0; padding: 0 .5rem; border-bottom: 2px solid var(--nature); position: sticky; top: 0; z-index: 30; }
+.menubar .menu { position: relative; }
+.menu-top { background: transparent; border: 0; font: inherit; font-weight: 600; color: var(--on-lime); padding: .5rem .9rem; cursor: pointer; text-decoration: none; display: inline-block; }
+.menu-top:hover, .menu.on > .menu-top, .menu-top.active { background: var(--forest); color: var(--on-forest); }
+.menu-drop { position: absolute; left: 0; top: 100%; min-width: 230px; margin: 0; padding: .25rem 0; list-style: none; background: var(--surface); border: 1px solid var(--nature); box-shadow: 0 6px 16px rgba(0,0,0,.18); z-index: 50; }
+.menu-drop a { display: flex; gap: .6rem; align-items: center; padding: .45rem 1rem; color: var(--carbon); text-decoration: none; }
+.menu-drop a:hover, .menu-drop a:focus-visible, .menu-drop a.active { background: var(--forest); color: var(--on-forest); }
+.shell.desk .main { flex: 1; margin: 0 auto; width: 100%; padding: 1rem 1.5rem 2rem; }
+.shell.desk .page-header { background: var(--forest); color: var(--on-forest); padding: .45rem 1rem; border-radius: 6px 6px 0 0; margin-bottom: 0; }
+.shell.desk .page-header h1 { font-size: 1.05rem; color: var(--on-forest); }
+.shell.desk .page-header .muted { color: var(--on-forest); opacity: .8; font-size: .8rem; margin: 0; }
+.shell.desk .page-header .btn-secondary { background: var(--lime); color: var(--on-lime); border-color: var(--lime); }
+.shell.desk .main > .tabs { margin-top: .6rem; }
+.statusbar { background: var(--lime); color: var(--on-lime); display: flex; gap: 1.5rem; padding: .25rem 1rem; font-size: .78rem; border-top: 2px solid var(--nature); position: sticky; bottom: 0; }
+.statusbar span:last-child { margin-left: auto; text-transform: capitalize; }
+@media (max-width: 900px) {
+  .menu-toggle { display: inline-block; }
+  .titlebar .coop, .who-inline { display: none; }
+  .menubar { display: none; flex-direction: column; position: static; }
+  .menubar.open { display: flex; }
+  .menu-drop { position: static; box-shadow: none; border: 0; border-left: 4px solid var(--nature); }
+  .menu-top { text-align: left; width: 100%; }
+}
+@media print { .titlebar, .menubar, .statusbar { display: none !important; } }
+@media (max-width: 900px) { .titlebar { flex-wrap: wrap; } .title-right { flex-wrap: wrap; } .statusbar { display: none; } }
