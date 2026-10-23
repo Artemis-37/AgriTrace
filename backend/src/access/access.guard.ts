@@ -95,7 +95,7 @@ export class AccessGuard implements CanActivate {
       const mo = (await this.db.tx(orgId, (c) => c.query(
         `SELECT r.mobile_only FROM user_organizations uo JOIN roles r ON r.id = uo.role_id WHERE uo.user_id = $1 AND uo.organization_id = $2 AND uo.status = 'active'`, [req.user.id, orgId]))).rows as { mobile_only: boolean }[];
       const isCollector = ((await this.db.tx(orgId, (c) => c.query(`SELECT 1 FROM collectors WHERE user_id = $1 AND status = 'active'`, [req.user.id]))).rowCount ?? 0) > 0;
-      if (mo.some((x) => x.mobile_only) || isCollector)
+      if ((mo.length > 0 && mo.every((x) => x.mobile_only)) || isCollector)
         throw new ForbiddenException({ message: 'Ce compte se connecte uniquement depuis l\'application mobile AgriTrace.', code: 'MOBILE_ONLY' });
     }
 

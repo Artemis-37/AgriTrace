@@ -10,7 +10,7 @@ export const STANDARD_ROLES: Record<string, { name: string; description: string;
   caissier: {
     name: 'Caissier',
     description: 'Traite les convois reçus, règle les délégués, tient la caisse et les comptes des délégués.',
-    permissions: ['products:read', 'partners:read', 'dues:read', 'dues:settle', 'campaigns:read', 'convoys:read', 'convoys:settle', 'cash:operate', 'finance:read', 'accounting:read', 'cancellations:request', 'messages:use', 'sync:use'],
+    permissions: ['products:read', 'partners:read', 'dues:read', 'dues:settle', 'campaigns:read', 'convoys:read', 'convoys:settle', 'cash:operate', 'cash:read', 'finance:read', 'accounting:read', 'cancellations:request', 'messages:use', 'sync:use'],
     hidden: ['Cartographie', 'Conformité / qualité', 'Équipe', 'Missions', 'Stocks'],
   },
   comptable: {

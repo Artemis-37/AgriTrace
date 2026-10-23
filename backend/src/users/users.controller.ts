@@ -46,11 +46,15 @@ export class UsersController {
   list(@Req() req: any) {
     // La table des rôles est protégée par RLS : la lecture doit se faire dans le contexte de l'organisation
     return this.db.tx(req.org.id, async (c) => (await c.query(
-      `SELECT u.id, u.email, u.full_name, u.phone, u.status, (SELECT mc.code FROM member_codes mc WHERE mc.organization_id = uo.organization_id AND mc.user_id = u.id) AS member_code, r.code AS role_code, uo.status AS membership_status
+      `SELECT u.id, u.email, u.full_name, u.phone, u.status, (SELECT mc.code FROM member_codes mc WHERE mc.organization_id = uo.organization_id AND mc.user_id = u.id) AS member_code,
+              string_agg(r.name, ', ' ORDER BY r.name) AS role_name, string_agg(r.code, ', ' ORDER BY r.code) AS role_code,
+              array_agg(r.code ORDER BY r.code) AS role_codes, array_agg(r.id ORDER BY r.code) AS role_ids,
+              CASE WHEN bool_or(uo.status = 'active') THEN 'active' ELSE 'suspended' END AS membership_status
          FROM user_organizations uo
          JOIN users u ON u.id = uo.user_id
          JOIN roles r ON r.id = uo.role_id
-        WHERE uo.organization_id = $1 ORDER BY u.full_name`,
+        WHERE uo.organization_id = $1
+        GROUP BY u.id, uo.organization_id ORDER BY u.full_name`,
       [req.org.id])).rows);
   }
 

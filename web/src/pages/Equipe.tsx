@@ -7,7 +7,7 @@ import { Badge, Card, ErrorBox, Field, Loading, Modal, PageHeader, Table, useAct
 import { dateTime } from '../format';
 import { Confirm } from './Declarations';
 
-const ACTIONS: Record<string, string> = { suspend: 'Suspension', reactivate: 'Réactivation', revoke_sessions: 'Sessions révoquées', role_change: 'Changement de rôle' };
+const ACTIONS: Record<string, string> = { suspend: 'Suspension', reactivate: 'Réactivation', revoke_sessions: 'Sessions révoquées', role_change: 'Changement de rôle', role_add: 'Rôle ajouté', role_remove: 'Rôle retiré' };
 
 export default function Equipe() {
   const { can, me } = useAuth();
@@ -47,7 +47,7 @@ export default function Equipe() {
         {error && <ErrorBox message={error} onRetry={reload} />}
         {loading ? <Loading /> : (
           <Table rows={data?.users ?? []} empty="Aucun utilisateur." columns={[
-            { header: 'Code', render: (u) => <code>{u.member_code ?? '—'}</code> }, { header: 'Nom', render: (u) => <strong>{u.full_name}</strong> }, { header: 'E-mail', render: (u) => u.email }, { header: 'Rôle', render: (u) => u.role_code },
+            { header: 'Code', render: (u) => <code>{u.member_code ?? '—'}</code> }, { header: 'Nom', render: (u) => <strong>{u.full_name}</strong> }, { header: 'E-mail', render: (u) => u.email }, { header: 'Rôles', render: (u) => u.role_name ?? u.role_code },
             { header: 'Accès', render: (u) => <Badge tone={u.membership_status === 'active' ? 'ok' : 'bad'}>{u.membership_status === 'active' ? 'Actif' : 'Suspendu'}</Badge> },
             { header: '', render: (u) => (
               <div className="row-actions">
@@ -58,7 +58,7 @@ export default function Equipe() {
                 {can('users:suspend') && <button className="btn btn-small btn-secondary" onClick={() => setAsk({ u, what: 'revoke-sessions' })}>Révoquer les sessions</button>}
                 {can('users:manage') && u.id !== me?.user.id && <button className="btn btn-small btn-secondary" onClick={async () => { if (confirm(`Réinitialiser le mot de passe de ${u.full_name} ? Ses sessions seront fermées.`)) await mk.run(async () => setTemp(await post(`/users/${u.id}/reset-password`))); }}>Réinitialiser le mot de passe</button>}
                 {can('users:manage') && u.id !== me?.user.id && <button className="btn btn-small btn-secondary" onClick={async () => { if (confirm(`Retirer la double authentification de ${u.full_name} (téléphone perdu) ? Ses sessions seront fermées ; la personne pourra la reconfigurer.`)) await mk.run(async () => { await post(`/users/${u.id}/reset-2fa`); alert('Double authentification retirée.'); }); }}>Retirer sa double authentification</button>}
-                {can('users:change_role') && u.id !== me?.user.id && <button className="btn btn-small btn-secondary" onClick={() => setRole(u)}>Rôle</button>}
+                {can('users:change_role') && u.id !== me?.user.id && <button className="btn btn-small btn-secondary" onClick={() => setRole(u)}>Rôles</button>}
                 <button className="btn btn-small btn-ghost" onClick={() => setHist(u)}>Historique</button>
               </div>) },
           ]} />
@@ -202,14 +202,23 @@ function ChangeRole({ u, roles, onClose, onDone }: { u: any; roles: any[]; onClo
   const [roleId, setRoleId] = useState('');
   const [reason, setReason] = useState('');
   const { busy, error, run } = useAction();
+  const mine: string[] = u.role_ids ?? [];
+  const names = (id: string) => roles.find((r) => r.id === id)?.name ?? id;
+  const ok = reason.trim().length >= 3;
   return (
-    <Modal title={`Rôle de ${u.full_name}`} onClose={onClose}>
-      <p className="muted">Rôle actuel : {u.role_code}</p>
-      <Field label="Nouveau rôle"><select value={roleId} onChange={(e) => setRoleId(e.target.value)}><option value="">—</option>{roles.filter((r) => r.code !== u.role_code).map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}</select></Field>
-      <Field label="Motif"><textarea rows={2} value={reason} onChange={(e) => setReason(e.target.value)} /></Field>
+    <Modal title={`Rôles de ${u.full_name}`} onClose={onClose}>
+      <p className="muted">Une personne peut cumuler plusieurs rôles : ses droits sont la somme de ceux de ses rôles, et son menu ne montre que ce qu'ils permettent.</p>
+      <div className="role-chips">
+        {mine.map((id) => (
+          <span key={id} className="chip">{names(id)}
+            {mine.length > 1 && <button className="btn btn-small btn-ghost" title="Retirer ce rôle" disabled={busy || !ok} onClick={() => run(async () => { await del(`/users/${u.id}/roles/${id}?reason=${encodeURIComponent(reason)}`); onDone(); })}>Retirer</button>}
+          </span>))}
+      </div>
+      <Field label="Ajouter un rôle"><select value={roleId} onChange={(e) => setRoleId(e.target.value)}><option value="">—</option>{roles.filter((r) => !mine.includes(r.id)).map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}</select></Field>
+      <Field label="Motif (obligatoire pour ajouter ou retirer)"><textarea rows={2} value={reason} onChange={(e) => setReason(e.target.value)} /></Field>
       {error && <ErrorBox message={error} />}
-      <div className="modal-foot"><button className="btn btn-secondary" onClick={onClose}>Annuler</button>
-        <button className="btn" disabled={busy || !roleId || reason.trim().length < 3} onClick={() => run(async () => { await post(`/users/${u.id}/role`, { role_id: roleId, reason }); onDone(); })}>Changer le rôle</button></div>
+      <div className="modal-foot"><button className="btn btn-secondary" onClick={onClose}>Fermer</button>
+        <button className="btn" disabled={busy || !roleId || !ok} onClick={() => run(async () => { await post(`/users/${u.id}/roles`, { role_id: roleId, reason }); onDone(); })}>Ajouter le rôle</button></div>
     </Modal>
   );
 }

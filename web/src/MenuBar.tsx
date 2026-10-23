@@ -3,14 +3,14 @@ import { NavLink, useLocation } from 'react-router-dom';
 
 export interface MenuItem { to: string; label: string; icon: string }
 const GROUP_OF: Record<string, string> = {
-  '/producteurs': 'Fichier', '/parcelles': 'Fichier', '/delegues': 'Fichier', '/partenaires': 'Fichier', '/parametres': 'Fichier',
+  '/producteurs': 'Fichier', '/parcelles': 'Fichier', '/delegues': 'Fichier', '/partenaires': 'Fichier', '/parametres': 'Paramètres',
   '/mes-achats': 'Opérations', '/mon-stock': 'Opérations', '/historique': 'Opérations', '/pesees': 'Opérations', '/convois': 'Opérations', '/caisse': 'Opérations', '/commerce': 'Opérations', '/declarations': 'Opérations', '/operations': 'Opérations', '/missions': 'Opérations', '/terrain': 'Opérations',
   '/comptabilite': 'Comptabilité', '/finances': 'Comptabilité', '/prefinancement': 'Comptabilité',
   '/stocks': 'Stock', '/inventaire': 'Stock', '/qualite': 'Stock',
   '/cartographie': 'Suivi', '/rapports': 'Suivi', '/modules-formation': 'Suivi', '/modules-exportateurs': 'Suivi',
   '/equipe': 'Administration', '/synchronisation': 'Administration',
 };
-const ORDER = ['Fichier', 'Opérations', 'Comptabilité', 'Stock', 'Suivi', 'Administration', 'Autres'];
+const ORDER = ['Fichier', 'Opérations', 'Comptabilité', 'Stock', 'Suivi', 'Paramètres', 'Administration', 'Autres'];
 const LABEL: Record<string, string> = { '/parcelles': 'Plantations (parcelles)' };
 
 /** Barre de menus à la manière d'un logiciel de bureau (Fichier, Opérations, Comptabilité…), aux couleurs AgriTrace. */

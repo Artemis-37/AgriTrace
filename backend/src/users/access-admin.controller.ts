@@ -1,4 +1,4 @@
-import { BadRequestException, Body, ConflictException, Controller, ForbiddenException, Get, NotFoundException, Param, ParseUUIDPipe, Post, Req } from '@nestjs/common';
+import { BadRequestException, Body, ConflictException, Controller, Delete, ForbiddenException, Get, NotFoundException, Param, ParseUUIDPipe, Post, Query, Req } from '@nestjs/common';
 import { ApiBearerAuth, ApiHeader, ApiTags } from '@nestjs/swagger';
 import { IsOptional, IsString, IsUUID, Length } from 'class-validator';
 import { PoolClient } from 'pg';
@@ -107,6 +107,49 @@ export class AccessAdminController {
       await this.event(c, req, id, 'role_change', b.reason, { from: before, to: b.role_id, role: role.code });
       await this.notif.notifyUsers(c, req.org.id, [id], { kind: 'role_changed', title: 'Vos droits ont été modifiés', body: `Nouveau rôle : ${role.code}`, entityType: 'user', entityId: id });
       return { id, role_id: b.role_id, role_code: role.code };
+    });
+  }
+
+  /** Ajoute un rôle à la personne (plusieurs rôles possibles : ses droits sont la somme de ceux de ses rôles). */
+  @Post(':id/roles')
+  @RequirePermissions('users:change_role')
+  async addRole(@Param('id', ParseUUIDPipe) id: string, @Body() b: RoleChangeDto, @Req() req: any) {
+    if (id === req.user.id) throw new ConflictException('Impossible de modifier ses propres rôles');
+    return this.db.tx(req.org.id, async (c) => {
+      const rows = await this.member(c, req.org.id, id);
+      const role = (await c.query(`SELECT id, code FROM roles WHERE id = $1 AND organization_id = $2`, [b.role_id, req.org.id])).rows[0];
+      if (!role) throw new BadRequestException('Rôle inconnu pour cette coopérative');
+      if (rows.some((r) => r.role_id === b.role_id)) throw new ConflictException('Cette personne a déjà ce rôle');
+      const perms = (await c.query(`SELECT permission_code FROM role_permissions WHERE role_id = $1`, [b.role_id])).rows.map((r) => r.permission_code);
+      const missing = perms.filter((p) => !req.org.permissions.has(p));
+      if (missing.length) throw new ForbiddenException(`Permissions non détenues : ${missing.join(', ')}`);
+      const status = rows.some((r) => r.status === 'active') ? 'active' : 'suspended';
+      await c.query(`INSERT INTO user_organizations(user_id, organization_id, role_id, status, created_by) VALUES ($1,$2,$3,$4,$5)`, [id, req.org.id, b.role_id, status, req.user.id]);
+      await this.event(c, req, id, 'role_add', b.reason, { role: role.code });
+      await this.notif.notifyUsers(c, req.org.id, [id], { kind: 'role_changed', title: 'Vos droits ont été modifiés', body: `Rôle ajouté : ${role.code}`, entityType: 'user', entityId: id });
+      return { id, role_id: b.role_id, role_code: role.code };
+    });
+  }
+
+  /** Retire un des rôles de la personne ; elle doit en garder au moins un. */
+  @Delete(':id/roles/:roleId')
+  @RequirePermissions('users:change_role')
+  async removeRole(@Param('id', ParseUUIDPipe) id: string, @Param('roleId', ParseUUIDPipe) roleId: string, @Query('reason') reason: string, @Req() req: any) {
+    if (id === req.user.id) throw new ConflictException('Impossible de modifier ses propres rôles');
+    if (!reason || reason.trim().length < 3) throw new BadRequestException('Motif requis (3 caractères minimum)');
+    return this.db.tx(req.org.id, async (c) => {
+      const rows = await this.member(c, req.org.id, id);
+      if (!rows.some((r) => r.role_id === roleId)) throw new NotFoundException("Cette personne n'a pas ce rôle");
+      if (rows.length === 1) throw new ConflictException('Une personne doit garder au moins un rôle : utilisez « Remplacer » pour en changer');
+      const role = (await c.query(`SELECT code FROM roles WHERE id = $1`, [roleId])).rows[0];
+      await c.query(`DELETE FROM user_organizations WHERE organization_id = $1 AND user_id = $2 AND role_id = $3`, [req.org.id, id, roleId]);
+      const left = (await c.query(
+        `SELECT count(DISTINCT uo.user_id)::int AS n FROM user_organizations uo JOIN role_permissions rp ON rp.role_id = uo.role_id
+          WHERE uo.organization_id = $1 AND uo.status = 'active' AND rp.permission_code = 'users:suspend'`, [req.org.id])).rows[0].n;
+      if (!left) throw new ConflictException('Il doit rester au moins un administrateur actif');
+      await this.event(c, req, id, 'role_remove', reason, { role: role?.code });
+      await this.notif.notifyUsers(c, req.org.id, [id], { kind: 'role_changed', title: 'Vos droits ont été modifiés', body: `Rôle retiré : ${role?.code}`, entityType: 'user', entityId: id });
+      return { id, removed: roleId };
     });
   }
 

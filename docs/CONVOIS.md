@@ -49,6 +49,8 @@ La fiche papier devient le compte du délégué. Colonnes reprises : A poids, B 
 - **Caissier** : convois à traiter, caisse, comptes financiers et comptabilité en lecture ; pas de stocks, d'équipe ni de missions.
 - **Délégué** : ses achats, convois, stock et fiche uniquement.
 - « Ajouter un utilisateur » (Équipe) crée le compte avec le rôle choisi.
+- **Plusieurs rôles par personne** : Équipe → « Rôles » ajoute (`POST /users/:id/roles`) ou retire (`DELETE /users/:id/roles/:roleId?reason=…`) un rôle, avec motif tracé dans l'historique d'accès. Les droits sont la somme de ceux des rôles (un magasinier qui tient aussi la caisse cumule les deux), le menu et les tuiles n'affichent que ce que ces droits permettent, et une personne garde toujours au moins un rôle. On ne modifie pas ses propres rôles. Un compte n'est « mobile uniquement » que si tous ses rôles le sont. Migrations 050 (caissier : lecture des caisses) et 051 (journal des rôles ajoutés/retirés) ; contrôle : `scripts/e2e-roles-multiples.js`.
+- Menu « Paramètres » du bandeau supérieur : Produits et campagnes. Les rubriques de l'accordéon (Banques, Emprunts, Impôts…) restent dans la page Comptabilité et ne sont pas répétées dans la barre du haut.
 
 ## Poste unique / serveur / client et icônes de connexion (modèle CentriGest)
 

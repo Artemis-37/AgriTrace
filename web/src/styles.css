@@ -320,3 +320,6 @@ dl.kv dd { margin: 0; }
 .seg button { border: 1px solid var(--nature); background: var(--surface); color: var(--carbon); padding: .3rem .8rem; font: inherit; cursor: pointer; }
 .seg button.on { background: var(--forest); color: var(--on-forest); }
 .seg { display: inline-flex; }
+.role-chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 12px}
+.chip{display:inline-flex;align-items:center;gap:6px;background:var(--lime,#B5CC8E);color:#1f3a2e;border-radius:12px;padding:3px 4px 3px 10px;font-size:13px}
+.chip .btn{padding:0 6px}

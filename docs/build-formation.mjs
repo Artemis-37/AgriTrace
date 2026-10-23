@@ -87,10 +87,10 @@ const MOD = {
     niveau: 'Niveau 1 — Opérateur', duree: '1 h 30',
     objectifs: ['Traiter un convoi reçu (règlement du collecteur)', 'Tenir la caisse (entrées/sorties) avec justificatif', 'Consulter les comptes collecteurs', 'Imprimer les reçus et demander une annulation'],
     pas: [
-      ['Ouvrir la session de caisse', 'Menu **Caisse** (rubriques dépliantes à gauche) → *Session de caisse* : ouvrez la session avec le fonds de caisse initial.'],
-      ['Régler un convoi', 'Rubrique *Pesées à traiter* : sur une pesée « Reçu — en caisse », vérifiez le **prix unitaire** (prérempli avec le prix d\'achat du produit, modifiable). Le montant = poids reçu × prix ; l\'écriture de caisse et le compte du collecteur sont créés automatiquement.'],
-      ['Saisir une opération de caisse', 'Rubrique *Opérations de caisse* : sens (entrée/sortie), montant, motif obligatoire. Aucune suppression possible : une erreur se corrige par une écriture inverse.'],
-      ['Suivre les comptes collecteurs', 'Rubrique *Comptes des délégués* : soldes, avances et retenues.'],
+      ['Ouvrir la caisse', 'Menu **Caisse** → rubrique *Mouvements de caisse* → *Ouvrir / fermer la caisse* : saisissez le fonds de caisse et ouvrez la session. En fin de journée, saisissez le montant compté et fermez : l\'écart avec le solde attendu est conservé.'],
+      ['Régler un convoi', 'Rubrique *Opérations* → *Traiter une pesée / régler un achat* : sur une pesée « Reçu — en caisse », cliquez **Traiter**. Le **prix unitaire** est prérempli avec le prix d\'achat du produit (modifiable). Le montant = poids net × prix ; l\'écriture de caisse et le compte du délégué sont créés automatiquement.'],
+      ['Saisir une opération de caisse', 'Rubrique *Mouvements de caisse* → *Enregistrer une entrée / sortie* : sens, montant, motif obligatoire. Aucune suppression possible : une erreur se corrige par une écriture inverse. Le résultat apparaît dans *Les entrées* ou *Les sorties de caisse*.'],
+      ['Suivre les comptes collecteurs', 'Rubrique *Solde délégué* : soldes, avances et retenues.'],
     ],
     exos: [
       ['Réglez le convoi {{CV3}} (réceptionné par le magasinier à son exercice) au prix de 1 000 F/kg.', 'Montant = poids reçu × 1 000 (ex. 2 080 kg → 2 080 000 F) ; le convoi passe à « Réglé ».'],
