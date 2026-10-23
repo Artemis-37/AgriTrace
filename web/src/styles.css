@@ -261,3 +261,6 @@ dl.kv dd { margin: 0; }
 .pick-list { list-style: none; padding: 0; }
 .pick-list + * , .pick-list { margin-left: 0; }
 .search-full { width: 100%; box-sizing: border-box; padding: .5rem .7rem; border: 1px solid var(--line, #d9d4c8); border-radius: .5rem; font: inherit; background: #fff; }
+
+.bloc { border: 1px solid var(--line, #d9d4c8); border-radius: .6rem; margin: 0 0 1rem; padding: .5rem 1rem .25rem; }
+.bloc legend { padding: 0 .5rem; font-weight: 700; color: var(--brand, #2f6b3a); }

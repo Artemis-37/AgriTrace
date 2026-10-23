@@ -121,6 +121,7 @@ export function Receive() {
   const [bags, setBags] = useState('');
   const [notes, setNotes] = useState('');
   const [done, setDone] = useState('');
+  const [codeQ, setCodeQ] = useState('');
   const [d, setD] = useState({ wIn: '', wOut: '', tare: '', ref: '', grade: '', trailer: '', unl: '', refused: '' });
   const [an, setAn] = useState<Record<string, string>>({});
   const [m, setM] = useState({ driver: '', truck: '', bags: '', kg: '' });
@@ -149,47 +150,57 @@ export function Receive() {
   const valid = collector && convoyNo.trim().length >= 2 && wh && (!manual || (m.driver.trim().length >= 2 && m.truck.trim().length >= 2 && (m.kg === '' || W.test(m.kg)) && /^\d*$/.test(m.bags))) && (!blocked || notes.trim().length >= 5) && /^\d+(\.\d{1,3})?$/.test(kgEff) && Number(kgEff) > 0 && /^[1-9]\d*$/.test(bags)
     && optOk(d.tare) && optOk(d.ref) && (!twoWeighings || (W.test(d.wIn) && W.test(d.wOut))) && /^\d*$/.test(d.unl) && /^\d*$/.test(d.refused);
   return (
-    <Card title="Réceptionner un convoi">
-      <div className="grid-3">
-      <Field label="Délégué"><select value={collector} onChange={(e) => { setCollector(e.target.value); setConvoyNo(''); }}><option value="">—</option>{collectors.map(([id, n]) => <option key={id} value={id}>{n}</option>)}</select></Field>
-      <Field label="Numéro de connaissement" hint={mine.length ? `En route : ${mine.map((v) => v.convoy_no).join(', ')}` : undefined}>
-        <input list="convois-attendus" value={convoyNo} onChange={(e) => setConvoyNo(e.target.value)} /></Field>
-      <datalist id="convois-attendus">{mine.map((v) => <option key={v.id} value={v.convoy_no} />)}</datalist>
-      {expected && <p className="muted span-all">Chauffeur : {expected.driver_name} · Camion : {expected.truck_no}{expected.declared_kg ? ` · Déclaré : ${num(expected.declared_kg)} kg` : ''}{expected.declared_bags != null ? ` / ${expected.declared_bags} sacs` : ''}</p>}
-      {(content.data ?? []).length > 0 && (
-        <details open className="span-all"><summary>Contenu déclaré : {(content.data ?? []).length} achat(s)</summary>
-          <ul className="list">{(content.data ?? []).map((d) => <li key={d.id}>{d.producer_name} · {date(d.operation_date)} · {num(d.kg)} kg · {d.bags} sacs</li>)}</ul></details>
-      )}
-      <Field label="Magasin"><select value={wh} onChange={(e) => setWh(e.target.value)}><option value="">—</option>{data.whs.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}</select></Field>
-      </div>
-      <h3>Indication connaissement</h3>
-      {manual && <>
-        <p className="notice" role="status">Ce connaissement n'a pas été déclaré par le délégué : saisissez les informations du bordereau ; il sera enregistré à la réception.</p>
+    <Card title="Saisie de pesée">
+      <fieldset className="bloc"><legend>Infos délégué</legend>
         <div className="grid-3">
-        <Field label="Nom du chauffeur"><input value={m.driver} onChange={(e) => setM({ ...m, driver: e.target.value })} maxLength={120} /></Field>
-        <Field label="N° du camion"><input value={m.truck} onChange={(e) => setM({ ...m, truck: e.target.value })} maxLength={40} /></Field>
-        <Field label="Nombre de sacs déclaré (facultatif)"><input inputMode="numeric" value={m.bags} onChange={(e) => setM({ ...m, bags: e.target.value })} /></Field>
-        <Field label="Poids déclaré en kg (facultatif)"><input inputMode="decimal" value={m.kg} onChange={(e) => setM({ ...m, kg: e.target.value })} /></Field>
+          <Field label="ID (code) du délégué" hint="Saisissez le code : le délégué est retrouvé"><input value={codeQ} onChange={(e) => { setCodeQ(e.target.value); const hit = data.expected.find((v) => v.collector_code && v.collector_code.toLowerCase() === e.target.value.trim().toLowerCase()); if (hit) { setCollector(hit.collector_id); setConvoyNo(''); } }} /></Field>
+          <Field label="Délégué (recherche par nom)"><select value={collector} onChange={(e) => { setCollector(e.target.value); setConvoyNo(''); setCodeQ(data.expected.find((v) => v.collector_id === e.target.value)?.collector_code ?? ''); }}><option value="">—</option>{collectors.map(([id, n]) => <option key={id} value={id}>{n}</option>)}</select></Field>
+          <Field label="Localité (provenance)"><input readOnly disabled value={collector ? (data.expected.find((v) => v.collector_id === collector)?.collector_origin ?? 'non renseignée') : ''} /></Field>
         </div>
-      </>}
-      {collector && <p className="muted">Provenance (profil du délégué) : <strong>{data.expected.find((v) => v.collector_id === collector)?.collector_origin ?? 'non renseignée'}</strong>{expected ? ' · remorque reprise du convoi déclaré (modifiable).' : ''}</p>}
-      <Field label="Remorque"><input value={d.trailer} onChange={setF('trailer')} maxLength={40} /></Field>
-      <h3>Livraison produit</h3>
-      <div className="grid-3">
-      <Field label="Pesée à l'entrée, camion chargé (kg)"><input inputMode="decimal" value={d.wIn} onChange={setF('wIn')} /></Field>
-      <Field label="Pesée à la sortie, camion vide (kg)"><input inputMode="decimal" value={d.wOut} onChange={setF('wOut')} /></Field>
-      <Field label="Tare des sacs (kg)"><input inputMode="decimal" value={d.tare} onChange={setF('tare')} /></Field>
-      <Field label="Réfaction (kg)"><input inputMode="decimal" value={d.ref} onChange={setF('ref')} /></Field>
-      <Field label="Poids net payé (kg)" hint={twoWeighings ? 'Calculé : entrée − sortie − tare − réfaction' : 'Sans double pesée, saisissez directement le poids net'}><input inputMode="decimal" value={twoWeighings ? kgEff : kg} readOnly={twoWeighings} onChange={(e) => setKg(e.target.value)} /></Field>
-      <Field label="Nombre de sacs reçus"><input inputMode="numeric" value={bags} onChange={(e) => setBags(e.target.value)} /></Field>
-      <Field label="Sacs déchargés"><input inputMode="numeric" value={d.unl} onChange={setF('unl')} /></Field>
-      <Field label="Sacs refusés"><input inputMode="numeric" value={d.refused} onChange={setF('refused')} /></Field>
-      <Field label="Manquants (automatique)" hint="Sacs déclarés − sacs déchargés"><input readOnly disabled value={declaredBags != null && /^\d+$/.test(d.unl) && d.unl !== '' ? String(declaredBags - Number(d.unl)) : '—'} /></Field>
-      <Field label="Écart / poids déclaré (automatique)" hint="Poids net payé − poids déclaré"><input readOnly disabled value={declared > 0 && /^\d+(\.\d{1,3})?$/.test(kgEff) ? `${Math.round(Number(kgEff) - declared)} kg` : '—'} /></Field>
-      <Field label="Qualité / grade"><input value={d.grade} onChange={setF('grade')} maxLength={20} /></Field>
-      </div>
-      <h3>Analyse</h3>
-      <div className="grid-3">{ANALYSIS.map((k) => <Field key={k} label={k}><input inputMode="decimal" value={an[k] ?? ''} onChange={(e) => setAn((x) => ({ ...x, [k]: e.target.value }))} maxLength={10} /></Field>)}</div>
+      </fieldset>
+      <fieldset className="bloc"><legend>Infos pesée</legend>
+        <div className="grid-3"><Field label="Date de la pesée"><input readOnly disabled value={new Date().toLocaleDateString('fr-FR')} /></Field>
+          <Field label="Magasin"><select value={wh} onChange={(e) => setWh(e.target.value)}><option value="">—</option>{data.whs.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}</select></Field></div>
+      </fieldset>
+      <fieldset className="bloc"><legend>Infos arrivée (déclaré)</legend>
+        <div className="grid-3">
+          <Field label="N° de connaissement" hint={mine.length ? `En route : ${mine.map((v) => v.convoy_no).join(', ')}` : undefined}><input list="convois-attendus" value={convoyNo} onChange={(e) => setConvoyNo(e.target.value)} /></Field>
+          <Field label="Sacs déclarés"><input inputMode="numeric" readOnly={!!expected} disabled={!collector} value={expected ? (expected.declared_bags ?? '') : m.bags} onChange={(e) => setM({ ...m, bags: e.target.value })} /></Field>
+          <Field label="Poids déclaré (kg)"><input inputMode="decimal" readOnly={!!expected} disabled={!collector} value={expected ? (expected.declared_kg ?? '') : m.kg} onChange={(e) => setM({ ...m, kg: e.target.value })} /></Field>
+        </div>
+        <datalist id="convois-attendus">{mine.map((v) => <option key={v.id} value={v.convoy_no} />)}</datalist>
+        {manual && <p className="notice" role="status">Ce connaissement n'a pas été déclaré par le délégué : saisissez les informations du bordereau ; il sera enregistré à la réception.</p>}
+        {(content.data ?? []).length > 0 && (
+          <details open><summary>Contenu déclaré : {(content.data ?? []).length} achat(s)</summary>
+            <ul className="list">{(content.data ?? []).map((d) => <li key={d.id}>{d.producer_name} · {date(d.operation_date)} · {num(d.kg)} kg · {d.bags} sacs</li>)}</ul></details>
+        )}
+      </fieldset>
+      <fieldset className="bloc"><legend>Infos pesée</legend>
+        <div className="grid-3">
+          <Field label="Pesée à l'entrée, camion chargé (kg)"><input inputMode="decimal" value={d.wIn} onChange={setF('wIn')} /></Field>
+          <Field label="Pesée à la sortie, camion vide (kg)"><input inputMode="decimal" value={d.wOut} onChange={setF('wOut')} /></Field>
+          <Field label="Tare des sacs (kg)"><input inputMode="decimal" value={d.tare} onChange={setF('tare')} /></Field>
+          <Field label="Réfaction (kg)"><input inputMode="decimal" value={d.ref} onChange={setF('ref')} /></Field>
+          <Field label="Poids net payé (kg)" hint={twoWeighings ? 'Calculé : entrée − sortie − tare − réfaction' : 'Sans double pesée, saisissez directement le poids net'}><input inputMode="decimal" value={twoWeighings ? kgEff : kg} readOnly={twoWeighings} onChange={(e) => setKg(e.target.value)} /></Field>
+          <Field label="Nombre de sacs reçus"><input inputMode="numeric" value={bags} onChange={(e) => setBags(e.target.value)} /></Field>
+          <Field label="Sacs déchargés"><input inputMode="numeric" value={d.unl} onChange={setF('unl')} /></Field>
+          <Field label="Sacs refusés"><input inputMode="numeric" value={d.refused} onChange={setF('refused')} /></Field>
+          <Field label="Qualité / grade"><input value={d.grade} onChange={setF('grade')} maxLength={20} /></Field>
+          <Field label="Manquants (automatique)" hint="Sacs déclarés − sacs déchargés"><input readOnly disabled value={declaredBags != null && /^\d+$/.test(d.unl) && d.unl !== '' ? String(declaredBags - Number(d.unl)) : '—'} /></Field>
+          <Field label="Écart / poids déclaré (automatique)" hint="Poids net payé − poids déclaré"><input readOnly disabled value={declared > 0 && /^\d+(\.\d{1,3})?$/.test(kgEff) ? `${Math.round(Number(kgEff) - declared)} kg` : '—'} /></Field>
+        </div>
+      </fieldset>
+      <fieldset className="bloc"><legend>Transporteur</legend>
+        <div className="grid-3">
+          <Field label="Chauffeur"><input readOnly={!!expected} disabled={!collector} value={expected ? expected.driver_name : m.driver} onChange={(e) => setM({ ...m, driver: e.target.value })} maxLength={120} /></Field>
+          <Field label="N° du camion"><input readOnly={!!expected} disabled={!collector} value={expected ? expected.truck_no : m.truck} onChange={(e) => setM({ ...m, truck: e.target.value })} maxLength={40} /></Field>
+          <Field label="Remorque"><input value={d.trailer} onChange={setF('trailer')} maxLength={40} /></Field>
+        </div>
+      </fieldset>
+      <fieldset className="bloc"><legend>Analyse (facultatif)</legend>
+        <p className="muted">Peut être laissée vide et complétée plus tard depuis l'onglet Analyses.</p>
+        <div className="grid-3">{ANALYSIS.map((k) => <Field key={k} label={k}><input inputMode="decimal" value={an[k] ?? ''} onChange={(e) => setAn((x) => ({ ...x, [k]: e.target.value }))} maxLength={10} /></Field>)}</div>
+      </fieldset>
       {blocked && <p className="notice" role="status">Écart de {gapPct.toFixed(1)} % avec le poids déclaré (tolérance {tol} %) : la réception sera retenue jusqu'à validation par un responsable, et la cause est obligatoire.</p>}
       <Field label={blocked ? 'Cause de l\'écart (obligatoire)' : 'Observations (facultatif)'}><textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={500} /></Field>
       {act.error && <ErrorBox message={act.error} />}
