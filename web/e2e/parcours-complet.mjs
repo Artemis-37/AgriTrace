@@ -163,6 +163,7 @@ console.log('4. Caisse');
   await page.getByRole('button', { name: 'Connexion à la caisse' }).click().catch(() => undefined); await page.waitForTimeout(800);
   await snap(page, 'caissier', 'session', 'Connexion à la caisse', 'Avant de payer, le caissier se connecte à la caisse (pas de fonds ni de clôture : seul le caissier se connecte et se déconnecte).');
   await page.getByRole('button', { name: 'Se connecter' }).first().click().catch(() => undefined); await page.waitForTimeout(1200);
+  await page.locator('.acc-head', { hasText: 'Opérations' }).click().catch(() => undefined); await page.waitForTimeout(300);
   await page.getByText('Traiter une pesée / régler un achat', { exact: true }).first().click().catch(() => undefined); await page.waitForTimeout(900);
   await snap(page, 'caissier', 'a-traiter', 'Pesées à traiter', 'La file des réceptions pesées et non encore réglées.');
   for (const [no, last] of [[CV, false], ['CV-NC-001', true]]) {
@@ -175,6 +176,7 @@ console.log('4. Caisse');
   }
   await page.getByRole('button', { name: 'Fonds global de la caisse' }).click().catch(() => undefined); await page.waitForTimeout(900);
   await snap(page, 'caissier', 'fonds-global', 'Fonds global de la caisse', 'Le fonds de la caisse se compose des **espèces** et des **comptes bancaires** : chaque forme de fonds a son solde, et le total donne le fonds global.');
+  await page.locator('.acc-head', { hasText: 'Solde délégué' }).click().catch(() => undefined); await page.waitForTimeout(300);
   await page.getByText('Solde et fiche des délégués', { exact: true }).first().click().catch(() => undefined); await page.waitForTimeout(1000);
   await snap(page, 'caissier', 'soldes', 'Solde des délégués', 'Après règlement, le compte de chaque délégué est crédité du net à payer ; la fiche détaille livraisons, avances et soldes.');
   await close();
