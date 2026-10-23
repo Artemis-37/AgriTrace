@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../auth';
 
 const TILES: { to: string; label: string; icon: string; perm: string[]; notFor?: 'collector' }[] = [
-  { to: '/equipe', label: 'Membres', icon: '👥', perm: ['users:read'] },
+  { to: '/delegues', label: 'Délégués', icon: '👥', perm: ['collectors:read'] },
   { to: '/producteurs', label: 'Producteurs', icon: '🌱', perm: ['producers:read'] },
   { to: '/parcelles', label: 'Plantations', icon: '🌳', perm: ['parcels:read'] },
   { to: '/partenaires', label: 'Partenaires', icon: '🤝', perm: ['partners:read'] },

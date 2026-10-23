@@ -300,3 +300,23 @@ dl.kv dd { margin: 0; }
 }
 @media print { .titlebar, .menubar, .statusbar { display: none !important; } }
 @media (max-width: 900px) { .titlebar { flex-wrap: wrap; } .title-right { flex-wrap: wrap; } .statusbar { display: none; } }
+
+/* Écrans comptables « ancien logiciel » : titre de période, grille avec ligne Somme, barre de totaux */
+.win-title { background: var(--forest); color: var(--on-forest); padding: .4rem .8rem; border-radius: 4px; font-size: 1rem; margin: 0 0 .6rem; }
+.period-bar { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; justify-content: flex-end; margin-bottom: .6rem; }
+.period-bar label { display: flex; gap: .4rem; align-items: center; font-size: .85rem; }
+.legacy-grid table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--line); }
+.legacy-grid th { background: var(--lime); color: var(--on-lime); text-align: left; padding: .4rem .6rem; border: 1px solid var(--nature); font-size: .85rem; }
+.legacy-grid td { padding: .35rem .6rem; border-left: 1px solid var(--line); border-right: 1px solid var(--line); }
+.legacy-grid tbody tr:nth-child(even) { background: rgba(94, 155, 107, .08); }
+.legacy-grid tfoot td { background: var(--neutral-bg); font-weight: 700; border-top: 2px solid var(--nature); }
+.legacy-grid .r { text-align: right; }
+.legacy-total { display: flex; flex-wrap: wrap; gap: 1.5rem; background: var(--forest); color: var(--on-forest); padding: .5rem 1rem; margin-top: .6rem; border-radius: 4px; }
+.legacy-total em { color: var(--sun); font-style: normal; font-weight: 700; margin-right: .5rem; }
+.legacy-total b { background: var(--surface); color: var(--carbon); padding: .15rem .8rem; border-radius: 3px; display: inline-block; min-width: 8rem; text-align: right; }
+.accordion .acc-head { background: var(--lime); color: var(--on-lime); font-weight: 700; text-transform: uppercase; font-size: .8rem; }
+.accordion .open > .acc-head { background: var(--forest); color: var(--on-forest); }
+@media print { .period-bar { display: none; } }
+.seg button { border: 1px solid var(--nature); background: var(--surface); color: var(--carbon); padding: .3rem .8rem; font: inherit; cursor: pointer; }
+.seg button.on { background: var(--forest); color: var(--on-forest); }
+.seg { display: inline-flex; }

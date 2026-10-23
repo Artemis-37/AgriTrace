@@ -1,63 +1,94 @@
 import { useState } from 'react';
 import { del, get, idem, post } from '../api';
 import { useAuth } from '../auth';
-import { date } from '../format';
 import { Badge, Card, ErrorBox, Field, Loading, Modal, Table, useAction, useAsync } from '../ui';
 
 const FR = (v: any) => (v === null || v === undefined || v === '' ? '' : Number(v).toLocaleString('fr-FR', { maximumFractionDigits: 2 }));
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 const AMT = /^\d{1,12}(\.\d{1,2})?$/;
+const FRD = (d: string) => new Date(d).toLocaleDateString('fr-FR', { timeZone: 'UTC' });
+const hour = (t: string) => new Date(t).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+/** Campagne comptable par défaut : du 1er septembre au 31 août. */
+export const campaignRange = (): [string, string] => { const n = new Date(); const y = n.getMonth() >= 8 ? n.getFullYear() : n.getFullYear() - 1; return [`${y}-09-01`, `${y + 1}-08-31`]; };
+const preset = (p: string): [string, string] | null => {
+  const n = new Date(), t = iso(n);
+  if (p === 'today') return [t, t];
+  if (p === 'week') { const d = new Date(n); d.setDate(n.getDate() - ((n.getDay() + 6) % 7)); return [iso(d), t]; }
+  if (p === 'month') return [`${t.slice(0, 8)}01`, t];
+  if (p === 'year') return [`${n.getFullYear()}-01-01`, `${n.getFullYear()}-12-31`];
+  if (p === 'campaign') return campaignRange();
+  return null;
+};
+/** Période : date de début, date de fin, « Afficher » et « Période prédéfinie », comme dans l'ancien logiciel. */
+export function PeriodBar({ from, to, onShow }: { from: string; to: string; onShow: (from: string, to: string) => void }) {
+  const [f, setF] = useState(from), [t, setT] = useState(to);
+  return (
+    <div className="period-bar">
+      <label>Date de début <input type="date" value={f} onChange={(e) => setF(e.target.value)} /></label>
+      <label>Date de fin <input type="date" value={t} onChange={(e) => setT(e.target.value)} /></label>
+      <button className="btn" onClick={() => onShow(f, t)}>Afficher</button>
+      <select aria-label="Période prédéfinie" value="" onChange={(e) => { const r = preset(e.target.value); if (r) { setF(r[0]); setT(r[1]); onShow(r[0], r[1]); } }}>
+        <option value="">Période prédéfinie</option><option value="today">Aujourd'hui</option><option value="week">Cette semaine</option><option value="month">Ce mois</option><option value="year">Cette année</option><option value="campaign">Cette campagne (1er sept. – 31 août)</option>
+      </select>
+    </div>
+  );
+}
+/** Pied de tableau « Somme » et barre de totaux à la manière de l'ancien logiciel. */
+export const TotalBar = ({ items }: { items: [string, any][] }) => <div className="legacy-total">{items.map(([l, v]) => <span key={l}><em>{l}</em><b>{FR(v)}</b></span>)}</div>;
 
 export type DueKind = 'supplier_invoice' | 'borrowing' | 'service' | 'other_sale' | 'tax';
-const CFG: Record<DueKind, { title: string; add: string; pay: string; partner?: string; partnerKind?: string; ref: string; unit?: boolean }> = {
-  supplier_invoice: { title: 'Factures des fournisseurs', add: 'Nouvelle facture', pay: 'Régler', partner: 'Fournisseur', partnerKind: 'supplier', ref: 'N° de facture', unit: true },
-  borrowing: { title: 'Emprunts', add: 'Nouvel emprunt', pay: 'Rembourser', partner: 'Prêteur (banque, institution)', partnerKind: 'lender', ref: 'N° de contrat' },
-  service: { title: 'Prestations', add: 'Nouvelle prestation', pay: 'Encaisser', partner: 'Client', partnerKind: 'client', ref: 'N° de facture', unit: true },
-  other_sale: { title: 'Ventes d\'autres produits', add: 'Nouvelle vente', pay: 'Encaisser', partner: 'Client', partnerKind: 'client', ref: 'N° de facture', unit: true },
-  tax: { title: 'Impôts et taxes', add: 'Nouvel impôt', pay: 'Régler', ref: 'N° de déclaration' },
+const CFG: Record<DueKind, { title: string; heading: string; refCol?: string; party?: string; paidCol?: string; restCol?: string; totalCol?: string; add: string; pay: string; partner?: string; partnerKind?: string; ref: string; unit?: boolean }> = {
+  supplier_invoice: { title: 'Factures des fournisseurs', heading: 'Les factures des fournisseurs', party: 'Fournisseur', add: 'Nouvelle facture', pay: 'Régler', partner: 'Fournisseur', partnerKind: 'supplier', ref: 'N° de facture', unit: true },
+  borrowing: { title: 'Emprunts', heading: 'Les emprunts', paidCol: 'Remboursé', restCol: 'Reste à rembourser', party: 'Provenance', add: 'Nouvel emprunt', pay: 'Rembourser', partner: 'Prêteur (banque, institution)', partnerKind: 'lender', ref: 'N° de contrat' },
+  service: { title: 'Prestations', heading: 'Les prestations', paidCol: 'Réglé', restCol: 'Reste', party: 'Prestataire', add: 'Nouvelle prestation', pay: 'Encaisser', partner: 'Client', partnerKind: 'client', ref: 'N° de facture', unit: true },
+  other_sale: { title: 'Ventes d\'autres produits', heading: 'Les ventes d\'autres produits', party: 'Client', add: 'Nouvelle vente', pay: 'Encaisser', partner: 'Client', partnerKind: 'client', ref: 'N° de facture', unit: true },
+  tax: { title: 'Impôts et taxes', heading: 'Les impôts et taxes', party: 'Nature', add: 'Nouvel impôt', pay: 'Régler', ref: 'N° de déclaration' },
 };
 
 /** État d'une rubrique d'échéances (fournisseurs, emprunts, prestations, ventes d'autres produits, impôts) : liste, total, règlement ou encaissement. */
-export function Dues({ kind }: { kind: DueKind }) {
+export function Dues({ kind, startAdding = false }: { kind: DueKind; startAdding?: boolean }) {
   const { can } = useAuth();
   const c = CFG[kind];
-  const [from, setFrom] = useState(iso(new Date(new Date().getFullYear(), 0, 1)));
-  const [to, setTo] = useState('');
+  const [[from, to], setRange] = useState<[string, string]>(campaignRange());
   const [state, setState] = useState('all');
-  const { data, loading, error, reload } = useAsync(() => get<any>(`/dues?kind=${kind}&state=${state}${from ? `&from=${from}` : ''}${to ? `&to=${to}` : ''}`), [kind, from, to, state]);
-  const [adding, setAdding] = useState(false);
+  const { data, loading, error, reload } = useAsync(() => get<any>(`/dues?kind=${kind}&state=${state}&from=${from}&to=${to}`), [kind, from, to, state]);
+  const [adding, setAdding] = useState(startAdding);
   const [paying, setPaying] = useState<any | null>(null);
   const act = useAction();
   const receivable = kind === 'service' || kind === 'other_sale';
+  const paidL = c.paidCol ?? (receivable ? 'Encaissé' : 'Réglé');
+  const restL = c.restCol ?? 'Reste';
   return (
     <Card>
-      <div className="journal-head"><h2>{c.title}</h2><div className="toolbar">
+      <div className="journal-head"><h2 className="win-title">{c.heading} du {FRD(from)} au {FRD(to)}</h2>
+        <PeriodBar key={`${from}${to}`} from={from} to={to} onShow={(f, t) => setRange([f, t])} /></div>
+      <div className="toolbar">
         {can('dues:manage') && <button className="btn" onClick={() => setAdding(true)}>{c.add}</button>}
-        <button className="btn btn-secondary" onClick={() => window.print()}>Imprimer</button></div></div>
-      <div className="toolbar filters">
-        <label>Du <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></label>
-        <label>au <input type="date" value={to} onChange={(e) => setTo(e.target.value)} /></label>
+        <button className="btn btn-secondary" onClick={() => window.print()}>Imprimer</button>
         <span className="seg" role="radiogroup" aria-label="État">{[['all', 'Toutes'], ['open', receivable ? 'À encaisser' : 'À régler'], ['settled', 'Soldées']].map(([k, l]) => <button key={k} className={state === k ? 'on' : ''} onClick={() => setState(k)}>{l}</button>)}</span>
       </div>
       {error && <ErrorBox message={error} onRetry={reload} />}{act.error && <ErrorBox message={act.error} />}
       {loading || !data ? <Loading /> : (
         <>
-          <div className="table-scroll"><Table rows={data.rows} empty="Aucune opération sur la période." columns={[
-            { header: 'Date', render: (r: any) => date(r.issued_on) }, { header: c.ref, render: (r: any) => r.ref_no ?? '' },
-            { header: c.partner ? c.partner.split(' (')[0] : 'Nature', render: (r: any) => r.partner_name ?? (r.tax_type ? `${r.tax_type}${r.period ? ` ${r.period}` : ''}` : '') },
-            { header: 'Libellé', render: (r: any) => r.label },
-            ...(kind === 'borrowing' ? [{ header: 'Taux / durée', render: (r: any) => `${FR(r.rate_pct)} % · ${r.term_months} mois` }] : []),
-            { header: 'Échéance', render: (r: any) => date(r.due_date) },
-            { header: 'Montant', align: 'right' as const, render: (r: any) => FR(r.amount) }, { header: receivable ? 'Encaissé' : 'Réglé', align: 'right' as const, render: (r: any) => FR(r.paid) },
-            { header: 'Reste', align: 'right' as const, render: (r: any) => <strong>{FR(r.remaining)}</strong> },
-            { header: '', render: (r: any) => (
-              <span className="row-actions">
-                {Number(r.remaining) > 0 && can('dues:settle') && <button className="btn btn-small btn-secondary" onClick={() => setPaying(r)}>{c.pay}</button>}
-                {Number(r.remaining) === 0 && <Badge tone="ok">Soldée</Badge>}
-                {Number(r.paid) === 0 && can('dues:manage') && <button className="btn btn-small btn-ghost" disabled={act.busy} onClick={() => { if (confirm(`Annuler « ${r.label} » ?`)) act.run(async () => { await del(`/dues/${r.id}`); reload(); }); }}>Annuler</button>}
-              </span>) },
-          ]} /></div>
-          <div className="solde-bar totals"><span>Total : <strong>{FR(data.totals.amount)}</strong></span><span>{receivable ? 'Encaissé' : 'Réglé'} : <strong>{FR(data.totals.paid)}</strong></span><span>Reste : <strong>{FR(data.totals.remaining)}</strong> FCFA</span></div>
+          <div className="table-scroll legacy-grid"><table>
+            <thead><tr><th>N°</th><th>Date</th><th>Heure</th>{kind !== 'borrowing' && <th>{c.ref}</th>}<th>Libellé</th>{kind === 'borrowing' && <th>Taux / durée</th>}<th>Échéance</th><th className="r">Montant</th><th className="r">{paidL}</th><th className="r">{restL}</th><th>{c.party}</th><th /></tr></thead>
+            <tbody>
+              {data.rows.length === 0 && <tr><td colSpan={12} className="muted">Aucune opération sur la période.</td></tr>}
+              {data.rows.map((r: any, i: number) => (
+                <tr key={r.id}><td>{i + 1}</td><td>{FRD(r.issued_on)}</td><td>{hour(r.created_at)}</td>{kind !== 'borrowing' && <td>{r.ref_no ?? ''}</td>}<td>{r.label}</td>
+                  {kind === 'borrowing' && <td>{FR(r.rate_pct)} % · {r.term_months} mois</td>}<td>{FRD(r.due_date)}</td>
+                  <td className="r">{FR(r.amount)}</td><td className="r">{FR(r.paid)}</td><td className="r"><strong>{FR(r.remaining)}</strong></td>
+                  <td>{r.partner_name ?? (r.tax_type ? `${r.tax_type}${r.period ? ` ${r.period}` : ''}` : '')}</td>
+                  <td><span className="row-actions">
+                    {Number(r.remaining) > 0 && can('dues:settle') && <button className="btn btn-small btn-secondary" onClick={() => setPaying(r)}>{c.pay}</button>}
+                    {Number(r.remaining) === 0 && <Badge tone="ok">Soldée</Badge>}
+                    {Number(r.paid) === 0 && can('dues:manage') && <button className="btn btn-small btn-ghost" disabled={act.busy} onClick={() => { if (confirm(`Annuler « ${r.label} » ?`)) act.run(async () => { await del(`/dues/${r.id}`); reload(); }); }}>Annuler</button>}
+                  </span></td></tr>
+              ))}
+            </tbody>
+            <tfoot><tr><td colSpan={kind === 'borrowing' ? 6 : 5}>Somme</td><td className="r">{FR(data.totals.amount)}</td><td className="r">{FR(data.totals.paid)}</td><td className="r">{FR(data.totals.remaining)}</td><td colSpan={2} /></tr></tfoot>
+          </table></div>
+          <TotalBar items={[['TOTAL', data.totals.amount], [paidL.toUpperCase(), data.totals.paid], [(kind === 'borrowing' ? 'RESTE' : restL.toUpperCase()), data.totals.remaining]]} />
         </>
       )}
       {adding && <DueForm kind={kind} onClose={() => setAdding(false)} onDone={() => { setAdding(false); reload(); }} />}

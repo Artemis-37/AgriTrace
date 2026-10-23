@@ -1,37 +1,43 @@
 import { ReactNode, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { get } from '../api';
+import { get, post } from '../api';
 import { useAuth } from '../auth';
 import { LOAN_KIND, date } from '../format';
-import { Card, ErrorBox, Loading, PageHeader, Table, useAsync } from '../ui';
+import { Card, ErrorBox, Field, Loading, Modal, PageHeader, Table, useAction, useAsync } from '../ui';
 import { FR, Journal } from './Caisse';
-import { Bic, Dues } from './Echeances';
+import { Bic, Dues, PeriodBar, campaignRange } from './Echeances';
 
-type Key = 'journal' | 'expenses' | 'purchases' | 'settlements' | 'loans' | 'delegates' | 'exporters' | 'banks' | 'suppliers' | 'borrowings' | 'services' | 'sales' | 'taxes' | 'bic';
-const PERM: Record<Key, string> = { journal: 'finance:read', expenses: 'finance:read', purchases: 'accounting:read', settlements: 'accounting:read', loans: 'loans:read', delegates: 'accounting:read', exporters: 'prefinancing:read', banks: 'finance:read', suppliers: 'dues:read', borrowings: 'dues:read', services: 'dues:read', sales: 'dues:read', taxes: 'dues:read', bic: 'dues:read' };
-const ALL: { title: string; items: [Key, string][] }[] = [
-  { title: 'Opérations', items: [['journal', 'Mouvements de caisse']] },
-  { title: 'Dépenses', items: [['expenses', 'État des dépenses']] },
-  { title: 'Achats prod. agricole', items: [['purchases', 'Journal des achats'], ['settlements', 'État des règlements']] },
-  { title: 'Prêts', items: [['loans', 'État des prêts']] },
-  { title: 'Délégués', items: [['delegates', 'Solde des délégués']] },
-  { title: 'Exportateurs', items: [['exporters', 'État des exportateurs']] },
-  { title: 'Banques et comptes', items: [['banks', 'État des comptes']] },
-  { title: 'Fournisseurs', items: [['suppliers', 'Factures des fournisseurs']] },
-  { title: 'Emprunts', items: [['borrowings', 'État des emprunts']] },
-  { title: 'Prestations', items: [['services', 'État des prestations']] },
-  { title: 'Ventes autres produits', items: [['sales', 'État des ventes']] },
-  { title: 'Impôts', items: [['taxes', 'Impôts et taxes'], ['bic', 'Estimation du BIC']] },
+type Key = string;
+interface View { label: string; perm: string; el: () => ReactNode }
+const V = (label: string, perm: string, el: () => ReactNode): View => ({ label, perm, el });
+const GROUPS_ALL: { title: string; items: [Key, View][] }[] = [
+  { title: 'Opérations', items: [['journal', V('Mouvements de caisse', 'finance:read', () => <Journal kind="" />)], ['deposits', V('Entrées en caisse', 'finance:read', () => <Journal kind="in" />)]] },
+  { title: 'Dépenses', items: [['expenses', V('État des dépenses', 'finance:read', () => <Journal kind="out" />)]] },
+  { title: 'Achats prod. agricole', items: [['purchases', V('Journal des achats', 'accounting:read', () => <Purchases state="all" title="Journal des achats" />)], ['settlements', V('État des règlements', 'accounting:read', () => <Purchases state="settled" title="État des règlements" />)]] },
+  { title: 'Achats autres prod.', items: [['other-purchases', V('Achats d\'autres produits', 'dues:read', () => <Dues kind="supplier_invoice" />)]] },
+  { title: 'Prêts', items: [['loans', V('État des prêts', 'loans:read', () => <Loans />)]] },
+  { title: 'Ventes prod. agricoles', items: [['invoices', V('Factures de vente', 'invoices:read', () => <Invoices />)]] },
+  { title: 'Ventes autres prod.', items: [['sales', V('État des ventes', 'dues:read', () => <Dues kind="other_sale" />)]] },
+  { title: 'Les emprunts', items: [['borrow-new', V('Enregistrer un emprunt', 'dues:manage', () => <Dues kind="borrowing" startAdding key="bn" />)], ['borrowings', V('État des emprunts', 'dues:read', () => <Dues kind="borrowing" />)]] },
+  { title: 'Prestations', items: [['services', V('État des prestations', 'dues:read', () => <Dues kind="service" />)]] },
+  { title: 'Banques et comptes', items: [['banks', V('Les comptes', 'finance:read', () => <Banks />)], ['lenders', V('Les banques', 'partners:read', () => <Tiers kind="lender" title="Les banques et prêteurs" />)], ['withdrawals', V('État des retraits', 'finance:read', () => <Journal kind="out" />)], ['deposits2', V('État des dépôts', 'finance:read', () => <Journal kind="in" />)], ['all-tx', V('État global des transactions', 'finance:read', () => <Journal kind="" />)]] },
+  { title: 'Délégués', items: [['delegates', V('Solde des délégués', 'accounting:read', () => <Delegates />)]] },
+  { title: 'Exportateurs', items: [['exporters', V('État des exportateurs', 'prefinancing:read', () => <Exporters />)]] },
+  { title: 'Impôts', items: [['taxes', V('Impôts et taxes', 'dues:read', () => <Dues kind="tax" />)], ['bic', V('BIC', 'dues:read', () => <Bic />)]] },
+  { title: 'Fournisseurs', items: [['suppliers', V('Les fournisseurs', 'partners:read', () => <Tiers kind="supplier" title="Les fournisseurs" />)], ['supplier-invoices', V('Factures des fournisseurs', 'dues:read', () => <Dues kind="supplier_invoice" />)]] },
+  { title: 'Journaux', items: [['j-cash', V('Journal de caisse', 'finance:read', () => <Journal kind="" />)], ['j-borrow', V('Journal des emprunts', 'dues:read', () => <Dues kind="borrowing" />)], ['j-loans', V('Journal des prêts', 'loans:read', () => <Loans />)], ['j-purchases', V('Journal des achats', 'accounting:read', () => <Purchases state="all" title="Journal des achats" />)],
+    ['j-sales', V('Journal des ventes', 'invoices:read', () => <Invoices />)], ['j-settle', V('Journal des règlements', 'accounting:read', () => <Purchases state="settled" title="Journal des règlements" />)], ['j-banks', V('Journal des banques', 'finance:read', () => <Banks />)]] },
 ];
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 
 /** Comptabilité : menu en rubriques dépliantes et états imprimables (journaux, prêts, soldes des délégués, exportateurs, comptes). */
 export default function Comptabilite() {
   const { can } = useAuth();
-  const GROUPS = ALL.map((g) => ({ ...g, items: g.items.filter(([k]) => can(PERM[k])) })).filter((g) => g.items.length);
-  const [cur, setCur] = useState<Key>(GROUPS[0]?.items[0]?.[0] ?? 'journal');
+  const GROUPS = GROUPS_ALL.map((g) => ({ ...g, items: g.items.filter(([, v]) => can(v.perm)) })).filter((g) => g.items.length);
+  const first = GROUPS[0]?.items[0]?.[0] ?? 'journal';
+  const [cur, setCur] = useState<Key>(first);
   const [open, setOpen] = useState(GROUPS[0]?.title ?? '');
-  const find = (k: Key) => GROUPS.find((g) => g.items.some(([x]) => x === k))!.title;
+  const view = GROUPS.flatMap((g) => g.items).find(([k]) => k === cur)?.[1];
   return (
     <>
       <PageHeader title="Comptabilité" subtitle="États et journaux de la coopérative. Balance et écritures : onglet Comptabilité des Finances." actions={<Link className="btn btn-secondary" to="/finances?tab=accounting">Balance comptable</Link>} />
@@ -40,28 +46,44 @@ export default function Comptabilite() {
           {GROUPS.map((g) => (
             <div key={g.title} className={open === g.title ? 'open' : ''}>
               <button className="acc-head" aria-expanded={open === g.title} onClick={() => setOpen(open === g.title ? '' : g.title)}>{g.title}<span aria-hidden="true">{open === g.title ? '▴' : '▾'}</span></button>
-              {open === g.title && <ul>{g.items.map(([k, l]) => <li key={k}><button className={cur === k ? 'on' : ''} onClick={() => { setCur(k); setOpen(find(k)); }}>{l}</button></li>)}</ul>}
+              {open === g.title && <ul>{g.items.map(([k, v]) => <li key={k}><button className={cur === k ? 'on' : ''} onClick={() => setCur(k)}>{v.label}</button></li>)}</ul>}
             </div>
           ))}
         </nav>
-        <div className="caisse-main">
-          {cur === 'journal' && <Journal kind="" />}
-          {cur === 'expenses' && <Journal kind="out" />}
-          {cur === 'purchases' && <Purchases state="all" title="Journal des achats" />}
-          {cur === 'settlements' && <Purchases state="settled" title="État des règlements" />}
-          {cur === 'loans' && <Loans />}
-          {cur === 'delegates' && <Delegates />}
-          {cur === 'exporters' && <Exporters />}
-          {cur === 'banks' && <Banks />}
-          {cur === 'suppliers' && <Dues kind="supplier_invoice" />}
-          {cur === 'borrowings' && <Dues kind="borrowing" />}
-          {cur === 'services' && <Dues kind="service" />}
-          {cur === 'sales' && <Dues kind="other_sale" />}
-          {cur === 'taxes' && <Dues kind="tax" />}
-          {cur === 'bic' && <Bic />}
-        </div>
+        <div className="caisse-main">{view?.el()}</div>
       </div>
     </>
+  );
+}
+
+/** Liste simple des tiers d'une rubrique (fournisseurs, banques) ; la gestion se fait dans le menu Partenaires. */
+function Tiers({ kind, title }: { kind: string; title: string }) {
+  const { can } = useAuth();
+  const { data, loading, error, reload } = useAsync(() => get<any[]>(`/partners?kind=${kind}`), [kind]);
+  return (
+    <Frame title={title} total={<span>NOMBRE <b>{(data ?? []).length}</b></span>}>
+      {can('partners:manage') && <div className="toolbar"><Link className="btn" to="/partenaires">Ajouter ou modifier</Link></div>}
+      {error && <ErrorBox message={error} onRetry={reload} />}
+      {loading ? <Loading /> : <Table rows={data ?? []} empty="Aucun élément." columns={[{ header: 'Nom', render: (p) => <strong>{p.name}</strong> }, { header: 'Téléphone', render: (p) => p.phone ?? '' }, { header: 'Adresse', render: (p) => p.address ?? '' }, { header: 'N° contribuable', render: (p) => p.tax_id ?? '' }]} />}
+    </Frame>
+  );
+}
+
+/** Factures de vente (produits agricoles) sur la période, avec le reste à encaisser. */
+function Invoices() {
+  const [[from, to], setRange] = useState<[string, string]>(campaignRange());
+  const { data, loading, error, reload } = useAsync(() => get<any[]>('/invoices'), []);
+  const rows = (data ?? []).filter((i) => String(i.issue_date).slice(0, 10) >= from && String(i.issue_date).slice(0, 10) <= to && i.status !== 'cancelled');
+  const sum = (k: string) => rows.reduce((s, r) => s + Number(r[k] ?? 0), 0);
+  return (
+    <Frame title={`Les ventes de produits agricoles du ${date(from)} au ${date(to)}`} total={<><span>TOTAL <b>{FR(sum('total'))}</b></span><span>ENCAISSÉ <b>{FR(sum('paid'))}</b></span><span>RESTE <b>{FR(sum('balance'))}</b></span></>}>
+      <PeriodBar key={`${from}${to}`} from={from} to={to} onShow={(f, t) => setRange([f, t])} />
+      {error && <ErrorBox message={error} onRetry={reload} />}
+      {loading ? <Loading /> : <Table rows={rows} empty="Aucune facture sur la période." columns={[
+        { header: 'N°', render: (r) => r.number }, { header: 'Date', render: (r) => date(r.issue_date) }, { header: 'Client', render: (r) => r.buyer_name }, { header: 'Échéance', render: (r) => date(r.due_date) },
+        { header: 'Montant', align: 'right', render: (r) => FR(r.total) }, { header: 'Encaissé', align: 'right', render: (r) => FR(r.paid) }, { header: 'Reste', align: 'right', render: (r) => <strong>{FR(r.balance)}</strong> },
+      ]} />}
+    </Frame>
   );
 }
 
@@ -149,12 +171,21 @@ function Exporters() {
 }
 
 function Banks() {
+  const { can } = useAuth();
   const { data, loading, error, reload } = useAsync(() => get<any[]>('/financial-accounts'), []);
   const rows = (data ?? []).filter((a) => a.owner_type !== 'collector' && a.owner_type !== 'producer');
+  const [adding, setAdding] = useState(false);
+  const [name, setName] = useState('');
+  const act = useAction();
   return (
-    <Frame title="État des comptes" total={<span>SOLDE <b>{FR(rows.reduce((s, r) => s + Number(r.balance), 0))}</b></span>}>
-      {error && <ErrorBox message={error} onRetry={reload} />}
-      {loading ? <Loading /> : <Table rows={rows} empty="Aucun compte." columns={[{ header: 'Compte', render: (a) => <strong>{a.name}</strong> }, { header: 'Type', render: (a) => (a.owner_type === 'cash_register' ? 'Caisse' : 'Compte') }, { header: 'Solde', align: 'right', render: (a) => FR(Number(a.balance)) }]} />}
+    <Frame title="État des comptes bancaires et caisses" total={<span>SOLDE <b>{FR(rows.reduce((s, r) => s + Number(r.balance), 0))}</b></span>}>
+      {can('cash:manage') && <div className="toolbar"><button className="btn" onClick={() => setAdding(true)}>Nouveau</button></div>}
+      {error && <ErrorBox message={error} onRetry={reload} />}{act.error && <ErrorBox message={act.error} />}
+      {loading ? <Loading /> : <Table rows={rows} empty="Aucun compte." columns={[{ header: 'N°', render: (a) => rows.indexOf(a) + 1 }, { header: 'Compte', render: (a) => <strong>{a.name}</strong> }, { header: 'Type', render: (a) => (a.owner_type === 'cash_register' ? 'Caisse' : 'Compte bancaire') }, { header: 'Solde', align: 'right', render: (a) => <strong>{FR(Number(a.balance))}</strong> }]} />}
+      {adding && <Modal title="Nouveau compte" onClose={() => setAdding(false)}>
+        <Field label="Banque et n° de compte"><input value={name} onChange={(e) => setName(e.target.value)} maxLength={150} /></Field>
+        <div className="modal-actions"><button className="btn" disabled={act.busy || name.trim().length < 2} onClick={() => act.run(async () => { await post('/financial-accounts', { owner_type: 'other', name: name.trim() }); setAdding(false); setName(''); reload(); })}>Enregistrer</button><button className="btn btn-ghost" onClick={() => setAdding(false)}>Annuler</button></div>
+      </Modal>}
     </Frame>
   );
 }

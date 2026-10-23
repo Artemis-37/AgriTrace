@@ -113,7 +113,7 @@ export class DuesController {
     return this.db.tx(req.org.id, async (c) => {
       const rows = (await c.query(
         `SELECT * FROM (SELECT d.id, d.kind, d.direction, d.partner_id, p.name AS partner_name, d.ref_no, d.label, d.issued_on, d.due_date, d.quantity, d.unit_price, d.principal, d.rate_pct, d.term_months,
-                d.tax_type, d.period, d.amount, d.status, coalesce((SELECT sum(amount) FROM due_payments WHERE due_id = d.id), 0) AS paid
+                d.tax_type, d.period, d.amount, d.status, d.created_at, coalesce((SELECT sum(amount) FROM due_payments WHERE due_id = d.id), 0) AS paid
            FROM dues d LEFT JOIN partners p ON p.id = d.partner_id
           WHERE d.status = 'open' AND ($1::text IS NULL OR d.kind = $1) AND ($2::date IS NULL OR d.issued_on >= $2) AND ($3::date IS NULL OR d.issued_on <= $3)) x
          WHERE ($4::text IS NULL OR $4 = 'all' OR ($4 = 'open' AND paid < amount) OR ($4 = 'settled' AND paid >= amount))
