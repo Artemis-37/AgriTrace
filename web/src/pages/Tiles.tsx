@@ -4,6 +4,9 @@ import { useAuth } from '../auth';
 const TILES: { to: string; label: string; icon: string; perm: string[]; notFor?: 'collector' }[] = [
   { to: '/equipe', label: 'Membres', icon: '👥', perm: ['users:read'] },
   { to: '/producteurs', label: 'Producteurs', icon: '🌱', perm: ['producers:read'] },
+  { to: '/parcelles', label: 'Plantations', icon: '🌳', perm: ['parcels:read'] },
+  { to: '/partenaires', label: 'Partenaires', icon: '🤝', perm: ['partners:read'] },
+  { to: '/parametres', label: 'Produits', icon: '🌾', perm: ['products:read', 'campaigns:read'] },
   { to: '/pesees', label: 'Pesées', icon: '⚖️', perm: ['convoys:read', 'convoys:receive'], notFor: 'collector' },
   { to: '/commerce', label: 'Ventes', icon: '🚚', perm: ['buyers:read', 'logistics:read', 'invoices:read'] },
   { to: '/caisse', label: 'Caisse', icon: '💰', perm: ['convoys:settle', 'finance:read'] },

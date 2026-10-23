@@ -11,6 +11,9 @@ import 'package:uuid/uuid.dart';
 import 'app_database.dart';
 
 /// Accès aux données locales et création d'opérations hors connexion.
+/// Produits proposés à la déclaration d'un convoi : les produits actifs seulement.
+List<Map<String, Object?>> activeProducts(List<dynamic> rows) => [for (final r in rows) if ((r as Map)['active'] != false) Map<String, Object?>.from(r)];
+
 class Repository {
   final AppDatabase db;
   Repository(this.db);
@@ -137,14 +140,28 @@ class Repository {
   Future<int> pendingPhotos() async => Sqflite.firstIntValue(await db.raw.rawQuery("SELECT count(*) FROM pending_uploads WHERE status = 'pending'")) ?? 0;
 
   /// Convoi vers le magasin central : mis en file d'envoi, envoyé dès que le réseau revient (idempotent).
-  Future<void> queueConvoy({String? convoyNo, required String driverName, required String truckNo, int? declaredBags, String? declaredKg, List<String> declarationIds = const []}) async {
+  Future<void> queueConvoy({String? convoyNo, required String driverName, required String truckNo, int? declaredBags, String? declaredKg, String? productId, List<String> declarationIds = const []}) async {
     final key = 'convoy-${_uuid.v4()}';
     final payload = {
       'idempotency_key': key, if (convoyNo != null && convoyNo.trim().isNotEmpty) 'convoy_no': convoyNo.trim(), 'driver_name': driverName.trim(), 'truck_no': truckNo.trim(),
       if (declaredBags != null) 'declared_bags': declaredBags, if (declaredKg != null && declaredKg.isNotEmpty) 'declared_kg': declaredKg,
+      if (productId != null && productId.isNotEmpty) 'product_id': productId,
       if (declarationIds.isNotEmpty) 'declaration_ids': declarationIds,
     };
     await db.raw.insert('outbox', {'idempotency_key': key, 'op_type': 'convoy.create', 'payload': jsonEncode(payload), 'entity_id': key, 'created_at': DateTime.now().toIso8601String()});
+  }
+
+  /// Produits actifs (cacao, café…) : lus sur le serveur, gardés en cache pour la saisie hors connexion.
+  Future<List<Map<String, Object?>>> products(Future<dynamic> Function() fetch) async {
+    List<dynamic>? rows;
+    try {
+      rows = await fetch() as List<dynamic>;
+      await db.setKv('products', jsonEncode(rows));
+    } catch (_) {
+      final c = await db.getKv('products');
+      if (c != null) { try { rows = jsonDecode(c) as List<dynamic>; } catch (_) {/* cache illisible */} }
+    }
+    return activeProducts(rows ?? const []);
   }
 
   /// Convois créés sur l'appareil et pas encore envoyés : sert à prévoir le prochain numéro automatique hors connexion.

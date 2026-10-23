@@ -5,9 +5,10 @@ import { useAuth } from '../auth';
 import { LOAN_KIND, date } from '../format';
 import { Card, ErrorBox, Loading, PageHeader, Table, useAsync } from '../ui';
 import { FR, Journal } from './Caisse';
+import { Bic, Dues } from './Echeances';
 
-type Key = 'journal' | 'expenses' | 'purchases' | 'settlements' | 'loans' | 'delegates' | 'exporters' | 'banks';
-const PERM: Record<Key, string> = { journal: 'finance:read', expenses: 'finance:read', purchases: 'accounting:read', settlements: 'accounting:read', loans: 'loans:read', delegates: 'accounting:read', exporters: 'prefinancing:read', banks: 'finance:read' };
+type Key = 'journal' | 'expenses' | 'purchases' | 'settlements' | 'loans' | 'delegates' | 'exporters' | 'banks' | 'suppliers' | 'borrowings' | 'services' | 'sales' | 'taxes' | 'bic';
+const PERM: Record<Key, string> = { journal: 'finance:read', expenses: 'finance:read', purchases: 'accounting:read', settlements: 'accounting:read', loans: 'loans:read', delegates: 'accounting:read', exporters: 'prefinancing:read', banks: 'finance:read', suppliers: 'dues:read', borrowings: 'dues:read', services: 'dues:read', sales: 'dues:read', taxes: 'dues:read', bic: 'dues:read' };
 const ALL: { title: string; items: [Key, string][] }[] = [
   { title: 'Opérations', items: [['journal', 'Mouvements de caisse']] },
   { title: 'Dépenses', items: [['expenses', 'État des dépenses']] },
@@ -16,6 +17,11 @@ const ALL: { title: string; items: [Key, string][] }[] = [
   { title: 'Délégués', items: [['delegates', 'Solde des délégués']] },
   { title: 'Exportateurs', items: [['exporters', 'État des exportateurs']] },
   { title: 'Banques et comptes', items: [['banks', 'État des comptes']] },
+  { title: 'Fournisseurs', items: [['suppliers', 'Factures des fournisseurs']] },
+  { title: 'Emprunts', items: [['borrowings', 'État des emprunts']] },
+  { title: 'Prestations', items: [['services', 'État des prestations']] },
+  { title: 'Ventes autres produits', items: [['sales', 'État des ventes']] },
+  { title: 'Impôts', items: [['taxes', 'Impôts et taxes'], ['bic', 'Estimation du BIC']] },
 ];
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 
@@ -47,6 +53,12 @@ export default function Comptabilite() {
           {cur === 'delegates' && <Delegates />}
           {cur === 'exporters' && <Exporters />}
           {cur === 'banks' && <Banks />}
+          {cur === 'suppliers' && <Dues kind="supplier_invoice" />}
+          {cur === 'borrowings' && <Dues kind="borrowing" />}
+          {cur === 'services' && <Dues kind="service" />}
+          {cur === 'sales' && <Dues kind="other_sale" />}
+          {cur === 'taxes' && <Dues kind="tax" />}
+          {cur === 'bic' && <Bic />}
         </div>
       </div>
     </>

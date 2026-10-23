@@ -8,7 +8,9 @@
 | Identité des producteurs | nom, village, section, téléphone, code producteur | traçabilité, paiements | rôles `producers:*` |
 | Localisation | parcelles, tracés GPS | conformité EUDR, anti-déforestation | rôles `parcels:*`, `geo:*` |
 | Pièces justificatives | pièces d'identité, contrats (documents sensibles) | contrôle, audit | `documents:read`, `documents:sensitive` |
-| Données financières | achats, paiements, prêts | gestion, comptabilité | rôles finance/comptabilité |
+| Données financières | achats, paiements, prêts, emprunts, factures des fournisseurs, impôts | gestion, comptabilité | rôles finance/comptabilité |
+| Coordonnées bancaires et pièce d'identité des délégués | banque, n° de compte, type et n° de pièce | paiement et identification des délégués | `collectors:read`, rôles caisse/comptabilité |
+| Tiers (partenaires, fournisseurs, clients, prêteurs) | nom, téléphone, courriel, adresse, n° de contribuable | gestion des relations et des règlements | `partners:read` |
 | Comptes utilisateurs | e-mail, nom, rôle, journaux de connexion | accès, sécurité | administrateurs |
 
 ## 2. Mesures techniques en place

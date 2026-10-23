@@ -20,6 +20,8 @@ export class CreateConvoyDto {
   @IsOptional() @Dec(3) declared_kg?: string;
   @IsOptional() @IsString() @Length(1, 40) trailer_no?: string;
   @IsOptional() @IsString() @Length(1, 500) notes?: string;
+  /** Produit convoyé annoncé par le délégué ; le magasinier le confirme ou le change à la pesée. */
+  @IsOptional() @IsUUID() product_id?: string;
   /** Achats chargés dans ce convoi (déclarations du délégué, une seule fois chacune). Sans poids/sacs annoncés, ils sont déduits de ces achats. */
   @IsOptional() @IsArray() @ArrayMaxSize(300) @IsUUID('all', { each: true }) declaration_ids?: string[];
 }
@@ -122,6 +124,7 @@ export class ConvoysController {
       if (!collectorId) throw new BadRequestException('Délégué requis (le compte connecté n\'est pas un délégué)');
       if (own && b.collector_id && b.collector_id !== own.id) throw new BadRequestException('Un délégué ne peut déclarer que ses propres convois');
       if (!(await c.query(`SELECT 1 FROM collectors WHERE id = $1 AND status = 'active'`, [collectorId])).rowCount) throw new BadRequestException('Délégué inconnu ou désactivé');
+      if (b.product_id && !(await c.query(`SELECT 1 FROM products WHERE id = $1 AND active`, [b.product_id])).rowCount) throw new BadRequestException('Produit inconnu ou inactif');
       const auto = await nextConvoyNo(c, req.org.id, collectorId, true);
       const convoyNo = auto ? auto.convoy_no : b.convoy_no?.trim();
       if (!convoyNo || convoyNo.length < 2) throw new BadRequestException('Numéro de connaissement requis (renseignez le code CCC de la coopérative pour le générer automatiquement)');
@@ -141,10 +144,10 @@ export class ConvoysController {
       }
       const linkedKg = linked.reduce((a, d) => a + Number(d.kg), 0), linkedBags = linked.reduce((a, d) => a + Number(d.bags ?? 0), 0);
       const ins = await c.query(
-        `INSERT INTO convoys(organization_id, idempotency_key, convoy_no, collector_id, driver_name, truck_no, declared_bags, declared_kg, notes, created_by, trailer_no)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
+        `INSERT INTO convoys(organization_id, idempotency_key, convoy_no, collector_id, driver_name, truck_no, declared_bags, declared_kg, notes, created_by, trailer_no, product_id)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *`,
         [req.org.id, b.idempotency_key, convoyNo, collectorId, b.driver_name.trim(), b.truck_no.trim().toUpperCase(),
-         b.declared_bags ?? (linked.length ? linkedBags : null), b.declared_kg ?? (linked.length ? linkedKg.toFixed(3) : null), b.notes ?? null, req.user.id, b.trailer_no?.trim() || null]);
+         b.declared_bags ?? (linked.length ? linkedBags : null), b.declared_kg ?? (linked.length ? linkedKg.toFixed(3) : null), b.notes ?? null, req.user.id, b.trailer_no?.trim() || null, b.product_id ?? null]);
       for (const d of linked) await c.query(`INSERT INTO convoy_declarations(organization_id, convoy_id, declaration_id, kg, bags) VALUES ($1,$2,$3,$4,$5)`, [req.org.id, ins.rows[0].id, d.id, d.kg, d.bags ?? 0]);
       const who = (await c.query(`SELECT u.full_name FROM collectors k JOIN users u ON u.id = k.user_id WHERE k.id = $1`, [collectorId])).rows[0];
       await this.notif.notifyPermission(c, req.org.id, 'convoys:receive', { kind: 'convoy_created', title: `Convoi en route : ${ins.rows[0].convoy_no}`,
@@ -203,10 +206,10 @@ export class ConvoysController {
   @RequirePermissions('convoys:read')
   list(@Req() req: any, @Query('status') status?: string) {
     return this.db.tx(req.org.id, async (c) => (await c.query(
-      `SELECT v.*, u.full_name AS collector_name, r.id AS reception_id, r.total_kg, r.bags, r.variance_kg, r.status AS reception_status, r.amount, r.unit_price, pr.name AS product, pr.buy_price_per_kg AS product_buy_price
+      `SELECT v.*, u.full_name AS collector_name, r.id AS reception_id, r.total_kg, r.bags, r.variance_kg, r.status AS reception_status, r.amount, r.unit_price, pr.name AS product, pr.buy_price_per_kg AS product_buy_price, v.product_id AS declared_product_id
          FROM convoys v JOIN collectors k ON k.id = v.collector_id JOIN users u ON u.id = k.user_id
          LEFT JOIN convoy_receptions r ON r.convoy_id = v.id
-         LEFT JOIN products pr ON pr.id = r.product_id
+         LEFT JOIN products pr ON pr.id = coalesce(r.product_id, v.product_id)
         WHERE ($1::text IS NULL OR v.status = $1)
           AND ($2::boolean OR k.user_id = $3)
         ORDER BY v.created_at DESC LIMIT 300`,
@@ -218,7 +221,7 @@ export class ConvoysController {
   @RequirePermissions('convoys:receive')
   expected(@Req() req: any, @Query('collector_id') collectorId?: string) {
     return this.db.tx(req.org.id, async (c) => (await c.query(
-      `SELECT v.id, v.trailer_no, k.origin AS collector_origin, v.convoy_no, v.collector_id, u.full_name AS collector_name, (SELECT mc.code FROM member_codes mc WHERE mc.user_id = k.user_id AND mc.organization_id = k.organization_id) AS collector_code, v.driver_name, v.truck_no, v.declared_bags, v.declared_kg, v.created_at,
+      `SELECT v.id, v.trailer_no, k.origin AS collector_origin, v.convoy_no, v.collector_id, u.full_name AS collector_name, (SELECT mc.code FROM member_codes mc WHERE mc.user_id = k.user_id AND mc.organization_id = k.organization_id) AS collector_code, v.driver_name, v.truck_no, v.declared_bags, v.declared_kg, v.created_at, v.product_id, (SELECT name FROM products WHERE id = v.product_id) AS product,
               coalesce((SELECT convoy_weight_tolerance_pct FROM org_settings), 2) AS weight_tolerance_pct,
               (SELECT count(*)::int FROM convoy_declarations x WHERE x.convoy_id = v.id) AS declaration_count
          FROM convoys v JOIN collectors k ON k.id = v.collector_id JOIN users u ON u.id = k.user_id WHERE v.status = 'in_transit' AND ($1::uuid IS NULL OR v.collector_id = $1) ORDER BY v.created_at`, [collectorId ?? null])).rows);
@@ -383,7 +386,7 @@ export class ConvoysController {
            $12,$13,$14,$15,CASE WHEN $15::numeric IS NULL THEN NULL ELSE now() END,$16,$17,CASE WHEN $17::numeric IS NULL THEN NULL ELSE now() END,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27) RETURNING *`,
         [req.org.id, b.idempotency_key, v.id, b.warehouse_id, b.total_kg, b.bags, variance, vpct, req.user.id, b.notes ?? null, held ? 'pending_variance' : 'pending_cashier',
          bulletinNo, b.trailer_no ?? v.trailer_no ?? null, (await c.query(`SELECT origin FROM collectors WHERE id = $1`, [v.collector_id])).rows[0]?.origin ?? null, b.weigh_in_kg ?? null, b.scale_in ?? null, b.weigh_out_kg ?? null, b.scale_out ?? null, gross, b.bag_tare_kg ?? null, b.refaction_kg ?? null,
-         b.grade ?? null, b.bags_unloaded ?? null, b.bags_refused ?? null, JSON.stringify(b.analysis ?? {}), b.product_id ?? null, campaignId])).rows[0];
+         b.grade ?? null, b.bags_unloaded ?? null, b.bags_refused ?? null, JSON.stringify(b.analysis ?? {}), b.product_id ?? v.product_id ?? null, campaignId])).rows[0];
       await c.query(`UPDATE convoys SET status = 'received' WHERE id = $1`, [v.id]);
       if (held) await this.notif.notifyPermission(c, req.org.id, 'weighings:approve', { kind: 'convoy_variance', severity: 'warning', title: `Écart de poids à valider : convoi ${v.convoy_no}`,
         body: `${variance} kg (${vpct} %) · ${b.notes}`, entityType: 'convoy', entityId: v.id, dedupe: `convoy_variance:${v.id}` });

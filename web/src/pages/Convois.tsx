@@ -125,6 +125,8 @@ export function Receive() {
   const [codeQ, setCodeQ] = useState('');
   const [d, setD] = useState({ grade: '', trailer: '', unl: '', refused: '' });
   const [prod, setProd] = useState('');
+  // Produit annoncé par le délégué sur ce convoi : proposé d'office, toujours modifiable par le magasinier.
+  useEffect(() => { const e = data?.expected.find((v: any) => v.collector_id === collector && v.convoy_no === convoyNo.trim()); if (e?.product_id) setProd(e.product_id); }, [data, collector, convoyNo]);
   const [camp, setCamp] = useState('');
   useEffect(() => { if (data) { setProd((p) => p || (data.products.length === 1 ? data.products[0].id : '')); const t = new Date().toISOString().slice(0, 10); setCamp((c) => c || (data.campaigns.find((x: any) => String(x.starts_on).slice(0, 10) <= t && t <= String(x.ends_on).slice(0, 10)) ?? data.campaigns[0])?.id || ''); } }, [data]);
   const [an, setAn] = useState<Record<string, string>>({});

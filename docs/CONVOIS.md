@@ -110,3 +110,17 @@ Chaque intervenant de la coopérative (délégué, magasinier, caissier, coach, 
 - **État du stock** (écran « Stocks et lots ») : par campagne et par produit, nombre de pesées, nombre de sacs et stock net en kg. Les ventes et expéditions ne sont pas encore déduites.
 - Caisse : le prix unitaire de règlement est prérempli avec le prix d'achat du produit de la pesée (modifiable).
 - API : `GET/POST /products`, `PUT/DELETE /products/:id`, `GET /stock-state?campaign_id&from&to` ; `gross_kg`, `product_id`, `campaign_id` sur la réception ; migration `048_produits_campagnes.sql`.
+
+## Partenaires, fournisseurs, emprunts, prestations, ventes d'autres produits et impôts
+
+- **Partenaires et fournisseurs** (menu « Partenaires », `partners:read` / `partners:manage`) : quatre listes — partenaires, fournisseurs, clients, prêteurs — avec téléphone, courriel, adresse et n° de contribuable. Un tiers qui a des échéances ne se supprime pas : on le désactive.
+- **Comptabilité** : de nouvelles rubriques (`dues:read`, `dues:manage`, `dues:settle`) : *Fournisseurs* (factures, quantité × prix), *Emprunts* (capital, taux annuel, durée en mois : les intérêts simples sont calculés, le capital peut être crédité sur un compte), *Prestations* et *Ventes autres produits* (à encaisser), *Impôts et taxes* (nature BIC / TVA / patente…, période).
+- **Règlement ou encaissement** : chaque échéance se solde en une ou plusieurs fois ; chaque règlement passe une opération sur le compte choisi (sortie pour une dette, entrée pour une créance), sans dépasser le reste dû, rejouable sans doublon. Une échéance réglée ne s'annule plus.
+- **Estimation du BIC** : produits (prestations, ventes d'autres produits) − charges (factures fournisseurs, intérêts d'emprunt), au taux saisi (25 % par défaut). **C'est une estimation limitée à ces rubriques, à valider avec l'expert-comptable** ; elle ne remplace pas la déclaration fiscale.
+- **Plantations** : la tuile « Plantations » de l'accueil ouvre les parcelles des producteurs (déjà gérées avec leur tracé).
+- Le **comptable** peut désormais lire les prêts et les préfinancements (états des prêts et des exportateurs).
+- API : `GET/POST/PUT/DELETE /partners`, `GET/POST /dues`, `DELETE /dues/:id`, `POST /dues/:id/payments`, `GET /dues/bic-estimate` ; migration `049_partenaires_echeances.sql`.
+
+## Produit convoyé annoncé par le délégué (application mobile)
+
+À la déclaration d'un convoi, le délégué choisit le **produit convoyé** (liste des produits actifs, gardée en cache pour la saisie hors connexion). Le magasinier le voit à la pesée : le produit est **proposé d'office mais toujours modifiable**. Sans choix du magasinier, le produit annoncé est retenu. Le règlement en caisse reprend le prix d'achat du produit.

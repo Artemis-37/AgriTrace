@@ -21,12 +21,15 @@ class _NewConvoyScreenState extends State<NewConvoyScreen> {
   String? _autoNo;
   List<Map<String, Object?>> _linkable = [];
   final Set<String> _picked = {};
+  List<Map<String, Object?>> _products = [];
+  String? _product;
 
   @override
   void initState() {
     super.initState();
     _loadLinkable();
     _loadNumber();
+    services.repo.products(() => services.api.get('/products')).then((p) { if (mounted) setState(() { _products = p; if (p.length == 1) _product = p.first['id'] as String?; }); });
   }
 
   /// Aperçu du prochain numéro de connaissement (le serveur l'attribue définitivement à l'envoi).
@@ -61,7 +64,7 @@ class _NewConvoyScreenState extends State<NewConvoyScreen> {
     setState(() => _busy = true);
     await services.repo.queueConvoy(
       convoyNo: _auto == true ? null : _no.text, driverName: _driver.text, truckNo: _truck.text,
-      declaredBags: int.tryParse(_bags.text.trim()), declaredKg: _kg.text.trim().replaceAll(',', '.'), declarationIds: _picked.toList(),
+      declaredBags: int.tryParse(_bags.text.trim()), declaredKg: _kg.text.trim().replaceAll(',', '.'), productId: _product, declarationIds: _picked.toList(),
     );
     if (!mounted) return;
     Navigator.of(context).pop();
@@ -88,6 +91,15 @@ class _NewConvoyScreenState extends State<NewConvoyScreen> {
         const SizedBox(height: 12),
         TextField(controller: _truck, decoration: const InputDecoration(labelText: 'N° du camion'), textCapitalization: TextCapitalization.characters, onChanged: (_) => setState(() {})),
         const SizedBox(height: 12),
+        if (_products.isNotEmpty) ...[
+          DropdownButtonFormField<String>(
+            initialValue: _product, isExpanded: true,
+            decoration: const InputDecoration(labelText: 'Produit convoyé', helperText: 'Le magasinier peut le corriger à la pesée.'),
+            items: [for (final p in _products) DropdownMenuItem(value: p['id'] as String, child: Text('${p['name']}'))],
+            onChanged: (v) => setState(() => _product = v),
+          ),
+          const SizedBox(height: 12),
+        ],
         if (_linkable.isNotEmpty) ...[
           const Text('Achats chargés dans ce convoi (facultatif)', style: TextStyle(fontWeight: FontWeight.w600)),
           for (final d in _linkable)
