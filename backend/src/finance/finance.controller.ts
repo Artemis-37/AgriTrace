@@ -1,5 +1,6 @@
 import {
   BadRequestException, Body, ConflictException, Controller, Get, NotFoundException, Param, ParseUUIDPipe, Post, Query, Req,
+  ForbiddenException,
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiHeader, ApiTags } from '@nestjs/swagger';
@@ -210,9 +211,10 @@ export class FinanceController {
   async closeSession(@Param('id', ParseUUIDPipe) id: string, @Body() b: CloseSessionDto, @Req() req: any) {
     const row = await this.db.tx(req.org.id, async (c) => {
       const s = await c.query(
-        `SELECT s.id, s.status, r.account_id FROM cash_sessions s JOIN cash_registers r ON r.id = s.register_id WHERE s.id = $1 FOR UPDATE OF s`, [id]);
+        `SELECT s.id, s.status, s.opened_by, r.account_id FROM cash_sessions s JOIN cash_registers r ON r.id = s.register_id WHERE s.id = $1 FOR UPDATE OF s`, [id]);
       if (!s.rowCount) throw new NotFoundException();
       if (s.rows[0].status !== 'open') throw new BadRequestException('Session déjà clôturée');
+      if (s.rows[0].opened_by !== req.user.id) throw new ForbiddenException('Seul le caissier connecté à cette caisse peut s\'en déconnecter');
       await c.query(`SELECT 1 FROM financial_accounts WHERE id = $1 FOR UPDATE`, [s.rows[0].account_id]);
       const exp = (await c.query(BALANCE_SQL, [s.rows[0].account_id])).rows[0].balance;
       // Sans comptage (cas normal : la caisse ne se clôture pas), ni écart ni montant attendu ne sont enregistrés.

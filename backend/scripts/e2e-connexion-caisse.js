@@ -19,6 +19,16 @@ async function call(m, p, { token, org, body } = {}) { const r = await fetch(API
   check('la caisse indique le caissier connecté', l.open_session_id === s.body.id && !!l.open_session_by, l);
   check('une seconde connexion sur la même caisse est refusée', (await call('POST', `/cash-registers/${reg.id}/sessions`, { ...C, body: {} })).status >= 400);
   check('l\'administrateur ne déconnecte pas le caissier', (await call('POST', `/cash-sessions/${s.body.id}/close`, { ...A, body: {} })).status === 403);
+  await call('POST', '/users', { ...A, body: { email: `cais2.${run}@t.test`, full_name: 'Caissier 2', password: pw, role_id: role.id } });
+  const C2 = { token: (await call('POST', '/auth/login', { body: { email: `cais2.${run}@t.test`, password: pw } })).body.access_token, org: org.id };
+  check('un autre caissier ne déconnecte pas le caissier connecté', (await call('POST', `/cash-sessions/${s.body.id}/close`, { ...C2, body: {} })).status === 403);
+  // isolation entre coopératives : une autre coopérative ne voit ni la caisse ni ses comptes
+  const org2 = (await call('POST', '/organizations', { token: adm, body: { code: 'CD' + run, name: 'CD' + run } })).body;
+  await call('POST', `/organizations/${org2.id}/admins`, { token: adm, body: { email: `cd.${run}@t.test`, full_name: 'Chef', password: pw } });
+  const B = { token: (await call('POST', '/auth/login', { body: { email: `cd.${run}@t.test`, password: pw } })).body.access_token, org: org2.id };
+  check('autre coopérative : la session n\'est pas atteignable', [403, 404].includes((await call('POST', `/cash-sessions/${s.body.id}/close`, { ...B, body: {} })).status));
+  check('autre coopérative : aucune caisse visible', !(await call('GET', '/cash-registers', B)).body.some((x) => x.id === reg.id));
+  check('sans jeton : refusé', (await call('GET', '/cash-registers')).status === 401);
   const c = await call('POST', `/cash-sessions/${s.body.id}/close`, { ...C, body: {} });
   check('le caissier se déconnecte : aucun comptage, aucun écart', c.status < 300 && c.body.variance == null, c.body);
   const l2 = (await call('GET', '/cash-registers', C)).body.find((x) => x.id === reg.id);
