@@ -141,6 +141,19 @@ console.log('3. Pesées au magasin');
   await close();
 }
 
+// ═══ 3 bis. Administrateur : tarifs du délégué (transport, retenue) préenregistrés dans son profil
+console.log('3 bis. Tarifs du délégué');
+{
+  const { page, go, close } = await actor('coop_admin');
+  await go('/delegues');
+  await page.locator('.pick-list button', { hasText: 'Brahima' }).first().click(); await page.waitForTimeout(600);
+  await page.getByRole('tab', { name: 'Transport' }).click().catch(async () => { await page.getByText('Transport', { exact: true }).first().click(); }); await page.waitForTimeout(700);
+  await snap(page, 'coop_admin', 'tarif-transport', 'Délégué : onglet Transport', 'Le **coût de transport au kilo** du délégué est préenregistré dans son profil, onglet **Transport**. Seul l\'administrateur le saisit ; la caisse le reprend à chaque règlement sans pouvoir le modifier.');
+  await page.getByRole('tab', { name: /Retenues/ }).click().catch(async () => { await page.getByText(/^Retenues/).first().click(); }); await page.waitForTimeout(700);
+  await snap(page, 'coop_admin', 'tarif-retenue', 'Délégué : onglet Retenues', 'La **retenue au kilo** (mise en compte) est préenregistrée dans l\'onglet **Retenues**, également par l\'administrateur seul.');
+  await close();
+}
+
 // ═══ 4. Caissier : session de caisse, règlement des deux pesées
 console.log('4. Caisse');
 {
@@ -154,8 +167,8 @@ console.log('4. Caisse');
     await page.locator('tr', { hasText: no }).getByRole('button', { name: 'Traiter' }).click(); await page.waitForTimeout(600);
     const m = modalOf(page);
     must(await m.getByLabel(/P\.U\./).isDisabled(), 'le P.U. ne doit pas être modifiable par le caissier');
-    await m.getByLabel(/Retenue au kg/).fill('10'); await page.waitForTimeout(400);
-    if (!last) await snap(page, 'caissier', 'traiter', 'Règlement d\'une pesée', 'Le P.U. (prix d\'achat au kg) est celui **fixé par l\'administrateur** pour la traite : il s\'affiche mais le caissier ne peut pas le modifier. Avec le coût de transport et la **retenue au kg**, il donne le net à payer, porté au compte du délégué.');
+    must(await m.getByLabel(/Retenue au kg/).isDisabled() && await m.getByLabel(/Coût de transport/).isDisabled(), 'transport et retenue ne doivent pas être modifiables par le caissier');
+    if (!last) await snap(page, 'caissier', 'traiter', 'Règlement d\'une pesée', 'Le P.U. (prix d\'achat au kg) est celui **fixé par l\'administrateur** pour la traite : il s\'affiche mais le caissier ne peut pas le modifier. Le **coût de transport** et la **retenue au kg** viennent eux aussi du profil du délégué (préenregistrés par l\'administrateur) et sont affichés sans pouvoir être saisis ; avec le P.U., ils donnent le net à payer, porté au compte du délégué.');
     await m.getByRole('button', { name: 'Enregistrer le net à payer' }).click(); await page.waitForTimeout(1800);
   }
   await page.getByText('Solde et fiche des délégués', { exact: true }).first().click().catch(() => undefined); await page.waitForTimeout(1000);

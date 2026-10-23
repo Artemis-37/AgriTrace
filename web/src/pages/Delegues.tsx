@@ -5,7 +5,7 @@ import { Card, ErrorBox, Field, Loading, Modal, PageHeader, Tabs, useAction, use
 import { Fiche } from './Convois';
 
 const DOC: Record<string, string> = { cni: "Carte nationale d'identité", passeport: 'Passeport', attestation: "Attestation d'identité", permis: 'Permis de conduire', autre: 'Autre pièce' };
-type Tab = 'info' | 'id' | 'account';
+type Tab = 'info' | 'id' | 'transport' | 'retenues' | 'account';
 
 /** Fiche des délégués : liste à gauche (recherche par code ou nom), fiche à onglets à droite. */
 export default function Delegues() {
@@ -18,6 +18,7 @@ export default function Delegues() {
   const rows = (data ?? []).filter((c) => !q.trim() || `${c.member_code ?? ''} ${c.full_name}`.toLowerCase().includes(q.trim().toLowerCase()));
   const cur = (data ?? []).find((c) => c.id === sel) ?? null;
   const tabs: [Tab, string][] = [['info', 'Informations personnelles'], ['id', "Pièce d'identité"]];
+  tabs.push(['transport', 'Transport'], ['retenues', 'Retenues (mise en compte)']);
   if (can('convoys:settle')) tabs.push(['account', 'Compte et solde']);
   return (
     <>
@@ -44,8 +45,9 @@ export default function Delegues() {
                   </dl>
                 )}
                 {tab === 'id' && <dl className="fiche"><dt>Type de pièce</dt><dd>{DOC[cur.id_doc_type] ?? '—'}</dd><dt>N° de la pièce</dt><dd>{cur.id_doc_no ?? '—'}</dd></dl>}
+                {(tab === 'transport' || tab === 'retenues') && <Rates c={cur} kind={tab} onDone={reload} />}
                 {tab === 'account' && <Fiche collectorId={cur.id} />}
-                {tab !== 'account' && can('collectors:manage') && <p><button className="btn" onClick={() => setEdit(true)}>Modifier la fiche</button></p>}
+                {['info', 'id'].includes(tab) && can('collectors:manage') && <p><button className="btn" onClick={() => setEdit(true)}>Modifier la fiche</button></p>}
               </Card>
             )}
           </div>
@@ -69,5 +71,32 @@ function Edit({ c, onClose, onDone }: { c: any; onClose: () => void; onDone: () 
       {act.error && <ErrorBox message={act.error} />}
       <div className="modal-actions"><button className="btn" disabled={act.busy || !f.origin.trim()} onClick={() => act.run(async () => { await put(`/collectors/${c.id}/profile`, f); onDone(); })}>Enregistrer</button><button className="btn btn-ghost" onClick={onClose}>Annuler</button></div>
     </Modal>
+  );
+}
+
+/** Onglets Transport et Retenues : tarifs au kilo préenregistrés dans le profil du délégué ; seul l'administrateur les saisit, la caisse les reprend. */
+function Rates({ c, kind, onDone }: { c: any; kind: 'transport' | 'retenues'; onDone: () => void }) {
+  const { can } = useAuth();
+  const field = kind === 'transport' ? 'transport_per_kg' : 'retention_per_kg';
+  const cfg = useAsync(() => get<any>('/convoys/settings').catch(() => null), []);
+  const [v, setV] = useState<string | null>(null);
+  const { busy, error, run } = useAction();
+  const own = c[field];
+  const def = kind === 'transport' ? cfg.data?.transport_unit : cfg.data?.retention_per_kg;
+  const shown = v ?? (own != null ? String(Number(own)) : '');
+  const may = can('collectors:rates');
+  const ok = shown === '' || /^\d+(\.\d{1,4})?$/.test(shown);
+  const label = kind === 'transport' ? 'Coût de transport au kilo (FCFA)' : 'Retenue au kilo — mise en compte (FCFA)';
+  return (
+    <div>
+      <p className="muted">{kind === 'transport'
+        ? 'Le coût de transport de ce délégué est préenregistré ici : la caisse le reprend à chaque règlement, sans pouvoir le modifier.'
+        : 'La somme retenue au kilo sur chaque règlement de ce délégué s\'accumule en mise en compte ; elle est reversée à la clôture de son compte, après approbation de l\'administrateur.'}</p>
+      <Field label={label} hint={own == null ? `Non renseigné : tarif par défaut de la coopérative (${Number(def ?? 0).toLocaleString('fr-FR')})` : undefined}>
+        <input inputMode="decimal" value={shown} readOnly={!may} disabled={!may} onChange={(e) => setV(e.target.value)} /></Field>
+      {error && <ErrorBox message={error} />}
+      {may ? <p><button className="btn" disabled={busy || v === null || !ok} onClick={() => run(async () => { await put(`/collectors/${c.id}/rates`, { [field]: shown === '' ? null : shown }); setV(null); onDone(); })}>Enregistrer</button></p>
+        : <p className="muted">Seul l'administrateur de la coopérative saisit ces tarifs.</p>}
+    </div>
   );
 }

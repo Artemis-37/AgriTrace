@@ -52,13 +52,24 @@ const login = async (email) => (await call('POST', '/auth/login', { body: { emai
   check('le nouveau prix est repris (1 100 × 1 000 kg)', s2.status < 300 && Number(s2.body.amount) === 1100000, s2.body);
   const hist = (await call('GET', `/products/${prod.id}/prices`, A)).body;
   check('historique : prix de départ et actualisation', hist.length === 2 && Number(hist[0].buy_price_per_kg) === 1100 && hist[0].campaign_name === 'Traite 2026-2027', hist);
+  // Transport et retenue : préenregistrés dans le profil du délégué par l'administrateur
+  check('le caissier ne peut pas fixer les tarifs du délégué', (await call('PUT', `/collectors/${k.id}/rates`, { ...cai.J, body: { transport_per_kg: '1' } })).status === 403);
+  const rt = await call('PUT', `/collectors/${k.id}/rates`, { ...A, body: { transport_per_kg: '20', retention_per_kg: '10' } });
+  check('l\'administrateur fixe transport 20 et retenue 10', rt.status < 300 && Number(rt.body.transport_per_kg) === 20 && Number(rt.body.retention_per_kg) === 10, rt.body);
+  const r4 = await recv('PX-4');
+  const q4 = (await call('GET', '/convoys/cashier-queue', cai.J)).body.find((x) => x.id === r4.id);
+  check('la file de la caisse porte les tarifs du délégué', Number(q4?.transport_unit) === 20 && Number(q4?.retention_per_kg) === 10, q4);
+  check('le caissier ne peut pas saisir un autre transport', (await call('POST', `/convoy-receptions/${r4.id}/settle`, { ...cai.J, body: { idempotency_key: 'idem-f-' + run, transport_unit: '0' } })).status === 403);
+  check('ni une autre retenue', (await call('POST', `/convoy-receptions/${r4.id}/settle`, { ...cai.J, body: { idempotency_key: 'idem-g-' + run, retention_per_kg: '0' } })).status === 403);
+  const s4 = await call('POST', `/convoy-receptions/${r4.id}/settle`, { ...cai.J, body: { idempotency_key: 'idem-h-' + run } });
+  check('règlement : 1 100 000 + transport 20 000 − retenue 10 000 = 1 110 000', s4.status < 300 && Number(s4.body.amount) === 1110000 && Number(s4.body.retention_amount) === 10000, s4.body);
   // Produit sans prix : la caisse est bloquée
   const noP = (await call('POST', '/products', { ...A, body: { name: 'Café' } })).body;
   const r3 = (await call('POST', '/convoys/receive', { ...mag.J, body: { idempotency_key: 'rv3' + run, collector_id: k.id, convoy_no: 'PX-3', warehouse_id: wh.id, campaign_id: camp.id, product_id: noP.id, gross_kg: '500', bags: 5, bags_unloaded: 0, driver_name: 'Chauffeur', truck_no: 'AB 1 CI' } })).body;
   const s3 = await call('POST', `/convoy-receptions/${r3.id}/settle`, { ...cai.J, body: { idempotency_key: 'idem-d-' + run } });
   check('produit sans prix fixé : règlement refusé (409)', s3.status === 409, s3.body);
   const adm3 = await call('POST', `/convoy-receptions/${r3.id}/settle`, { ...A, body: { idempotency_key: 'idem-e-' + run, unit_price: '600' } });
-  check('l\'administrateur peut régler en indiquant le prix', adm3.status < 300 && Number(adm3.body.amount) === 300000, adm3.body);
+  check('l\'administrateur peut régler en indiquant le prix (300 000 + transport 10 000 − retenue 5 000)', adm3.status < 300 && Number(adm3.body.amount) === 305000, adm3.body);
   // Ventes : le prix de vente au kilo est aussi celui de l'administrateur
   const ach = await mk('responsable_logistique');
   const buyer = (await call('POST', '/buyers', { ...A, body: { code: 'AC1', name: 'Négoce (fictif)', country: 'FR', currency: 'XOF', payment_terms_days: 30 } })).body;

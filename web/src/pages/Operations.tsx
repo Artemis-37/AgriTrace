@@ -24,11 +24,13 @@ function Qr({ text }: { text: string }) {
 
 const fmtKg = (v: string | null | undefined) => (v == null ? '' : `${v} kg`);
 
-/** Bulletin de pesée, présenté par parties : connaissement, pesée, analyse, livraison produit, visas. Les lignes sans donnée ne sont pas imprimées. */
+/** Bulletin de pesée, présenté par parties : connaissement, pesée, analyse, livraison produit, visas. Les lignes sans donnée ne sont pas imprimées, sauf l'analyse : non saisie, elle s'imprime à 0. */
 function Bulletin({ r }: { r: any }) {
   const b = r.bulletin;
   const rank = (k: string) => { const i = ANALYSIS.indexOf(k); return i < 0 ? 99 : i; };
-  const an = (Object.entries(b.analysis ?? {}) as [string, string][]).sort((x, y) => rank(x[0]) - rank(y[0]));
+  // Analyse non saisie par le magasinier : chaque ligne s'imprime à 0 par défaut (les lignes hors liste saisies restent affichées).
+  const saisi = (b.analysis ?? {}) as Record<string, string>;
+  const an = ([...ANALYSIS.map((k) => [k, (saisi[k] ?? '').toString().trim() || '0']), ...Object.entries(saisi).filter(([k]) => !ANALYSIS.includes(k))] as [string, string][]).sort((x, y) => rank(x[0]) - rank(y[0]));
   const L = (label: string, v: any, strong = false) => (v == null || v === '' ? null : <div className={`bp-l${strong ? ' net' : ''}`}><span>{label}</span><b>{v}</b></div>);
   const qr = `AGRITRACE|${b.no}|${b.convoy_no}|NET ${b.net} kg|${String(b.received_at).slice(0, 10)}`;
   return (
@@ -48,8 +50,8 @@ function Bulletin({ r }: { r: any }) {
         <div>{L('Fournisseur', b.collector)}{L('Code fournisseur', b.collector_code)}{L('Connaissement', b.convoy_no)}{L('Nb sacs déclaré', b.declared_bags)}{L('Date de réception', dateTime(b.received_at))}</div>
       </div>
 
-      {an.length > 0 && <><h3>Analyse</h3>
-        <div className="bp-3">{an.map(([k, v]) => L(k, v))}</div></>}
+      <h3>Analyse</h3>
+        <div className="bp-3">{an.map(([k, v]) => L(k, v))}</div>
 
       <h3>Livraison produit</h3>
       <div className="bp-2 bp-liv">

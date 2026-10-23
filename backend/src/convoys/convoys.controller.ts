@@ -454,7 +454,12 @@ export class ConvoysController {
            FROM convoy_receptions r JOIN convoys v ON v.id = r.convoy_id JOIN collectors k ON k.id = v.collector_id JOIN users u ON u.id = k.user_id
           WHERE r.status = 'pending_cashier' ORDER BY r.received_at`)).rows;
       // Prix au kilo fixé par l'administrateur (traite en cours) : repris tel quel par la caisse.
-      for (const r of rows) r.official_price = await effectiveBuyPrice(c, r.product_id, r.campaign_id);
+      const st = (await c.query(`SELECT coalesce((SELECT convoy_transport_unit FROM org_settings), 0) AS t, coalesce((SELECT convoy_retention_per_kg FROM org_settings), 0) AS r`)).rows[0];
+      for (const r of rows) {
+        r.official_price = await effectiveBuyPrice(c, r.product_id, r.campaign_id);
+        const k = (await c.query(`SELECT transport_per_kg AS t, retention_per_kg AS r FROM collectors WHERE id = $1`, [r.collector_id])).rows[0];
+        r.transport_unit = k?.t ?? st.t; r.retention_per_kg = k?.r ?? st.r;
+      }
       return rows;
     });
   }
@@ -483,7 +488,13 @@ export class ConvoysController {
         `INSERT INTO financial_accounts(organization_id, owner_type, owner_id, name, created_by) VALUES ($1,'collector',$2,$3,$4) RETURNING id, currency, accounting_code`,
         [req.org.id, v.collector_id, `Compte délégué — ${u.full_name}`, req.user.id])).rows[0];
       const st = (await c.query(`SELECT convoy_transport_unit AS t, convoy_retention_per_kg AS r FROM org_settings`)).rows[0] ?? { t: '0', r: '0' };
-      const tu = b.transport_unit ?? st.t, rt = b.retention_per_kg ?? st.r;
+      // Transport et retenue au kilo : préenregistrés dans le profil du délégué par l'administrateur (sinon tarif de la coopérative) ; la caisse ne les saisit pas.
+      const rates = (await c.query(`SELECT transport_per_kg AS t, retention_per_kg AS r FROM collectors WHERE id = $1`, [v.collector_id])).rows[0];
+      const offT = rates?.t ?? st.t, offR = rates?.r ?? st.r;
+      const mayRates = req.org.permissions.has('collectors:rates');
+      if (!mayRates && ((b.transport_unit !== undefined && Number(b.transport_unit) !== Number(offT)) || (b.retention_per_kg !== undefined && Number(b.retention_per_kg) !== Number(offR))))
+        throw new ForbiddenException("Le coût de transport et la retenue au kilo sont fixés par l'administrateur dans le profil du délégué : ils ne se saisissent pas en caisse");
+      const tu = mayRates ? (b.transport_unit ?? offT) : offT, rt = mayRates ? (b.retention_per_kg ?? offR) : offR;
       const m = (await c.query(
         `SELECT round($1::numeric * $2::numeric, 4) AS gross, round($1::numeric * $3::numeric, 4) AS transport, round($1::numeric * $4::numeric, 4) AS retention`,
         [r.total_kg, unitPrice, tu, rt])).rows[0];
@@ -555,6 +566,11 @@ export class ConvoysController {
   @Post('convoys/settings')
   @RequirePermissions('convoys:settle')
   async putSettings(@Body() b: SettingsDto, @Req() req: any) {
+    // Tarifs par défaut (transport, retenue) : administrateur seul ; la tolérance de poids reste réglable par la caisse.
+    if (!req.org.permissions.has('collectors:rates')) {
+      const cur = (await this.db.tx(req.org.id, (c) => c.query(`SELECT coalesce((SELECT convoy_transport_unit FROM org_settings), 0) AS t, coalesce((SELECT convoy_retention_per_kg FROM org_settings), 0) AS r`))).rows[0];
+      if (Number(b.transport_unit) !== Number(cur.t) || Number(b.retention_per_kg) !== Number(cur.r)) throw new ForbiddenException("Le coût de transport et la retenue au kilo sont fixés par l'administrateur de la coopérative");
+    }
     await this.db.tx(req.org.id, (c) => c.query(
       `INSERT INTO org_settings(organization_id, convoy_transport_unit, convoy_retention_per_kg, convoy_weight_tolerance_pct, updated_by) VALUES ($1,$2,$3,coalesce($5::numeric, 2),$4)
        ON CONFLICT (organization_id) DO UPDATE SET convoy_transport_unit = EXCLUDED.convoy_transport_unit, convoy_retention_per_kg = EXCLUDED.convoy_retention_per_kg,

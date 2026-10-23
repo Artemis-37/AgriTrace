@@ -99,12 +99,15 @@ const PROFILS = [
   // ── Collecteurs (le compte « collecteur » + un second pour les rapprochements)
   const col = await call('POST', '/collectors', { ...A, body: { user_id: users.collecteur.id } });
   await call('POST', `/collectors/${col.id}/assignments`, { ...A, body: { value_chain_id: vc.id } });
+  // Transport et retenue au kilo : préenregistrés dans le profil du délégué par l'administrateur (la caisse ne les saisit pas)
+  await call('PUT', `/collectors/${col.id}/rates`, { ...A, body: { transport_per_kg: '15', retention_per_kg: '10' } });
   // Second délégué (sans convoi déclaré) : sert à la pesée d'un convoi non déclaré, saisi par le magasinier.
   const r2 = await call('POST', '/roles/standard', { ...A, body: { code: 'collecteur' } });
   const email2 = `collecteur2@${DOMAIN}`;
   const u2 = await call('POST', '/users', { ...A, body: { email: email2, full_name: 'Yao Kouassi', password: PASSWORD, role_id: r2.id } });
   const col2 = await call('POST', '/collectors', { ...A, body: { user_id: u2.id } });
   await call('POST', `/collectors/${col2.id}/assignments`, { ...A, body: { value_chain_id: vc.id } });
+  await call('PUT', `/collectors/${col2.id}/rates`, { ...A, body: { transport_per_kg: '15', retention_per_kg: '10' } });
   const delegate2 = { name: 'Yao Kouassi', email: email2, collector_id: col2.id };
 
   // ── Producteurs et parcelles (coordonnées fictives)
@@ -148,7 +151,7 @@ const PROFILS = [
   const rec = await call('POST', '/convoys/receive', { ...U('magasinier'), body: { idempotency_key: key('rc'), collector_id: col.id, convoy_no: cv1, warehouse_id: wh.id, product_id: cacao.id, campaign_id: camp.id, total_kg: '2587.500', bags: 40 } });
   const reg = await call('POST', '/cash-registers', { ...A, body: { name: 'Caisse principale' } });
   const sess = await call('POST', `/cash-registers/${reg.id}/sessions`, { ...U('caissier'), body: { opening_amount: '5000000' } });
-  await soft('règlement du convoi', () => call('POST', `/convoy-receptions/${rec.id}/settle`, { ...U('caissier'), body: { idempotency_key: key('st'), retention_per_kg: '10' } }));
+  await soft('règlement du convoi', () => call('POST', `/convoy-receptions/${rec.id}/settle`, { ...U('caissier'), body: { idempotency_key: key('st') } }));
   // Compte bancaire de la coopérative (fictif) : sert aux reversements par chèque
   await soft('compte bancaire', async () => {
     const bank = await call('POST', '/financial-accounts', { ...A, body: { owner_type: 'other', name: 'Banque (compte courant) — fictif' } });

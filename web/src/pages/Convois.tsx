@@ -335,7 +335,9 @@ function Settle({ r, onClose, onDone }: { r: any; onClose: () => void; onDone: (
   const price = priceIn ?? suggested;
   const [tu, setTu] = useState<string | null>(null);
   const [rt, setRt] = useState<string | null>(null);
-  const t = tu ?? String(Number(cfg.data?.transport_unit ?? 0)), q = rt ?? String(Number(cfg.data?.retention_per_kg ?? 0));
+  const mayRates = canPrice('collectors:rates');
+  // Tarifs du délégué (profil) : transport et retenue au kilo, fixés par l'administrateur.
+  const t = tu ?? String(Number(r.transport_unit ?? cfg.data?.transport_unit ?? 0)), q = rt ?? String(Number(r.retention_per_kg ?? cfg.data?.retention_per_kg ?? 0));
   const num4 = (v: string) => /^\d+(\.\d{1,4})?$/.test(v);
   const ok = num4(price) && Number(price) > 0 && num4(t) && num4(q);
   const w = Number(r.total_kg);
@@ -352,8 +354,8 @@ function Settle({ r, onClose, onDone }: { r: any; onClose: () => void; onDone: (
     <Modal title={`Traiter le convoi ${r.convoy_no}`} onClose={onClose}>
       <p>{r.collector_name} · {num(r.total_kg)} kg · {r.bags} sacs</p>
       <Field label="P.U. — prix d'achat au kg (FCFA)" hint={mayPrice ? (suggested && priceIn === null ? `Prix de la traite pour ${r.product ?? 'le produit'}, modifiable par vous seul` : undefined) : (suggested ? `Prix fixé par l'administrateur pour ${r.product ?? 'le produit'} (non modifiable en caisse)` : "Prix non fixé : l'administrateur doit le renseigner dans Paramètres")}><input inputMode="decimal" value={price} readOnly={!mayPrice} disabled={!mayPrice} onChange={(e) => setPrice(e.target.value)} /></Field>
-      <Field label="Coût de transport au kg (FCFA)"><input inputMode="decimal" value={t} onChange={(e) => setTu(e.target.value)} /></Field>
-      <Field label="Retenue au kg (FCFA)"><input inputMode="decimal" value={q} onChange={(e) => setRt(e.target.value)} /></Field>
+      <Field label="Coût de transport au kg (FCFA)" hint={mayRates ? undefined : "Tarif du délégué fixé par l'administrateur (non modifiable en caisse)"}><input inputMode="decimal" value={t} readOnly={!mayRates} disabled={!mayRates} onChange={(e) => setTu(e.target.value)} /></Field>
+      <Field label="Retenue au kg (FCFA)" hint={mayRates ? undefined : "Mise en compte du délégué fixée par l'administrateur (non modifiable en caisse)"}><input inputMode="decimal" value={q} readOnly={!mayRates} disabled={!mayRates} onChange={(e) => setRt(e.target.value)} /></Field>
       {ok && <table><tbody>
         <tr><td>Montant brut (poids × P.U.)</td><td className="r">{f(gross)}</td></tr>
         <tr><td>Transport (poids × coût unitaire)</td><td className="r">{f(transport)}</td></tr>

@@ -1,10 +1,17 @@
 import { BadRequestException, Body, ConflictException, Controller, Get, NotFoundException, Param, ParseUUIDPipe, Post, Put, Req } from '@nestjs/common';
 import { ApiBearerAuth, ApiHeader, ApiTags } from '@nestjs/swagger';
-import { IsIn, IsOptional, IsString, IsUUID, Length } from 'class-validator';
+import { IsIn, IsOptional, IsString, IsUUID, Length, Matches } from 'class-validator';
 import { RequirePermissions } from '../access/decorators';
 import { AuditService } from '../audit/audit.service';
 import { isUniqueViolation } from '../common/dto';
 import { DbService } from '../db/db.service';
+
+class RatesDto {
+  /** Coût de transport au kilo (FCFA) ; null = tarif par défaut de la coopérative. */
+  @IsOptional() @Matches(/^\d{1,12}(\.\d{1,4})?$/) transport_per_kg?: string | null;
+  /** Retenue (mise en compte) au kilo (FCFA) ; null = tarif par défaut de la coopérative. */
+  @IsOptional() @Matches(/^\d{1,12}(\.\d{1,4})?$/) retention_per_kg?: string | null;
+}
 
 class CreateCollectorDto {
   @IsUUID() user_id: string;
@@ -36,7 +43,7 @@ export class CollectorsController {
   list(@Req() req: any) {
     return this.db.tx(req.org.id, async (c) =>
       (await c.query(
-        `SELECT c.id, c.user_id, c.status, c.origin, c.bank_name, c.bank_account, c.id_doc_type, c.id_doc_no, u.phone, u.email, u.full_name, (SELECT mc.code FROM member_codes mc WHERE mc.user_id = c.user_id AND mc.organization_id = c.organization_id) AS member_code,
+        `SELECT c.id, c.user_id, c.status, c.origin, c.bank_name, c.bank_account, c.id_doc_type, c.id_doc_no, c.transport_per_kg, c.retention_per_kg, u.phone, u.email, u.full_name, (SELECT mc.code FROM member_codes mc WHERE mc.user_id = c.user_id AND mc.organization_id = c.organization_id) AS member_code,
                 coalesce((SELECT json_agg(json_build_object('id', a.id, 'value_chain_id', a.value_chain_id, 'zone', a.zone))
                             FROM collector_assignments a WHERE a.collector_id = c.id), '[]') AS assignments
            FROM collectors c JOIN users u ON u.id = c.user_id ORDER BY u.full_name`)).rows);
@@ -82,6 +89,19 @@ export class CollectorsController {
     if (!n) throw new NotFoundException();
     await this.audit.log({ organizationId: req.org.id, actorUserId: req.user.id, action: 'collector.origin', entityType: 'collector', entityId: id, details: { origin: b.origin.trim() } });
     return { id, origin: b.origin.trim() };
+  }
+
+  /** Tarifs du délégué (onglets Transport et Retenues de son profil) : saisis par l'administrateur seul. */
+  @Put(':id/rates')
+  @RequirePermissions('collectors:rates')
+  async setRates(@Param('id', ParseUUIDPipe) id: string, @Body() b: RatesDto, @Req() req: any) {
+    const sets: string[] = []; const vals: any[] = [id, req.user.id];
+    for (const k of ['transport_per_kg', 'retention_per_kg'] as const) if (b[k] !== undefined) { vals.push(b[k] === '' ? null : b[k]); sets.push(`${k} = $${vals.length}`); }
+    if (!sets.length) throw new BadRequestException('Aucun tarif à modifier');
+    const row = await this.db.tx(req.org.id, async (c) => (await c.query(`UPDATE collectors SET ${sets.join(', ')}, updated_at = now(), updated_by = $2, version = version + 1 WHERE id = $1 RETURNING id, transport_per_kg, retention_per_kg`, vals)).rows[0]);
+    if (!row) throw new NotFoundException();
+    await this.audit.log({ organizationId: req.org.id, actorUserId: req.user.id, action: 'collector.rates', entityType: 'collector', entityId: id, details: { transport_per_kg: b.transport_per_kg, retention_per_kg: b.retention_per_kg } });
+    return row;
   }
 
   /** Fiche du délégué : localité, banque, pièce d'identité. Une valeur vide efface le champ ; un champ absent reste inchangé. */

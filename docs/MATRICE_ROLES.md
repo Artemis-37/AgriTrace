@@ -2,7 +2,7 @@
 
 Fichier généré par `backend/scripts/gen-matrice-roles.js` à partir du code : ne pas le modifier à la main. Les menus du portail et les routes de l'API se règlent sur les **permissions**, jamais sur le nom du rôle. Une coopérative crée ses propres rôles en combinant ces permissions ; les cinq rôles ci-dessous sont des modèles proposés.
 
-142 permissions, 353 routes protégées. Les droits sensibles (paiements, ajustements, exports de noms) peuvent en plus exiger une seconde approbation, réglée par rôle.
+143 permissions, 354 routes protégées. Les droits sensibles (paiements, ajustements, exports de noms) peuvent en plus exiger une seconde approbation, réglée par rôle.
 
 ## Rôles types
 - **Magasinier** (`magasinier`) : Réceptionne et pèse les convois au magasin central, tient les stocks et l'inventaire.
@@ -89,6 +89,7 @@ Colonnes : ✓ = accordé par le rôle type. Les rôles Administrateur de coopé
 | Permission | Rôle du droit | Magasinier | Caissier | Comptable | Direction | Responsable de traçabilité | Responsable cartographie | Cartographe | Agent de terrain | Responsable de magasin | Responsable financier | Responsable qualité | Responsable logistique | Auditeur | Acheteur / partenaire externe | Exportateur | Délégué | Administrateur de groupe | Coach | Routes |
 |---|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|---|
 | `collectors:manage` | Gérer les collecteurs et affectations |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | `POST /collectors`<br>`POST /collectors/:id/assignments`<br>`PUT /collectors/:id/origin`<br>… +2 |
+| `collectors:rates` | Fixer le coût de transport et la retenue au kilo des délégués (administrateur) |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | `PUT /collectors/:id/rates` |
 | `collectors:read` | Consulter les collecteurs |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | ✓ |  | `GET /collectors` |
 
 ### convoys
