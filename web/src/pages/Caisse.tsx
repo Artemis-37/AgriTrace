@@ -63,7 +63,9 @@ export function Journal({ kind }: { kind: '' | 'in' | 'out' }) {
   const [from, setFrom] = useState(iso(new Date()));
   const [to, setTo] = useState(iso(new Date()));
   const [q, setQ] = useState({ from, to });
-  const { data, loading, error, reload } = useAsync(() => get<any>(`/cash-journal?${new URLSearchParams({ from: q.from, to: q.to, ...(kind && { kind }) })}`), [q.from, q.to, kind]);
+  const [fund, setFund] = useState('');
+  const banks = useAsync(async () => (await get<any[]>('/financial-accounts').catch(() => [] as any[])).filter((a) => a.owner_type === 'other' && a.status === 'active'), []);
+  const { data, loading, error, reload } = useAsync(() => get<any>(`/cash-journal?${new URLSearchParams({ from: q.from, to: q.to, ...(kind && { kind }), ...(fund && { account_id: fund }) })}`), [q.from, q.to, kind, fund]);
   const title = kind === 'in' ? 'Entrées en caisse' : kind === 'out' ? 'Sorties de caisse' : 'Journal de caisse';
   const pick = (p: Period) => { const r = range(p); if (r) { setFrom(r[0]); setTo(r[1]); setQ({ from: r[0], to: r[1] }); } };
   return (
@@ -73,6 +75,7 @@ export function Journal({ kind }: { kind: '' | 'in' | 'out' }) {
         <div className="toolbar">
           <label>Date de début <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></label>
           <label>Date de fin <input type="date" value={to} onChange={(e) => setTo(e.target.value)} /></label>
+          <select aria-label="Fonds" value={fund} onChange={(e) => setFund(e.target.value)}><option value="">Fonds : espèces (caisse)</option>{(banks.data ?? []).map((b: any) => <option key={b.id} value={b.id}>Compte bancaire : {b.name}</option>)}</select>
           <select aria-label="Période prédéfinie" value="" onChange={(e) => pick(e.target.value as Period)}>
             <option value="">Période prédéfinie</option><option value="today">Aujourd'hui</option><option value="week">Cette semaine</option><option value="month">Ce mois</option><option value="year">Cette année</option>
           </select>
@@ -143,8 +146,11 @@ function CashDesk() {
 
 /** Entrée ou sortie de caisse avec motif obligatoire ; une erreur se corrige par une écriture inverse. */
 function CashEntry() {
-  const { data, loading, error, reload } = useAsync(() => get<any[]>('/cash-registers'), []);
-  const open = (data ?? []).filter((r) => r.open_session_id);
+  const { data, loading, error, reload } = useAsync(async () => ({ regs: await get<any[]>('/cash-registers'), banks: (await get<any[]>('/financial-accounts').catch(() => [] as any[])).filter((a) => a.owner_type === 'other' && a.status === 'active') }), []);
+  const open = (data?.regs ?? []).filter((r) => r.open_session_id);
+  const banks = data?.banks ?? [];
+  const [mode, setMode] = useState<'cash' | 'bank'>('cash');
+  const [bank, setBank] = useState('');
   const [reg, setReg] = useState('');
   const [dir, setDir] = useState<'in' | 'out'>('out');
   const [amount, setAmount] = useState('');
@@ -153,7 +159,8 @@ function CashEntry() {
   const [msg, setMsg] = useState('');
   const act = useAction();
   const regId = reg || open[0]?.id || '';
-  const ok = regId && AMT.test(amount) && Number(amount) > 0 && reason.trim().length >= 3;
+  const bankId = bank || banks[0]?.id || '';
+  const ok = regId && (mode === 'cash' || bankId) && AMT.test(amount) && Number(amount) > 0 && reason.trim().length >= 3;
   return (
     <Card>
       <h2 className="win-title">Enregistrer une entrée ou une sortie de caisse</h2>
@@ -161,14 +168,18 @@ function CashEntry() {
       {loading ? <Loading /> : !open.length ? <p className="muted">Aucune caisse ouverte : ouvrez d'abord la caisse.</p> : (
         <fieldset className="bloc"><legend>Mouvement</legend>
           <div className="grid-2">
-            <Field label="Caisse"><select value={regId} onChange={(e) => setReg(e.target.value)}>{open.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}</select></Field>
+            <Field label="Caisse"><select value={regId} onChange={(e) => setReg(e.target.value)}>{open.map((r: any) => <option key={r.id} value={r.id}>{r.name}</option>)}</select></Field>
+            <Field label="Mode (fonds de la caisse)"><span className="seg" role="radiogroup" aria-label="Mode">{([['cash', 'Espèces'], ['bank', 'Compte bancaire']] as const).map(([k, l]) => <button key={k} className={mode === k ? 'on' : ''} onClick={() => setMode(k)}>{l}</button>)}</span></Field>
+          </div>
+          <div className="grid-2">
+            {mode === 'bank' && <Field label="Banque (compte)" hint={banks.length ? undefined : 'Aucun compte bancaire : créez-le dans Comptabilité → États des comptes.'}><select value={bankId} onChange={(e) => setBank(e.target.value)}>{banks.map((b: any) => <option key={b.id} value={b.id}>{b.name}</option>)}</select></Field>}
             <Field label="Sens"><span className="seg" role="radiogroup" aria-label="Sens">{([['in', 'Entrée'], ['out', 'Sortie']] as const).map(([k, l]) => <button key={k} className={dir === k ? 'on' : ''} onClick={() => setDir(k)}>{l}</button>)}</span></Field>
           </div>
           <div className="grid-2"><Field label="Montant (FCFA)"><input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} /></Field>
             <Field label="Motif (obligatoire)"><input value={reason} maxLength={300} onChange={(e) => setReason(e.target.value)} /></Field></div>
           <button className="btn" disabled={act.busy || !ok} onClick={() => act.run(async () => {
-            const r0 = open.find((r) => r.id === regId); await post('/financial-transactions', { idempotency_key: key, account_id: r0.account_id, cash_session_id: r0.open_session_id, direction: dir, amount, reason: reason.trim() });
-            setMsg(`${dir === 'in' ? 'Entrée' : 'Sortie'} de ${FR(amount)} FCFA enregistrée.`); setAmount(''); setReason(''); setKey(idem());
+            const r0 = open.find((r) => r.id === regId); await post('/financial-transactions', { idempotency_key: key, account_id: mode === 'bank' ? bankId : r0.account_id, cash_session_id: r0.open_session_id, direction: dir, amount, reason: reason.trim() });
+            setMsg(`${dir === 'in' ? 'Entrée' : 'Sortie'} de ${FR(amount)} FCFA enregistrée ${mode === 'bank' ? `sur le compte ${banks.find((b: any) => b.id === bankId)?.name ?? ''}` : 'en espèces'}.`); setAmount(''); setReason(''); setKey(idem());
           })}>Enregistrer</button>
         </fieldset>
       )}

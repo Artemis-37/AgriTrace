@@ -88,11 +88,15 @@ export class FinanceController {
   /** Journal de caisse d'une période : solde d'ouverture, mouvements avec solde cumulé, totaux entrées / sorties. */
   @Get('cash-journal')
   @RequirePermissions('finance:read')
-  journal(@Req() req: any, @Query('from') from?: string, @Query('to') to?: string, @Query('kind') kind?: string) {
+  journal(@Req() req: any, @Query('from') from?: string, @Query('to') to?: string, @Query('kind') kind?: string, @Query('account_id') accountId?: string) {
     const d = (v?: string) => (v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
     const f = d(from) ?? new Date().toISOString().slice(0, 10), t = d(to) ?? f;
     return this.db.tx(req.org.id, async (c) => {
-      const base = `FROM financial_transactions x JOIN financial_accounts a ON a.id = x.account_id AND a.owner_type = 'cash_register'`;
+      // Fonds de la caisse : espèces (comptes des caisses, par défaut) ou un compte bancaire choisi.
+      const bank = accountId && /^[0-9a-f-]{36}$/i.test(accountId) ? accountId : null;
+      if (bank && !(await c.query(`SELECT 1 FROM financial_accounts WHERE id = $1 AND owner_type = 'other'`, [bank])).rowCount) throw new BadRequestException('Compte bancaire inconnu');
+      const base = bank ? `FROM financial_transactions x JOIN financial_accounts a ON a.id = x.account_id AND a.id = '${bank}'`
+        : `FROM financial_transactions x JOIN financial_accounts a ON a.id = x.account_id AND a.owner_type = 'cash_register'`;
       const opening = Number((await c.query(`SELECT coalesce(sum(CASE x.direction WHEN 'in' THEN x.amount ELSE -x.amount END), 0) AS o ${base} WHERE x.created_at < $1::date`, [f])).rows[0].o);
       const rows = (await c.query(
         `SELECT x.id, x.created_at, x.direction, x.amount, x.reason, x.reference_type, x.reference_id, x.reversal_of ${base}
@@ -209,9 +213,11 @@ export class FinanceController {
       if (!a.rowCount) throw new BadRequestException('Compte inconnu');
       if (a.rows[0].status !== 'active') throw new BadRequestException('Compte clôturé');
       if (b.cash_session_id) {
+        // Espèces : la session doit être celle de la caisse du compte. Compte bancaire (autre forme de fonds de la caisse) : toute session ouverte convient,
+        // le mouvement est alors rattaché à la session qui l'a enregistré.
         const s = await c.query(
-          `SELECT 1 FROM cash_sessions s JOIN cash_registers r ON r.id = s.register_id WHERE s.id = $1 AND s.status = 'open' AND r.account_id = $2`,
-          [b.cash_session_id, b.account_id]);
+          `SELECT 1 FROM cash_sessions s JOIN cash_registers r ON r.id = s.register_id WHERE s.id = $1 AND s.status = 'open' AND ($3::boolean OR r.account_id = $2)`,
+          [b.cash_session_id, b.account_id, a.rows[0].owner_type === 'other']);
         if (!s.rowCount) throw new BadRequestException("Session de caisse inconnue, clôturée, ou étrangère à ce compte");
       } else if (a.rows[0].owner_type === 'cash_register') {
         throw new BadRequestException('Une opération de caisse exige une session ouverte');

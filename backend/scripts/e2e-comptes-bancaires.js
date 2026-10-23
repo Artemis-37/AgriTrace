@@ -17,5 +17,19 @@ async function call(m, p, { token, org, body } = {}) { const r = await fetch(API
   const r2 = await call('POST', '/financial-accounts', { ...A, body: { owner_type: 'other', name: 'Sans solde' } });
   check('sans solde initial : compte à zéro', Number((await call('GET', '/financial-accounts', A)).body.find((a) => a.id === r2.body.id).balance) === 0);
   check('solde initial négatif refusé', (await call('POST', '/financial-accounts', { ...A, body: { owner_type: 'other', name: 'Neg', opening_balance: '-5' } })).status === 400);
+  // Entrée de caisse : espèces ou compte bancaire (autre forme de fonds de la caisse)
+  const reg = (await call('POST', '/cash-registers', { ...A, body: { name: 'Principale' } })).body;
+  const ses = (await call('POST', `/cash-registers/${reg.id}/sessions`, { ...A, body: { opening_amount: '100000' } })).body;
+  const regs = (await call('GET', '/cash-registers', A)).body.find((x) => x.id === reg.id);
+  check('caisse ouverte avec fonds de 100 000', !!ses.id && regs.open_session_id === ses.id, ses);
+  const e1 = await call('POST', '/financial-transactions', { ...A, body: { idempotency_key: 'ent-esp-' + run, account_id: regs.account_id, cash_session_id: ses.id, direction: 'in', amount: '50000', reason: 'Vente comptant' } });
+  check('entrée en espèces sur la caisse', e1.status < 300, e1.body);
+  const e2 = await call('POST', '/financial-transactions', { ...A, body: { idempotency_key: 'ent-bq-' + run, account_id: r.body.id, cash_session_id: ses.id, direction: 'in', amount: '300000', reason: 'Versement client par virement' } });
+  check('entrée sur le compte bancaire, rattachée à la session', e2.status < 300 && e2.body.cash_session_id === ses.id, e2.body);
+  const jc = (await call('GET', '/cash-journal?from=2000-01-01&to=2099-12-31', A)).body;
+  check('journal espèces : 150 000 (fonds + entrée), sans le virement', jc.closing === 150000 && jc.total_in === 150000, jc);
+  const jb = (await call('GET', `/cash-journal?from=2000-01-01&to=2099-12-31&account_id=${r.body.id}`, A)).body;
+  check('journal du compte bancaire : 2 500 000 + 300 000', jb.closing === 2800000 && jb.rows.some((x) => x.label.includes('virement')), jb);
+  check('clôture de caisse : seuls les espèces comptent (150 000 attendus)', Number((await call('POST', `/cash-sessions/${ses.id}/close`, { ...A, body: { counted_amount: '150000' } })).body.variance) === 0);
   console.log(`${ok} contrôles réussis, ${ko} en échec`); process.exit(ko ? 1 : 0);
 })();
