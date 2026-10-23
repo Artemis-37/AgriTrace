@@ -94,7 +94,7 @@ export class AccessAdminController {
       const role = (await c.query(`SELECT id, code FROM roles WHERE id = $1 AND organization_id = $2`, [b.role_id, req.org.id])).rows[0];
       if (!role) throw new BadRequestException('Rôle inconnu pour cette coopérative');
       const perms = (await c.query(`SELECT permission_code FROM role_permissions WHERE role_id = $1`, [b.role_id])).rows.map((r) => r.permission_code);
-      const missing = perms.filter((p) => !req.org.permissions.has(p));
+      const missing = perms.filter((p) => p !== 'cash:session' && !req.org.permissions.has(p));
       if (missing.length) throw new ForbiddenException(`Permissions non détenues : ${missing.join(', ')}`);
       const status = rows.some((r) => r.status === 'active') ? 'active' : 'suspended';
       const before = rows.map((r) => r.role_id);
@@ -121,7 +121,7 @@ export class AccessAdminController {
       if (!role) throw new BadRequestException('Rôle inconnu pour cette coopérative');
       if (rows.some((r) => r.role_id === b.role_id)) throw new ConflictException('Cette personne a déjà ce rôle');
       const perms = (await c.query(`SELECT permission_code FROM role_permissions WHERE role_id = $1`, [b.role_id])).rows.map((r) => r.permission_code);
-      const missing = perms.filter((p) => !req.org.permissions.has(p));
+      const missing = perms.filter((p) => p !== 'cash:session' && !req.org.permissions.has(p));
       if (missing.length) throw new ForbiddenException(`Permissions non détenues : ${missing.join(', ')}`);
       const status = rows.some((r) => r.status === 'active') ? 'active' : 'suspended';
       await c.query(`INSERT INTO user_organizations(user_id, organization_id, role_id, status, created_by) VALUES ($1,$2,$3,$4,$5)`, [id, req.org.id, b.role_id, status, req.user.id]);

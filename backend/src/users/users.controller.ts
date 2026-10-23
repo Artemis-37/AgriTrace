@@ -176,7 +176,7 @@ export class UsersController {
         const extra = await c.query(`SELECT id FROM roles WHERE id = $1 AND organization_id = $2`, [rid, req.org.id]);
         if (!extra.rowCount) throw new BadRequestException('Rôle inconnu pour cette organisation');
         const perms = (await c.query(`SELECT permission_code FROM role_permissions WHERE role_id = $1`, [rid])).rows.map((r) => r.permission_code);
-        const missing = perms.filter((p) => !req.org.permissions.has(p));
+        const missing = perms.filter((p) => p !== 'cash:session' && !req.org.permissions.has(p));
         if (missing.length) throw new ForbiddenException(`Permissions non détenues : ${missing.join(', ')}`);
         await c.query(`INSERT INTO user_organizations(user_id, organization_id, role_id, created_by) VALUES ($1,$2,$3,$4)`, [userId, req.org.id, rid, req.user.id]);
       }

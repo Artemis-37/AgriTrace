@@ -73,7 +73,7 @@ const key = (p) => `${p}-${run}-${crypto.randomBytes(4).toString('hex')}`;
 
   console.log('Règlement puis annulation du règlement');
   const r2 = await mkConvoy('AN-002', '1000');
-  const s = await call('POST', `/convoy-receptions/${r2.id}/settle`, { ...J(cai.t), body: { idempotency_key: key('st'), unit_price: '1000' } });
+  const s = await call('POST', `/convoy-receptions/${r2.id}/settle`, { ...J(t0), body: { idempotency_key: key('st'), unit_price: '1000' } });
   check('règlement', s.status === 201 && s.body.status === 'settled', s.body);
   const rc = await call('GET', `/operation-receipts/convoy_settlement/${r2.id}`, J(cai.t));
   check('reçu de règlement avec net payé', rc.status === 200 && rc.body.lines.some((l) => l.label === 'Net payé' && Number(l.value) === 1000000), rc.body);
@@ -87,7 +87,7 @@ const key = (p) => `${p}-${run}-${crypto.randomBytes(4).toString('hex')}`;
   const acc = accs.find((a) => a.owner_type === 'collector');
   check('compte du collecteur remis à zéro', Number(acc.balance) === 0, acc);
   check('la réception revient dans la file de la caisse', (await call('GET', '/convoys/cashier-queue', J(cai.t))).body.some((x) => x.id === r2.id));
-  const s3 = await call('POST', `/convoy-receptions/${r2.id}/settle`, { ...J(cai.t), body: { idempotency_key: key('st'), unit_price: '1200' } });
+  const s3 = await call('POST', `/convoy-receptions/${r2.id}/settle`, { ...J(t0), body: { idempotency_key: key('st'), unit_price: '1200' } });
   check('nouveau règlement au bon prix', s3.status === 201 && Number(s3.body.amount) === 1200000, s3.body);
   check('compte du collecteur recrédité', Number((await call('GET', '/financial-accounts', J(cai.t))).body.find((a) => a.owner_type === 'collector').balance) === 1200000);
 
