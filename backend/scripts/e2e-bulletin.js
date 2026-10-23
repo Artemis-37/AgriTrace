@@ -62,6 +62,7 @@ const key = (p) => `${p}-${run}-${crypto.randomBytes(4).toString('hex')}`;
   check('le collecteur ne peut pas saisir l’analyse', (await call('PATCH', `/convoys/receptions/${r2.body.id}/analysis`, { ...J(c1.t), body: { analysis: {} } })).status === 403);
   const lst = await call('GET', '/convoys/receptions/recent', J(mag.t));
   check('liste des réceptions récentes', lst.status === 200 && lst.body.length === 2, lst.body);
+  check('manquants et écart non saisissables', (await rec('BP-1', { total_kg: '39900', missing_bags: 3, variance_kg: '0' })).status === 400);
   console.log('Code intervenant');
   const ulist = (await call('GET', '/users', J(t0))).body;
   const codes = ulist.map((u) => u.member_code);
