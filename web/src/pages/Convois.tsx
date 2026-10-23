@@ -64,7 +64,7 @@ function CreateConvoy({ onClose, onDone }: { onClose: () => void; onDone: () => 
   const { org, can } = useAuth();
   const off = useOffline();
   const act = useAction();
-  const [f, setF] = useState({ convoy_no: '', driver_name: '', truck_no: '', declared_bags: '', declared_kg: '' });
+  const [f, setF] = useState({ convoy_no: '', driver_name: '', truck_no: '', trailer_no: '', origin: '', declared_bags: '', declared_kg: '' });
   const set = (k: keyof typeof f) => (e: any) => setF({ ...f, [k]: e.target.value });
   const avail = useAsync(() => (off.offline || !can('convoys:create') ? Promise.resolve([] as any[]) : get<any[]>('/convoys/available-declarations').catch(() => [] as any[])), []);
   const [picked, setPicked] = useState<string[]>([]);
@@ -84,6 +84,8 @@ function CreateConvoy({ onClose, onDone }: { onClose: () => void; onDone: () => 
         : <Field label="Numéro de connaissement" hint={noKnown ? 'Saisi par le collecteur ; il accompagne le convoi jusqu\'au magasin.' : 'Laissez vide si la coopérative a renseigné son code CCC : le numéro est alors attribué automatiquement à l\'envoi.'}><input value={f.convoy_no} onChange={set('convoy_no')} maxLength={60} /></Field>}
       <Field label="Nom du chauffeur"><input value={f.driver_name} onChange={set('driver_name')} maxLength={120} /></Field>
       <Field label="N° du camion"><input value={f.truck_no} onChange={set('truck_no')} maxLength={40} /></Field>
+      <Field label="N° de la remorque (facultatif)"><input value={f.trailer_no} onChange={set('trailer_no')} maxLength={40} /></Field>
+      <Field label="Provenance (facultatif)"><input value={f.origin} onChange={set('origin')} maxLength={80} /></Field>
       {list.length > 0 && (
         <fieldset className="field">
           <legend>Achats chargés dans ce convoi (facultatif)</legend>
@@ -102,7 +104,7 @@ function CreateConvoy({ onClose, onDone }: { onClose: () => void; onDone: () => 
         <button className="btn btn-secondary" onClick={onClose}>Annuler</button>
         <button className="btn" disabled={act.busy || !valid || !org} onClick={() => act.run(async () => {
           await enqueue(org!.id, 'convoy.create', {
-            idempotency_key: idem(), ...(!auto && f.convoy_no.trim() && { convoy_no: f.convoy_no.trim() }), driver_name: f.driver_name.trim(), truck_no: f.truck_no.trim(),
+            idempotency_key: idem(), ...(!auto && f.convoy_no.trim() && { convoy_no: f.convoy_no.trim() }), driver_name: f.driver_name.trim(), truck_no: f.truck_no.trim(), ...(f.trailer_no.trim() && { trailer_no: f.trailer_no.trim() }), ...(f.origin.trim() && { origin: f.origin.trim() }),
             ...(f.declared_bags && { declared_bags: Number(f.declared_bags) }), ...(f.declared_kg && { declared_kg: f.declared_kg }), ...(picked.length && { declaration_ids: picked }),
           }, `Convoi ${auto ? next.data!.convoy_no : f.convoy_no.trim() || 'à numéroter'}`);
           onDone();
@@ -128,16 +130,22 @@ function Receive() {
   const [done, setDone] = useState('');
   const [d, setD] = useState({ wIn: '', wOut: '', tare: '', ref: '', grade: '', trailer: '', origin: '', unl: '', refused: '' });
   const [an, setAn] = useState<Record<string, string>>({});
+  const [m, setM] = useState({ driver: '', truck: '', bags: '', kg: '' });
   const setF = (k: keyof typeof d) => (e: any) => setD((x) => ({ ...x, [k]: e.target.value }));
   const exp0 = data?.expected.find((v) => v.collector_id === collector && v.convoy_no === convoyNo.trim());
   const content = useAsync(() => (exp0?.declaration_count > 0 ? get<any[]>(`/convoys/${exp0.id}/declarations`) : Promise.resolve([] as any[])), [exp0?.id]);
+  // Convoi déclaré par le collecteur : remorque et provenance reprises automatiquement (modifiables).
+  useEffect(() => { if (exp0) setD((x) => ({ ...x, trailer: exp0.trailer_no ?? '', origin: exp0.origin ?? '' })); }, [exp0?.id]);
   if (loading) return <Loading />;
   if (error || !data) return <ErrorBox message={error ?? 'Chargement impossible'} onRetry={reload} />;
   const collectors = [...new Map(data.expected.map((v) => [v.collector_id, v.collector_code ? `${v.collector_name} (${v.collector_code})` : v.collector_name])).entries()];
   const mine = data.expected.filter((v) => v.collector_id === collector);
   const expected = mine.find((v) => v.convoy_no === convoyNo.trim());
-  const declared = expected?.declared_kg != null ? Number(expected.declared_kg) : 0;
   const W = /^\d+(\.\d{1,3})?$/;
+  // Saisie complète : connaissement non déclaré par le collecteur, informations saisies par le magasinier.
+  const manual = !!collector && convoyNo.trim().length >= 2 && !expected;
+  const declared = expected ? (expected.declared_kg != null ? Number(expected.declared_kg) : 0) : (W.test(m.kg) ? Number(m.kg) : 0);
+  const declaredBags = expected ? expected.declared_bags : (/^\d+$/.test(m.bags) ? Number(m.bags) : null);
   const twoWeighings = d.wIn !== '' || d.wOut !== '';
   const net = twoWeighings && W.test(d.wIn) && W.test(d.wOut) ? Number(d.wIn) - Number(d.wOut) - Number(W.test(d.tare) ? d.tare : 0) - Number(W.test(d.ref) ? d.ref : 0) : NaN;
   const kgEff = twoWeighings ? (Number.isFinite(net) && net > 0 ? String(Math.round(net * 1000) / 1000) : '') : kg;
@@ -145,7 +153,7 @@ function Receive() {
   const gapPct = declared > 0 && /^\d+(\.\d{1,3})?$/.test(kgEff) ? Math.abs(Number(kgEff) - declared) * 100 / declared : 0;
   const tol = Number(expected?.weight_tolerance_pct ?? 2);
   const blocked = gapPct > tol;
-  const valid = collector && convoyNo.trim().length >= 2 && wh && (!blocked || notes.trim().length >= 5) && /^\d+(\.\d{1,3})?$/.test(kgEff) && Number(kgEff) > 0 && /^[1-9]\d*$/.test(bags)
+  const valid = collector && convoyNo.trim().length >= 2 && wh && (!manual || (m.driver.trim().length >= 2 && m.truck.trim().length >= 2 && (m.kg === '' || W.test(m.kg)) && /^\d*$/.test(m.bags))) && (!blocked || notes.trim().length >= 5) && /^\d+(\.\d{1,3})?$/.test(kgEff) && Number(kgEff) > 0 && /^[1-9]\d*$/.test(bags)
     && optOk(d.tare) && optOk(d.ref) && (!twoWeighings || (W.test(d.wIn) && W.test(d.wOut))) && /^\d*$/.test(d.unl) && /^\d*$/.test(d.refused);
   return (
     <Card title="Réceptionner un convoi">
@@ -160,6 +168,14 @@ function Receive() {
       )}
       <Field label="Magasin"><select value={wh} onChange={(e) => setWh(e.target.value)}><option value="">—</option>{data.whs.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}</select></Field>
       <h3>Indication connaissement</h3>
+      {manual && <>
+        <p className="notice" role="status">Ce connaissement n'a pas été déclaré par le collecteur : saisissez les informations du bordereau ; il sera enregistré à la réception.</p>
+        <Field label="Nom du chauffeur"><input value={m.driver} onChange={(e) => setM({ ...m, driver: e.target.value })} maxLength={120} /></Field>
+        <Field label="N° du camion"><input value={m.truck} onChange={(e) => setM({ ...m, truck: e.target.value })} maxLength={40} /></Field>
+        <Field label="Nombre de sacs déclaré (facultatif)"><input inputMode="numeric" value={m.bags} onChange={(e) => setM({ ...m, bags: e.target.value })} /></Field>
+        <Field label="Poids déclaré en kg (facultatif)"><input inputMode="decimal" value={m.kg} onChange={(e) => setM({ ...m, kg: e.target.value })} /></Field>
+      </>}
+      {expected && <p className="muted">Repris du convoi déclaré par le collecteur : remorque et provenance (modifiables).</p>}
       <Field label="Remorque"><input value={d.trailer} onChange={setF('trailer')} maxLength={40} /></Field>
       <Field label="Provenance"><input value={d.origin} onChange={setF('origin')} maxLength={80} /></Field>
       <h3>Livraison produit</h3>
@@ -171,7 +187,7 @@ function Receive() {
       <Field label="Nombre de sacs reçus"><input inputMode="numeric" value={bags} onChange={(e) => setBags(e.target.value)} /></Field>
       <Field label="Sacs déchargés"><input inputMode="numeric" value={d.unl} onChange={setF('unl')} /></Field>
       <Field label="Sacs refusés"><input inputMode="numeric" value={d.refused} onChange={setF('refused')} /></Field>
-      <Field label="Manquants (automatique)" hint="Sacs déclarés − sacs déchargés"><input readOnly disabled value={expected?.declared_bags != null && /^\d+$/.test(d.unl) && d.unl !== '' ? String(expected.declared_bags - Number(d.unl)) : '—'} /></Field>
+      <Field label="Manquants (automatique)" hint="Sacs déclarés − sacs déchargés"><input readOnly disabled value={declaredBags != null && /^\d+$/.test(d.unl) && d.unl !== '' ? String(declaredBags - Number(d.unl)) : '—'} /></Field>
       <Field label="Écart / poids déclaré (automatique)" hint="Poids net payé − poids déclaré"><input readOnly disabled value={declared > 0 && /^\d+(\.\d{1,3})?$/.test(kgEff) ? `${Math.round(Number(kgEff) - declared)} kg` : '—'} /></Field>
       <Field label="Qualité / grade"><input value={d.grade} onChange={setF('grade')} maxLength={20} /></Field>
       <h3>Analyse</h3>
@@ -182,11 +198,12 @@ function Receive() {
       {done && <p className="notice" role="status">{done}</p>}
       <div className="modal-actions"><button className="btn" disabled={act.busy || !valid || !org} onClick={() => act.run(async () => {
         await enqueue(org!.id, 'convoy.receive', { idempotency_key: idem(), collector_id: collector, convoy_no: convoyNo.trim(), warehouse_id: wh, total_kg: kgEff, bags: Number(bags), ...(notes.trim() && { notes: notes.trim() }),
+          ...(manual && { driver_name: m.driver.trim(), truck_no: m.truck.trim(), ...(m.bags && { declared_bags: Number(m.bags) }), ...(m.kg && { declared_kg: m.kg }) }),
           ...(twoWeighings && { weigh_in_kg: d.wIn, weigh_out_kg: d.wOut }),
           ...(d.tare && { bag_tare_kg: d.tare }), ...(d.ref && { refaction_kg: d.ref }), ...(d.grade.trim() && { grade: d.grade.trim() }), ...(d.trailer.trim() && { trailer_no: d.trailer.trim() }),
           ...(d.origin.trim() && { origin: d.origin.trim() }), ...(d.unl && { bags_unloaded: Number(d.unl) }), ...(d.refused && { bags_refused: Number(d.refused) }),
           ...(Object.values(an).some((v) => v.trim()) && { analysis: Object.fromEntries(Object.entries(an).filter(([, v]) => v.trim()).map(([k, v]) => [k, v.trim()])) }) }, `Réception du convoi ${convoyNo.trim()}`);
-        setDone(`Convoi ${convoyNo.trim()} enregistré : il sera transmis à la caisse dès l'envoi au serveur.`); setConvoyNo(''); setKg(''); setBags(''); setNotes(''); setD({ wIn: '', wOut: '', tare: '', ref: '', grade: '', trailer: '', origin: '', unl: '', refused: '' }); setAn({}); reload();
+        setDone(`Convoi ${convoyNo.trim()} enregistré : il sera transmis à la caisse dès l'envoi au serveur.`); setConvoyNo(''); setKg(''); setBags(''); setNotes(''); setD({ wIn: '', wOut: '', tare: '', ref: '', grade: '', trailer: '', origin: '', unl: '', refused: '' }); setAn({}); setM({ driver: '', truck: '', bags: '', kg: '' }); reload();
       })}>Valider la réception et transmettre à la caisse</button></div>
     </Card>
   );

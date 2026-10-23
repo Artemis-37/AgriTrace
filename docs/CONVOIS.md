@@ -86,3 +86,7 @@ Chaque intervenant de la coopérative (collecteur, magasinier, caissier, coach, 
 - La partie « Indication connaissement » du bulletin reprend : origine, chauffeur, n° camion, n° remorque, poids déclaré, fournisseur, code fournisseur, connaissement, nombre de sacs déclaré, date de réception.
 - Les **manquants** (sacs déclarés − déchargés) et l’**écart** (net payé − poids déclaré) sont calculés par le logiciel : affichés en lecture seule au magasinier, refusés par l’API s’ils sont envoyés.
 - À la réception, le formulaire du magasinier suit les parties du bulletin : indication connaissement, livraison produit (pesées, tare, réfaction, sacs, grade) et analyse.
+
+### Reprise automatique ou saisie complète (réception)
+- **Convoi déclaré par le collecteur** : le magasinier choisit le collecteur puis le connaissement ; le chauffeur, le camion, le poids et les sacs déclarés sont repris du convoi, ainsi que la **remorque** et la **provenance** (que le collecteur peut renseigner en créant le convoi) — ces deux champs restent modifiables à la réception.
+- **Connaissement non déclaré** : si le numéro saisi n'existe pas pour ce collecteur, le formulaire passe en **saisie complète** : le magasinier saisit chauffeur, camion (obligatoires), sacs et poids déclarés (facultatifs), remorque et provenance ; le convoi est créé à la réception, à son nom (numéro déjà utilisé refusé).
