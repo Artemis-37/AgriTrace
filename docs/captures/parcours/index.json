@@ -1,0 +1,262 @@
+{
+  "convoy": "SC000000-2026-BRA-4",
+  "convoy_non_declare": "CV-NC-001",
+  "steps": [
+    {
+      "n": 1,
+      "role": "collecteur",
+      "who": "Brahima Sylla",
+      "title": "Choisir le producteur",
+      "text": "Dans **Acheter**, le délégué cherche le producteur par code ou nom : l'application affiche son code, sa filière et sa campagne.",
+      "mobile": "collecteur-choix-producteur.png"
+    },
+    {
+      "n": 2,
+      "role": "collecteur",
+      "who": "Brahima Sylla",
+      "title": "Saisir l'achat",
+      "text": "Poids, nombre de sacs et **n° du reçu** remis au producteur. L'achat est enregistré sur le téléphone, même sans réseau.",
+      "mobile": "collecteur-achat-saisi.png"
+    },
+    {
+      "n": 3,
+      "role": "collecteur",
+      "who": "Brahima Sylla",
+      "title": "Historique des achats",
+      "text": "Après la synchronisation, les achats apparaissent dans l'historique du délégué avec leur état (reçus, en vérification, acceptés).",
+      "mobile": "collecteur-historique.png"
+    },
+    {
+      "n": 4,
+      "role": "collecteur",
+      "who": "Brahima Sylla",
+      "title": "Déclarer le convoi",
+      "text": "Le délégué annonce le convoi : n° de connaissement (ou numéro automatique), chauffeur, camion, sacs et poids annoncés.",
+      "mobile": "collecteur-convoi-saisi.png"
+    },
+    {
+      "n": 5,
+      "role": "responsable_tracabilite",
+      "who": "Éric Tano",
+      "title": "Achats reçus du téléphone",
+      "text": "Les achats déclarés par le délégué arrivent dans **Déclarations d'achat** avec le statut « Reçue ».",
+      "file": "05-responsable_tracabilite-declarations.png"
+    },
+    {
+      "n": 6,
+      "role": "responsable_tracabilite",
+      "who": "Éric Tano",
+      "title": "Mise en vérification",
+      "text": "On met l'achat en vérification (confirmation demandée), puis on l'accepte ou on demande une correction.",
+      "file": "06-responsable_tracabilite-verification.png"
+    },
+    {
+      "n": 7,
+      "role": "responsable_tracabilite",
+      "who": "Éric Tano",
+      "title": "Achats acceptés",
+      "text": "Les achats acceptés sont désormais reconnus : ils peuvent être pesés au magasin.",
+      "file": "07-responsable_tracabilite-acceptes.png"
+    },
+    {
+      "n": 8,
+      "role": "magasinier",
+      "who": "Mamadou Coulibaly",
+      "title": "Pesées du magasin",
+      "text": "La liste des pesées (traitées ou non par la caisse). Le bouton **Enregistrer une pesée** ouvre la saisie.",
+      "file": "08-magasinier-liste.png"
+    },
+    {
+      "n": 9,
+      "role": "magasinier",
+      "who": "Mamadou Coulibaly",
+      "title": "Pesée d'un convoi déclaré",
+      "text": "On choisit le délégué (ou on saisit son code), le n° de connaissement : chauffeur, camion, sacs et poids déclarés sont repris, avec le **contenu déclaré** (achats chargés). On saisit le poids pesé et les sacs déchargés ; le poids net est calculé (poids − sacs déchargés).",
+      "file": "09-magasinier-pesee-declaree.png"
+    },
+    {
+      "n": 10,
+      "role": "magasinier",
+      "who": "Mamadou Coulibaly",
+      "title": "Pesée enregistrée",
+      "text": "La réception est transmise à la caisse. Elle apparaît dans la liste avec son bulletin de pesée.",
+      "file": "10-magasinier-pesee-enregistree.png"
+    },
+    {
+      "n": 11,
+      "role": "magasinier",
+      "who": "Mamadou Coulibaly",
+      "title": "Pesée d'un convoi non déclaré",
+      "text": "Le délégué existe mais n'a pas déclaré ce convoi : le magasinier le choisit dans la liste, saisit le n° de connaissement et les informations du bordereau (chauffeur, camion, sacs et poids déclarés). Le convoi est créé à la réception.",
+      "file": "11-magasinier-pesee-non-declaree.png"
+    },
+    {
+      "n": 12,
+      "role": "magasinier",
+      "who": "Mamadou Coulibaly",
+      "title": "Les deux pesées",
+      "text": "Le convoi déclaré et le convoi non déclaré figurent dans la liste, en attente de traitement par la caisse.",
+      "file": "12-magasinier-pesees-liste.png"
+    },
+    {
+      "n": 13,
+      "role": "coop_admin",
+      "who": "Adjoua Konan",
+      "title": "Délégué : onglet Transport",
+      "text": "Le **coût de transport au kilo** du délégué est préenregistré dans son profil, onglet **Transport**. Seul l'administrateur le saisit ; la caisse le reprend à chaque règlement sans pouvoir le modifier.",
+      "file": "13-coop_admin-tarif-transport.png"
+    },
+    {
+      "n": 14,
+      "role": "coop_admin",
+      "who": "Adjoua Konan",
+      "title": "Délégué : onglet Retenues",
+      "text": "La **retenue au kilo** (mise en compte) est préenregistrée dans l'onglet **Retenues**, également par l'administrateur seul.",
+      "file": "14-coop_admin-tarif-retenue.png"
+    },
+    {
+      "n": 15,
+      "role": "caissier",
+      "who": "Aya Kouamé",
+      "title": "Connexion à la caisse",
+      "text": "Avant de payer, le caissier se connecte à la caisse (pas de fonds ni de clôture : seul le caissier se connecte et se déconnecte).",
+      "file": "15-caissier-session.png"
+    },
+    {
+      "n": 16,
+      "role": "caissier",
+      "who": "Aya Kouamé",
+      "title": "Pesées à traiter",
+      "text": "La file des réceptions pesées et non encore réglées.",
+      "file": "16-caissier-a-traiter.png"
+    },
+    {
+      "n": 17,
+      "role": "caissier",
+      "who": "Aya Kouamé",
+      "title": "Règlement d'une pesée",
+      "text": "Le P.U. (prix d'achat au kg) est celui **fixé par l'administrateur** pour la traite : il s'affiche mais le caissier ne peut pas le modifier. Le **coût de transport** et la **retenue au kg** viennent eux aussi du profil du délégué (préenregistrés par l'administrateur) et sont affichés sans pouvoir être saisis ; avec le P.U., ils donnent le net à payer, porté au compte du délégué.",
+      "file": "17-caissier-traiter.png"
+    },
+    {
+      "n": 18,
+      "role": "caissier",
+      "who": "Aya Kouamé",
+      "title": "Fonds global de la caisse",
+      "text": "Le fonds de la caisse se compose des **espèces** et des **comptes bancaires** : chaque forme de fonds a son solde, et le total donne le fonds global.",
+      "file": "18-caissier-fonds-global.png"
+    },
+    {
+      "n": 19,
+      "role": "caissier",
+      "who": "Aya Kouamé",
+      "title": "Solde des délégués",
+      "text": "Après règlement, le compte de chaque délégué est crédité du net à payer ; la fiche détaille livraisons, avances et soldes.",
+      "file": "19-caissier-soldes.png"
+    },
+    {
+      "n": 20,
+      "role": "caissier",
+      "who": "Aya Kouamé",
+      "title": "Mise en compte des délégués",
+      "text": "Pour chaque délégué : somme retenue, reversée, en attente et disponible. Une fois la campagne terminée, le compte du délégué est **clôturé**.",
+      "file": "20-caissier-mise-en-compte.png"
+    },
+    {
+      "n": 21,
+      "role": "caissier",
+      "who": "Aya Kouamé",
+      "title": "Clôturer le compte du délégué",
+      "text": "La clôture du compte du délégué (fin de campagne) ouvre la possibilité de reverser sa mise en compte ; une nouvelle livraison rouvre le compte.",
+      "file": "21-caissier-cloture.png"
+    },
+    {
+      "n": 22,
+      "role": "caissier",
+      "who": "Aya Kouamé",
+      "title": "Reverser la mise en compte",
+      "text": "Le montant disponible peut être reversé **sur le compte du délégué, par chèque, en espèces ou vers un autre compte**. La demande est soumise à l'administrateur de la coopérative.",
+      "file": "22-caissier-reverser.png"
+    },
+    {
+      "n": 23,
+      "role": "coop_admin",
+      "who": "Adjoua Konan",
+      "title": "Demande à approuver",
+      "text": "L'administrateur voit la demande (délégué, montant, destination, demandeur) et l'**approuve ou la refuse** avec un motif. Le demandeur ne peut pas approuver sa propre demande.",
+      "file": "23-coop_admin-demande.png"
+    },
+    {
+      "n": 24,
+      "role": "coop_admin",
+      "who": "Adjoua Konan",
+      "title": "Reversement approuvé",
+      "text": "À l'approbation, le mouvement financier et l'écriture comptable (débit 4781 « Retenues sur règlements des délégués ») sont passés.",
+      "file": "24-coop_admin-approuvee.png"
+    },
+    {
+      "n": 25,
+      "role": "comptable",
+      "who": "Salif Ouédraogo",
+      "title": "Journal des achats",
+      "text": "Chaque pesée réglée a passé son écriture d'achat : produit acheté, transport, compte du délégué et retenue.",
+      "file": "25-comptable-journal-achats.png"
+    },
+    {
+      "n": 26,
+      "role": "comptable",
+      "who": "Salif Ouédraogo",
+      "title": "Journal de caisse",
+      "text": "Les mouvements de caisse, y compris les reversements en espèces approuvés.",
+      "file": "26-comptable-journal-caisse.png"
+    },
+    {
+      "n": 27,
+      "role": "responsable_magasin",
+      "who": "Daouda Fofana",
+      "title": "Stock mis à jour",
+      "text": "Les pesées réglées alimentent le stock du magasin ; chaque lot garde sa traçabilité jusqu'au producteur.",
+      "file": "27-responsable_magasin-stock.png"
+    },
+    {
+      "n": 28,
+      "role": "acheteur",
+      "who": "Fanta Kamara",
+      "title": "Vente aux acheteurs",
+      "text": "L'acheteur suit contrats et commandes ; les quantités vendues sortent du stock.",
+      "file": "28-acheteur-commerce.png"
+    },
+    {
+      "n": 29,
+      "role": "adg",
+      "who": "Mireille Ouattara",
+      "title": "Modules proposés par l'exportateur",
+      "text": "L'exportateur propose ses modules ; l'ADG les transmet aux coachs.",
+      "file": "29-adg-modules.png"
+    },
+    {
+      "n": 30,
+      "role": "adg",
+      "who": "Mireille Ouattara",
+      "title": "Résultats des coachs",
+      "text": "Les résultats saisis par les coachs sur le terrain sont transmis à l'exportateur.",
+      "file": "30-adg-resultats.png"
+    },
+    {
+      "n": 31,
+      "role": "exportateur",
+      "who": "Karim Diallo",
+      "title": "Suivi par l'exportateur",
+      "text": "L'exportateur suit ses propositions et reçoit les résultats transmis : la boucle du terrain à l'exportateur est bouclée.",
+      "file": "31-exportateur-suivi.png"
+    },
+    {
+      "n": 32,
+      "role": "coach",
+      "who": "Gilbert Koffi",
+      "title": "Résultats saisis sur le terrain",
+      "text": "Le coach saisit le résultat de la séance (village, participants, note moyenne) sur son téléphone ; il remonte à l'ADG puis à l'exportateur.",
+      "mobile": "coach-module-resultats.png"
+    }
+  ]
+}

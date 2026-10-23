@@ -174,6 +174,7 @@ console.log('4. Caisse');
     if (!last) await snap(page, 'caissier', 'traiter', 'Règlement d\'une pesée', 'Le P.U. (prix d\'achat au kg) est celui **fixé par l\'administrateur** pour la traite : il s\'affiche mais le caissier ne peut pas le modifier. Le **coût de transport** et la **retenue au kg** viennent eux aussi du profil du délégué (préenregistrés par l\'administrateur) et sont affichés sans pouvoir être saisis ; avec le P.U., ils donnent le net à payer, porté au compte du délégué.');
     await m.getByRole('button', { name: 'Enregistrer le net à payer' }).click(); await page.waitForTimeout(1800);
   }
+  await page.locator('.acc-head', { hasText: 'Mouvements de caisse' }).click().catch(() => undefined); await page.waitForTimeout(400);
   await page.getByRole('button', { name: 'Fonds global de la caisse' }).click().catch(() => undefined); await page.waitForTimeout(900);
   await snap(page, 'caissier', 'fonds-global', 'Fonds global de la caisse', 'Le fonds de la caisse se compose des **espèces** et des **comptes bancaires** : chaque forme de fonds a son solde, et le total donne le fonds global.');
   await page.locator('.acc-head', { hasText: 'Solde délégué' }).click().catch(() => undefined); await page.waitForTimeout(300);
