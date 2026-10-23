@@ -204,7 +204,7 @@ dl.kv dd { margin: 0; }
 .receipt-sheet .bp-l { display: flex; justify-content: space-between; gap: .5rem; padding: .04rem 0; font-size: .88rem; border-bottom: 1px dotted #999; }
 .receipt-sheet .bp-l.net { font-size: 1.1rem; border-bottom: 2px solid #000; border-top: 1px solid #000; margin-top: .2rem; }
 .receipt-sheet .bp-qr { text-align: right; margin-top: .2rem; }
-.receipt-sheet .bp-visas { margin: .8rem 0 .3rem; gap: 1rem; }
+.receipt-sheet .bp-visas { margin: 1.6rem 0 .3rem; gap: 1rem; }
 .receipt-sheet footer { display: flex; gap: 2rem; margin: 2.5rem 0 1rem; }
 .receipt-sheet footer div { flex: 1; border-top: 1px solid #000; padding-top: .3rem; text-align: center; }
 .receipt-dup { font-weight: 700; border: 2px solid #000; display: inline-block; padding: .1rem .6rem; }

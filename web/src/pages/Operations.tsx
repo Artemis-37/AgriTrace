@@ -65,7 +65,7 @@ function Bulletin({ r }: { r: any }) {
       </div>
       {b.notes && <p><strong>Observations :</strong> {b.notes}</p>}
       <footer className="bp-visas">
-        <div><span>Visa pont-bascule : {r.operator ?? ''}</span></div><div><span>Visa fournisseur</span></div><div><span>Visa responsable</span></div>
+        <div><span>{r.operator ?? ''}</span></div><div><span>{b.collector ?? ''}</span></div><div><span>{b.approver ?? ''}</span></div>
       </footer>
     </div>
   );

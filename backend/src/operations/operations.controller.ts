@@ -117,6 +117,7 @@ export class OperationsController {
             net_delivered: r.gross_kg == null ? null : w(Number(r.gross_kg) - Number(r.bag_tare_kg ?? 0)),
             avg_bag: r.bags > 0 ? nb(Number(r.total_kg) / r.bags) : null,
             missing: r.declared_bags != null && r.bags_unloaded != null ? r.declared_bags - r.bags_unloaded : null,
+            approver: await user(r.variance_approved_by ?? null),
             bags: r.bags, bags_unloaded: r.bags_unloaded, bags_refused: r.bags_refused, declared_bags: r.declared_bags, analysis: r.analysis ?? {}, notes: r.notes,
           };
         }
