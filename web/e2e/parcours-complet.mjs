@@ -174,13 +174,13 @@ console.log('5. Mise en compte');
   await modalOf(page).getByRole('button', { name: 'Clôturer' }).click(); await page.waitForTimeout(1200);
   await page.locator('tr', { hasText: 'Brahima' }).getByRole('button', { name: 'Reverser…' }).click(); await page.waitForTimeout(700);
   const m = modalOf(page);
-  await m.getByRole('radio', { name: 'Chèque' }).check(); await page.waitForTimeout(400);
+  await m.getByRole('radio', { name: 'Chèque', exact: true }).check(); await page.waitForTimeout(400);
   const bankSel = m.getByLabel('Compte bancaire débité');
   if (await bankSel.count()) { const o = await bankSel.locator('option').allInnerTexts(); if (o.length > 1) await bankSel.selectOption({ index: 1 }); await m.getByLabel('N° du chèque').fill('CH-004512'); }
   await page.waitForTimeout(400);
   await snap(page, 'caissier', 'reverser', 'Reverser la mise en compte', 'Le montant disponible peut être reversé **sur le compte du délégué, par chèque, en espèces ou vers un autre compte**. La demande est soumise à l\'administrateur de la coopérative.');
   const ok = await m.getByRole('button', { name: /Soumettre/ }).isEnabled();
-  if (!ok) { await m.getByLabel('Sur le compte du délégué').check(); }
+  if (!ok) { await m.getByRole('radio', { name: 'Sur le compte du délégué' }).check(); }
   await m.getByRole('button', { name: /Soumettre/ }).click(); await page.waitForTimeout(1200);
   await close();
 }
