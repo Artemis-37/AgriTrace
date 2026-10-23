@@ -175,16 +175,18 @@ function Banks() {
   const { data, loading, error, reload } = useAsync(() => get<any[]>('/financial-accounts'), []);
   const rows = (data ?? []).filter((a) => a.owner_type !== 'collector' && a.owner_type !== 'producer');
   const [adding, setAdding] = useState(false);
-  const [name, setName] = useState('');
+  const [name, setName] = useState(''); const [num, setNum] = useState(''); const [open0, setOpen0] = useState('');
   const act = useAction();
   return (
     <Frame title="État des comptes bancaires et caisses" total={<span>SOLDE <b>{FR(rows.reduce((s, r) => s + Number(r.balance), 0))}</b></span>}>
       {can('cash:manage') && <div className="toolbar"><button className="btn" onClick={() => setAdding(true)}>Nouveau</button></div>}
       {error && <ErrorBox message={error} onRetry={reload} />}{act.error && <ErrorBox message={act.error} />}
-      {loading ? <Loading /> : <Table rows={rows} empty="Aucun compte." columns={[{ header: 'N°', render: (a) => rows.indexOf(a) + 1 }, { header: 'Compte', render: (a) => <strong>{a.name}</strong> }, { header: 'Type', render: (a) => (a.owner_type === 'cash_register' ? 'Caisse' : 'Compte bancaire') }, { header: 'Solde', align: 'right', render: (a) => <strong>{FR(Number(a.balance))}</strong> }]} />}
+      {loading ? <Loading /> : <Table rows={rows} empty="Aucun compte." columns={[{ header: 'N°', render: (a) => rows.indexOf(a) + 1 }, { header: 'Compte', render: (a) => <strong>{a.name}</strong> }, { header: 'N° de compte', render: (a) => a.account_number ?? '—' }, { header: 'Type', render: (a) => (a.owner_type === 'cash_register' ? 'Caisse' : 'Compte bancaire') }, { header: 'Solde', align: 'right', render: (a) => <strong>{FR(Number(a.balance))}</strong> }]} />}
       {adding && <Modal title="Nouveau compte" onClose={() => setAdding(false)}>
-        <Field label="Banque et n° de compte"><input value={name} onChange={(e) => setName(e.target.value)} maxLength={150} /></Field>
-        <div className="modal-actions"><button className="btn" disabled={act.busy || name.trim().length < 2} onClick={() => act.run(async () => { await post('/financial-accounts', { owner_type: 'other', name: name.trim() }); setAdding(false); setName(''); reload(); })}>Enregistrer</button><button className="btn btn-ghost" onClick={() => setAdding(false)}>Annuler</button></div>
+        <Field label="Banque (ou nom du compte)"><input value={name} onChange={(e) => setName(e.target.value)} maxLength={100} /></Field>
+        <Field label="N° de compte"><input value={num} onChange={(e) => setNum(e.target.value)} maxLength={60} /></Field>
+        <Field label="Solde initial (FCFA)" hint="Entrée tracée « Solde initial » dans le compte ; laissez vide si le compte est à zéro."><input inputMode="decimal" value={open0} onChange={(e) => setOpen0(e.target.value)} maxLength={18} /></Field>
+        <div className="modal-actions"><button className="btn" disabled={act.busy || name.trim().length < 2 || (open0.trim() !== '' && !/^\d+([.,]\d{1,4})?$/.test(open0.trim()))} onClick={() => act.run(async () => { await post('/financial-accounts', { owner_type: 'other', name: num.trim() ? `${name.trim()} ${num.trim()}` : name.trim(), bank_name: name.trim(), ...(num.trim() && { account_number: num.trim() }), ...(open0.trim() && { opening_balance: open0.trim().replace(',', '.') }) }); setAdding(false); setName(''); setNum(''); setOpen0(''); reload(); })}>Enregistrer</button><button className="btn btn-ghost" onClick={() => setAdding(false)}>Annuler</button></div>
       </Modal>}
     </Frame>
   );

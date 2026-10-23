@@ -19,6 +19,10 @@ class AccountDto {
   @IsOptional() @IsUUID() owner_id?: string;
   @IsString() @Length(2, 150) name: string;
   @IsOptional() @Matches(/^[A-Z]{3}$/) currency?: string;
+  @IsOptional() @IsString() @Length(2, 100) bank_name?: string;
+  @IsOptional() @IsString() @Length(2, 60) account_number?: string;
+  /** Solde initial à l'ouverture du compte dans AgriTrace (entrée tracée « Solde initial »). */
+  @IsOptional() @Dec(4) opening_balance?: string;
 }
 class OpenSessionDto { @Dec(4) opening_amount: string; }
 class CloseSessionDto { @Dec(4) counted_amount: string; }
@@ -53,7 +57,7 @@ export class FinanceController {
   @RequirePermissions('finance:read')
   accounts(@Req() req: any) {
     return this.db.tx(req.org.id, async (c) => (await c.query(
-      `SELECT a.id, a.owner_type, a.owner_id, a.name, a.currency, a.status,
+      `SELECT a.id, a.owner_type, a.owner_id, a.name, a.currency, a.status, a.bank_name, a.account_number,
               coalesce((SELECT sum(CASE direction WHEN 'in' THEN amount ELSE -amount END) FROM financial_transactions t WHERE t.account_id = a.id), 0) AS balance
          FROM financial_accounts a ORDER BY a.name`)).rows);
   }
@@ -61,9 +65,14 @@ export class FinanceController {
   @Post('financial-accounts')
   @RequirePermissions('cash:manage')
   async createAccount(@Body() b: AccountDto, @Req() req: any) {
-    const row = await this.db.tx(req.org.id, async (c) =>
-      (await c.query(`INSERT INTO financial_accounts(organization_id, owner_type, owner_id, name, currency, created_by) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id, owner_type, owner_id, name, currency`,
-        [req.org.id, b.owner_type, b.owner_id ?? null, b.name, b.currency ?? 'XOF', req.user.id])).rows[0]);
+    const row = await this.db.tx(req.org.id, async (c) => {
+      const a = (await c.query(`INSERT INTO financial_accounts(organization_id, owner_type, owner_id, name, currency, bank_name, account_number, created_by) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id, owner_type, owner_id, name, currency, bank_name, account_number`,
+        [req.org.id, b.owner_type, b.owner_id ?? null, b.name, b.currency ?? 'XOF', b.bank_name ?? null, b.account_number ?? null, req.user.id])).rows[0];
+      if (b.opening_balance && Number(b.opening_balance) > 0)
+        await c.query(`INSERT INTO financial_transactions(organization_id, idempotency_key, account_id, direction, amount, currency, reason, created_by) VALUES ($1,$2,$3,'in',$4,$5,'Solde initial',$6)`,
+          [req.org.id, `opening-balance:${a.id}`, a.id, b.opening_balance, a.currency, req.user.id]);
+      return a;
+    });
     await this.log(req, 'account.create', 'financial_account', row.id);
     return row;
   }

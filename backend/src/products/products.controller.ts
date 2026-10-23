@@ -15,6 +15,8 @@ class ProductDto {
   @IsOptional() @IsBoolean() active?: boolean;
   /** Campagne (traite) à laquelle s'applique le prix saisi ; sans campagne, le prix est général. */
   @IsOptional() @IsUUID() campaign_id?: string;
+  /** Filière dont les déclarations d'achat utilisent le prix officiel de ce produit (null = aucune). */
+  @IsOptional() @IsUUID() value_chain_id?: string | null;
 }
 class PriceDto {
   @IsOptional() @IsUUID() campaign_id?: string;
@@ -34,7 +36,7 @@ export class ProductsController {
   @Get('products')
   @RequirePermissions('products:read')
   products(@Req() req: any) {
-    return this.db.tx(req.org.id, async (c) => (await c.query(`SELECT id, name, buy_price_per_kg, sell_price_per_kg, active FROM products ORDER BY name`)).rows);
+    return this.db.tx(req.org.id, async (c) => (await c.query(`SELECT id, name, buy_price_per_kg, sell_price_per_kg, active, value_chain_id FROM products ORDER BY name`)).rows);
   }
 
   @Post('products')
@@ -42,8 +44,8 @@ export class ProductsController {
   async createProduct(@Body() b: ProductDto, @Req() req: any) {
     try {
       const row = await this.db.tx(req.org.id, async (c) => (await c.query(
-        `INSERT INTO products(organization_id, name, buy_price_per_kg, sell_price_per_kg, active, created_by) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id, name, buy_price_per_kg, sell_price_per_kg, active`,
-        [req.org.id, b.name.trim(), b.buy_price_per_kg ?? null, b.sell_price_per_kg ?? null, b.active ?? true, req.user.id])).rows[0]);
+        `INSERT INTO products(organization_id, name, buy_price_per_kg, sell_price_per_kg, active, created_by, value_chain_id) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id, name, buy_price_per_kg, sell_price_per_kg, active, value_chain_id`,
+        [req.org.id, b.name.trim(), b.buy_price_per_kg ?? null, b.sell_price_per_kg ?? null, b.active ?? true, req.user.id, b.value_chain_id ?? null])).rows[0]);
       if (row.buy_price_per_kg != null || row.sell_price_per_kg != null) await this.db.tx(req.org.id, (c) => c.query(`INSERT INTO product_prices(organization_id, product_id, campaign_id, buy_price_per_kg, sell_price_per_kg, created_by) VALUES ($1,$2,$3,$4,$5,$6)`, [req.org.id, row.id, b.campaign_id ?? null, row.buy_price_per_kg, row.sell_price_per_kg, req.user.id]));
       await this.log(req, 'product.create', 'product', row.id, { name: row.name });
       return row;
@@ -57,8 +59,8 @@ export class ProductsController {
       const row = await this.db.tx(req.org.id, async (c) => {
         const before = (await c.query(`SELECT buy_price_per_kg AS b, sell_price_per_kg AS s FROM products WHERE id = $1`, [id])).rows[0];
         const u = (await c.query(
-        `UPDATE products SET name = $2, buy_price_per_kg = $3, sell_price_per_kg = $4, active = coalesce($5, active), updated_at = now(), updated_by = $6 WHERE id = $1
-         RETURNING id, name, buy_price_per_kg, sell_price_per_kg, active`, [id, b.name.trim(), b.buy_price_per_kg ?? null, b.sell_price_per_kg ?? null, b.active ?? null, req.user.id])).rows[0];
+        `UPDATE products SET name = $2, buy_price_per_kg = $3, sell_price_per_kg = $4, active = coalesce($5, active), updated_at = now(), updated_by = $6, value_chain_id = CASE WHEN $8::boolean THEN $7::uuid ELSE value_chain_id END WHERE id = $1
+         RETURNING id, name, buy_price_per_kg, sell_price_per_kg, active, value_chain_id`, [id, b.name.trim(), b.buy_price_per_kg ?? null, b.sell_price_per_kg ?? null, b.active ?? null, req.user.id, b.value_chain_id ?? null, b.value_chain_id !== undefined])).rows[0];
         if (u && before && (String(before.b ?? '') !== String(u.buy_price_per_kg ?? '') || String(before.s ?? '') !== String(u.sell_price_per_kg ?? '')))
           await c.query(`INSERT INTO product_prices(organization_id, product_id, campaign_id, buy_price_per_kg, sell_price_per_kg, created_by) VALUES ($1,$2,$3,$4,$5,$6)`, [req.org.id, id, b.campaign_id ?? null, u.buy_price_per_kg, u.sell_price_per_kg, req.user.id]);
         return u;

@@ -61,7 +61,8 @@ function PriceHistory({ p, onClose }: { p: any; onClose: () => void }) {
 }
 
 function ProductForm({ p, onClose, onDone }: { p: any | null; onClose: () => void; onDone: () => void }) {
-  const [f, setF] = useState({ name: p?.name ?? '', buy: p?.buy_price_per_kg ? String(Number(p.buy_price_per_kg)) : '', sell: p?.sell_price_per_kg ? String(Number(p.sell_price_per_kg)) : '', active: p?.active ?? true });
+  const [f, setF] = useState({ name: p?.name ?? '', buy: p?.buy_price_per_kg ? String(Number(p.buy_price_per_kg)) : '', sell: p?.sell_price_per_kg ? String(Number(p.sell_price_per_kg)) : '', active: p?.active ?? true, chain: p?.value_chain_id ?? '' });
+  const chains = useAsync(() => get<any[]>('/value-chains').catch(() => [] as any[]), []);
   const act = useAction();
   const ok = f.name.trim() && (f.buy === '' || PRICE.test(f.buy)) && (f.sell === '' || PRICE.test(f.sell));
   return (
@@ -69,10 +70,11 @@ function ProductForm({ p, onClose, onDone }: { p: any | null; onClose: () => voi
       <Field label="Désignation"><input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} maxLength={80} /></Field>
       <div className="grid-2"><Field label="Prix d'achat au kilo"><input inputMode="decimal" value={f.buy} onChange={(e) => setF({ ...f, buy: e.target.value })} /></Field>
         <Field label="Prix de vente au kilo"><input inputMode="decimal" value={f.sell} onChange={(e) => setF({ ...f, sell: e.target.value })} /></Field></div>
+      <Field label="Filière (déclarations d'achat)" hint="Si une filière est choisie, les déclarations d'achat de cette filière utilisent le prix d'achat officiel de ce produit au lieu du barème."><select value={f.chain} onChange={(e) => setF({ ...f, chain: e.target.value })}><option value="">— Aucune —</option>{(chains.data ?? []).map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}</select></Field>
       <label><input type="checkbox" checked={f.active} onChange={(e) => setF({ ...f, active: e.target.checked })} /> Actif</label>
       {act.error && <ErrorBox message={act.error} />}
       <div className="modal-actions"><button className="btn" disabled={act.busy || !ok} onClick={() => act.run(async () => {
-        const body = { name: f.name.trim(), ...(f.buy && { buy_price_per_kg: f.buy }), ...(f.sell && { sell_price_per_kg: f.sell }), active: f.active };
+        const body = { name: f.name.trim(), ...(f.buy && { buy_price_per_kg: f.buy }), ...(f.sell && { sell_price_per_kg: f.sell }), active: f.active, value_chain_id: f.chain || null };
         if (p) await put(`/products/${p.id}`, body); else await post('/products', body);
         onDone();
       })}>Enregistrer</button><button className="btn btn-ghost" onClick={onClose}>Annuler</button></div>

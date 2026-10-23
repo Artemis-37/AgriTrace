@@ -1,3 +1,4 @@
+import { effectiveBuyPrice } from '../products/price';
 import {
   BadRequestException, Body, ConflictException, Controller, ForbiddenException, Get, NotFoundException, Param, ParseUUIDPipe,
   Post, Put, Query, Req, StreamableFile, UnprocessableEntityException,
@@ -299,6 +300,26 @@ export class DeclarationsController {
       if (!d.purchase_receipt_no && (await receiptConfig(c)).required)
         throw new BadRequestException("Le numéro du reçu d'achat est obligatoire avant la soumission");
 
+      // Prix officiel du produit rattaché à la filière (fixé par l'administrateur), s'il existe : prioritaire sur le barème.
+      const prod = (await c.query(`SELECT id FROM products WHERE value_chain_id = $1 AND active ORDER BY created_at LIMIT 1`, [d.value_chain_id])).rows[0];
+      const official = prod ? await effectiveBuyPrice(c, prod.id, d.campaign_id) : null;
+      if (official != null && Number(official) > 0) {
+        let f = '1';
+        if (String(d.unit).toLowerCase() !== 'kg') {
+          const cv = await c.query(`SELECT factor FROM unit_conversions WHERE value_chain_id = $1 AND from_unit = $2 AND to_unit = 'kg'`, [d.value_chain_id, d.unit]);
+          f = cv.rowCount ? cv.rows[0].factor : '';
+        }
+        if (f !== '') {
+          const upo = await c.query(
+            `UPDATE purchase_declarations
+                SET price_version_id = NULL, unit_price = $2, currency = 'XOF',
+                    amount = round($3::numeric * $4::numeric * $2::numeric, 4),
+                    status = 'received', status_reason = NULL, updated_at = now(), updated_by = $5, version = version + 1
+              WHERE id = $1 RETURNING *`, [id, official, d.quantity, f, req.user.id]);
+          await this.history(c, req.org.id, id, d.status, 'received', undefined, req.user.id);
+          return upo.rows[0];
+        }
+      }
       const p = await c.query(
         `SELECT v.id AS version_id, v.unit_price, s.currency, s.unit AS price_unit
            FROM price_schedules s JOIN price_versions v ON v.schedule_id = s.id

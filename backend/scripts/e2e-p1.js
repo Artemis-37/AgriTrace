@@ -92,6 +92,13 @@ const login = async (email, password) => (await call('POST', '/auth/login', { bo
   check('rejeu idempotent : même déclaration, pas de doublon', replay.id === d1.id && replay.replayed === true, replay);
   const sub = (await call('POST', `/purchase-declarations/${d1.id}/submit`, { token: tc, org: A.id })).body;
   check('soumission : 2 sacs × 65 kg × 1000 = 130000', sub.status === 'received' && Number(sub.amount) === 130000, sub);
+  // Prix officiel du produit rattaché à la filière : prioritaire sur le barème (fixé par l'administrateur seul)
+  const prodC = (await call('POST', '/products', { token: ta, org: A.id, body: { name: 'Cacao officiel ' + run, buy_price_per_kg: '1500', value_chain_id: vc.id, campaign_id: camp.id } })).body;
+  check('produit rattaché à la filière', prodC.value_chain_id === vc.id, prodC);
+  const dP = (await call('POST', '/purchase-declarations', { token: tc, org: A.id, body: decl(p.producer.id, vc.id, camp.id, 'keyprod-' + run) })).body;
+  const subP = (await call('POST', `/purchase-declarations/${dP.id}/submit`, { token: tc, org: A.id })).body;
+  check('déclaration : 2 sacs × 65 kg × 1500 (prix officiel du produit) = 195000', Number(subP.amount) === 195000 && Number(subP.unit_price) === 1500, subP);
+  await call('PUT', `/products/${prodC.id}`, { token: ta, org: A.id, body: { name: prodC.name, buy_price_per_kg: '1500', value_chain_id: null } });
   // nouvelle version de prix : l'ancienne déclaration ne bouge pas
   await call('POST', `/price-schedules/${sched.id}/versions`, { token: ta, org: A.id, body: { unit_price: '1200', valid_from: '2026-06-01' } });
   const other = await call('GET', `/purchase-declarations/${d1.id}`, { token: await login(`col2.${run}@t.test`, pw), org: A.id });
