@@ -17,12 +17,12 @@ const range = (p: Period): [string, string] | null => {
   return null;
 };
 
-type Key = 'cash' | 'variance' | 'accounts' | 'journal' | 'in' | 'out' | 'desk' | 'entry' | 'bank';
+type Key = 'cash' | 'variance' | 'accounts' | 'journal' | 'in' | 'out' | 'desk' | 'entry' | 'bank' | 'fund';
 const GROUPS: { title: string; perm: string; items: [Key, string][] }[] = [
   { title: 'Opérations', perm: 'convoys:settle', items: [['cash', 'Traiter une pesée / régler un achat'], ['variance', 'Écarts de poids à valider']] },
   { title: 'Achats prod. agricole', perm: 'convoys:settle', items: [['cash', 'Journal des achats (pesées à traiter)']] },
   { title: 'Solde délégué', perm: 'convoys:settle', items: [['accounts', 'Solde et fiche des délégués']] },
-  { title: 'Mouvements de caisse', perm: 'finance:read', items: [['desk', 'Connexion à la caisse'], ['entry', 'Enregistrer une entrée / sortie'], ['journal', 'Mouvements de caisse'], ['in', 'Les entrées en caisse'], ['out', 'Les sorties de caisse'], ['bank', 'Évolution des comptes bancaires']] },
+  { title: 'Mouvements de caisse', perm: 'finance:read', items: [['fund', 'Fonds global de la caisse'], ['desk', 'Connexion à la caisse'], ['entry', 'Enregistrer une entrée / sortie'], ['journal', 'Mouvements de caisse'], ['in', 'Les entrées en caisse'], ['out', 'Les sorties de caisse'], ['bank', 'Évolution des comptes bancaires']] },
 ];
 
 /** Caisse : menu à gauche en rubriques dépliantes, journal de caisse avec solde d'ouverture et solde actuel. */
@@ -50,6 +50,7 @@ export default function Caisse() {
           {cur === 'cash' && <Cash />}
           {cur === 'variance' && <Variance />}
           {cur === 'accounts' && <Accounts />}
+          {cur === 'fund' && <GlobalFund />}
           {cur === 'desk' && <CashDesk />}
           {cur === 'entry' && <CashEntry />}
           {cur === 'bank' && <BankEvolution />}
@@ -223,6 +224,33 @@ function CashEntry() {
             setMsg(`${dir === 'in' ? 'Entrée' : 'Sortie'} de ${FR(amount)} FCFA enregistrée ${mode === 'bank' ? `sur le compte ${banks.find((b: any) => b.id === bankId)?.name ?? ''}` : 'en espèces'}.`); setAmount(''); setReason(''); setKey(idem());
           })}>Enregistrer</button>
         </fieldset>
+      )}
+    </Card>
+  );
+}
+
+/** Fonds global de la caisse = espèces + comptes bancaires. */
+export function GlobalFund() {
+  const { data, loading, error, reload } = useAsync(() => get<any[]>('/financial-accounts'), []);
+  const cash = (data ?? []).filter((a) => a.owner_type === 'cash_register');
+  const banks = (data ?? []).filter((a) => a.owner_type === 'other');
+  const sum = (l: any[]) => l.reduce((t, a) => t + Number(a.balance), 0);
+  return (
+    <Card>
+      <h2 className="win-title">Fonds global de la caisse</h2>
+      {error && <ErrorBox message={error} onRetry={reload} />}
+      {loading || !data ? <Loading /> : (
+        <>
+          <p className="muted">Le fonds de la caisse est composé des espèces et des comptes bancaires.</p>
+          <div className="tw"><table>
+            <thead><tr><th>Forme du fonds</th><th>Compte</th><th>N° de compte</th><th className="r">Solde</th></tr></thead>
+            <tbody>
+              {cash.map((a) => <tr key={a.id}><td>Espèces</td><td>{a.name}</td><td></td><td className="r">{FR(a.balance)}</td></tr>)}
+              {banks.map((a) => <tr key={a.id}><td>Compte bancaire</td><td>{a.name}{a.bank_name ? ` (${a.bank_name})` : ''}</td><td>{a.account_number ?? ''}</td><td className="r">{FR(a.balance)}</td></tr>)}
+            </tbody>
+          </table></div>
+          <div className="solde-bar"><span>ESPÈCES <b>{FR(sum(cash))}</b></span><span>COMPTES BANCAIRES <b>{FR(sum(banks))}</b></span><span className="big">FONDS GLOBAL <b>{FR(sum(cash) + sum(banks))}</b></span></div>
+        </>
       )}
     </Card>
   );

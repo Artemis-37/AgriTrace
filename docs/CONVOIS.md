@@ -147,3 +147,5 @@ Le menu de la Comptabilité reprend les rubriques de l'ancien logiciel : *Opéra
 Sur l'accueil, la tuile **Membres** devient **Délégués**.
 
 - **Connexion à la caisse** (migration 058, permission `cash:session`) : la caisse n'encaisse pas, elle produit des bons de sortie, des chèques et des paiements en espèces ; elle n'a donc ni fonds de caisse, ni comptage, ni clôture. Seul le **caissier** se connecte (Caisse → *Connexion à la caisse* → *Se connecter*) et se déconnecte ; l'administrateur ne détient pas cette permission. La déconnexion est automatique à la fermeture de session de l'application. Test : `scripts/e2e-connexion-caisse.js`.
+
+- **Fonds global de la caisse** : les espèces et les comptes bancaires forment ensemble le fonds de la caisse. Caisse → *Fonds global de la caisse* affiche le solde en espèces, le solde de chaque compte bancaire (banque, n° de compte) et le **total**. Droit `finance:read`.
