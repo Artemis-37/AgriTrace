@@ -108,4 +108,5 @@ Chaque intervenant de la coopérative (délégué, magasinier, caissier, coach, 
 - **Saisie de pesée** : le magasinier choisit toujours la **campagne** et le **produit** (listes modifiables ; présélection seulement s'il n'y a qu'un produit actif ou une campagne couvrant la date du jour). Le produit reste facultatif.
 - **Poids net automatique** = Poids − Nombre de sacs déchargés (1 kg retranché par sac déchargé, enregistré comme réfaction). Les champs « pesée à l'entrée », « pesée à la sortie » et « tare de sacs » sont retirés du formulaire (l'ancien calcul reste accepté par l'API pour compatibilité).
 - **État du stock** (écran « Stocks et lots ») : par campagne et par produit, nombre de pesées, nombre de sacs et stock net en kg. Les ventes et expéditions ne sont pas encore déduites.
+- Caisse : le prix unitaire de règlement est prérempli avec le prix d'achat du produit de la pesée (modifiable).
 - API : `GET/POST /products`, `PUT/DELETE /products/:id`, `GET /stock-state?campaign_id&from&to` ; `gross_kg`, `product_id`, `campaign_id` sur la réception ; migration `048_produits_campagnes.sql`.

@@ -203,9 +203,10 @@ export class ConvoysController {
   @RequirePermissions('convoys:read')
   list(@Req() req: any, @Query('status') status?: string) {
     return this.db.tx(req.org.id, async (c) => (await c.query(
-      `SELECT v.*, u.full_name AS collector_name, r.id AS reception_id, r.total_kg, r.bags, r.variance_kg, r.status AS reception_status, r.amount, r.unit_price
+      `SELECT v.*, u.full_name AS collector_name, r.id AS reception_id, r.total_kg, r.bags, r.variance_kg, r.status AS reception_status, r.amount, r.unit_price, pr.name AS product, pr.buy_price_per_kg AS product_buy_price
          FROM convoys v JOIN collectors k ON k.id = v.collector_id JOIN users u ON u.id = k.user_id
          LEFT JOIN convoy_receptions r ON r.convoy_id = v.id
+         LEFT JOIN products pr ON pr.id = r.product_id
         WHERE ($1::text IS NULL OR v.status = $1)
           AND ($2::boolean OR k.user_id = $3)
         ORDER BY v.created_at DESC LIMIT 300`,

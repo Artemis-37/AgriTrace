@@ -326,7 +326,9 @@ export function Cash() {
 function Settle({ r, onClose, onDone }: { r: any; onClose: () => void; onDone: () => void }) {
   const act = useAction();
   const cfg = useAsync(() => get<any>('/convoys/settings'), []);
-  const [price, setPrice] = useState('');
+  const [priceIn, setPrice] = useState<string | null>(null);
+  const suggested = Number(r.product_buy_price) > 0 ? String(Number(r.product_buy_price)) : '';
+  const price = priceIn ?? suggested;
   const [tu, setTu] = useState<string | null>(null);
   const [rt, setRt] = useState<string | null>(null);
   const t = tu ?? String(Number(cfg.data?.transport_unit ?? 0)), q = rt ?? String(Number(cfg.data?.retention_per_kg ?? 0));
@@ -345,7 +347,7 @@ function Settle({ r, onClose, onDone }: { r: any; onClose: () => void; onDone: (
   return (
     <Modal title={`Traiter le convoi ${r.convoy_no}`} onClose={onClose}>
       <p>{r.collector_name} · {num(r.total_kg)} kg · {r.bags} sacs</p>
-      <Field label="P.U. — prix d'achat au kg (FCFA)"><input inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} /></Field>
+      <Field label="P.U. — prix d'achat au kg (FCFA)" hint={suggested && priceIn === null ? `Prix d'achat du produit ${r.product ?? ''}, modifiable` : undefined}><input inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} /></Field>
       <Field label="Coût de transport au kg (FCFA)"><input inputMode="decimal" value={t} onChange={(e) => setTu(e.target.value)} /></Field>
       <Field label="Retenue au kg (FCFA)"><input inputMode="decimal" value={q} onChange={(e) => setRt(e.target.value)} /></Field>
       {ok && <table><tbody>
