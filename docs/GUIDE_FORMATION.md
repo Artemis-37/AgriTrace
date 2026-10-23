@@ -10,6 +10,10 @@
 3. Suivez le module de votre profil, réalisez les exercices, cochez la liste « Acquis » en fin de module.
 4. Les données sont **entièrement fictives** : on peut se tromper, annuler, recommencer. Le formateur peut réinstaller la démonstration à tout moment.
 
+**Ouvrir un écran sur un autre.** Dans les listes, les noms soulignés en pointillés (producteur dans les déclarations d'achat, délégué dans la file de la caisse, les convois et l'état des délégués, compte bancaire dans le bandeau « Fonds disponible ») ouvrent l'écran lié **par-dessus** l'écran courant. Le fil d'Ariane en haut de la fenêtre rappelle d'où l'on vient ; **← Retour** revient à la fenêtre précédente, **✕ Fermer** ou la touche **Échap** ramène à l'écran d'origine, resté exactement comme on l'a laissé.
+
+![Fiche du producteur ouverte par-dessus la liste des déclarations d'achat](captures/fenetre-liee-producteur.png)
+
 Les captures ont été prises sur la version de démonstration ; les libellés des boutons peuvent différer légèrement selon la version installée.
 
 ## 2. Niveaux de compte
