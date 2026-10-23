@@ -222,7 +222,22 @@ export class ConvoysController {
   @Get('convoys/receptions')
   @RequirePermissions('convoys:read')
   receptions(@Req() req: any, @Query('state') state?: string, @Query('q') q?: string, @Query('from') from?: string, @Query('to') to?: string) {
-    const all = req.org.permissions.has('convoys:receive') || req.org.permissions.has('convoys:settle');
+    return this.receptionRows(req, req.org.permissions.has('convoys:receive') || req.org.permissions.has('convoys:settle'), state, q, from, to);
+  }
+
+  /** États comptables : toutes les pesées, en lecture, pour le comptable. */
+  @Get('accounting/etats/pesees')
+  @RequirePermissions('accounting:read')
+  etatPesees(@Req() req: any, @Query('state') state?: string, @Query('q') q?: string, @Query('from') from?: string, @Query('to') to?: string) {
+    return this.receptionRows(req, true, state, q, from, to);
+  }
+
+  /** Soldes des délégués (code, contact, localité), en lecture, pour le comptable. */
+  @Get('accounting/etats/delegues')
+  @RequirePermissions('accounting:read')
+  etatDelegues(@Req() req: any) { return this.collectors(req); }
+
+  private receptionRows(req: any, all: boolean, state?: string, q?: string, from?: string, to?: string) {
     const d = (v?: string) => (v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
     return this.db.tx(req.org.id, async (c) => (await c.query(
       `SELECT r.id, r.bulletin_no, v.convoy_no, r.received_at, u.full_name AS collector_name,
@@ -475,7 +490,7 @@ export class ConvoysController {
   @RequirePermissions('convoys:settle')
   collectors(@Req() req: any) {
     return this.db.tx(req.org.id, async (c) => (await c.query(
-      `SELECT k.id, u.full_name AS name,
+      `SELECT k.id, u.full_name AS name, u.phone, k.origin, (SELECT mc.code FROM member_codes mc WHERE mc.user_id = k.user_id AND mc.organization_id = k.organization_id) AS member_code,
               coalesce((SELECT sum(CASE t.direction WHEN 'out' THEN t.amount ELSE -t.amount END) FROM financial_accounts a JOIN financial_transactions t ON t.account_id = a.id
                          WHERE a.owner_type = 'collector' AND a.owner_id = k.id), 0) AS solde,
               coalesce((SELECT sum(amount) FROM collector_advances WHERE collector_id = k.id AND kind = 'advance'), 0)

@@ -258,6 +258,8 @@ export class LoansController {
   list(@Req() req: any) {
     return this.db.tx(req.org.id, async (c) => (await c.query(
       `SELECT l.id, l.kind, l.borrower_type, l.borrower_id, l.requested_amount, l.approved_amount, l.currency, l.status, l.requested_at,
+              coalesce((SELECT p.last_name || ' ' || p.first_names FROM producers p WHERE l.borrower_type = 'producer' AND p.id = l.borrower_id),
+                       (SELECT u.full_name FROM collectors k JOIN users u ON u.id = k.user_id WHERE l.borrower_type = 'collector' AND k.id = l.borrower_id)) AS borrower_name,
               l.approved_amount - coalesce((SELECT sum(CASE WHEN r.reversal_of IS NULL THEN r.amount ELSE -r.amount END) FROM loan_repayments r WHERE r.loan_id = l.id), 0) AS remaining
          FROM loans l ORDER BY l.requested_at DESC LIMIT 500`)).rows);
   }

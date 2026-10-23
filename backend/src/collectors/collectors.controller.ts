@@ -1,6 +1,6 @@
 import { BadRequestException, Body, ConflictException, Controller, Get, NotFoundException, Param, ParseUUIDPipe, Post, Put, Req } from '@nestjs/common';
 import { ApiBearerAuth, ApiHeader, ApiTags } from '@nestjs/swagger';
-import { IsOptional, IsString, IsUUID, Length } from 'class-validator';
+import { IsIn, IsOptional, IsString, IsUUID, Length } from 'class-validator';
 import { RequirePermissions } from '../access/decorators';
 import { AuditService } from '../audit/audit.service';
 import { isUniqueViolation } from '../common/dto';
@@ -10,6 +10,13 @@ class CreateCollectorDto {
   @IsUUID() user_id: string;
   /** Provenance habituelle des achats du délégué (localité, zone) : reprise sur chaque bulletin de pesée. */
   @IsOptional() @IsString() @Length(1, 80) origin?: string;
+}
+class ProfileDto {
+  @IsOptional() @IsString() @Length(1, 80) origin?: string;
+  @IsOptional() @IsString() @Length(0, 80) bank_name?: string;
+  @IsOptional() @IsString() @Length(0, 40) bank_account?: string;
+  @IsOptional() @IsIn(['cni', 'passeport', 'attestation', 'permis', 'autre', '']) id_doc_type?: string;
+  @IsOptional() @IsString() @Length(0, 40) id_doc_no?: string;
 }
 class OriginDto { @IsString() @Length(1, 80) origin: string; }
 class AssignmentDto {
@@ -29,7 +36,7 @@ export class CollectorsController {
   list(@Req() req: any) {
     return this.db.tx(req.org.id, async (c) =>
       (await c.query(
-        `SELECT c.id, c.user_id, c.status, c.origin, u.full_name, (SELECT mc.code FROM member_codes mc WHERE mc.user_id = c.user_id AND mc.organization_id = c.organization_id) AS member_code,
+        `SELECT c.id, c.user_id, c.status, c.origin, c.bank_name, c.bank_account, c.id_doc_type, c.id_doc_no, u.phone, u.email, u.full_name, (SELECT mc.code FROM member_codes mc WHERE mc.user_id = c.user_id AND mc.organization_id = c.organization_id) AS member_code,
                 coalesce((SELECT json_agg(json_build_object('id', a.id, 'value_chain_id', a.value_chain_id, 'zone', a.zone))
                             FROM collector_assignments a WHERE a.collector_id = c.id), '[]') AS assignments
            FROM collectors c JOIN users u ON u.id = c.user_id ORDER BY u.full_name`)).rows);
@@ -75,6 +82,20 @@ export class CollectorsController {
     if (!n) throw new NotFoundException();
     await this.audit.log({ organizationId: req.org.id, actorUserId: req.user.id, action: 'collector.origin', entityType: 'collector', entityId: id, details: { origin: b.origin.trim() } });
     return { id, origin: b.origin.trim() };
+  }
+
+  /** Fiche du délégué : localité, banque, pièce d'identité. Une valeur vide efface le champ ; un champ absent reste inchangé. */
+  @Put(':id/profile')
+  @RequirePermissions('collectors:manage')
+  async setProfile(@Param('id', ParseUUIDPipe) id: string, @Body() b: ProfileDto, @Req() req: any) {
+    const cols = ['origin', 'bank_name', 'bank_account', 'id_doc_type', 'id_doc_no'] as const;
+    const sets: string[] = []; const vals: any[] = [id, req.user.id];
+    for (const k of cols) if (b[k] !== undefined) { vals.push(b[k]!.trim() || null); sets.push(`${k} = $${vals.length}`); }
+    if (!sets.length) throw new BadRequestException('Aucune information à modifier');
+    const n = await this.db.tx(req.org.id, async (c) => (await c.query(`UPDATE collectors SET ${sets.join(', ')}, updated_at = now(), updated_by = $2, version = version + 1 WHERE id = $1`, vals)).rowCount);
+    if (!n) throw new NotFoundException();
+    await this.audit.log({ organizationId: req.org.id, actorUserId: req.user.id, action: 'collector.profile', entityType: 'collector', entityId: id, details: { fields: cols.filter((k) => b[k] !== undefined) } });
+    return { id };
   }
 
   @Post(':id/disable')

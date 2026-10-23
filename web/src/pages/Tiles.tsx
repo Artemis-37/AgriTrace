@@ -8,7 +8,7 @@ const TILES: { to: string; label: string; icon: string; perm: string[]; notFor?:
   { to: '/commerce', label: 'Ventes', icon: '🚚', perm: ['buyers:read', 'logistics:read', 'invoices:read'] },
   { to: '/caisse', label: 'Caisse', icon: '💰', perm: ['convoys:settle', 'finance:read'] },
   { to: '/finances', label: 'Trésorerie', icon: '🏦', perm: ['finance:read'] },
-  { to: '/finances?tab=accounting', label: 'Comptabilité', icon: '🧮', perm: ['accounting:read'] },
+  { to: '/comptabilite', label: 'Comptabilité', icon: '🧮', perm: ['accounting:read'] },
   { to: '/stocks', label: 'Stock', icon: '📦', perm: ['warehouses:read'] },
 ];
 

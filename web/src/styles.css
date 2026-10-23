@@ -251,3 +251,13 @@ dl.kv dd { margin: 0; }
 .grid-3 .span-all { grid-column: 1 / -1; }
 @media (max-width: 900px) { .grid-3 { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 600px) { .grid-3 { grid-template-columns: 1fr; } }
+.caisse-main { min-width: 0; }
+
+.fiche { display: grid; grid-template-columns: 12rem 1fr; gap: .5rem 1rem; margin: 1rem 0; }
+.fiche dt { color: var(--muted, #666); } .fiche dd { margin: 0; font-weight: 600; }
+.pick-list { max-height: 60vh; overflow: auto; margin-top: .6rem; }
+.pick-list button { width: 100%; text-align: left; padding: .35rem .5rem; border: 0; background: transparent; font: inherit; cursor: pointer; border-radius: .3rem; }
+.pick-list button.on, .pick-list button:hover { background: rgba(0,0,0,.07); }
+.pick-list { list-style: none; padding: 0; }
+.pick-list + * , .pick-list { margin-left: 0; }
+.search-full { width: 100%; box-sizing: border-box; padding: .5rem .7rem; border: 1px solid var(--line, #d9d4c8); border-radius: .5rem; font: inherit; background: #fff; }

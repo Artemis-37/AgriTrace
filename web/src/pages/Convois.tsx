@@ -389,7 +389,7 @@ function Payout({ onClose }: { onClose: () => void }) {
 const FR = (v: any) => (v === null || v === undefined || v === '' ? '' : Number(v).toLocaleString('fr-FR', { maximumFractionDigits: 3 }));
 
 /** Fiche de suivi du compte délégué, dans la présentation de la fiche papier (solde = ce que le délégué doit à la coopérative). */
-function Fiche({ collectorId }: { collectorId?: string }) {
+export function Fiche({ collectorId }: { collectorId?: string }) {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const { data, loading, error, reload } = useAsync(() => get<any>(`/convoys/statement?${new URLSearchParams({ ...(collectorId && { collector_id: collectorId }), ...(from && { from }), ...(to && { to }) })}`), [collectorId, from, to]);

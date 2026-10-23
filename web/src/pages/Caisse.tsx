@@ -5,7 +5,7 @@ import { useDeepLink } from '../notifTarget';
 import { Card, ErrorBox, Loading, PageHeader, useAsync } from '../ui';
 import { Accounts, Cash, Variance } from './Convois';
 
-const FR = (v: number | null | undefined) => (v === null || v === undefined ? '' : v.toLocaleString('fr-FR', { maximumFractionDigits: 0 }));
+export const FR = (v: number | string | null | undefined) => (v === null || v === undefined || v === '' ? '' : Number(v).toLocaleString('fr-FR', { maximumFractionDigits: 0 }));
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 type Period = '' | 'today' | 'week' | 'month' | 'year';
 const range = (p: Period): [string, string] | null => {
@@ -57,7 +57,7 @@ export default function Caisse() {
   );
 }
 
-function Journal({ kind }: { kind: '' | 'in' | 'out' }) {
+export function Journal({ kind }: { kind: '' | 'in' | 'out' }) {
   const [from, setFrom] = useState(iso(new Date()));
   const [to, setTo] = useState(iso(new Date()));
   const [q, setQ] = useState({ from, to });
