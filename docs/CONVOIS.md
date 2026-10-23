@@ -4,7 +4,7 @@
 Le numéro de connaissement (B/L) est **saisi** par l'opérateur (`POST /shipments/:id/depart`, champs `bill_of_lading_no`, `port`, `exporter_name`). Sans lui le départ est refusé (400) ; une contrainte en base le garantit aussi.
 
 ## Convois des collecteurs
-1. Le collecteur déclare le convoi (`convoys:create`, hors ligne possible via `convoy.create`) : n° de convoi (unique), chauffeur, camion, sacs/poids annoncés facultatifs.
+1. Le collecteur déclare le convoi (`convoys:create`, hors ligne possible via `convoy.create`) : n° de convoi (unique), chauffeur, camion, sacs/poids déclarés facultatifs.
 2. Le magasinier (`convoys:receive`) choisit le collecteur et le n° de convoi, saisit poids total et sacs (`convoy.receive`) ; l'écart avec l'annoncé est calculé.
 3. La caisse (`convoys:settle`) voit la file (`GET /convoys/cashier-queue`) et traite : prix au kg → montant exact crédité au compte du collecteur (`financial_accounts`, créé au besoin), écriture immuable liée à la réception, idempotente.
 4. Le collecteur consulte son stock et son solde (`GET /convoys/my-stock`, `collector:stock`).
@@ -69,10 +69,10 @@ Barre du haut : quatre icônes carrées comme CentriGest, vert = bon, rouge = co
 
 ## Bulletin de pesée (réception au magasin)
 
-À la réception, le magasinier peut renseigner, dans « Détails de la pesée », la **double pesée** (entrée camion chargé, sortie camion vide, pont-bascule), la tare des sacs, la réfaction, le grade, la remorque, la provenance, les sacs déchargés/refusés et l'analyse (humidité, déchets). Tout est facultatif.
+À la réception, le magasinier peut renseigner, dans la section « Pesée au pont-bascule », la **double pesée** (entrée camion chargé, sortie camion vide, pont-bascule), la tare des sacs, la réfaction, le grade, la remorque, la provenance, les sacs déchargés/refusés et l'analyse (humidité, déchets). Tout est facultatif.
 
-- Poids brut = entrée − sortie ; **poids net payé = brut − tare des sacs − réfaction**. Ce net devient le poids de la réception : c'est lui que la caisse règle et que l'écart avec le poids annoncé compare. Si la double pesée est fournie, le serveur calcule le net et refuse un `total_kg` incohérent.
+- Poids brut = entrée − sortie ; **poids net payé = brut − tare des sacs − réfaction**. Ce net devient le poids de la réception : c'est lui que la caisse règle et que l'écart avec le poids déclaré compare. Si la double pesée est fournie, le serveur calcule le net et refuse un `total_kg` incohérent.
 - Numéro de bulletin séquentiel par coopérative et par année : `BP-2026-000001`.
-- Impression : « Bulletin de pesée » avec QR code (n° de bulletin, convoi, poids net, date), tableau des pesées, analyse et quatre visas (magasinier, chauffeur, collecteur, responsable). Les lignes sans donnée ne sont pas imprimées ; mention DUPLICATA dès la deuxième édition et « ÉCART À VALIDER — NON PAYABLE » si la réception est retenue.
+- Impression : « Bulletin de pesée » lu de haut en bas en quatre blocs (identification, pesées, sacs, analyse), avec QR code (n° de bulletin, convoi, poids net, date), tableau des pesées, analyse et quatre visas (magasinier, chauffeur, collecteur, responsable). Les lignes sans donnée ne sont pas imprimées ; mention DUPLICATA dès la deuxième édition et « ÉCART À VALIDER — NON PAYABLE » si la réception est retenue.
 - Les poids sont imprimés en **kilogrammes entiers**, avec une espace pour les milliers (`41 780 kg`), sans virgule ni décimales.
 - Limite : le QR code encode le texte du bulletin ; il n'existe pas encore de page publique de vérification en ligne.

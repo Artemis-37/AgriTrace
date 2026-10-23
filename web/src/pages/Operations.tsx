@@ -36,23 +36,21 @@ function Bulletin({ r }: { r: any }) {
       {r.duplicate && <p className="receipt-dup">DUPLICATA n°{r.copy_no}</p>}
       {r.cancelled && <p className="receipt-dup">OPÉRATION ANNULÉE</p>}
       {b.status === 'pending_variance' && <p className="receipt-dup">ÉCART À VALIDER — NON PAYABLE</p>}
-      <div className="bp-cols">
-        <table><tbody>
-          {row('Date de réception', dateTime(b.received_at))}{row('Convoi n°', b.convoy_no)}{row('Collecteur', b.collector)}
-          {row('Chauffeur', b.driver)}{row('Camion', b.truck)}{row('Remorque', b.trailer)}{row('Provenance', b.origin)}{row('Qualité / grade', b.grade)}
-        </tbody></table>
-        <table><tbody>
-          {row('Poids annoncé', fmtKg(b.declared))}
-          {row(`Pesée entrée${b.scale_in ? ` (${b.scale_in})` : ''}`, fmtKg(b.weigh_in))}
-          {row(`Pesée sortie${b.scale_out ? ` (${b.scale_out})` : ''}`, fmtKg(b.weigh_out))}
-          {row('Poids brut', fmtKg(b.gross))}{row('Tare des sacs', fmtKg(b.bag_tare))}{row('Réfaction', fmtKg(b.refaction))}
-          {row('POIDS NET PAYÉ', fmtKg(b.net), true)}{row('Écart / annoncé', b.variance == null ? null : `${b.variance} kg`)}
-        </tbody></table>
-      </div>
       <table><tbody>
-        <tr><th>Sacs annoncés</th><td>{b.declared_bags ?? '—'}</td><th>Sacs reçus</th><td>{b.bags}</td><th>Déchargés</th><td>{b.bags_unloaded ?? '—'}</td><th>Refusés</th><td>{b.bags_refused ?? '—'}</td></tr>
+        <tr className="sect"><th colSpan={2}>1. Identification</th></tr>
+        {row('Date de réception', dateTime(b.received_at))}{row('Connaissement n°', b.convoy_no)}{row('Collecteur', b.collector)}
+        {row('Chauffeur', b.driver)}{row('Camion', b.truck)}{row('Remorque', b.trailer)}{row('Provenance', b.origin)}{row('Qualité / grade', b.grade)}
+        <tr className="sect"><th colSpan={2}>2. Pesées</th></tr>
+        {row('Poids déclaré', fmtKg(b.declared))}
+        {row(`Pesée entrée, camion chargé${b.scale_in ? ` (${b.scale_in})` : ''}`, fmtKg(b.weigh_in))}
+        {row(`Pesée sortie, camion vide${b.scale_out ? ` (${b.scale_out})` : ''}`, fmtKg(b.weigh_out))}
+        {row('Poids brut (entrée − sortie)', fmtKg(b.gross))}{row('Tare des sacs', fmtKg(b.bag_tare))}{row('Réfaction', fmtKg(b.refaction))}
+        {row('POIDS NET PAYÉ', fmtKg(b.net), true)}{row('Écart / poids déclaré', b.variance == null ? null : `${b.variance} kg`)}
+        <tr className="sect"><th colSpan={2}>3. Sacs</th></tr>
+        {row('Sacs déclarés', b.declared_bags)}{row('Sacs reçus', b.bags)}{row('Sacs déchargés', b.bags_unloaded)}{row('Sacs refusés', b.bags_refused)}
+        {an.length > 0 && <tr className="sect"><th colSpan={2}>4. Analyse</th></tr>}
+        {an.map(([k, v]) => row(k, v))}
       </tbody></table>
-      {an.length > 0 && <table><tbody><tr>{an.map(([k]) => <th key={k}>{k}</th>)}</tr><tr>{an.map(([k, v]) => <td key={k}>{v}</td>)}</tr></tbody></table>}
       {b.notes && <p><strong>Observations :</strong> {b.notes}</p>}
       <footer className="bp-visas">
         <div><span>Magasinier : {r.operator ?? ''}</span></div><div><span>Chauffeur</span></div><div><span>Collecteur</span></div><div><span>Responsable</span></div>

@@ -198,6 +198,7 @@ dl.kv dd { margin: 0; }
 .receipt-sheet .bp-head h2 { font-size: 1.3rem; letter-spacing: .04em; }
 .receipt-sheet .bp-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
 .receipt-sheet .bp-cols th { width: 48%; }
+.receipt-sheet tr.sect th { background: #fff; color: #000; width: auto; font-size: .85rem; letter-spacing: .05em; border-top: 2px solid #000; border-bottom: 2px solid #000; text-align: left; }
 .receipt-sheet tr.net th, .receipt-sheet tr.net td { font-weight: 800; font-size: 1.15rem; background: #e6e6e6; }
 .receipt-sheet .bp-visas { gap: 1rem; }
 .receipt-sheet footer { display: flex; gap: 2rem; margin: 2.5rem 0 1rem; }
@@ -211,3 +212,8 @@ dl.kv dd { margin: 0; }
 /* Missions validées : grisées, non cliquables (retirées de la liste après le délai réglé par l'ADG) */
 .row-done { opacity: .5; filter: grayscale(1); pointer-events: none; }
 .row-done-open { pointer-events: auto; } /* les responsables gardent l'accès (clôture, historique) */
+.receipt-sheet .bp-head + * , .receipt-sheet table { font-size: .9rem; }
+.receipt-sheet table th, .receipt-sheet table td { padding: .08rem .45rem; }
+.receipt-sheet table { margin: .3rem 0; }
+.receipt-sheet .bp-visas { margin-bottom: .3rem; }
+.receipt-sheet .bp-visas { margin-top: 1.5rem; }

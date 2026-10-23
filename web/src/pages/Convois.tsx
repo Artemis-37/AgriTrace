@@ -78,8 +78,8 @@ function CreateConvoy({ onClose, onDone }: { onClose: () => void; onDone: () => 
     <Modal title="Déclarer un convoi" onClose={onClose}>
       {off.offline && <p className="notice" role="status">Hors connexion : le convoi sera enregistré sur ce poste puis envoyé dès que le serveur sera joignable.</p>}
       {auto
-        ? <Field label="Numéro de connaissement du convoi" hint="Attribué automatiquement par le logiciel (code CCC de la coopérative, année, 3 lettres de votre nom, n° d'ordre). Il accompagne le convoi jusqu'au magasin."><input value={next.data!.convoy_no ?? ''} readOnly aria-readonly="true" /></Field>
-        : <Field label="Numéro de connaissement du convoi" hint={noKnown ? 'Saisi par le collecteur ; il accompagne le convoi jusqu\'au magasin.' : 'Laissez vide si la coopérative a renseigné son code CCC : le numéro est alors attribué automatiquement à l\'envoi.'}><input value={f.convoy_no} onChange={set('convoy_no')} maxLength={60} /></Field>}
+        ? <Field label="Numéro de connaissement" hint="Attribué automatiquement par le logiciel (code CCC de la coopérative, année, 3 lettres de votre nom, n° d'ordre). Il accompagne le convoi jusqu'au magasin."><input value={next.data!.convoy_no ?? ''} readOnly aria-readonly="true" /></Field>
+        : <Field label="Numéro de connaissement" hint={noKnown ? 'Saisi par le collecteur ; il accompagne le convoi jusqu\'au magasin.' : 'Laissez vide si la coopérative a renseigné son code CCC : le numéro est alors attribué automatiquement à l\'envoi.'}><input value={f.convoy_no} onChange={set('convoy_no')} maxLength={60} /></Field>}
       <Field label="Nom du chauffeur"><input value={f.driver_name} onChange={set('driver_name')} maxLength={120} /></Field>
       <Field label="N° du camion"><input value={f.truck_no} onChange={set('truck_no')} maxLength={40} /></Field>
       {list.length > 0 && (
@@ -90,11 +90,11 @@ function CreateConvoy({ onClose, onDone }: { onClose: () => void; onDone: () => 
               <li key={d.id}><label><input type="checkbox" checked={picked.includes(d.id)} onChange={() => toggle(d.id)} /> {d.producer_name} · {date(d.operation_date)} · {num(d.kg)} kg · {d.bags ?? 0} sacs</label></li>
             ))}
           </ul>
-          {picked.length > 0 && <p className="muted">{picked.length} achat(s) : {num(pickKg)} kg, {pickBags} sacs — le poids et les sacs annoncés sont déduits de ces achats si vous ne les saisissez pas.</p>}
+          {picked.length > 0 && <p className="muted">{picked.length} achat(s) : {num(pickKg)} kg, {pickBags} sacs — le poids et les sacs déclarés sont déduits de ces achats si vous ne les saisissez pas.</p>}
         </fieldset>
       )}
-      <Field label="Nombre de sacs annoncé (facultatif)"><input inputMode="numeric" value={f.declared_bags} onChange={set('declared_bags')} /></Field>
-      <Field label="Poids annoncé en kg (facultatif)"><input inputMode="decimal" value={f.declared_kg} onChange={set('declared_kg')} /></Field>
+      <Field label="Nombre de sacs déclaré (facultatif)"><input inputMode="numeric" value={f.declared_bags} onChange={set('declared_bags')} /></Field>
+      <Field label="Poids déclaré en kg (facultatif)"><input inputMode="decimal" value={f.declared_kg} onChange={set('declared_kg')} /></Field>
       {act.error && <ErrorBox message={act.error} />}
       <div className="modal-actions">
         <button className="btn btn-secondary" onClick={onClose}>Annuler</button>
@@ -147,30 +147,33 @@ function Receive() {
   return (
     <Card title="Réceptionner un convoi">
       <Field label="Collecteur"><select value={collector} onChange={(e) => { setCollector(e.target.value); setConvoyNo(''); }}><option value="">—</option>{collectors.map(([id, n]) => <option key={id} value={id}>{n}</option>)}</select></Field>
-      <Field label="Numéro de connaissement du convoi" hint={mine.length ? `En route : ${mine.map((v) => v.convoy_no).join(', ')}` : undefined}>
+      <Field label="Numéro de connaissement" hint={mine.length ? `En route : ${mine.map((v) => v.convoy_no).join(', ')}` : undefined}>
         <input list="convois-attendus" value={convoyNo} onChange={(e) => setConvoyNo(e.target.value)} /></Field>
       <datalist id="convois-attendus">{mine.map((v) => <option key={v.id} value={v.convoy_no} />)}</datalist>
-      {expected && <p className="muted">Chauffeur : {expected.driver_name} · Camion : {expected.truck_no}{expected.declared_kg ? ` · Annoncé : ${num(expected.declared_kg)} kg` : ''}{expected.declared_bags != null ? ` / ${expected.declared_bags} sacs` : ''}</p>}
+      {expected && <p className="muted">Chauffeur : {expected.driver_name} · Camion : {expected.truck_no}{expected.declared_kg ? ` · Déclaré : ${num(expected.declared_kg)} kg` : ''}{expected.declared_bags != null ? ` / ${expected.declared_bags} sacs` : ''}</p>}
       {(content.data ?? []).length > 0 && (
-        <details open><summary>Contenu annoncé : {(content.data ?? []).length} achat(s)</summary>
+        <details open><summary>Contenu déclaré : {(content.data ?? []).length} achat(s)</summary>
           <ul className="list">{(content.data ?? []).map((d) => <li key={d.id}>{d.producer_name} · {date(d.operation_date)} · {num(d.kg)} kg · {d.bags} sacs</li>)}</ul></details>
       )}
       <Field label="Magasin"><select value={wh} onChange={(e) => setWh(e.target.value)}><option value="">—</option>{data.whs.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}</select></Field>
-      <Field label="Poids total pesé (kg)" hint={twoWeighings ? 'Calculé à partir de la double pesée ci-dessous' : undefined}><input inputMode="decimal" value={twoWeighings ? kgEff : kg} readOnly={twoWeighings} onChange={(e) => setKg(e.target.value)} /></Field>
-      <details><summary>Détails de la pesée (bulletin de pesée) — facultatif</summary>
-        <Field label="Pesée à l'entrée, camion chargé (kg)"><input inputMode="decimal" value={d.wIn} onChange={setF('wIn')} /></Field>
-        <Field label="Pesée à la sortie, camion vide (kg)"><input inputMode="decimal" value={d.wOut} onChange={setF('wOut')} /></Field>
-        <Field label="Pont-bascule entrée / sortie (ex. Pont 1)"><span style={{ display: 'flex', gap: '.5rem' }}><input value={d.scaleIn} onChange={setF('scaleIn')} maxLength={40} /><input value={d.scaleOut} onChange={setF('scaleOut')} maxLength={40} /></span></Field>
-        <Field label="Tare des sacs (kg)"><input inputMode="decimal" value={d.tare} onChange={setF('tare')} /></Field>
-        <Field label="Réfaction (kg)"><input inputMode="decimal" value={d.ref} onChange={setF('ref')} /></Field>
-        <Field label="Qualité / grade"><input value={d.grade} onChange={setF('grade')} maxLength={20} /></Field>
-        <Field label="Remorque"><input value={d.trailer} onChange={setF('trailer')} maxLength={40} /></Field>
-        <Field label="Provenance"><input value={d.origin} onChange={setF('origin')} maxLength={80} /></Field>
-        <Field label="Sacs déchargés / refusés"><span style={{ display: 'flex', gap: '.5rem' }}><input inputMode="numeric" value={d.unl} onChange={setF('unl')} /><input inputMode="numeric" value={d.refused} onChange={setF('refused')} /></span></Field>
-        <Field label="Humidité (%) / déchets (%)"><span style={{ display: 'flex', gap: '.5rem' }}><input value={d.humidity} onChange={setF('humidity')} maxLength={10} /><input value={d.waste} onChange={setF('waste')} maxLength={10} /></span></Field>
-      </details>
-      <Field label="Nombre de sacs"><input inputMode="numeric" value={bags} onChange={(e) => setBags(e.target.value)} /></Field>
-      {blocked && <p className="notice" role="status">Écart de {gapPct.toFixed(1)} % avec le poids annoncé (tolérance {tol} %) : la réception sera retenue jusqu'à validation par un responsable, et la cause est obligatoire.</p>}
+      <h3>Pesée au pont-bascule</h3>
+      <Field label="Pesée à l'entrée, camion chargé (kg)"><input inputMode="decimal" value={d.wIn} onChange={setF('wIn')} /></Field>
+      <Field label="Pesée à la sortie, camion vide (kg)"><input inputMode="decimal" value={d.wOut} onChange={setF('wOut')} /></Field>
+      <Field label="Pont-bascule (ex. Pont 1)"><input value={d.scaleIn} onChange={(e) => setD((x) => ({ ...x, scaleIn: e.target.value, scaleOut: e.target.value }))} maxLength={40} /></Field>
+      <Field label="Tare des sacs (kg)"><input inputMode="decimal" value={d.tare} onChange={setF('tare')} /></Field>
+      <Field label="Réfaction (kg)"><input inputMode="decimal" value={d.ref} onChange={setF('ref')} /></Field>
+      <Field label="Poids net payé (kg)" hint={twoWeighings ? 'Calculé : entrée − sortie − tare − réfaction' : 'Sans double pesée, saisissez directement le poids net'}><input inputMode="decimal" value={twoWeighings ? kgEff : kg} readOnly={twoWeighings} onChange={(e) => setKg(e.target.value)} /></Field>
+      <h3>Marchandise</h3>
+      <Field label="Qualité / grade"><input value={d.grade} onChange={setF('grade')} maxLength={20} /></Field>
+      <Field label="Nombre de sacs reçus"><input inputMode="numeric" value={bags} onChange={(e) => setBags(e.target.value)} /></Field>
+      <Field label="Sacs déchargés"><input inputMode="numeric" value={d.unl} onChange={setF('unl')} /></Field>
+      <Field label="Sacs refusés"><input inputMode="numeric" value={d.refused} onChange={setF('refused')} /></Field>
+      <Field label="Humidité (%)"><input value={d.humidity} onChange={setF('humidity')} maxLength={10} /></Field>
+      <Field label="Déchets (%)"><input value={d.waste} onChange={setF('waste')} maxLength={10} /></Field>
+      <h3>Transport</h3>
+      <Field label="Remorque"><input value={d.trailer} onChange={setF('trailer')} maxLength={40} /></Field>
+      <Field label="Provenance"><input value={d.origin} onChange={setF('origin')} maxLength={80} /></Field>
+      {blocked && <p className="notice" role="status">Écart de {gapPct.toFixed(1)} % avec le poids déclaré (tolérance {tol} %) : la réception sera retenue jusqu'à validation par un responsable, et la cause est obligatoire.</p>}
       <Field label={blocked ? 'Cause de l\'écart (obligatoire)' : 'Observations (facultatif)'}><textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={500} /></Field>
       {act.error && <ErrorBox message={act.error} />}
       {done && <p className="notice" role="status">{done}</p>}
@@ -210,7 +213,7 @@ function Variance() {
       {loading ? <Loading /> : (
         <Table rows={data ?? []} empty="Aucun écart en attente." columns={[
           { header: 'N° de convoi', render: (r) => r.convoy_no }, { header: 'Collecteur', render: (r) => r.collector_name },
-          { header: 'Annoncé (kg)', align: 'right', render: (r) => num(r.declared_kg) }, { header: 'Pesé (kg)', align: 'right', render: (r) => num(r.total_kg) },
+          { header: 'Déclaré (kg)', align: 'right', render: (r) => num(r.declared_kg) }, { header: 'Pesé (kg)', align: 'right', render: (r) => num(r.total_kg) },
           { header: 'Écart', align: 'right', render: (r) => <Badge tone="warn">{num(r.variance_kg)} kg ({Number(r.variance_pct).toFixed(1)} %)</Badge> },
           { header: 'Cause indiquée', render: (r) => r.notes },
           { header: '', render: (r) => <button className="btn" onClick={() => { setSel(r); setComment(''); }}>Examiner</button> },
@@ -218,7 +221,7 @@ function Variance() {
       )}
       {sel && (
         <Modal title={`Écart de poids — ${sel.convoy_no}`} onClose={() => setSel(null)}>
-          <p>Annoncé {num(sel.declared_kg)} kg, pesé {num(sel.total_kg)} kg : {num(sel.variance_kg)} kg ({Number(sel.variance_pct).toFixed(1)} %).</p>
+          <p>Déclaré {num(sel.declared_kg)} kg, pesé {num(sel.total_kg)} kg : {num(sel.variance_kg)} kg ({Number(sel.variance_pct).toFixed(1)} %).</p>
           <p className="muted">Cause indiquée à la réception : {sel.notes}</p>
           <Field label="Motif de la validation (5 caractères au moins)"><textarea rows={2} value={comment} onChange={(e) => setComment(e.target.value)} maxLength={500} /></Field>
           {act.error && <ErrorBox message={act.error} />}
@@ -247,7 +250,7 @@ function Cash() {
         <Table rows={data ?? []} empty="Aucune réception en attente." columns={[
           { header: 'N° de convoi', render: (r) => r.convoy_no }, { header: 'Collecteur', render: (r) => r.collector_name },
           { header: 'Poids (kg)', align: 'right', render: (r) => num(r.total_kg) }, { header: 'Sacs', align: 'right', render: (r) => r.bags },
-          { header: 'Écart vs annoncé (kg)', align: 'right', render: (r) => (r.variance_kg == null ? '—' : num(r.variance_kg)) },
+          { header: 'Écart vs déclaré (kg)', align: 'right', render: (r) => (r.variance_kg == null ? '—' : num(r.variance_kg)) },
           { header: '', render: (r) => <button className="btn" onClick={() => setSel(r)}>Traiter</button> },
         ]} />
       )}

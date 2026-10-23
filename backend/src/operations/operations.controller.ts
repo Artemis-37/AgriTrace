@@ -97,8 +97,8 @@ export class OperationsController {
         const r = (await c.query(`SELECT r.*, v.convoy_no, v.driver_name, v.truck_no, v.declared_kg, v.declared_bags, w.name AS warehouse, ku.full_name AS collector
             FROM convoy_receptions r JOIN convoys v ON v.id = r.convoy_id JOIN warehouses w ON w.id = r.warehouse_id JOIN collectors k ON k.id = v.collector_id JOIN users ku ON ku.id = k.user_id WHERE r.id = $1`, [id])).rows[0];
         number = r.convoy_no;
-        lines = [{ label: 'Convoi', value: r.convoy_no }, { label: 'Collecteur', value: r.collector }, { label: 'Chauffeur / camion', value: `${r.driver_name} · ${r.truck_no}` },
-          { label: 'Magasin', value: r.warehouse }, { label: 'Poids annoncé', value: r.declared_kg == null ? '—' : kg(r.declared_kg) }, { label: 'Poids reçu', value: kg(r.total_kg) },
+        lines = [{ label: 'Connaissement', value: r.convoy_no }, { label: 'Collecteur', value: r.collector }, { label: 'Chauffeur / camion', value: `${r.driver_name} · ${r.truck_no}` },
+          { label: 'Magasin', value: r.warehouse }, { label: 'Poids déclaré', value: r.declared_kg == null ? '—' : kg(r.declared_kg) }, { label: 'Poids reçu', value: kg(r.total_kg) },
           { label: 'Sacs', value: String(r.bags) }, { label: 'Écart', value: r.variance_kg == null ? '—' : kg(r.variance_kg) }];
         if (t === 'convoy_settlement') {
           if (r.status !== 'settled') throw new NotFoundException("Ce convoi n'est pas réglé");
