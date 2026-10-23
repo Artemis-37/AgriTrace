@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { get } from '../api';
 import { useAuth } from '../auth';
 import { dateTime, kg, money } from '../format';
+import { Tiles } from './Tiles';
 import { Card, ErrorBox, Loading, PageHeader, Stat, useAsync } from '../ui';
 
 const ok = async <T,>(p: Promise<T>): Promise<T | null> => { try { return await p; } catch { return null; } };
@@ -53,6 +54,7 @@ export default function Dashboard() {
   return (
     <>
       <PageHeader title={`Bonjour ${me?.user.full_name.split(' ')[0] ?? ''}`} subtitle="Vue d'ensemble de votre coopérative" />
+      <Tiles />
       <div className="grid">
         {sync?.mode === 'local' && (
           <Stat label="Synchronisation avec le central"

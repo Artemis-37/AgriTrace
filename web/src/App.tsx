@@ -15,6 +15,8 @@ import Finance from './pages/Finance';
 import Login from './pages/Login';
 import { Historique, MesAchats, MonStock } from './pages/EspaceCollecteur';
 import Convois from './pages/Convois';
+import Pesees from './pages/Pesees';
+import Caisse from './pages/Caisse';
 import Bell, { MessageButton } from './Bell';
 import ConnectionStatus from './ConnectionStatus';
 import PairWorkstation from './PairWorkstation';
@@ -44,6 +46,8 @@ const NAV: { to: string; label: string; icon: string; perm: string[]; any?: bool
   { to: '/parcelles', label: 'Parcelles', icon: '◩', perm: ['parcels:read'] },
   { to: '/cartographie', label: 'Cartographie', icon: '⌖', perm: ['geo:anomalies'] },
   { to: '/commerce', label: 'Commerce', icon: '⇄', perm: ['buyers:read', 'logistics:read', 'invoices:read'], any: true },
+  { to: '/pesees', label: 'Pesées', icon: '⚖', perm: ['convoys:read', 'convoys:receive'], any: true, notFor: 'collector' },
+  { to: '/caisse', label: 'Caisse', icon: '₵', perm: ['convoys:settle', 'finance:read'], any: true },
   { to: '/convois', label: 'Convois', icon: '⛟', perm: ['convoys:read', 'convoys:receive', 'convoys:settle'], any: true },
   { to: '/inventaire', label: 'Inventaire', icon: '☰', perm: ['stock:count'] },
   { to: '/prefinancement', label: 'Préfinancement', icon: '◈', perm: ['prefinancing:read'] },
@@ -120,6 +124,8 @@ export default function App() {
           <Route path="/mon-stock" element={<MonStock />} />
           <Route path="/historique" element={<Historique />} />
           <Route path="/convois" element={<Convois />} />
+          <Route path="/pesees" element={<Pesees />} />
+          <Route path="/caisse" element={<Caisse />} />
           <Route path="/inventaire" element={<Inventaire />} />
           <Route path="/prefinancement" element={<Prefinancement />} />
           <Route path="/messages" element={<Messages onChange={refreshUnread} />} />

@@ -65,7 +65,7 @@ function Bulletin({ r }: { r: any }) {
   );
 }
 
-function Receipt({ r, onClose }: { r: any; onClose: () => void }) {
+export function Receipt({ r, onClose }: { r: any; onClose: () => void }) {
   useEffect(() => { document.body.classList.add('printing-receipt'); return () => document.body.classList.remove('printing-receipt'); }, []);
   const o = r.organization ?? {};
   return (

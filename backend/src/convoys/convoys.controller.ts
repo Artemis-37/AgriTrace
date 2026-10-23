@@ -218,6 +218,26 @@ export class ConvoysController {
          FROM convoys v JOIN collectors k ON k.id = v.collector_id JOIN users u ON u.id = k.user_id WHERE v.status = 'in_transit' AND ($1::uuid IS NULL OR v.collector_id = $1) ORDER BY v.created_at`, [collectorId ?? null])).rows);
   }
 
+  /** Liste des pesées (réceptions) : filtre traité / non traité, recherche, période. Un délégué ne voit que les siennes. */
+  @Get('convoys/receptions')
+  @RequirePermissions('convoys:read')
+  receptions(@Req() req: any, @Query('state') state?: string, @Query('q') q?: string, @Query('from') from?: string, @Query('to') to?: string) {
+    const all = req.org.permissions.has('convoys:receive') || req.org.permissions.has('convoys:settle');
+    const d = (v?: string) => (v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
+    return this.db.tx(req.org.id, async (c) => (await c.query(
+      `SELECT r.id, r.bulletin_no, v.convoy_no, r.received_at, u.full_name AS collector_name,
+              (SELECT mc.code FROM member_codes mc WHERE mc.user_id = k.user_id AND mc.organization_id = k.organization_id) AS collector_code,
+              k.origin, r.bags, r.gross_kg, r.refaction_kg, r.total_kg, r.grade, r.status, r.unit_price, r.amount, r.settled_at, r.variance_kg
+         FROM convoy_receptions r JOIN convoys v ON v.id = r.convoy_id JOIN collectors k ON k.id = v.collector_id JOIN users u ON u.id = k.user_id
+        WHERE ($1::boolean OR k.user_id = $2)
+          AND ($3::text IS NULL OR ($3 = 'settled' AND r.status = 'settled') OR ($3 = 'pending' AND r.status <> 'settled'))
+          AND ($4::text IS NULL OR u.full_name ILIKE '%' || $4 || '%' OR v.convoy_no ILIKE '%' || $4 || '%' OR r.bulletin_no ILIKE '%' || $4 || '%'
+               OR EXISTS (SELECT 1 FROM member_codes mc WHERE mc.user_id = k.user_id AND mc.organization_id = k.organization_id AND mc.code ILIKE '%' || $4 || '%'))
+          AND ($5::date IS NULL OR r.received_at >= $5::date) AND ($6::date IS NULL OR r.received_at < $6::date + 1)
+        ORDER BY r.received_at DESC LIMIT 500`,
+      [all, req.user.id, state === 'settled' || state === 'pending' ? state : null, q?.trim().slice(0, 60) || null, d(from), d(to)])).rows);
+  }
+
   /** Réceptions récentes du magasinier (analyses à compléter tant que la caisse n'a pas réglé). */
   @Get('convoys/receptions/recent')
   @RequirePermissions('convoys:receive')

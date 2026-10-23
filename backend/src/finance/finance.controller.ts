@@ -76,6 +76,29 @@ export class FinanceController {
          FROM financial_transactions WHERE account_id = $1 ORDER BY created_at DESC, id LIMIT $2`, [id, Math.min(Number(limit) || 100, 500)])).rows);
   }
 
+  /** Journal de caisse d'une période : solde d'ouverture, mouvements avec solde cumulé, totaux entrées / sorties. */
+  @Get('cash-journal')
+  @RequirePermissions('finance:read')
+  journal(@Req() req: any, @Query('from') from?: string, @Query('to') to?: string, @Query('kind') kind?: string) {
+    const d = (v?: string) => (v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
+    const f = d(from) ?? new Date().toISOString().slice(0, 10), t = d(to) ?? f;
+    return this.db.tx(req.org.id, async (c) => {
+      const base = `FROM financial_transactions x JOIN financial_accounts a ON a.id = x.account_id AND a.owner_type = 'cash_register'`;
+      const opening = Number((await c.query(`SELECT coalesce(sum(CASE x.direction WHEN 'in' THEN x.amount ELSE -x.amount END), 0) AS o ${base} WHERE x.created_at < $1::date`, [f])).rows[0].o);
+      const rows = (await c.query(
+        `SELECT x.id, x.created_at, x.direction, x.amount, x.reason, x.reference_type, x.reference_id, x.reversal_of ${base}
+          WHERE x.created_at >= $1::date AND x.created_at < $2::date + 1 ORDER BY x.created_at, x.id`, [f, t])).rows;
+      let run = opening, inn = 0, out = 0;
+      const all = rows.map((r: any, i: number) => {
+        const a = Number(r.amount);
+        if (r.direction === 'in') { run += a; inn += a; } else { run -= a; out += a; }
+        return { n: i + 1, id: r.id, at: r.created_at, label: r.reason, ref: r.reference_type, in: r.direction === 'in' ? a : null, out: r.direction === 'out' ? a : null, balance: run, reversal: !!r.reversal_of };
+      });
+      const shown = kind === 'in' ? all.filter((r) => r.in !== null) : kind === 'out' ? all.filter((r) => r.out !== null) : all;
+      return { from: f, to: t, opening, closing: run, total_in: inn, total_out: out, rows: shown };
+    });
+  }
+
   // ---- Caisses ----
   @Get('cash-registers')
   @RequirePermissions('cash:read')

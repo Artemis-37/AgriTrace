@@ -5,7 +5,7 @@ import { useSearchParams } from 'react-router-dom';
  * porte sur un élément précis, ouverture directe de son détail (`open`).
  */
 const BY_KIND: Record<string, { to: string; tab?: string; open?: boolean }> = {
-  convoy_created: { to: '/convois', tab: 'receive' }, convoy_received: { to: '/convois', tab: 'cash' }, convoy_variance: { to: '/convois', tab: 'variance' }, convoy_received_mine: { to: '/convois', tab: 'list' },
+  convoy_created: { to: '/pesees', tab: 'new' }, convoy_received: { to: '/caisse', tab: 'cash' }, convoy_variance: { to: '/convois', tab: 'variance' }, convoy_received_mine: { to: '/convois', tab: 'list' },
   convoy_settled: { to: '/convois', tab: 'mine' }, collector_advance: { to: '/convois', tab: 'mine' },
   counts_to_approve: { to: '/inventaire' }, stock_count_gap: { to: '/inventaire' }, stock_count_rejected: { to: '/inventaire' },
   declarations_waiting: { to: '/declarations' }, receipt_duplicate: { to: '/declarations' }, duplicate_near: { to: '/declarations' },

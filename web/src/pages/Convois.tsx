@@ -8,17 +8,15 @@ import { date, dateTime } from '../format';
 import { Badge, Card, ErrorBox, Field, Loading, Modal, PageHeader, Table, Tabs, useAction, useAsync } from '../ui';
 
 const STATUS: Record<string, [string, import('../format').Tone]> = { in_transit: ['En route', 'warn'], received: ['Reçu — en caisse', 'neutral'], settled: ['Réglé', 'ok'] };
-const num = (v: any) => Number(v).toLocaleString('fr-FR', { maximumFractionDigits: 3 });
+export const num = (v: any) => Number(v).toLocaleString('fr-FR', { maximumFractionDigits: 3 });
 
 /** Convois des délégués (délégués) vers le magasin central : déclaration, réception et pesée, traitement en caisse. */
 export default function Convois() {
   const { can } = useAuth();
   const tabs: [string, string][] = [];
   if (can('convoys:read')) tabs.push(['list', 'Convois']);
-  if (can('convoys:receive')) tabs.push(['receive', 'Réception au magasin'], ['analyses', 'Analyses']);
   if (can('weighings:approve')) tabs.push(['variance', 'Écarts de poids']);
-  if (can('convoys:settle')) tabs.push(['cash', 'Caisse'], ['accounts', 'Comptes délégués']);
-  else if (can('collector:stock')) tabs.push(['mine', 'Ma fiche']);
+  if (!can('convoys:settle') && can('collector:stock')) tabs.push(['mine', 'Ma fiche']);
   const dl = useDeepLink(tabs.map((t) => t[0]));
   const [tab, setTab] = useState(dl.tab ?? tabs[0]?.[0] ?? 'list');
   return (
@@ -26,11 +24,7 @@ export default function Convois() {
       <PageHeader title="Convois des délégués" subtitle="Achats chez les producteurs convoyés vers le magasin central, pesés à la réception puis réglés en caisse." />
       <Tabs tabs={tabs as any} value={tab as any} onChange={setTab as any} />
       {tab === 'list' && <List />}
-      {tab === 'receive' && <Receive />}
-      {tab === 'analyses' && <Analyses />}
       {tab === 'variance' && <Variance />}
-      {tab === 'cash' && <Cash />}
-      {tab === 'accounts' && <Accounts />}
       {tab === 'mine' && <Card><Fiche collectorId={undefined} /></Card>}
     </>
   );
@@ -113,7 +107,7 @@ function CreateConvoy({ onClose, onDone }: { onClose: () => void; onDone: () => 
   );
 }
 
-function Receive() {
+export function Receive() {
   const { org } = useAuth();
   const act = useAction();
   const { data, loading, error, reload } = useAsync(async () => ({
@@ -156,27 +150,32 @@ function Receive() {
     && optOk(d.tare) && optOk(d.ref) && (!twoWeighings || (W.test(d.wIn) && W.test(d.wOut))) && /^\d*$/.test(d.unl) && /^\d*$/.test(d.refused);
   return (
     <Card title="Réceptionner un convoi">
+      <div className="grid-3">
       <Field label="Délégué"><select value={collector} onChange={(e) => { setCollector(e.target.value); setConvoyNo(''); }}><option value="">—</option>{collectors.map(([id, n]) => <option key={id} value={id}>{n}</option>)}</select></Field>
       <Field label="Numéro de connaissement" hint={mine.length ? `En route : ${mine.map((v) => v.convoy_no).join(', ')}` : undefined}>
         <input list="convois-attendus" value={convoyNo} onChange={(e) => setConvoyNo(e.target.value)} /></Field>
       <datalist id="convois-attendus">{mine.map((v) => <option key={v.id} value={v.convoy_no} />)}</datalist>
-      {expected && <p className="muted">Chauffeur : {expected.driver_name} · Camion : {expected.truck_no}{expected.declared_kg ? ` · Déclaré : ${num(expected.declared_kg)} kg` : ''}{expected.declared_bags != null ? ` / ${expected.declared_bags} sacs` : ''}</p>}
+      {expected && <p className="muted span-all">Chauffeur : {expected.driver_name} · Camion : {expected.truck_no}{expected.declared_kg ? ` · Déclaré : ${num(expected.declared_kg)} kg` : ''}{expected.declared_bags != null ? ` / ${expected.declared_bags} sacs` : ''}</p>}
       {(content.data ?? []).length > 0 && (
-        <details open><summary>Contenu déclaré : {(content.data ?? []).length} achat(s)</summary>
+        <details open className="span-all"><summary>Contenu déclaré : {(content.data ?? []).length} achat(s)</summary>
           <ul className="list">{(content.data ?? []).map((d) => <li key={d.id}>{d.producer_name} · {date(d.operation_date)} · {num(d.kg)} kg · {d.bags} sacs</li>)}</ul></details>
       )}
       <Field label="Magasin"><select value={wh} onChange={(e) => setWh(e.target.value)}><option value="">—</option>{data.whs.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}</select></Field>
+      </div>
       <h3>Indication connaissement</h3>
       {manual && <>
         <p className="notice" role="status">Ce connaissement n'a pas été déclaré par le délégué : saisissez les informations du bordereau ; il sera enregistré à la réception.</p>
+        <div className="grid-3">
         <Field label="Nom du chauffeur"><input value={m.driver} onChange={(e) => setM({ ...m, driver: e.target.value })} maxLength={120} /></Field>
         <Field label="N° du camion"><input value={m.truck} onChange={(e) => setM({ ...m, truck: e.target.value })} maxLength={40} /></Field>
         <Field label="Nombre de sacs déclaré (facultatif)"><input inputMode="numeric" value={m.bags} onChange={(e) => setM({ ...m, bags: e.target.value })} /></Field>
         <Field label="Poids déclaré en kg (facultatif)"><input inputMode="decimal" value={m.kg} onChange={(e) => setM({ ...m, kg: e.target.value })} /></Field>
+        </div>
       </>}
       {collector && <p className="muted">Provenance (profil du délégué) : <strong>{data.expected.find((v) => v.collector_id === collector)?.collector_origin ?? 'non renseignée'}</strong>{expected ? ' · remorque reprise du convoi déclaré (modifiable).' : ''}</p>}
       <Field label="Remorque"><input value={d.trailer} onChange={setF('trailer')} maxLength={40} /></Field>
       <h3>Livraison produit</h3>
+      <div className="grid-3">
       <Field label="Pesée à l'entrée, camion chargé (kg)"><input inputMode="decimal" value={d.wIn} onChange={setF('wIn')} /></Field>
       <Field label="Pesée à la sortie, camion vide (kg)"><input inputMode="decimal" value={d.wOut} onChange={setF('wOut')} /></Field>
       <Field label="Tare des sacs (kg)"><input inputMode="decimal" value={d.tare} onChange={setF('tare')} /></Field>
@@ -188,8 +187,9 @@ function Receive() {
       <Field label="Manquants (automatique)" hint="Sacs déclarés − sacs déchargés"><input readOnly disabled value={declaredBags != null && /^\d+$/.test(d.unl) && d.unl !== '' ? String(declaredBags - Number(d.unl)) : '—'} /></Field>
       <Field label="Écart / poids déclaré (automatique)" hint="Poids net payé − poids déclaré"><input readOnly disabled value={declared > 0 && /^\d+(\.\d{1,3})?$/.test(kgEff) ? `${Math.round(Number(kgEff) - declared)} kg` : '—'} /></Field>
       <Field label="Qualité / grade"><input value={d.grade} onChange={setF('grade')} maxLength={20} /></Field>
+      </div>
       <h3>Analyse</h3>
-      <div className="grid-2">{ANALYSIS.map((k) => <Field key={k} label={k}><input inputMode="decimal" value={an[k] ?? ''} onChange={(e) => setAn((x) => ({ ...x, [k]: e.target.value }))} maxLength={10} /></Field>)}</div>
+      <div className="grid-3">{ANALYSIS.map((k) => <Field key={k} label={k}><input inputMode="decimal" value={an[k] ?? ''} onChange={(e) => setAn((x) => ({ ...x, [k]: e.target.value }))} maxLength={10} /></Field>)}</div>
       {blocked && <p className="notice" role="status">Écart de {gapPct.toFixed(1)} % avec le poids déclaré (tolérance {tol} %) : la réception sera retenue jusqu'à validation par un responsable, et la cause est obligatoire.</p>}
       <Field label={blocked ? 'Cause de l\'écart (obligatoire)' : 'Observations (facultatif)'}><textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={500} /></Field>
       {act.error && <ErrorBox message={act.error} />}
@@ -208,7 +208,7 @@ function Receive() {
 }
 
 /** Saisie des résultats d'analyse après la pesée (tant que la caisse n'a pas réglé). */
-function Analyses() {
+export function Analyses() {
   const { data, loading, error, reload } = useAsync(() => get<any[]>('/convoys/receptions/recent'), []);
   const [sel, setSel] = useState<any>(null);
   const [an, setAn] = useState<Record<string, string>>({});
@@ -241,7 +241,7 @@ function Analyses() {
   );
 }
 
-function Variance() {
+export function Variance() {
   const { data, loading, error, reload } = useAsync(() => get<any[]>('/convoys/variance-queue'), []);
   const [sel, setSel] = useState<any>(null);
   const [comment, setComment] = useState('');
@@ -287,7 +287,7 @@ function Variance() {
   );
 }
 
-function Cash() {
+export function Cash() {
   const { data, loading, error, reload } = useAsync(() => get<any[]>('/convoys/cashier-queue'), []);
   useEffect(() => onFlushed(reload), [reload]);
   const [sel, setSel] = useState<any>(null);
@@ -419,7 +419,7 @@ function Fiche({ collectorId }: { collectorId?: string }) {
   );
 }
 
-function Accounts() {
+export function Accounts() {
   const { can } = useAuth();
   const { data, loading, error, reload } = useAsync(() => get<any[]>('/convoys/collectors'), []);
   const [col, setCol] = useState('');
