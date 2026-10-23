@@ -31,6 +31,11 @@ export class ReceiveConvoyDto {
   @IsString() @Length(2, 60) convoy_no: string;
   @IsUUID() warehouse_id: string;
   /** Poids net retenu pour le paiement. Omis si la double pesée est fournie : calculé = entrée − sortie − tare des sacs − réfaction. */
+  /** Produit et campagne de la pesée ; sans campagne, celle qui couvre la date du jour. */
+  @IsOptional() @IsUUID() product_id?: string;
+  @IsOptional() @IsUUID() campaign_id?: string;
+  /** Poids pesé (brut) : le poids net payé = poids − nombre de sacs déchargés (1 kg par sac). */
+  @IsOptional() @Dec(3) gross_kg?: string;
   @IsOptional() @Dec(3) total_kg?: string;
   @IsInt() @Min(1) bags: number;
   @IsOptional() @IsString() @Length(1, 500) notes?: string;
@@ -221,15 +226,15 @@ export class ConvoysController {
   /** Liste des pesées (réceptions) : filtre traité / non traité, recherche, période. Un délégué ne voit que les siennes. */
   @Get('convoys/receptions')
   @RequirePermissions('convoys:read')
-  receptions(@Req() req: any, @Query('state') state?: string, @Query('q') q?: string, @Query('from') from?: string, @Query('to') to?: string) {
-    return this.receptionRows(req, req.org.permissions.has('convoys:receive') || req.org.permissions.has('convoys:settle'), state, q, from, to);
+  receptions(@Req() req: any, @Query('state') state?: string, @Query('q') q?: string, @Query('from') from?: string, @Query('to') to?: string, @Query('campaign_id') campaignId?: string, @Query('product_id') productId?: string) {
+    return this.receptionRows(req, req.org.permissions.has('convoys:receive') || req.org.permissions.has('convoys:settle'), state, q, from, to, campaignId, productId);
   }
 
   /** États comptables : toutes les pesées, en lecture, pour le comptable. */
   @Get('accounting/etats/pesees')
   @RequirePermissions('accounting:read')
-  etatPesees(@Req() req: any, @Query('state') state?: string, @Query('q') q?: string, @Query('from') from?: string, @Query('to') to?: string) {
-    return this.receptionRows(req, true, state, q, from, to);
+  etatPesees(@Req() req: any, @Query('state') state?: string, @Query('q') q?: string, @Query('from') from?: string, @Query('to') to?: string, @Query('campaign_id') campaignId?: string, @Query('product_id') productId?: string) {
+    return this.receptionRows(req, true, state, q, from, to, campaignId, productId);
   }
 
   /** Soldes des délégués (code, contact, localité), en lecture, pour le comptable. */
@@ -237,20 +242,22 @@ export class ConvoysController {
   @RequirePermissions('accounting:read')
   etatDelegues(@Req() req: any) { return this.collectors(req); }
 
-  private receptionRows(req: any, all: boolean, state?: string, q?: string, from?: string, to?: string) {
+  private receptionRows(req: any, all: boolean, state?: string, q?: string, from?: string, to?: string, campaignId?: string, productId?: string) {
+    const u = (v?: string) => (v && /^[0-9a-f-]{36}$/i.test(v) ? v : null);
     const d = (v?: string) => (v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
     return this.db.tx(req.org.id, async (c) => (await c.query(
       `SELECT r.id, r.bulletin_no, v.convoy_no, r.received_at, u.full_name AS collector_name,
               (SELECT mc.code FROM member_codes mc WHERE mc.user_id = k.user_id AND mc.organization_id = k.organization_id) AS collector_code,
-              k.origin, r.bags, r.gross_kg, r.refaction_kg, r.total_kg, r.grade, r.status, r.unit_price, r.amount, r.settled_at, r.variance_kg
-         FROM convoy_receptions r JOIN convoys v ON v.id = r.convoy_id JOIN collectors k ON k.id = v.collector_id JOIN users u ON u.id = k.user_id
+              k.origin, r.bags, r.gross_kg, r.refaction_kg, r.total_kg, r.grade, r.status, r.unit_price, r.amount, r.settled_at, r.variance_kg, r.product_id, r.campaign_id, p.name AS product, cp.name AS campaign
+         FROM convoy_receptions r LEFT JOIN products p ON p.id = r.product_id LEFT JOIN campaigns cp ON cp.id = r.campaign_id JOIN convoys v ON v.id = r.convoy_id JOIN collectors k ON k.id = v.collector_id JOIN users u ON u.id = k.user_id
         WHERE ($1::boolean OR k.user_id = $2)
           AND ($3::text IS NULL OR ($3 = 'settled' AND r.status = 'settled') OR ($3 = 'pending' AND r.status <> 'settled'))
           AND ($4::text IS NULL OR u.full_name ILIKE '%' || $4 || '%' OR v.convoy_no ILIKE '%' || $4 || '%' OR r.bulletin_no ILIKE '%' || $4 || '%'
                OR EXISTS (SELECT 1 FROM member_codes mc WHERE mc.user_id = k.user_id AND mc.organization_id = k.organization_id AND mc.code ILIKE '%' || $4 || '%'))
           AND ($5::date IS NULL OR r.received_at >= $5::date) AND ($6::date IS NULL OR r.received_at < $6::date + 1)
+          AND ($7::uuid IS NULL OR r.campaign_id = $7) AND ($8::uuid IS NULL OR r.product_id = $8)
         ORDER BY r.received_at DESC LIMIT 500`,
-      [all, req.user.id, state === 'settled' || state === 'pending' ? state : null, q?.trim().slice(0, 60) || null, d(from), d(to)])).rows);
+      [all, req.user.id, state === 'settled' || state === 'pending' ? state : null, q?.trim().slice(0, 60) || null, d(from), d(to), u(campaignId), u(productId)])).rows);
   }
 
   /** Réceptions récentes du magasinier (analyses à compléter tant que la caisse n'a pas réglé). */
@@ -327,6 +334,14 @@ export class ConvoysController {
         if (b.total_kg != null && Number(b.total_kg) !== Number(n)) throw new BadRequestException(`Poids net incohérent : la double pesée donne ${Number(n)} kg`);
         net = n;
       }
+      if (b.gross_kg != null) {
+        // Poids net payé = poids − sacs déchargés (1 kg par sac) ; la réfaction enregistrée est ce nombre de sacs.
+        if (b.bags_unloaded == null) throw new BadRequestException('Indiquez le nombre de sacs déchargés : il sert au calcul du poids net');
+        const n = (await c.query(`SELECT $1::numeric - $2::numeric AS n`, [b.gross_kg, b.bags_unloaded])).rows[0].n;
+        if (Number(n) <= 0) throw new BadRequestException('Le poids net doit être supérieur à zéro');
+        if (b.total_kg != null && Number(b.total_kg) !== Number(n)) throw new BadRequestException(`Poids net incohérent : poids − sacs déchargés = ${Number(n)} kg`);
+        gross = b.gross_kg; b.refaction_kg = String(b.bags_unloaded); net = n;
+      }
       if (net == null || Number(net) <= 0) throw new BadRequestException('Poids total doit être supérieur à zéro');
       b.total_kg = net;
       const an = Object.entries(b.analysis ?? {});
@@ -343,6 +358,10 @@ export class ConvoysController {
           [req.org.id, `${b.idempotency_key}-cv`, b.convoy_no.trim(), b.collector_id, b.driver_name.trim(), b.truck_no.trim().toUpperCase(), b.declared_bags ?? null, b.declared_kg ?? null, req.user.id, b.trailer_no ?? null])).rows[0];
       }
       if (v.status !== 'in_transit') throw new ConflictException('Ce convoi a déjà été réceptionné');
+      if (b.product_id && !(await c.query(`SELECT 1 FROM products WHERE id = $1 AND active`, [b.product_id])).rowCount) throw new BadRequestException('Produit inconnu ou inactif');
+      let campaignId = b.campaign_id ?? null;
+      if (campaignId && !(await c.query(`SELECT 1 FROM campaigns WHERE id = $1`, [campaignId])).rowCount) throw new BadRequestException('Campagne inconnue');
+      if (!campaignId) campaignId = (await c.query(`SELECT id FROM campaigns WHERE status = 'open' AND current_date BETWEEN starts_on AND ends_on ORDER BY starts_on DESC LIMIT 1`)).rows[0]?.id ?? null;
       const w = (await c.query(`SELECT status FROM warehouses WHERE id = $1`, [b.warehouse_id])).rows[0];
       if (!w || w.status !== 'active') throw new BadRequestException('Magasin inconnu ou fermé');
       const variance = v.declared_kg == null ? null : (await c.query(`SELECT $1::numeric - $2::numeric AS d`, [b.total_kg, v.declared_kg])).rows[0].d;
@@ -358,12 +377,12 @@ export class ConvoysController {
       const bulletinNo = `BP-${yr}-${String(cnt).padStart(6, '0')}`;
       const ins = (await c.query(
         `INSERT INTO convoy_receptions(organization_id, idempotency_key, convoy_id, warehouse_id, total_kg, bags, variance_kg, variance_pct, received_by, notes, status,
-           bulletin_no, trailer_no, origin, weigh_in_kg, weigh_in_at, scale_in, weigh_out_kg, weigh_out_at, scale_out, gross_kg, bag_tare_kg, refaction_kg, grade, bags_unloaded, bags_refused, analysis)
+           bulletin_no, trailer_no, origin, weigh_in_kg, weigh_in_at, scale_in, weigh_out_kg, weigh_out_at, scale_out, gross_kg, bag_tare_kg, refaction_kg, grade, bags_unloaded, bags_refused, analysis, product_id, campaign_id)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,
-           $12,$13,$14,$15,CASE WHEN $15::numeric IS NULL THEN NULL ELSE now() END,$16,$17,CASE WHEN $17::numeric IS NULL THEN NULL ELSE now() END,$18,$19,$20,$21,$22,$23,$24,$25) RETURNING *`,
+           $12,$13,$14,$15,CASE WHEN $15::numeric IS NULL THEN NULL ELSE now() END,$16,$17,CASE WHEN $17::numeric IS NULL THEN NULL ELSE now() END,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27) RETURNING *`,
         [req.org.id, b.idempotency_key, v.id, b.warehouse_id, b.total_kg, b.bags, variance, vpct, req.user.id, b.notes ?? null, held ? 'pending_variance' : 'pending_cashier',
          bulletinNo, b.trailer_no ?? v.trailer_no ?? null, (await c.query(`SELECT origin FROM collectors WHERE id = $1`, [v.collector_id])).rows[0]?.origin ?? null, b.weigh_in_kg ?? null, b.scale_in ?? null, b.weigh_out_kg ?? null, b.scale_out ?? null, gross, b.bag_tare_kg ?? null, b.refaction_kg ?? null,
-         b.grade ?? null, b.bags_unloaded ?? null, b.bags_refused ?? null, JSON.stringify(b.analysis ?? {})])).rows[0];
+         b.grade ?? null, b.bags_unloaded ?? null, b.bags_refused ?? null, JSON.stringify(b.analysis ?? {}), b.product_id ?? null, campaignId])).rows[0];
       await c.query(`UPDATE convoys SET status = 'received' WHERE id = $1`, [v.id]);
       if (held) await this.notif.notifyPermission(c, req.org.id, 'weighings:approve', { kind: 'convoy_variance', severity: 'warning', title: `Écart de poids à valider : convoi ${v.convoy_no}`,
         body: `${variance} kg (${vpct} %) · ${b.notes}`, entityType: 'convoy', entityId: v.id, dedupe: `convoy_variance:${v.id}` });

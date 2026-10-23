@@ -4,25 +4,25 @@ export const STANDARD_ROLES: Record<string, { name: string; description: string;
   magasinier: {
     name: 'Magasinier',
     description: 'Réceptionne et pèse les convois au magasin central, tient les stocks et l\'inventaire.',
-    permissions: ['convoys:read', 'convoys:receive', 'warehouses:read', 'lots:read', 'receipts:create', 'stock:move', 'stock:count', 'cancellations:request', 'messages:use', 'sync:use'],
+    permissions: ['products:read', 'campaigns:read', 'convoys:read', 'convoys:receive', 'warehouses:read', 'lots:read', 'receipts:create', 'stock:move', 'stock:count', 'cancellations:request', 'messages:use', 'sync:use'],
     hidden: ['Conformité / qualité', 'Cartographie', 'Caisse et comptabilité', 'Finances', 'Équipe', 'Missions', 'Préfinancement'],
   },
   caissier: {
     name: 'Caissier',
     description: 'Traite les convois reçus, règle les délégués, tient la caisse et les comptes des délégués.',
-    permissions: ['convoys:read', 'convoys:settle', 'cash:operate', 'finance:read', 'accounting:read', 'cancellations:request', 'messages:use', 'sync:use'],
+    permissions: ['products:read', 'campaigns:read', 'convoys:read', 'convoys:settle', 'cash:operate', 'finance:read', 'accounting:read', 'cancellations:request', 'messages:use', 'sync:use'],
     hidden: ['Cartographie', 'Conformité / qualité', 'Équipe', 'Missions', 'Stocks'],
   },
   comptable: {
     name: 'Comptable',
     description: 'Passe et consulte les écritures comptables, suit les comptes financiers ; peut demander l\'annulation de ses écritures.',
-    permissions: ['accounting:read', 'accounting:post', 'finance:read', 'convoys:read', 'cancellations:request', 'messages:use', 'sync:use'],
+    permissions: ['products:read', 'campaigns:read', 'accounting:read', 'accounting:post', 'finance:read', 'convoys:read', 'cancellations:request', 'messages:use', 'sync:use'],
     hidden: ['Cartographie', 'Conformité / qualité', 'Équipe', 'Missions', 'Stocks'],
   },
   direction: {
     name: 'Direction',
     description: 'Suit l\'ensemble de l\'activité (lecture) et approuve les demandes d\'annulation, les prêts et les écarts.',
-    permissions: ['reports:read', 'alerts:read', 'audit:read', 'finance:read', 'accounting:read', 'cash:read', 'producers:read', 'parcels:read', 'convoys:read', 'warehouses:read', 'lots:read', 'quality:read', 'logistics:read', 'shipments:validate', 'loans:read', 'loans:approve', 'weighings:approve', 'cancellations:decide', 'cancellations:request', 'field_records:read', 'tasks:read_all', 'messages:use', 'sync:use'],
+    permissions: ['products:read', 'campaigns:read', 'reports:read', 'alerts:read', 'audit:read', 'finance:read', 'accounting:read', 'cash:read', 'producers:read', 'parcels:read', 'convoys:read', 'warehouses:read', 'lots:read', 'quality:read', 'logistics:read', 'shipments:validate', 'loans:read', 'loans:approve', 'weighings:approve', 'cancellations:decide', 'cancellations:request', 'field_records:read', 'tasks:read_all', 'messages:use', 'sync:use'],
     hidden: ['Paramètres techniques'],
   },
   responsable_tracabilite: {
@@ -53,13 +53,13 @@ export const STANDARD_ROLES: Record<string, { name: string; description: string;
   responsable_magasin: {
     name: 'Responsable de magasin',
     description: 'Gère les magasins, valide les inventaires et les écarts de pesée, ajuste les stocks.',
-    permissions: ['warehouses:read', 'warehouses:manage', 'lots:read', 'lots:manage', 'stock:move', 'stock:adjust', 'stock:count', 'stock:count_approve', 'weighings:read', 'weighings:approve', 'convoys:read', 'reports:read', 'cancellations:request', 'messages:use', 'sync:use'],
+    permissions: ['products:read', 'campaigns:read', 'warehouses:read', 'warehouses:manage', 'lots:read', 'lots:manage', 'stock:move', 'stock:adjust', 'stock:count', 'stock:count_approve', 'weighings:read', 'weighings:approve', 'convoys:read', 'reports:read', 'cancellations:request', 'messages:use', 'sync:use'],
     hidden: ['Caisse et comptabilité', 'Finances', 'Cartographie'],
   },
   responsable_financier: {
     name: 'Responsable financier',
     description: 'Supervise la caisse, les comptes et les prêts ; approuve les paiements, les corrections et les demandes d\'annulation.',
-    permissions: ['finance:read', 'finance:reverse', 'cash:read', 'cash:manage', 'accounting:read', 'accounting:post', 'accounting:close', 'payments:read', 'payments:confirm', 'loans:read', 'loans:approve', 'loans:disburse', 'prefinancing:read', 'prefinancing:manage', 'reconciliation:manage', 'cancellations:decide', 'cancellations:request', 'reports:read', 'messages:use', 'sync:use'],
+    permissions: ['products:read', 'campaigns:read', 'finance:read', 'finance:reverse', 'cash:read', 'cash:manage', 'accounting:read', 'accounting:post', 'accounting:close', 'payments:read', 'payments:confirm', 'loans:read', 'loans:approve', 'loans:disburse', 'prefinancing:read', 'prefinancing:manage', 'reconciliation:manage', 'cancellations:decide', 'cancellations:request', 'reports:read', 'messages:use', 'sync:use'],
     hidden: ['Cartographie', 'Missions'],
   },
   responsable_qualite: {

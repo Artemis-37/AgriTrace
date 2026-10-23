@@ -32,10 +32,13 @@ function List({ autoNew }: { autoNew: boolean }) {
   const [q, setQ] = useState('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
+  const [camp, setCamp] = useState('');
+  const [prod, setProd] = useState('');
+  const refs = useAsync(async () => ({ campaigns: await get<any[]>('/campaigns').catch(() => [] as any[]), products: await get<any[]>('/products').catch(() => [] as any[]) }), []);
   const [adding, setAdding] = useState(autoNew && can('convoys:receive'));
   const [receipt, setReceipt] = useState<any | null>(null);
   const act = useAction();
-  const { data, loading, error, reload } = useAsync(() => get<any[]>(`/convoys/receptions?${new URLSearchParams({ state, ...(q.trim() && { q: q.trim() }), ...(from && { from }), ...(to && { to }) })}`), [state, q, from, to]);
+  const { data, loading, error, reload } = useAsync(() => get<any[]>(`/convoys/receptions?${new URLSearchParams({ state, ...(q.trim() && { q: q.trim() }), ...(from && { from }), ...(to && { to }), ...(camp && { campaign_id: camp }), ...(prod && { product_id: prod }) })}`), [state, q, from, to, camp, prod]);
   const rows = data ?? [];
   const done = rows.filter((r) => r.status === 'settled'), todo = rows.filter((r) => r.status !== 'settled');
   const STATE: [State, string][] = [['pending', 'Non traitées'], ['settled', 'Traitées'], ['all', 'Toutes']];
@@ -46,6 +49,8 @@ function List({ autoNew }: { autoNew: boolean }) {
         <div className="seg" role="radiogroup" aria-label="État de traitement">
           {STATE.map(([k, l]) => <label key={k} className={state === k ? 'on' : ''}><input type="radio" name="pesee-state" checked={state === k} onChange={() => setState(k)} />{l}</label>)}
         </div>
+        <label>Campagne <select value={camp} onChange={(e) => setCamp(e.target.value)}><option value="">Toutes</option>{(refs.data?.campaigns ?? []).map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
+        <label>Produit <select value={prod} onChange={(e) => setProd(e.target.value)}><option value="">Tous</option>{(refs.data?.products ?? []).map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
         <input type="search" placeholder="Code, nom, connaissement ou bulletin" aria-label="Rechercher" value={q} onChange={(e) => setQ(e.target.value)} />
         <label>Du <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></label>
         <label>au <input type="date" value={to} onChange={(e) => setTo(e.target.value)} /></label>
@@ -57,6 +62,7 @@ function List({ autoNew }: { autoNew: boolean }) {
           <div className="pesees-table"><Table rows={rows} empty="Aucune pesée pour ces critères." columns={[
             { header: 'Bulletin', render: (r) => r.bulletin_no }, { header: 'Date', render: (r) => date(r.received_at) },
             { header: 'Connaissement', render: (r) => r.convoy_no },
+            { header: 'Produit', render: (r) => r.product ?? '—' },
             { header: 'Sacs', align: 'right', render: (r) => r.bags ?? '—' },
             { header: 'Poids brut', align: 'right', render: (r) => (r.gross_kg ? num(r.gross_kg) : '—') },
             { header: 'Réfaction', align: 'right', render: (r) => (Number(r.refaction_kg) ? num(r.refaction_kg) : '—') },

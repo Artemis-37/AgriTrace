@@ -17,6 +17,7 @@ import { Historique, MesAchats, MonStock } from './pages/EspaceCollecteur';
 import Convois from './pages/Convois';
 import Pesees from './pages/Pesees';
 import Delegues from './pages/Delegues';
+import Parametres from './pages/Parametres';
 import Caisse from './pages/Caisse';
 import Comptabilite from './pages/Comptabilite';
 import Bell, { MessageButton } from './Bell';
@@ -48,6 +49,7 @@ const NAV: { to: string; label: string; icon: string; perm: string[]; any?: bool
   { to: '/parcelles', label: 'Parcelles', icon: '◩', perm: ['parcels:read'] },
   { to: '/cartographie', label: 'Cartographie', icon: '⌖', perm: ['geo:anomalies'] },
   { to: '/commerce', label: 'Commerce', icon: '⇄', perm: ['buyers:read', 'logistics:read', 'invoices:read'], any: true },
+  { to: '/parametres', label: 'Produits et campagnes', icon: '🌾', perm: ['products:read', 'campaigns:read'], any: true },
   { to: '/delegues', label: 'Délégués', icon: '☻', perm: ['collectors:read'] },
   { to: '/pesees', label: 'Pesées', icon: '⚖', perm: ['convoys:read', 'convoys:receive'], any: true, notFor: 'collector' },
   { to: '/caisse', label: 'Caisse', icon: '₵', perm: ['convoys:settle', 'finance:read'], any: true },
@@ -130,6 +132,7 @@ export default function App() {
           <Route path="/convois" element={<Convois />} />
           <Route path="/pesees" element={<Pesees />} />
           <Route path="/delegues" element={<Delegues />} />
+          <Route path="/parametres" element={<Parametres />} />
           <Route path="/caisse" element={<Caisse />} />
           <Route path="/comptabilite" element={<Comptabilite />} />
           <Route path="/inventaire" element={<Inventaire />} />

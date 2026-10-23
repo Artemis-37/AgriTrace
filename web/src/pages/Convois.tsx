@@ -112,6 +112,7 @@ export function Receive() {
   const act = useAction();
   const { data, loading, error, reload } = useAsync(async () => ({
     expected: await get<any[]>('/convoys/expected'), whs: await get<any[]>('/warehouses').catch(() => [] as any[]),
+    products: (await get<any[]>('/products').catch(() => [] as any[])).filter((p) => p.active), campaigns: (await get<any[]>('/campaigns').catch(() => [] as any[])).filter((c) => c.status === 'open'),
   }), []);
   useEffect(() => onFlushed(reload), [reload]);
   const [collector, setCollector] = useState('');
@@ -122,7 +123,10 @@ export function Receive() {
   const [notes, setNotes] = useState('');
   const [done, setDone] = useState('');
   const [codeQ, setCodeQ] = useState('');
-  const [d, setD] = useState({ wIn: '', wOut: '', tare: '', ref: '', grade: '', trailer: '', unl: '', refused: '' });
+  const [d, setD] = useState({ grade: '', trailer: '', unl: '', refused: '' });
+  const [prod, setProd] = useState('');
+  const [camp, setCamp] = useState('');
+  useEffect(() => { if (data) { setProd((p) => p || (data.products.length === 1 ? data.products[0].id : '')); const t = new Date().toISOString().slice(0, 10); setCamp((c) => c || (data.campaigns.find((x: any) => String(x.starts_on).slice(0, 10) <= t && t <= String(x.ends_on).slice(0, 10)) ?? data.campaigns[0])?.id || ''); } }, [data]);
   const [an, setAn] = useState<Record<string, string>>({});
   const [m, setM] = useState({ driver: '', truck: '', bags: '', kg: '' });
   const setF = (k: keyof typeof d) => (e: any) => setD((x) => ({ ...x, [k]: e.target.value }));
@@ -140,15 +144,14 @@ export function Receive() {
   const manual = !!collector && convoyNo.trim().length >= 2 && !expected;
   const declared = expected ? (expected.declared_kg != null ? Number(expected.declared_kg) : 0) : (W.test(m.kg) ? Number(m.kg) : 0);
   const declaredBags = expected ? expected.declared_bags : (/^\d+$/.test(m.bags) ? Number(m.bags) : null);
-  const twoWeighings = d.wIn !== '' || d.wOut !== '';
-  const net = twoWeighings && W.test(d.wIn) && W.test(d.wOut) ? Number(d.wIn) - Number(d.wOut) - Number(W.test(d.tare) ? d.tare : 0) - Number(W.test(d.ref) ? d.ref : 0) : NaN;
-  const kgEff = twoWeighings ? (Number.isFinite(net) && net > 0 ? String(Math.round(net * 1000) / 1000) : '') : kg;
-  const optOk = (v: string) => v === '' || W.test(v);
+  // Poids net payé = poids − nombre de sacs déchargés (1 kg par sac), calculé automatiquement.
+  const net = W.test(kg) && /^\d+$/.test(d.unl) && d.unl !== '' ? Number(kg) - Number(d.unl) : NaN;
+  const kgEff = Number.isFinite(net) && net > 0 ? String(Math.round(net * 1000) / 1000) : '';
   const gapPct = declared > 0 && /^\d+(\.\d{1,3})?$/.test(kgEff) ? Math.abs(Number(kgEff) - declared) * 100 / declared : 0;
   const tol = Number(expected?.weight_tolerance_pct ?? 2);
   const blocked = gapPct > tol;
   const valid = collector && convoyNo.trim().length >= 2 && wh && (!manual || (m.driver.trim().length >= 2 && m.truck.trim().length >= 2 && (m.kg === '' || W.test(m.kg)) && /^\d*$/.test(m.bags))) && (!blocked || notes.trim().length >= 5) && /^\d+(\.\d{1,3})?$/.test(kgEff) && Number(kgEff) > 0 && /^[1-9]\d*$/.test(bags)
-    && optOk(d.tare) && optOk(d.ref) && (!twoWeighings || (W.test(d.wIn) && W.test(d.wOut))) && /^\d*$/.test(d.unl) && /^\d*$/.test(d.refused);
+    && W.test(kg) && /^\d+$/.test(d.unl) && /^\d*$/.test(d.refused);
   return (
     <Card title="Saisie de pesée">
       <fieldset className="bloc"><legend>Infos délégué</legend>
@@ -159,7 +162,9 @@ export function Receive() {
         </div>
       </fieldset>
       <fieldset className="bloc"><legend>Infos pesée</legend>
-        <div className="grid-3"><Field label="Date de la pesée"><input readOnly disabled value={new Date().toLocaleDateString('fr-FR')} /></Field>
+        <div className="grid-3"><Field label="Campagne"><select value={camp} onChange={(e) => setCamp(e.target.value)}><option value="">—</option>{data.campaigns.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></Field>
+          <Field label="Produit"><select value={prod} onChange={(e) => setProd(e.target.value)}><option value="">—</option>{data.products.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></Field>
+          <Field label="Date de la pesée"><input readOnly disabled value={new Date().toLocaleDateString('fr-FR')} /></Field>
           <Field label="Magasin"><select value={wh} onChange={(e) => setWh(e.target.value)}><option value="">—</option>{data.whs.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}</select></Field></div>
       </fieldset>
       <fieldset className="bloc"><legend>Infos arrivée (déclaré)</legend>
@@ -177,14 +182,11 @@ export function Receive() {
       </fieldset>
       <fieldset className="bloc"><legend>Infos pesée</legend>
         <div className="grid-3">
-          <Field label="Pesée à l'entrée, camion chargé (kg)"><input inputMode="decimal" value={d.wIn} onChange={setF('wIn')} /></Field>
-          <Field label="Pesée à la sortie, camion vide (kg)"><input inputMode="decimal" value={d.wOut} onChange={setF('wOut')} /></Field>
-          <Field label="Tare des sacs (kg)"><input inputMode="decimal" value={d.tare} onChange={setF('tare')} /></Field>
-          <Field label="Réfaction (kg)"><input inputMode="decimal" value={d.ref} onChange={setF('ref')} /></Field>
-          <Field label="Poids net payé (kg)" hint={twoWeighings ? 'Calculé : entrée − sortie − tare − réfaction' : 'Sans double pesée, saisissez directement le poids net'}><input inputMode="decimal" value={twoWeighings ? kgEff : kg} readOnly={twoWeighings} onChange={(e) => setKg(e.target.value)} /></Field>
+          <Field label="Poids (kg)"><input inputMode="decimal" value={kg} onChange={(e) => setKg(e.target.value)} /></Field>
           <Field label="Nombre de sacs reçus"><input inputMode="numeric" value={bags} onChange={(e) => setBags(e.target.value)} /></Field>
-          <Field label="Sacs déchargés"><input inputMode="numeric" value={d.unl} onChange={setF('unl')} /></Field>
+          <Field label="Sacs déchargés" hint="Retranchés du poids (1 kg par sac)"><input inputMode="numeric" value={d.unl} onChange={setF('unl')} /></Field>
           <Field label="Sacs refusés"><input inputMode="numeric" value={d.refused} onChange={setF('refused')} /></Field>
+          <Field label="Poids net (automatique)" hint="Poids − nombre de sacs déchargés"><input readOnly disabled value={kgEff} /></Field>
           <Field label="Qualité / grade"><input value={d.grade} onChange={setF('grade')} maxLength={20} /></Field>
           <Field label="Manquants (automatique)" hint="Sacs déclarés − sacs déchargés"><input readOnly disabled value={declaredBags != null && /^\d+$/.test(d.unl) && d.unl !== '' ? String(declaredBags - Number(d.unl)) : '—'} /></Field>
           <Field label="Écart / poids déclaré (automatique)" hint="Poids net payé − poids déclaré"><input readOnly disabled value={declared > 0 && /^\d+(\.\d{1,3})?$/.test(kgEff) ? `${Math.round(Number(kgEff) - declared)} kg` : '—'} /></Field>
@@ -206,13 +208,12 @@ export function Receive() {
       {act.error && <ErrorBox message={act.error} />}
       {done && <p className="notice" role="status">{done}</p>}
       <div className="modal-actions"><button className="btn" disabled={act.busy || !valid || !org} onClick={() => act.run(async () => {
-        await enqueue(org!.id, 'convoy.receive', { idempotency_key: idem(), collector_id: collector, convoy_no: convoyNo.trim(), warehouse_id: wh, total_kg: kgEff, bags: Number(bags), ...(notes.trim() && { notes: notes.trim() }),
+        await enqueue(org!.id, 'convoy.receive', { idempotency_key: idem(), collector_id: collector, convoy_no: convoyNo.trim(), warehouse_id: wh, total_kg: kgEff, gross_kg: kg, bags: Number(bags), bags_unloaded: Number(d.unl), ...(prod && { product_id: prod }), ...(camp && { campaign_id: camp }), ...(notes.trim() && { notes: notes.trim() }),
           ...(manual && { driver_name: m.driver.trim(), truck_no: m.truck.trim(), ...(m.bags && { declared_bags: Number(m.bags) }), ...(m.kg && { declared_kg: m.kg }) }),
-          ...(twoWeighings && { weigh_in_kg: d.wIn, weigh_out_kg: d.wOut }),
-          ...(d.tare && { bag_tare_kg: d.tare }), ...(d.ref && { refaction_kg: d.ref }), ...(d.grade.trim() && { grade: d.grade.trim() }), ...(d.trailer.trim() && { trailer_no: d.trailer.trim() }),
-          ...(d.unl && { bags_unloaded: Number(d.unl) }), ...(d.refused && { bags_refused: Number(d.refused) }),
+          ...(d.grade.trim() && { grade: d.grade.trim() }), ...(d.trailer.trim() && { trailer_no: d.trailer.trim() }),
+          ...(d.refused && { bags_refused: Number(d.refused) }),
           ...(Object.values(an).some((v) => v.trim()) && { analysis: Object.fromEntries(Object.entries(an).filter(([, v]) => v.trim()).map(([k, v]) => [k, v.trim()])) }) }, `Réception du convoi ${convoyNo.trim()}`);
-        setDone(`Convoi ${convoyNo.trim()} enregistré : il sera transmis à la caisse dès l'envoi au serveur.`); setConvoyNo(''); setKg(''); setBags(''); setNotes(''); setD({ wIn: '', wOut: '', tare: '', ref: '', grade: '', trailer: '', unl: '', refused: '' }); setAn({}); setM({ driver: '', truck: '', bags: '', kg: '' }); reload();
+        setDone(`Convoi ${convoyNo.trim()} enregistré : il sera transmis à la caisse dès l'envoi au serveur.`); setConvoyNo(''); setKg(''); setBags(''); setNotes(''); setD({ grade: '', trailer: '', unl: '', refused: '' }); setAn({}); setM({ driver: '', truck: '', bags: '', kg: '' }); reload();
       })}>Valider la réception et transmettre à la caisse</button></div>
     </Card>
   );

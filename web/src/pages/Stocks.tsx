@@ -5,6 +5,7 @@ import { dateTime, kg } from '../format';
 import { Badge, Card, ErrorBox, Loading, Modal, PageHeader, Table, useAction, useAsync } from '../ui';
 import { Confirm } from './Declarations';
 import DocumentsPanel from './DocumentsPanel';
+import EtatStock from './EtatStock';
 
 export default function Stocks() {
   const { can } = useAuth();
@@ -26,6 +27,7 @@ export default function Stocks() {
   return (
     <>
       <PageHeader title="Stocks et lots" subtitle="Quantités calculées depuis les mouvements, jamais saisies à la main" />
+      <EtatStock />
       {data.weighings.length > 0 && (
         <Card title={`Pesées à valider (${data.weighings.length})`}>
           <p className="muted">L'écart dépasse le seuil : la validation doit être faite par un autre utilisateur que l'opérateur.</p>
