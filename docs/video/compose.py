@@ -1,10 +1,12 @@
 # Montage : une séquence par scène (image fixe ou enregistrement du portail + narration + sous-titres), puis assemblage.
 # Usage : python3 compose.py [id ...]   → build/scenes/<id>.mp4, puis out/AgriTrace_Presentation.mp4 et .srt
+import os as _o
+SUF = _o.environ.get('VID', '')  # VID=-terrain : second film
 import json, os, re, subprocess, sys
 HERE = os.path.dirname(os.path.abspath(__file__))
-B = os.path.join(HERE, 'build'); SC = os.path.join(B, 'scenes'); OUT = os.path.join(HERE, 'out')
+B = os.path.join(HERE, 'build'+SUF); SC = os.path.join(B, 'scenes'); OUT = os.path.join(HERE, 'out')
 for d in (SC, OUT): os.makedirs(d, exist_ok=True)
-scenes = json.load(open(os.path.join(HERE, 'scenario.json')))
+scenes = json.load(open(os.path.join(HERE, 'scenario'+SUF+'.json')))
 durs = json.load(open(os.path.join(B, 'durations.json')))
 only = set(sys.argv[1:])
 PAD = 0.9
@@ -79,7 +81,7 @@ for sc in scenes:
         f = lambda t: ts(total + t).replace('.', ',') if False else (lambda x: f'{int(x // 3600):02d}:{int(x % 3600 // 60):02d}:{int(x % 60):02d},{int(round((x % 1) * 1000)):03d}')(total + t)
         srt.append(f'{idx}\n{f(a)} --> {f(b)}\n{c}\n'); idx += 1
     total += dur
-open(os.path.join(OUT, 'AgriTrace_Presentation.srt'), 'w').write('\n'.join(srt))
+open(os.path.join(OUT, f'AgriTrace_Presentation{SUF}.srt'), 'w').write('\n'.join(srt))
 lst = os.path.join(B, 'concat.txt'); open(lst, 'w').write(''.join(f"file '{os.path.join(SC, s['id'] + '.mp4')}'\n" for s in scenes))
-run(['ffmpeg', '-v', 'error', '-y', '-f', 'concat', '-safe', '0', '-i', lst, '-c', 'copy', '-movflags', '+faststart', os.path.join(OUT, 'AgriTrace_Presentation.mp4')])
+run(['ffmpeg', '-v', 'error', '-y', '-f', 'concat', '-safe', '0', '-i', lst, '-c', 'copy', '-movflags', '+faststart', os.path.join(OUT, f'AgriTrace_Presentation{SUF}.mp4')])
 print(f'Vidéo : {total / 60:.1f} minutes')

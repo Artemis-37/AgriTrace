@@ -1,8 +1,10 @@
 # Images fixes de la vidéo : cartes (titre, architecture, profils, flux, listes), planches de téléphones, portail + téléphone.
+import os as _o
+SUF = _o.environ.get('VID', '')  # VID=-terrain : second film
 import json, os
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 HERE = os.path.dirname(os.path.abspath(__file__))
-OUT = os.path.join(HERE, 'build', 'img'); os.makedirs(OUT, exist_ok=True)
+OUT = os.path.join(HERE, 'build'+SUF, 'img'); os.makedirs(OUT, exist_ok=True)
 FD = '/usr/share/fonts/truetype/google-fonts/'
 def font(sz, w='Regular'): return ImageFont.truetype(FD + f'Poppins-{w}.ttf', sz)
 GREEN, DARK, LIGHT, LIME, SAND, INK = (47, 93, 70), (34, 61, 48), (247, 250, 242), (183, 208, 138), (238, 233, 221), (40, 52, 46)
@@ -122,7 +124,7 @@ def mix_img(s):
     return im
 
 KINDS = {'title': title_card, 'arch': arch_card, 'flow': flow_card, 'bullets': bullets_card, 'profils': profils_card}
-for sc in json.load(open(os.path.join(HERE, 'scenario.json'))):
+for sc in json.load(open(os.path.join(HERE, 'scenario'+SUF+'.json'))):
     v = sc['visual']
     if v['type'] == 'card': im = KINDS[v['kind']](v)
     elif v['type'] == 'phones': v = {**v, 'images': [os.path.join(HERE, p) for p in v['images']]}; im = phones_img(v)

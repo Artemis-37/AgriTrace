@@ -1,5 +1,7 @@
 # Vidéo de présentation d'AgriTrace
 
+Deux films : la présentation complète et « Du terrain à l'exportateur » (`VID=-terrain python3 …`, scénario `scenario_terrain.py`, sortie `out/AgriTrace_Presentation-terrain.mp4`).
+
 La vidéo (`out/AgriTrace_Presentation.mp4`, ≈ 15 minutes, sous-titres `.srt` fournis) est fabriquée automatiquement : narration en français (voix de synthèse Piper), enregistrements réels du portail piloté pas à pas sur la démonstration, captures de l'application mobile, cartes explicatives.
 
 Pour la refaire après une évolution de l'outil :

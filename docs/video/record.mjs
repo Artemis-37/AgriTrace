@@ -8,11 +8,12 @@ import { fileURLToPath } from 'node:url';
 const require = createRequire(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'web', 'package.json'));
 const { chromium } = require('playwright-core');
 
+const SUF = process.env.VID ?? '';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const WEB = process.env.WEB ?? 'http://127.0.0.1:4173';
-const OUT = path.join(HERE, 'build', 'live'); fs.mkdirSync(OUT, { recursive: true });
-const scenes = JSON.parse(fs.readFileSync(path.join(HERE, 'scenario.json'), 'utf8'));
-const durs = JSON.parse(fs.readFileSync(path.join(HERE, 'build', 'durations.json'), 'utf8'));
+const OUT = path.join(HERE, 'build' + SUF, 'live'); fs.mkdirSync(OUT, { recursive: true });
+const scenes = JSON.parse(fs.readFileSync(path.join(HERE, 'scenario' + SUF + '.json'), 'utf8'));
+const durs = JSON.parse(fs.readFileSync(path.join(HERE, 'build' + SUF, 'durations.json'), 'utf8'));
 const demo = JSON.parse(fs.readFileSync(process.env.DEMO_JSON ?? '/tmp/demo-accounts.json', 'utf8'));
 const only = new Set(process.argv.slice(2));
 const VIEW = { width: 1600, height: 950 };
