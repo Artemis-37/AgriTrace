@@ -1,0 +1,21 @@
+# Surcouche : ajoute Caddy (HTTPS) devant le portail.
+# Usage : docker compose -f docker-compose.prod.yml -f deploy/hetzner/docker-compose.caddy.yml up -d --build
+# Dans .env : WEB_PORT=127.0.0.1:8080 (le portail n'est alors joignable que par Caddy), DOMAIN=..., ADMIN_EMAIL=...
+services:
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:?}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:?}
+    volumes:
+      - ./deploy/hetzner/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [web]
+volumes:
+  caddy_data:
+  caddy_config:

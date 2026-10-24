@@ -1,0 +1,5 @@
+[Unit]
+Description=Sauvegarde AgriTrace (chiffrée, copie hors site)
+[Service]
+Type=oneshot
+ExecStart=/bin/bash /opt/agritrace/deploy/hetzner/backup-offsite.sh

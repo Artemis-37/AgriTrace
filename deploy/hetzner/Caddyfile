@@ -1,0 +1,15 @@
+# HTTPS automatique (Let's Encrypt). {$DOMAIN} et {$ADMIN_EMAIL} viennent du .env.
+{
+	email {$ADMIN_EMAIL}
+}
+{$DOMAIN} {
+	encode zstd gzip
+	reverse_proxy web:8080
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+	}
+	request_body {
+		max_size 25MB
+	}
+}
