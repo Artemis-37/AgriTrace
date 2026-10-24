@@ -40,6 +40,7 @@ const LEGENDE = {
   missions: 'Missions (tâches de terrain) : création, suivi, validation.',
   terrain: 'Relevés de terrain : formations, infrastructures sociales, distributions.',
   qualite: 'Qualité : règles, inspections, certificats.',
+  'fiches-accompagnement': 'Fiches d\'accompagnement : producteurs des convois et des chargements, export Excel, import et transmission à l\'exportateur.',
   commerce: 'Commerce : acheteurs, contrats, commandes.',
   'mes-achats': 'Mes achats : achats déclarés par le délégué.',
   'mon-stock': 'Mon stock : stock du délégué et solde de son compte.',
@@ -131,10 +132,14 @@ const MOD = {
     objectifs: ['Contrôler les déclarations d\'achat', 'Remonter la chaîne de traçabilité d\'un lot', 'Suivre les producteurs'],
     pas: [
       ['Vérifier les déclarations', 'Menu **Déclarations d\'achat** : les déclarations « Reçue » attendent une mise en vérification, puis validation.'],
+      ['Préparer la fiche d\'accompagnement', 'Menu **Fiches d\'accompagnement** → onglet *Convois pesés* : **Consulter** liste les producteurs d\'un convoi (nom, genre, section, code, date de livraison, poids net, sacs, n° de reçu) et **Exporter (Excel)** produit la fiche sur le modèle de la coopérative. Pour un chargement de plusieurs convois, cochez-les puis **Créer la fiche** : renseignez chauffeur, camion, remorque, LOT ID DSE, n° de connaissement, date de départ, type de cacao et certifications. Une fiche déjà remplie ailleurs s\'**importe** par *Importer une fiche (Excel)* (les codes absents du registre sont signalés).'],
+      ['Transmettre la fiche à l\'exportateur', 'Onglet *Fiches d\'accompagnement* → **Transmettre à l\'exportateur** : choisissez le compte exportateur. La fiche ne peut plus être modifiée, l\'exportateur est notifié et la télécharge au format Excel.'],
       ['Tracer un lot', 'Menu **Stocks et lots** (si accessible) ou la fiche du lot : bouton *Traçabilité* pour voir producteurs, parcelles, connaissements et pesées.'],
     ],
     exos: [
       ['Mettez en vérification la déclaration de TAPE Joséphine.', 'Son statut passe à « En vérification ».'],
+      ['Dans **Fiches d\'accompagnement**, consultez les producteurs d\'un convoi puis exportez la fiche en Excel.', 'Le fichier reprend le modèle de la coopérative : producteurs, poids net, sacs, n° de reçu et totaux.'],
+      ['Créez la fiche d\'un chargement de deux convois et transmettez-la à l\'exportateur.', 'La fiche passe à « Transmise à … » ; l\'exportateur la voit dans son menu.'],
       ['Recherchez un reçu par numéro et retrouvez le producteur.', 'La fiche du producteur s\'affiche avec ses parcelles.'],
     ],
   },
@@ -257,9 +262,10 @@ const MOD = {
       ['Voir son accueil', 'Le **tableau de bord** affiche quatre indicateurs : propositions en attente de l\'ADG, transmises aux coachs, non retenues, résultats reçus (avec le total de participants). Les **messages** et les **notifications** s\'ouvrent par les icônes en haut à droite (enveloppe et cloche), pas par le menu.'],
       ['Proposer un module', 'Menu **Modules des exportateurs** → **Proposer un module** : titre, thème, résumé, cultures, certifications, objectifs, sections (titre et points), points à éviter, questions de vérification. Une fois envoyé, le module **n\'est plus modifiable** : en cas d\'erreur, proposez-en un nouveau.'],
       ['Suivre sa proposition', 'Le statut passe de « En attente de l\'ADG » à « Transmis aux coachs » ou « Non retenu » (avec le motif de l\'ADG). Vous êtes notifié à chaque étape.'],
+      ['Consulter les fiches d\'accompagnement', 'Menu **Fiches d\'accompagnement** : les fiches que le responsable de traçabilité vous a transmises (chargement, connaissement, camion, poids, sacs). **Consulter** affiche les producteurs du chargement, **Télécharger (Excel)** donne le fichier. Vous êtes notifié à chaque nouvelle fiche et ne voyez que celles qui vous sont destinées.'],
       ['Lire les résultats', 'Une fois la séance faite, les coachs envoient leurs résultats à l\'ADG, qui vous les transmet **tels que saisis** : séance, village, participants, score moyen, observations. Vous ne voyez que les résultats de vos propres modules, jamais les autres données de la coopérative.'],
     ],
-    exos: [['Proposez le module « Séchage des fèves » (un objectif, une section).', 'La proposition apparaît « En attente de l\'ADG ».'], ['Ouvrez les résultats du module « Carnet de récolte et traçabilité ».', 'Vous voyez la séance de Hiré (22 participants, score 78) et non celle de Zégban, tant que l\'ADG ne l\'a pas transmise.']],
+    exos: [['Proposez le module « Séchage des fèves » (un objectif, une section).', 'La proposition apparaît « En attente de l\'ADG ».'], ['Ouvrez la fiche d\'accompagnement reçue puis téléchargez-la.', 'Vous voyez les producteurs du chargement ; le fichier Excel suit le modèle de la coopérative.'], ['Ouvrez les résultats du module « Carnet de récolte et traçabilité ».', 'Vous voyez la séance de Hiré (22 participants, score 78) et non celle de Zégban, tant que l\'ADG ne l\'a pas transmise.']],
   },
   adg: {
     niveau: 'Niveau 3 — Pilotage', duree: '2 h',
@@ -352,7 +358,7 @@ md += `
 
 Ce chapitre déroule **une même chaîne, de bout en bout**, avec les comptes de la démonstration (données fictives). Chaque étape est jouée par le profil concerné ; les formulaires sont remplis. Le téléphone du délégué est simulé par les écrans de l'application.
 
-**Fil conducteur.** Le délégué achète du cacao à deux producteurs et déclare un connaissement qui les transporte (n° {{PCV}}). Le responsable traçabilité valide les achats ; le magasinier pèse ce connaissement, puis pèse aussi un connaissement **non déclaré** d'un autre délégué ({{PNC}}). La caisse règle les deux pesées au **prix de la traite fixé par l'administrateur** et retient une somme au kilo (la *mise en compte*). En fin de campagne le compte du délégué est clôturé ; son reversement (sur son compte, par chèque, en espèces ou vers un autre compte) est **approuvé par l'administrateur**. Le comptable retrouve les écritures, le stock alimente les ventes, et les modules de l'exportateur redescendent jusqu'aux coachs avant de remonter à l'exportateur.
+**Fil conducteur.** Le délégué achète du cacao à deux producteurs et déclare un connaissement qui les transporte (n° {{PCV}}). Le responsable traçabilité valide les achats ; le magasinier pèse ce connaissement, puis pèse aussi un connaissement **non déclaré** d'un autre délégué ({{PNC}}). La caisse règle les deux pesées au **prix de la traite fixé par l'administrateur** et retient une somme au kilo (la *mise en compte*). En fin de campagne le compte du délégué est clôturé ; son reversement (sur son compte, par chèque, en espèces ou vers un autre compte) est **approuvé par l'administrateur**. Le comptable retrouve les écritures. Le responsable traçabilité prépare la **fiche d\'accompagnement** du chargement (producteurs, poids, sacs, reçus), l\'exporte sur le modèle Excel de la coopérative et la **transmet à l\'exportateur**. Le stock alimente les ventes, et les modules de l'exportateur redescendent jusqu'aux coachs avant de remonter à l'exportateur.
 
 `;
 const P = JSON.parse(fs.readFileSync(path.join(dir, 'captures', 'parcours', 'index.json'), 'utf8'));

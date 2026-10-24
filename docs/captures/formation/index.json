@@ -277,6 +277,13 @@
       "visible": true
     },
     {
+      "name": "fiches-accompagnement",
+      "route": "/fiches-accompagnement",
+      "tab": null,
+      "file": "responsable_tracabilite-fiches-accompagnement.png",
+      "visible": true
+    },
+    {
       "name": "missions",
       "route": "/missions",
       "tab": null,
@@ -574,6 +581,13 @@
       "route": "/modules-exportateurs",
       "tab": null,
       "file": "exportateur-modules-exportateurs.png",
+      "visible": true
+    },
+    {
+      "name": "fiches-accompagnement",
+      "route": "/fiches-accompagnement",
+      "tab": null,
+      "file": "exportateur-fiches-accompagnement.png",
       "visible": true
     }
   ]

@@ -11,6 +11,8 @@ const out = path.join(dir, 'pdf'); fs.mkdirSync(out, { recursive: true });
 const DOCS = [
   ['GUIDE_UTILISATEUR.md', 'AgriTrace - Guide utilisateur', 'Guide utilisateur', false],
   ['GUIDE_FORMATION.md', 'AgriTrace - Guide de formation par profil', 'Guide de formation par profil', false],
+  ['DEPLOIEMENT.md', 'AgriTrace - Deploiement et installation', 'Déploiement et installation', false],
+  ['EXPLOITATION.md', 'AgriTrace - Exploitation', 'Exploitation', false],
   ['DEMO.md', 'AgriTrace - Version de demonstration', 'Version de démonstration', false],
   ['MATRICE_ROLES.md', 'AgriTrace - Matrice des roles et permissions', 'Matrice des rôles et permissions', true],
   ['DEFAUTS_CONNUS_ET_RECETTE.md', 'AgriTrace - Defauts connus et plan de recette', 'Défauts connus et plan de recette', false],

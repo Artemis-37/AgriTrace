@@ -204,46 +204,86 @@
     },
     {
       "n": 26,
-      "role": "responsable_magasin",
-      "who": "Daouda Fofana",
-      "title": "Stock mis à jour",
-      "text": "Les pesées réglées alimentent le stock du magasin ; chaque lot garde sa traçabilité jusqu'au producteur.",
-      "file": "26-responsable_magasin-stock.png"
+      "role": "responsable_tracabilite",
+      "who": "Éric Tano",
+      "title": "Convois pesés : choisir les convois du chargement",
+      "text": "Le menu **Fiches d'accompagnement** liste les convois pesés au magasin avec leur nombre de producteurs. **Consulter** affiche les producteurs d'un convoi ; **Exporter (Excel)** produit la fiche sur le modèle de la coopérative.",
+      "file": "26-responsable_tracabilite-fiches-convois.png"
     },
     {
       "n": 27,
-      "role": "acheteur",
-      "who": "Fanta Kamara",
-      "title": "Vente aux acheteurs",
-      "text": "L'acheteur suit contrats et commandes ; les quantités vendues sortent du stock.",
-      "file": "27-acheteur-commerce.png"
+      "role": "responsable_tracabilite",
+      "who": "Éric Tano",
+      "title": "Producteurs d'un convoi",
+      "text": "Nom et prénoms, genre, section, code planteur, date de livraison au magasin, poids net livré, sacs et n° de reçu : les colonnes de la fiche d'accompagnement. Le poids net pesé est réparti entre les producteurs au prorata de leurs achats.",
+      "file": "27-responsable_tracabilite-fiches-producteurs.png"
     },
     {
       "n": 28,
-      "role": "adg",
-      "who": "Mireille Ouattara",
-      "title": "Modules proposés par l'exportateur",
-      "text": "L'exportateur propose ses modules ; l'ADG les transmet aux coachs.",
-      "file": "28-adg-modules.png"
+      "role": "responsable_tracabilite",
+      "who": "Éric Tano",
+      "title": "Créer la fiche du chargement",
+      "text": "Cochez les convois du chargement puis **Créer la fiche** : les producteurs sont repris automatiquement. Renseignez le chauffeur, le camion, la remorque, le LOT ID DSE, le n° de connaissement, la date de départ, le type de cacao et les certifications.",
+      "file": "28-responsable_tracabilite-fiche-nouvelle.png"
     },
     {
       "n": 29,
-      "role": "adg",
-      "who": "Mireille Ouattara",
-      "title": "Résultats des coachs",
-      "text": "Les résultats saisis par les coachs sur le terrain sont transmis à l'exportateur.",
-      "file": "29-adg-resultats.png"
+      "role": "responsable_tracabilite",
+      "who": "Éric Tano",
+      "title": "Transmettre la fiche à l'exportateur",
+      "text": "Une fiche peut aussi être **importée** (bouton *Importer une fiche (Excel)*) si elle a été remplie ailleurs sur le même modèle. Choisissez l'exportateur : la fiche lui est transmise, il est notifié, et elle ne peut plus être modifiée.",
+      "file": "29-responsable_tracabilite-fiche-transmission.png"
     },
     {
       "n": 30,
       "role": "exportateur",
       "who": "Karim Diallo",
-      "title": "Suivi par l'exportateur",
-      "text": "L'exportateur suit ses propositions et reçoit les résultats transmis : la boucle du terrain à l'exportateur est bouclée.",
-      "file": "30-exportateur-suivi.png"
+      "title": "Fiche d'accompagnement reçue",
+      "text": "L'exportateur ne voit que les fiches qui lui sont transmises : il les consulte (producteurs du chargement) et les **télécharge au format Excel**.",
+      "file": "30-exportateur-fiche-recue.png"
     },
     {
       "n": 31,
+      "role": "responsable_magasin",
+      "who": "Daouda Fofana",
+      "title": "Stock mis à jour",
+      "text": "Les pesées réglées alimentent le stock du magasin ; chaque lot garde sa traçabilité jusqu'au producteur.",
+      "file": "31-responsable_magasin-stock.png"
+    },
+    {
+      "n": 32,
+      "role": "acheteur",
+      "who": "Fanta Kamara",
+      "title": "Vente aux acheteurs",
+      "text": "L'acheteur suit contrats et commandes ; les quantités vendues sortent du stock.",
+      "file": "32-acheteur-commerce.png"
+    },
+    {
+      "n": 33,
+      "role": "adg",
+      "who": "Mireille Ouattara",
+      "title": "Modules proposés par l'exportateur",
+      "text": "L'exportateur propose ses modules ; l'ADG les transmet aux coachs.",
+      "file": "33-adg-modules.png"
+    },
+    {
+      "n": 34,
+      "role": "adg",
+      "who": "Mireille Ouattara",
+      "title": "Résultats des coachs",
+      "text": "Les résultats saisis par les coachs sur le terrain sont transmis à l'exportateur.",
+      "file": "34-adg-resultats.png"
+    },
+    {
+      "n": 35,
+      "role": "exportateur",
+      "who": "Karim Diallo",
+      "title": "Suivi par l'exportateur",
+      "text": "L'exportateur suit ses propositions et reçoit les résultats transmis : la boucle du terrain à l'exportateur est bouclée.",
+      "file": "35-exportateur-suivi.png"
+    },
+    {
+      "n": 36,
       "role": "coach",
       "who": "Gilbert Koffi",
       "title": "Résultats saisis sur le terrain",

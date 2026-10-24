@@ -70,7 +70,7 @@ Mot de passe commun : `Demo-AgriTrace-2026!` (à changer pour toute utilisation 
 
 Ce chapitre déroule **une même chaîne, de bout en bout**, avec les comptes de la démonstration (données fictives). Chaque étape est jouée par le profil concerné ; les formulaires sont remplis. Le téléphone du délégué est simulé par les écrans de l'application.
 
-**Fil conducteur.** Le délégué achète du cacao à deux producteurs et déclare un connaissement qui les transporte (n° SC000000-2026-BRA-4). Le responsable traçabilité valide les achats ; le magasinier pèse ce connaissement, puis pèse aussi un connaissement **non déclaré** d'un autre délégué (CV-NC-001). La caisse règle les deux pesées au **prix de la traite fixé par l'administrateur** et retient une somme au kilo (la *mise en compte*). En fin de campagne le compte du délégué est clôturé ; son reversement (sur son compte, par chèque, en espèces ou vers un autre compte) est **approuvé par l'administrateur**. Le comptable retrouve les écritures, le stock alimente les ventes, et les modules de l'exportateur redescendent jusqu'aux coachs avant de remonter à l'exportateur.
+**Fil conducteur.** Le délégué achète du cacao à deux producteurs et déclare un connaissement qui les transporte (n° SC000000-2026-BRA-4). Le responsable traçabilité valide les achats ; le magasinier pèse ce connaissement, puis pèse aussi un connaissement **non déclaré** d'un autre délégué (CV-NC-001). La caisse règle les deux pesées au **prix de la traite fixé par l'administrateur** et retient une somme au kilo (la *mise en compte*). En fin de campagne le compte du délégué est clôturé ; son reversement (sur son compte, par chèque, en espèces ou vers un autre compte) est **approuvé par l'administrateur**. Le comptable retrouve les écritures. Le responsable traçabilité prépare la **fiche d'accompagnement** du chargement (producteurs, poids, sacs, reçus), l'exporte sur le modèle Excel de la coopérative et la **transmet à l'exportateur**. Le stock alimente les ventes, et les modules de l'exportateur redescendent jusqu'aux coachs avant de remonter à l'exportateur.
 
 ### Étape 1 — Brahima Sylla : Choisir le producteur
 
@@ -222,37 +222,67 @@ Les mouvements de caisse, y compris les reversements en espèces approuvés.
 
 ![Journal de caisse](captures/parcours/25-comptable-journal-caisse.png)
 
-### Étape 26 — Daouda Fofana : Stock mis à jour
+### Étape 26 — Éric Tano : Convois pesés : choisir les convois du chargement
+
+Le menu **Fiches d'accompagnement** liste les convois pesés au magasin avec leur nombre de producteurs. **Consulter** affiche les producteurs d'un convoi ; **Exporter (Excel)** produit la fiche sur le modèle de la coopérative.
+
+![Convois pesés : choisir les convois du chargement](captures/parcours/26-responsable_tracabilite-fiches-convois.png)
+
+### Étape 27 — Éric Tano : Producteurs d'un convoi
+
+Nom et prénoms, genre, section, code planteur, date de livraison au magasin, poids net livré, sacs et n° de reçu : les colonnes de la fiche d'accompagnement. Le poids net pesé est réparti entre les producteurs au prorata de leurs achats.
+
+![Producteurs d'un convoi](captures/parcours/27-responsable_tracabilite-fiches-producteurs.png)
+
+### Étape 28 — Éric Tano : Créer la fiche du chargement
+
+Cochez les convois du chargement puis **Créer la fiche** : les producteurs sont repris automatiquement. Renseignez le chauffeur, le camion, la remorque, le LOT ID DSE, le n° de connaissement, la date de départ, le type de cacao et les certifications.
+
+![Créer la fiche du chargement](captures/parcours/28-responsable_tracabilite-fiche-nouvelle.png)
+
+### Étape 29 — Éric Tano : Transmettre la fiche à l'exportateur
+
+Une fiche peut aussi être **importée** (bouton *Importer une fiche (Excel)*) si elle a été remplie ailleurs sur le même modèle. Choisissez l'exportateur : la fiche lui est transmise, il est notifié, et elle ne peut plus être modifiée.
+
+![Transmettre la fiche à l'exportateur](captures/parcours/29-responsable_tracabilite-fiche-transmission.png)
+
+### Étape 30 — Karim Diallo : Fiche d'accompagnement reçue
+
+L'exportateur ne voit que les fiches qui lui sont transmises : il les consulte (producteurs du chargement) et les **télécharge au format Excel**.
+
+![Fiche d'accompagnement reçue](captures/parcours/30-exportateur-fiche-recue.png)
+
+### Étape 31 — Daouda Fofana : Stock mis à jour
 
 Les pesées réglées alimentent le stock du magasin ; chaque lot garde sa traçabilité jusqu'au producteur.
 
-![Stock mis à jour](captures/parcours/26-responsable_magasin-stock.png)
+![Stock mis à jour](captures/parcours/31-responsable_magasin-stock.png)
 
-### Étape 27 — Fanta Kamara : Vente aux acheteurs
+### Étape 32 — Fanta Kamara : Vente aux acheteurs
 
 L'acheteur suit contrats et commandes ; les quantités vendues sortent du stock.
 
-![Vente aux acheteurs](captures/parcours/27-acheteur-commerce.png)
+![Vente aux acheteurs](captures/parcours/32-acheteur-commerce.png)
 
-### Étape 28 — Mireille Ouattara : Modules proposés par l'exportateur
+### Étape 33 — Mireille Ouattara : Modules proposés par l'exportateur
 
 L'exportateur propose ses modules ; l'ADG les transmet aux coachs.
 
-![Modules proposés par l'exportateur](captures/parcours/28-adg-modules.png)
+![Modules proposés par l'exportateur](captures/parcours/33-adg-modules.png)
 
-### Étape 29 — Mireille Ouattara : Résultats des coachs
+### Étape 34 — Mireille Ouattara : Résultats des coachs
 
 Les résultats saisis par les coachs sur le terrain sont transmis à l'exportateur.
 
-![Résultats des coachs](captures/parcours/29-adg-resultats.png)
+![Résultats des coachs](captures/parcours/34-adg-resultats.png)
 
-### Étape 30 — Karim Diallo : Suivi par l'exportateur
+### Étape 35 — Karim Diallo : Suivi par l'exportateur
 
 L'exportateur suit ses propositions et reçoit les résultats transmis : la boucle du terrain à l'exportateur est bouclée.
 
-![Suivi par l'exportateur](captures/parcours/30-exportateur-suivi.png)
+![Suivi par l'exportateur](captures/parcours/35-exportateur-suivi.png)
 
-### Étape 31 — Gilbert Koffi : Résultats saisis sur le terrain
+### Étape 36 — Gilbert Koffi : Résultats saisis sur le terrain
 
 Le coach saisit le résultat de la séance (village, participants, note moyenne) sur son téléphone ; il remonte à l'ADG puis à l'exportateur.
 
@@ -702,10 +732,16 @@ Valide les déclarations d'achat, suit les lots et les certificats, contrôle la
 
 *Déclarations d'achat des délégués, à mettre en vérification puis valider.*
 
+![Fiches d'accompagnement : producteurs des convois et des chargements, export Excel, import et transmission à l'exportateur.](captures/formation/responsable_tracabilite-fiches-accompagnement.png)
+
+*Fiches d'accompagnement : producteurs des convois et des chargements, export Excel, import et transmission à l'exportateur.*
+
 ### Pas à pas
 
 1. **Vérifier les déclarations.** Menu **Déclarations d'achat** : les déclarations « Reçue » attendent une mise en vérification, puis validation.
-2. **Tracer un lot.** Menu **Stocks et lots** (si accessible) ou la fiche du lot : bouton *Traçabilité* pour voir producteurs, parcelles, connaissements et pesées.
+2. **Préparer la fiche d'accompagnement.** Menu **Fiches d'accompagnement** → onglet *Convois pesés* : **Consulter** liste les producteurs d'un convoi (nom, genre, section, code, date de livraison, poids net, sacs, n° de reçu) et **Exporter (Excel)** produit la fiche sur le modèle de la coopérative. Pour un chargement de plusieurs convois, cochez-les puis **Créer la fiche** : renseignez chauffeur, camion, remorque, LOT ID DSE, n° de connaissement, date de départ, type de cacao et certifications. Une fiche déjà remplie ailleurs s'**importe** par *Importer une fiche (Excel)* (les codes absents du registre sont signalés).
+3. **Transmettre la fiche à l'exportateur.** Onglet *Fiches d'accompagnement* → **Transmettre à l'exportateur** : choisissez le compte exportateur. La fiche ne peut plus être modifiée, l'exportateur est notifié et la télécharge au format Excel.
+4. **Tracer un lot.** Menu **Stocks et lots** (si accessible) ou la fiche du lot : bouton *Traçabilité* pour voir producteurs, parcelles, connaissements et pesées.
 
 ### Ce que ce profil ne voit pas
 
@@ -717,7 +753,9 @@ Valide les déclarations d'achat, suit les lots et les certificats, contrôle la
 | # | À faire | Résultat attendu |
 |---|---|---|
 | 1 | Mettez en vérification la déclaration de TAPE Joséphine. | Son statut passe à « En vérification ». |
-| 2 | Recherchez un reçu par numéro et retrouvez le producteur. | La fiche du producteur s'affiche avec ses parcelles. |
+| 2 | Dans **Fiches d'accompagnement**, consultez les producteurs d'un convoi puis exportez la fiche en Excel. | Le fichier reprend le modèle de la coopérative : producteurs, poids net, sacs, n° de reçu et totaux. |
+| 3 | Créez la fiche d'un chargement de deux convois et transmettez-la à l'exportateur. | La fiche passe à « Transmise à … » ; l'exportateur la voit dans son menu. |
+| 4 | Recherchez un reçu par numéro et retrouvez le producteur. | La fiche du producteur s'affiche avec ses parcelles. |
 
 ### Acquis (à cocher)
 
@@ -1170,7 +1208,7 @@ Agent de terrain suivi par l'ADG : exécute ses missions, enregistre des product
 
 **Niveau 1 — Opérateur** · durée indicative : 1 h · compte de démonstration : `exportateur@demo.agritrace.test`
 
-Partenaire exportateur : propose des modules de formation à l'ADG et reçoit, par l'ADG, les résultats obtenus par les coachs sur ces modules.
+Partenaire exportateur : propose des modules de formation à l'ADG reçoit, par l'ADG, les résultats obtenus par les coachs sur ces modules, et consulte les fiches d'accompagnement que le responsable de traçabilité lui transmet.
 
 ### Objectifs
 
@@ -1188,12 +1226,17 @@ Partenaire exportateur : propose des modules de formation à l'ADG et reçoit, p
 
 *Modules des exportateurs : propositions à transmettre aux coachs, ou suivi de ses propres propositions.*
 
+![Fiches d'accompagnement : producteurs des convois et des chargements, export Excel, import et transmission à l'exportateur.](captures/formation/exportateur-fiches-accompagnement.png)
+
+*Fiches d'accompagnement : producteurs des convois et des chargements, export Excel, import et transmission à l'exportateur.*
+
 ### Pas à pas
 
 1. **Voir son accueil.** Le **tableau de bord** affiche quatre indicateurs : propositions en attente de l'ADG, transmises aux coachs, non retenues, résultats reçus (avec le total de participants). Les **messages** et les **notifications** s'ouvrent par les icônes en haut à droite (enveloppe et cloche), pas par le menu.
 2. **Proposer un module.** Menu **Modules des exportateurs** → **Proposer un module** : titre, thème, résumé, cultures, certifications, objectifs, sections (titre et points), points à éviter, questions de vérification. Une fois envoyé, le module **n'est plus modifiable** : en cas d'erreur, proposez-en un nouveau.
 3. **Suivre sa proposition.** Le statut passe de « En attente de l'ADG » à « Transmis aux coachs » ou « Non retenu » (avec le motif de l'ADG). Vous êtes notifié à chaque étape.
-4. **Lire les résultats.** Une fois la séance faite, les coachs envoient leurs résultats à l'ADG, qui vous les transmet **tels que saisis** : séance, village, participants, score moyen, observations. Vous ne voyez que les résultats de vos propres modules, jamais les autres données de la coopérative.
+4. **Consulter les fiches d'accompagnement.** Menu **Fiches d'accompagnement** : les fiches que le responsable de traçabilité vous a transmises (chargement, connaissement, camion, poids, sacs). **Consulter** affiche les producteurs du chargement, **Télécharger (Excel)** donne le fichier. Vous êtes notifié à chaque nouvelle fiche et ne voyez que celles qui vous sont destinées.
+5. **Lire les résultats.** Une fois la séance faite, les coachs envoient leurs résultats à l'ADG, qui vous les transmet **tels que saisis** : séance, village, participants, score moyen, observations. Vous ne voyez que les résultats de vos propres modules, jamais les autres données de la coopérative.
 
 ### Ce que ce profil ne voit pas
 
@@ -1204,7 +1247,8 @@ Partenaire exportateur : propose des modules de formation à l'ADG et reçoit, p
 | # | À faire | Résultat attendu |
 |---|---|---|
 | 1 | Proposez le module « Séchage des fèves » (un objectif, une section). | La proposition apparaît « En attente de l'ADG ». |
-| 2 | Ouvrez les résultats du module « Carnet de récolte et traçabilité ». | Vous voyez la séance de Hiré (22 participants, score 78) et non celle de Zégban, tant que l'ADG ne l'a pas transmise. |
+| 2 | Ouvrez la fiche d'accompagnement reçue puis téléchargez-la. | Vous voyez les producteurs du chargement ; le fichier Excel suit le modèle de la coopérative. |
+| 3 | Ouvrez les résultats du module « Carnet de récolte et traçabilité ». | Vous voyez la séance de Hiré (22 participants, score 78) et non celle de Zégban, tant que l'ADG ne l'a pas transmise. |
 
 ### Acquis (à cocher)
 

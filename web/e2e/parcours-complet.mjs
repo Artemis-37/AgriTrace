@@ -219,6 +219,32 @@ console.log('6. Comptabilité');
   await close();
 }
 
+// ═══ 6 bis. Fiche d'accompagnement : producteurs des convois, export Excel, transmission à l'exportateur
+console.log('6 bis. Fiche d\'accompagnement');
+{
+  const { page, go, close } = await actor('responsable_tracabilite');
+  await go('/fiches-accompagnement');
+  await snap(page, 'responsable_tracabilite', 'fiches-convois', 'Convois pesés : choisir les convois du chargement', 'Le menu **Fiches d\'accompagnement** liste les convois pesés au magasin avec leur nombre de producteurs. **Consulter** affiche les producteurs d\'un convoi ; **Exporter (Excel)** produit la fiche sur le modèle de la coopérative.');
+  await page.locator('tbody tr:has(button:not([disabled]))').first().getByRole('button', { name: 'Consulter' }).click(); await page.waitForTimeout(1000);
+  await snap(page, 'responsable_tracabilite', 'fiches-producteurs', 'Producteurs d\'un convoi', 'Nom et prénoms, genre, section, code planteur, date de livraison au magasin, poids net livré, sacs et n° de reçu : les colonnes de la fiche d\'accompagnement. Le poids net pesé est réparti entre les producteurs au prorata de leurs achats.', true);
+  for (const cb of await page.locator('tbody input[type=checkbox]:not([disabled])').all()) await cb.check();
+  await page.getByRole('button', { name: /Créer la fiche/ }).click(); await page.waitForTimeout(600);
+  await modalOf(page).locator('input').first().fill('Traoré Moussa'); await modalOf(page).locator('input').nth(4).fill('BL-DEMO-2026'); await page.waitForTimeout(300);
+  await snap(page, 'responsable_tracabilite', 'fiche-nouvelle', 'Créer la fiche du chargement', 'Cochez les convois du chargement puis **Créer la fiche** : les producteurs sont repris automatiquement. Renseignez le chauffeur, le camion, la remorque, le LOT ID DSE, le n° de connaissement, la date de départ, le type de cacao et les certifications.');
+  await modalOf(page).getByRole('button', { name: 'Créer la fiche' }).click(); await page.waitForTimeout(1500);
+  await page.getByRole('button', { name: /Transmettre à l'exportateur/ }).first().click(); await page.waitForTimeout(700);
+  await modalOf(page).locator('select').selectOption({ index: 1 }); await page.waitForTimeout(300);
+  await snap(page, 'responsable_tracabilite', 'fiche-transmission', 'Transmettre la fiche à l\'exportateur', 'Une fiche peut aussi être **importée** (bouton *Importer une fiche (Excel)*) si elle a été remplie ailleurs sur le même modèle. Choisissez l\'exportateur : la fiche lui est transmise, il est notifié, et elle ne peut plus être modifiée.');
+  await modalOf(page).getByRole('button', { name: /Transmettre à l'exportateur/ }).click(); await page.waitForTimeout(1500);
+  await close();
+}
+{
+  const { page, go, close } = await actor('exportateur');
+  await go('/fiches-accompagnement');
+  await snap(page, 'exportateur', 'fiche-recue', 'Fiche d\'accompagnement reçue', 'L\'exportateur ne voit que les fiches qui lui sont transmises : il les consulte (producteurs du chargement) et les **télécharge au format Excel**.');
+  await close();
+}
+
 // ═══ 7. Stock, vente et circuit exportateur
 console.log('7. Stock, vente et exportateur');
 for (const [role, route, slug, title, text, tab] of [

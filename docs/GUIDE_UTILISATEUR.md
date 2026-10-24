@@ -226,3 +226,8 @@ Un modèle enregistré reste un **brouillon** : rien ne change pour les coachs. 
 Tant qu'aucun modèle n'est déployé, l'application utilise ses modèles intégrés (École et thèmes de formation), pour que les coachs ne soient jamais bloqués.
 
 **Catégories et groupes de distribution.** Ils ne sont plus figés : ils sont ceux du catalogue de la coopérative. Une catégorie ou un groupe naît en ajoutant un premier article avec ce nom ; l'ADG peut ensuite les **renommer** ou les **retirer** d'un coup (onglet Catalogue des articles). Tant que le catalogue est vide, l'application propose Finance (Bourses, Crédit, Primes, Prêts, Subventions), Intrants et Outils, et Services et Dépistages.
+
+
+## Fiches d'accompagnement (responsable de traçabilité et exportateur)
+**Responsable de traçabilité** — menu **Opérations › Fiches d'accompagnement** : *Convois pesés* → **Consulter** (producteurs du convoi) ou **Exporter (Excel)** (modèle de la coopérative). Pour un chargement : cochez les convois, **Créer la fiche**, complétez l'en-tête (chauffeur, camion, remorque, LOT ID DSE, connaissement, date de départ, type de cacao, certifications). **Importer une fiche (Excel)** reprend une fiche déjà remplie ; **Transmettre à l'exportateur** la fige et la lui envoie.
+**Exportateur** — menu **Fiches d'accompagnement** : fiches transmises à son compte, consultation des producteurs et téléchargement Excel.

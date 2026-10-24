@@ -19,7 +19,7 @@ const PAGES = {
   caissier: [['accueil', '/'], ['caisse', '/caisse'], ['convois', '/convois'], ['finances', '/finances'], ['operations', '/operations']],
   comptable: [['accueil', '/'], ['comptabilite', '/comptabilite'], ['partenaires', '/partenaires'], ['finances', '/finances'], ['rapports', '/rapports']],
   direction: [['accueil', '/'], ['finances', '/finances'], ['prefinancement', '/prefinancement'], ['rapports', '/rapports'], ['operations', '/operations']],
-  responsable_tracabilite: [['accueil', '/'], ['producteurs', '/producteurs'], ['declarations', '/declarations'], ['missions', '/missions'], ['stocks', '/stocks']],
+  responsable_tracabilite: [['accueil', '/'], ['producteurs', '/producteurs'], ['declarations', '/declarations'], ['fiches-accompagnement', '/fiches-accompagnement'], ['missions', '/missions'], ['stocks', '/stocks']],
   responsable_cartographie: [['accueil', '/'], ['parcelles', '/parcelles'], ['cartographie', '/cartographie']],
   cartographe: [['accueil', '/'], ['parcelles', '/parcelles'], ['cartographie', '/cartographie']],
   responsable_magasin: [['accueil', '/'], ['convois', '/convois'], ['stocks', '/stocks'], ['inventaire', '/inventaire']],
@@ -28,7 +28,7 @@ const PAGES = {
   responsable_logistique: [['accueil', '/'], ['convois', '/convois'], ['stocks', '/stocks']],
   auditeur: [['accueil', '/'], ['finances', '/finances'], ['rapports', '/rapports']],
   acheteur: [['accueil', '/'], ['commerce', '/commerce']],
-  exportateur: [['accueil', '/'], ['modules-exportateurs', '/modules-exportateurs']],
+  exportateur: [['accueil', '/'], ['modules-exportateurs', '/modules-exportateurs'], ['fiches-accompagnement', '/fiches-accompagnement']],
   adg: [['accueil', '/'], ['modules-formation', '/modules-formation'], ['modules-exportateurs', '/modules-exportateurs'], ['resultats-exportateurs', '/modules-exportateurs', 'Résultats (1)'], ['transmission-nature-cible', '/modules-exportateurs', null, 'tr:has-text("Séchage et stockage") button:has-text("Transmettre aux coachs")'], ['affectations', '/modules-exportateurs', 'Affectations aux producteurs'], ['producteurs', '/producteurs'], ['missions', '/missions'], ['rapports', '/rapports'], ['operations', '/operations']],
 };
 

@@ -162,3 +162,11 @@ Le bouton « Se déconnecter » et le lien « Mon compte » de la barre du haut 
 
 ## Sous-rubriques : fenêtre contextuelle seulement pour les saisies courtes
 Les menus du haut (Fichier, Opérations, Comptabilité…) s'ouvrent comme avant. Dans la Caisse, les rubriques qui demandent une saisie courte (« Enregistrer une entrée / sortie », « Créer une caisse ») s'ouvrent dans une fenêtre centrée par-dessus l'écran ; ✕ Fermer ou Échap la ferme et l'écran de fond est rechargé. Les états larges (journaux, soldes et fiches des délégués, listes de pesées, Comptabilité) restent dans l'écran.
+
+## Fiches d'accompagnement (producteurs d'un convoi ou d'un chargement)
+- Menu **Opérations › Fiches d'accompagnement** (droit `dispatch:manage` : responsable de traçabilité et administrateur ; `dispatch:read` : exportateur, uniquement les fiches transmises à son compte).
+- **Convois pesés** : *Consulter* liste les producteurs du convoi (nom et prénoms, genre, section, code planteur, date de livraison au magasin, poids net livré, sacs, n° de reçu) ; *Exporter (Excel)* remplit le modèle de la coopérative (logo, cadres et mise en forme conservés). Le poids net pesé au magasin est réparti entre les producteurs **au prorata des quantités déclarées** (la somme égale toujours le poids net).
+- **Chargement** : cocher un ou plusieurs convois pesés, *Créer la fiche* (n° `FA-aaaa-nnnnn`), compléter chauffeur, camion, remorque, LOT ID DSE, n° de connaissement, date de départ, type de cacao et certifications. Capacité du modèle : 326 producteurs par fiche (au-delà, répartir les convois sur deux fiches).
+- **Importer une fiche** déjà remplie sur le même modèle (.xlsx, 5 Mo au plus) : elle est lue, les anomalies sont signalées (code planteur absent du registre, poids manquant, code répété) et le fichier d'origine est conservé et restitué tel quel.
+- **Transmettre à l'exportateur** : choix du compte exportateur ; la fiche est alors figée (déclencheur en base), l'exportateur est notifié et la télécharge. Un convoi déjà présent sur une fiche transmise ne peut plus être repris. Aucune suppression ; chaque export, import et transmission est tracé.
+- Le modèle ne contient ni nom de coopérative figé ni les lignes « ID FT USA » ; les noms de l'ADG et du magasinier se saisissent à la création.

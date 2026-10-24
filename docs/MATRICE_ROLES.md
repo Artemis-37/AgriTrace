@@ -2,7 +2,7 @@
 
 Fichier généré par `backend/scripts/gen-matrice-roles.js` à partir du code : ne pas le modifier à la main. Les menus du portail et les routes de l'API se règlent sur les **permissions**, jamais sur le nom du rôle. Une coopérative crée ses propres rôles en combinant ces permissions ; les cinq rôles ci-dessous sont des modèles proposés.
 
-144 permissions, 360 routes protégées. Les droits sensibles (paiements, ajustements, exports de noms) peuvent en plus exiger une seconde approbation, réglée par rôle.
+146 permissions, 367 routes protégées. Les droits sensibles (paiements, ajustements, exports de noms) peuvent en plus exiger une seconde approbation, réglée par rôle.
 
 ## Rôles types
 - **Magasinier** (`magasinier`) : Réceptionne et pèse les convois au magasin central, tient les stocks et l'inventaire.
@@ -19,7 +19,7 @@ Fichier généré par `backend/scripts/gen-matrice-roles.js` à partir du code :
 - **Responsable logistique** (`responsable_logistique`) : Planifie les transports et les expéditions, suit les documents d'export.
 - **Auditeur** (`auditeur`) : Consulte en lecture seule les opérations, les journaux d'audit et les états comptables ; ne modifie rien.
 - **Acheteur / partenaire externe** (`acheteur`) : Partenaire autorisé : consulte les commandes, les expéditions et les documents qui le concernent.
-- **Exportateur (partenaire)** (`exportateur`) : Partenaire exportateur : propose des modules de formation à l'ADG et reçoit, par l'ADG, les résultats obtenus par les coachs sur ces modules.
+- **Exportateur (partenaire)** (`exportateur`) : Partenaire exportateur : propose des modules de formation à l'ADG reçoit, par l'ADG, les résultats obtenus par les coachs sur ces modules, et consulte les fiches d'accompagnement que le responsable de traçabilité lui transmet.
 - **Délégué** (`collecteur`) : Déclare ses achats chez les producteurs et ses convois, voit son stock, son historique et sa fiche de compte.
 - **Administrateur de groupe (ADG)** (`adg`) : Responsable de la conformité et de la certification : suit les certificats, les inspections et la qualité, contrôle et vérifie les parcelles, met en place les missions des coachs et décide de leurs demandes.
 - **Coach** (`coach`) : Agent de terrain suivi par l'ADG : exécute ses missions, enregistre des producteurs, relève des parcelles, des infrastructures sociales, des formations et des distributions, joint des photos et demande de nouvelles missions.
@@ -107,6 +107,12 @@ Colonnes : ✓ = accordé par le rôle type. Les rôles Administrateur de coopé
 | `declarations:create` | Créer et soumettre des déclarations |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | ✓ |  |  | `POST /purchase-declarations`<br>`POST /purchase-declarations/:id/submit` |
 | `declarations:read` | Consulter les déclarations d'achat |  |  |  |  | ✓ |  |  |  |  |  |  |  | ✓ |  |  | ✓ |  |  | `GET /purchase-declarations/settings/receipts`<br>`GET /purchase-declarations/export/xlsx`<br>`GET /purchase-declarations`<br>… +1 |
 | `declarations:validate` | Vérifier, accepter ou rejeter des déclarations |  |  |  |  | ✓ |  |  |  |  |  |  |  |  |  |  |  |  |  | `POST /purchase-declarations/:id/transition` |
+
+### dispatch
+| Permission | Rôle du droit | Magasinier | Caissier | Comptable | Direction | Responsable de traçabilité | Responsable cartographie | Cartographe | Agent de terrain | Responsable de magasin | Responsable financier | Responsable qualité | Responsable logistique | Auditeur | Acheteur / partenaire externe | Exportateur | Délégué | Administrateur de groupe | Coach | Routes |
+|---|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|---|
+| `dispatch:manage` | Fiches d'accompagnement : consulter les producteurs d'un convoi ou d'un chargement, exporter en Excel, importer une fiche et la transmettre à l'exportateur |  |  |  |  | ✓ |  |  |  |  |  |  |  |  |  |  |  |  |  | `GET /dispatch-sheets/convoys`<br>`GET /convoys/:id/fiche-accompagnement`<br>`GET /convoys/:id/fiche-accompagnement.xlsx`<br>… +4 |
+| `dispatch:read` | Exportateur : consulter et télécharger les fiches d'accompagnement qui lui ont été transmises |  |  |  |  |  |  |  |  |  |  |  |  |  |  | ✓ |  |  |  | — |
 
 ### documents
 | Permission | Rôle du droit | Magasinier | Caissier | Comptable | Direction | Responsable de traçabilité | Responsable cartographie | Cartographe | Agent de terrain | Responsable de magasin | Responsable financier | Responsable qualité | Responsable logistique | Auditeur | Acheteur / partenaire externe | Exportateur | Délégué | Administrateur de groupe | Coach | Routes |
