@@ -207,11 +207,11 @@ export class AuditsController {
   }
 
   @Get('audits/catalog')
-  catalog(@Req() req: any) {
+  async catalog(@Req() req: any) {
     this.need(req, 'audits:share', 'audits:manage');
-    const supervisor = this.has(req, 'audits:manage');
-    return Object.entries(VIEWS).filter(([, v]) => (v.side === 'supervisor') === supervisor || (!supervisor && v.side === 'supervised'))
-      .filter(([, v]) => supervisor ? v.side === 'supervisor' : v.side === 'supervised').map(([key, v]) => ({ key, label: v.label, columns: v.columns }));
+    const kind = (await this.db.query<any>(`SELECT kind FROM organizations WHERE id = $1`, [req.org.id]))[0]?.kind;
+    const side = kind === 'exporter' ? 'supervisor' : 'supervised';
+    return Object.entries(VIEWS).filter(([, v]) => v.side === side).map(([key, v]) => ({ key, label: v.label, columns: v.columns }));
   }
 
   @Get('audits/:id')
