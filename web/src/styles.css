@@ -357,3 +357,13 @@ dl.kv dd { margin: 0; }
 .kv dt { font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; opacity: .65; }
 .kv dd { margin: 0; font-weight: 600; }
 @media print { .peek-backdrop { display: none; } }
+
+.profile-menu { position: relative; display: inline-block; }
+.profile-btn { background: var(--surface, #faf8f2); border: 1px solid var(--line); border-radius: 999px; width: 2.5rem; height: 2.5rem; cursor: pointer; color: var(--forest, #2f5d46); display: inline-flex; align-items: center; justify-content: center; }
+.profile-btn:hover, .profile-btn[aria-expanded="true"] { border-color: var(--green, #2f5d46); }
+.profile-pop { position: absolute; right: 0; top: calc(100% + .4rem); z-index: 60; min-width: 14rem; background: var(--surface, #faf8f2); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 10px 28px rgba(0,0,0,.18); padding: .4rem; display: flex; flex-direction: column; gap: .15rem; color: var(--ink, #28342e); }
+.profile-head { display: flex; align-items: center; gap: .6rem; padding: .5rem .6rem .6rem; border-bottom: 1px solid var(--line); margin-bottom: .25rem; }
+.profile-ini { width: 2rem; height: 2rem; border-radius: 50%; background: var(--green, #2f5d46); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: .8rem; font-weight: 600; }
+.profile-pop button { text-align: left; background: none; border: 0; padding: .55rem .6rem; border-radius: 8px; cursor: pointer; font: inherit; color: inherit; }
+.profile-pop button:hover { background: rgba(47,93,70,.1); }
+.profile-pop button.out { color: #b3261e; }

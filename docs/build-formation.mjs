@@ -29,7 +29,7 @@ const LEGENDE = {
   stocks: 'Stocks par magasin et par lot, traçabilité du lot.',
   inventaire: 'Inventaires : comptage physique, écarts, approbation.',
   operations: 'Mes opérations : reçus à imprimer et demandes d\'annulation.',
-  compte: 'Mon compte : changer son mot de passe.',
+  compte: 'Icône de profil (en haut à droite) › Mon profil : changer son mot de passe ; la déconnexion se trouve dans le même menu.',
   finances: 'Comptes, caisses et comptabilité (écritures non modifiables, corrigées par écriture inverse).',
   rapprochement: 'Rapprochement bancaire : import du relevé (CSV) et pointage des opérations.',
   rapports: 'Rapports et exports Excel.',

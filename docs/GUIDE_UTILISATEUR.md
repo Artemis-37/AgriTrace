@@ -27,8 +27,8 @@ Ce guide présente chaque utilisateur **sur ordinateur** (portail web dans le na
 <table class="phones"><tr><td><img src="captures/mobile/connexion.png" alt="Téléphone : connexion"><br><em>Téléphone : connexion</em></td></tr></table>
 
 ### Mot de passe
-- **Changer le mien** : portail › « Mon compte » (bas du menu de gauche) ; l'ancien mot de passe est demandé, 10 caractères minimum, et vos autres sessions sont fermées.
-- **Double authentification** (recommandée, obligatoire si votre coopérative l'impose) : portail › « Mon compte » › « Activer la double authentification ». Ajoutez la clé affichée dans une application d'authentification (Google Authenticator, Microsoft Authenticator, Aegis…), saisissez le code à 6 chiffres, puis **notez les 8 codes de secours** (chacun ne sert qu'une fois, affichés une seule fois). À chaque connexion, portail ou téléphone, un code vous est ensuite demandé. Téléphone perdu : utilisez un code de secours, ou demandez à l'administrateur « Retirer sa double authentification » (Équipe).
+- **Changer le mien** : portail › icône de profil (en haut à droite) › « Mon profil » ; l'ancien mot de passe est demandé, 10 caractères minimum, et vos autres sessions sont fermées.
+- **Double authentification** (recommandée, obligatoire si votre coopérative l'impose) : portail › icône de profil › « Mon profil » › « Activer la double authentification ». Ajoutez la clé affichée dans une application d'authentification (Google Authenticator, Microsoft Authenticator, Aegis…), saisissez le code à 6 chiffres, puis **notez les 8 codes de secours** (chacun ne sert qu'une fois, affichés une seule fois). À chaque connexion, portail ou téléphone, un code vous est ensuite demandé. Téléphone perdu : utilisez un code de secours, ou demandez à l'administrateur « Retirer sa double authentification » (Équipe).
 - **Mot de passe oublié ou réinitialisé** : l'administrateur de la coopérative utilise « Réinitialiser le mot de passe » dans Équipe ; il vous communique un mot de passe temporaire. À la première connexion (portail ou téléphone), l'application vous demande d'en choisir un nouveau avant tout le reste.
 
 ### Hors connexion

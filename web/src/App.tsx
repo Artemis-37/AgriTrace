@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { get } from './api';
-import { Navigate, NavLink, Route, Routes, useLocation } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from './auth';
 import Dashboard from './pages/Dashboard';
 import Inventaire from './pages/Inventaire';
@@ -77,6 +77,36 @@ const NAV: { to: string; label: string; icon: string; perm: string[]; any?: bool
   { to: '/qualite', label: 'Qualité et conformité', icon: '✔', perm: ['inspections:read'] },
 ];
 
+
+/** Icône de profil de la personne connectée : un clic ouvre un menu (profil, déconnexion). */
+function ProfileMenu({ name, onSignOut }: { name: string; onSignOut: () => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const nav = useNavigate();
+  useEffect(() => {
+    if (!open) return;
+    const away = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false); };
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', away); document.addEventListener('keydown', esc);
+    return () => { document.removeEventListener('mousedown', away); document.removeEventListener('keydown', esc); };
+  }, [open]);
+  const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase()).join('') || '?';
+  return (
+    <div className="profile-menu" ref={ref}>
+      <button className="profile-btn" aria-label={`Profil de ${name}`} aria-haspopup="menu" aria-expanded={open} title={name} onClick={() => setOpen(!open)}>
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7" /></svg>
+      </button>
+      {open && (
+        <div className="profile-pop" role="menu">
+          <div className="profile-head"><span className="profile-ini" aria-hidden="true">{initials}</span><strong>{name}</strong></div>
+          <button role="menuitem" onClick={() => { setOpen(false); nav('/compte'); }}>Mon profil</button>
+          <button role="menuitem" className="out" onClick={() => { setOpen(false); onSignOut(); }}>Se déconnecter</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function App() {
   const { status, org, me, can, signOut } = useAuth();
   const loc = useLocation();
@@ -112,8 +142,7 @@ export default function App() {
         <span className="coop">{org?.name}</span>
         <div className="title-right">
           <ConnectionStatus />{can('messages:use') && <MessageButton unread={msgUnread} />}<Bell unread={unread} onChange={refreshUnread} />
-          <span className="who-inline">{me?.user.full_name} · <NavLink to="/compte">Mon compte</NavLink></span>
-          <button className="btn btn-ghost btn-small" onClick={signOut}>Se déconnecter</button>
+          <ProfileMenu name={me?.user.full_name ?? ''} onSignOut={signOut} />
           <span className="today-date">{new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
         </div>
       </header>
