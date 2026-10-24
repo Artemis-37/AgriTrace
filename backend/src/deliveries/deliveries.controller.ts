@@ -1,4 +1,4 @@
-import { BadRequestException, Body, ConflictException, Controller, ForbiddenException, Get, NotFoundException, Param, ParseUUIDPipe, Post, Query, Req, UnprocessableEntityException } from '@nestjs/common';
+import { BadRequestException, Body, ConflictException, Controller, StreamableFile, ForbiddenException, Get, NotFoundException, Param, ParseUUIDPipe, Post, Query, Req, UnprocessableEntityException } from '@nestjs/common';
 import { ApiBearerAuth, ApiHeader, ApiTags } from '@nestjs/swagger';
 import { IsBoolean, IsIn, IsInt, IsNumber, IsObject, IsOptional, IsString, IsUUID, Length, Matches, Max, Min } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -265,6 +265,55 @@ export class DeliveriesController {
       `UPDATE deliveries SET status = 'settled', unit_price = $2, amount = $3, settled_by = $4, settled_at = now(), payment_ref = $5 WHERE id = $1 RETURNING *`,
       [b.unit_price, amount, req.user.id, b.payment_ref || null], 'delivery.settle',
       (d) => ({ title: `Livraison ${d.source_sheet_no} réglée`, body: `${Number(d.net_payable_kg ?? d.net_kg)} kg × ${Number(d.unit_price)} = ${Number(d.amount)}` }));
+  }
+
+  /** Bon retour (bulletin de pesée) en PDF : produit pour un chargement accepté, exportable par l'exportateur comme par la coopérative. */
+  @Get('deliveries/:id/bulletin.pdf')
+  async bulletinPdf(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
+    const b: any = await this.bulletin(id, req);
+    if (b.status === 'refused' || b.decision !== 'accepted') throw new ConflictException('Le bon retour n\'est produit que pour un chargement accepté');
+    const PDFDocument = require('pdfkit');
+    const doc = new PDFDocument({ size: 'A4', margin: 36 });
+    const chunks: Buffer[] = []; doc.on('data', (x: Buffer) => chunks.push(x));
+    const done = new Promise<Buffer>((ok) => doc.on('end', () => ok(Buffer.concat(chunks))));
+    const iss = b.issuer ?? {}; const N = (v: any) => (v === null || v === undefined || v === '' ? '' : Number(v).toLocaleString('fr-FR', { maximumFractionDigits: 2 }));
+    const D = (v: any) => (v ? new Date(v).toLocaleDateString('fr-FR') : '');
+    const W = doc.page.width - 72;
+    doc.font('Helvetica-Bold').fontSize(13).text(String(iss.commercial_name ?? iss.name ?? ''), 36, 36).font('Helvetica').fontSize(9)
+      .text([iss.address, iss.phone ? 'Tél : ' + iss.phone : '', iss.ccc_code ? 'N° CC : ' + iss.ccc_code : ''].filter(Boolean).join('\n'));
+    doc.font('Helvetica').fontSize(10).text(`Campagne : ${iss.campaign ?? ''}\nUsine : ${iss.plant ?? iss.name ?? ''}`, 36, 36, { width: W, align: 'right' });
+    doc.rect(150, 92, W - 228, 26).lineWidth(1.5).stroke().font('Helvetica-Bold').fontSize(15).text('BON RETOUR — BULLETIN DE PESÉE', 150, 99, { width: W - 228, align: 'center' });
+    doc.fontSize(10).text(`N° ${b.bulletin_no}`, 36, 126, { width: W, align: 'center' }).font('Helvetica').text(`Livraison ${b.number} · Fiche ${b.source_sheet_no} · Produit accepté`, 36, 140, { width: W, align: 'center' });
+    let y = 164;
+    const sec = (t: string) => { doc.rect(36, y, W, 15).fill('#e6e6e6'); doc.fillColor('#000').font('Helvetica-Bold').fontSize(9).text(t, 36, y + 3, { width: W, align: 'center' }); y += 20; };
+    const grid = (rows: [string, any][], cols = 2) => {
+      const cw = W / cols; const per = Math.ceil(rows.length / cols);
+      rows.forEach(([l, v], i) => { const cx = 36 + Math.floor(i / per) * cw, cy = y + (i % per) * 13;
+        doc.font('Helvetica').fontSize(8.5).text(l, cx, cy, { width: cw * 0.55 }).font('Helvetica-Bold').text(String(v ?? ''), cx + cw * 0.5, cy, { width: cw * 0.44 - 6, align: 'right' }); });
+      y += per * 13 + 6;
+    };
+    const df = b.defects ?? {}; const dv = (k: string) => N(df[k]);
+    const accepted = b.bags_discharged == null ? null : Number(b.bags_discharged) - Number(b.bags_refused ?? 0);
+    sec('INDICATION CONNAISSEMENT');
+    grid([['Fournisseur', b.source_org_name], ['Origine', b.origin], ['Chauffeur', b.driver_name], ['N° tracteur', b.truck_no], ['N° remorque', b.trailer_no], ['Transporteur', b.transporter],
+      ['Connaissement', b.bl_no], ['Date connaissement', D(b.departure_date)], ['Poids brut déclaré', N(b.declared_gross_kg)], ['Poids net déclaré', N(b.declared_kg)], ['Sacs déclarés', N(b.declared_bags)]]);
+    sec('PESÉE');
+    grid([['Poids d\'entrée (kg)', N(b.gross_kg)], ['Date d\'entrée', D(b.gross_at)], ['Pont d\'entrée', b.bridge_in], ['Poids de sortie (kg)', N(b.tare_kg)], ['Date de sortie', D(b.tare_at)], ['Pont de sortie', b.bridge_out]]);
+    sec('ANALYSE');
+    grid([['Humidité (%)', N(b.moisture_pct)], ['Grainage', b.bean_count ?? ''], ['Fèves moisies', dv('mouldy')], ['Fèves ardoisées', dv('slaty')], ['Fèves mitées', dv('insect')], ['Fèves germées', dv('germinated')],
+      ['Fèves plates', dv('flat')], ['Fèves violettes', dv('violet')], ['Résidus', dv('residues')], ['Classement', b.grade ?? '']], 3);
+    sec('LIVRAISON PRODUIT');
+    grid([['Poids brut livré (kg)', N(b.net_kg)], ['Sacs déchargés', b.bags_discharged ?? ''], ['Sacs refusés', b.bags_refused ?? 0], ['Sacs acceptés', accepted ?? ''], ['Tare sacs (kg)', N(b.sack_tare_kg)], ['Tare palettes (kg)', N(b.pallet_tare_kg)],
+      ['Poids net livré (kg)', N(b.net_delivered_kg)], ['Réfaction (kg)', N(b.refaction_kg)], ['POIDS NET PAYÉ (kg)', N(b.net_payable_kg)], ['Écart / déclaré (kg)', N(b.variance_kg)],
+      ['Manquants (sacs)', b.bags_discharged == null ? '' : Number(b.declared_bags) - Number(b.bags_discharged)]]);
+    if (b.analysis_notes) { doc.font('Helvetica-Bold').fontSize(9).text('Observations : ', 36, y, { continued: true }).font('Helvetica').text(String(b.analysis_notes)); y = doc.y + 8; }
+    const fy = Math.max(y + 30, 640);
+    ['VISA PONT BASCULE\n' + (b.weigher_name ?? ''), 'VISA ANALYSTE\n' + (b.analyst_name ?? ''), 'VISA FOURNISSEUR'].forEach((t, i) => doc.moveTo(36 + i * (W / 3) + 6, fy).lineTo(36 + (i + 1) * (W / 3) - 6, fy).lineWidth(0.7).stroke().font('Helvetica').fontSize(8.5).text(t, 36 + i * (W / 3), fy + 4, { width: W / 3, align: 'center' }));
+    doc.fontSize(7.5).fillColor('#444').text(`Document émis par ${iss.printed_by ?? b.analyst_name ?? ''} · exporté le ${new Date().toLocaleString('fr-FR')}`, 36, 780, { width: W, align: 'center' });
+    doc.end();
+    const buf = await done;
+    await this.log(req, 'delivery.bon_retour_pdf', id, { bulletin: b.bulletin_no });
+    return new StreamableFile(buf, { type: 'application/pdf', disposition: `attachment; filename="bon-retour-${b.bulletin_no}.pdf"` });
   }
 
   /** Données du bulletin de pesée (impression côté portail). Visible du destinataire et du fournisseur. */

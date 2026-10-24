@@ -264,6 +264,47 @@ export class DispatchController {
     return new StreamableFile(buf, { type: XLSX, disposition: `attachment; filename="Fiche_accompagnement_${s.number}.xlsx"` });
   }
 
+  // ── Pièces jointes du chargement : fiche d'accompagnement (Excel ou PDF) et connaissement CCC (PDF), transmis avec le chargement
+  @Post('dispatch-sheets/:id/attachments/:kind') @RequirePermissions('dispatch:manage')
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: MAX_IMPORT_BYTES * 2, files: 1 } }))
+  async attach(@Param('id', ParseUUIDPipe) id: string, @Param('kind') kind: string, @UploadedFile() file: Express.Multer.File, @Req() req: any) {
+    if (!['fiche', 'connaissement_ccc'].includes(kind)) throw new BadRequestException('Type de pièce inconnu');
+    if (!file?.buffer?.length) throw new BadRequestException('Aucun fichier reçu');
+    const isPdf = file.buffer.subarray(0, 5).toString() === '%PDF-';
+    const isXlsx = file.buffer[0] === 0x50 && file.buffer[1] === 0x4b;   // zip (xlsx)
+    if (kind === 'connaissement_ccc' && !isPdf) throw new BadRequestException('Le connaissement CCC doit être un PDF');
+    if (kind === 'fiche' && !isPdf && !isXlsx) throw new BadRequestException('La fiche doit être un fichier Excel (.xlsx) ou un PDF');
+    const row = await this.db.tx(req.org.id, async (c) => {
+      const sh = await this.sheetFor(c, req, id);
+      if (sh.status === 'transmitted') throw new ConflictException('Le chargement est déjà transmis : les pièces ne changent plus');
+      const old = (await c.query(`SELECT 1 FROM dispatch_attachments WHERE sheet_id = $1 AND kind = $2`, [id, kind])).rows[0];
+      if (old) throw new ConflictException('Cette pièce est déjà jointe');
+      return (await c.query(
+        `INSERT INTO dispatch_attachments(organization_id, sheet_id, kind, filename, mime, size_bytes, sha256, content, uploaded_by) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+         RETURNING id, kind, filename, mime, size_bytes, sha256, created_at`,
+        [req.org.id, id, kind, String(file.originalname ?? kind).slice(0, 150), isPdf ? 'application/pdf' : XLSX, file.buffer.length, createHash('sha256').update(file.buffer).digest('hex'), file.buffer, req.user.id])).rows[0];
+    });
+    await this.log(req, 'dispatch.attach', id, { kind, file: row.filename });
+    return row;
+  }
+
+  /** Liste des pièces d'un chargement : visible de la coopérative qui expédie et de l'organisation destinataire. */
+  @Get('dispatch-sheets/:id/attachments')
+  async attachments(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
+    if (!this.has(req, 'dispatch:manage') && !this.has(req, 'deliveries:read')) throw new ForbiddenException();
+    return this.db.tx(req.org.id, async (c) => (await c.query(
+      `SELECT id, kind, filename, mime, size_bytes, sha256, created_at FROM dispatch_attachments WHERE sheet_id = $1 ORDER BY kind`, [id])).rows);
+  }
+  @Get('dispatch-attachments/:aid/file')
+  async attachmentFile(@Param('aid', ParseUUIDPipe) aid: string, @Req() req: any) {
+    if (!this.has(req, 'dispatch:manage') && !this.has(req, 'deliveries:read')) throw new ForbiddenException();
+    const a = await this.db.tx(req.org.id, async (c) => (await c.query(`SELECT * FROM dispatch_attachments WHERE id = $1`, [aid])).rows[0]);
+    if (!a) throw new NotFoundException();
+    await this.log(req, 'dispatch.attachment_download', a.sheet_id, { kind: a.kind });
+    return new StreamableFile(a.content, { type: a.mime, disposition: `attachment; filename="${String(a.filename).replace(/[^\w.\- ]/g, '_')}"` });
+  }
+
   @Post('dispatch-sheets/:id/transmit') @RequirePermissions('dispatch:manage')
   async transmit(@Param('id', ParseUUIDPipe) id: string, @Body() b: TransmitDto, @Req() req: any) {
     const row = await this.db.tx(req.org.id, async (c) => {
