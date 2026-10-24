@@ -40,6 +40,8 @@ const LEGENDE = {
   missions: 'Missions (tâches de terrain) : création, suivi, validation.',
   terrain: 'Relevés de terrain : formations, infrastructures sociales, distributions.',
   qualite: 'Qualité : règles, inspections, certificats.',
+  livraisons: 'Livraisons : pont bascule, analyse, bulletin de pesée et règlement.',
+  'organisations-liees': 'Coopératives fournisseuses de l\'exportateur et liens entre organisations.',
   'fiches-accompagnement': 'Fiches d\'accompagnement : producteurs des convois et des chargements, export Excel, import et transmission à l\'exportateur.',
   commerce: 'Commerce : acheteurs, contrats, commandes.',
   'mes-achats': 'Mes achats : achats déclarés par le délégué.',
@@ -133,7 +135,7 @@ const MOD = {
     pas: [
       ['Vérifier les déclarations', 'Menu **Déclarations d\'achat** : les déclarations « Reçue » attendent une mise en vérification, puis validation.'],
       ['Préparer la fiche d\'accompagnement', 'Menu **Fiches d\'accompagnement** → onglet *Convois pesés* : **Consulter** liste les producteurs d\'un convoi (nom, genre, section, code, date de livraison, poids net, sacs, n° de reçu) et **Exporter (Excel)** produit la fiche sur le modèle de la coopérative. Pour un chargement de plusieurs convois, cochez-les puis **Créer la fiche** : renseignez chauffeur, camion, remorque, LOT ID DSE, n° de connaissement, date de départ, type de cacao et certifications. Une fiche déjà remplie ailleurs s\'**importe** par *Importer une fiche (Excel)* (les codes absents du registre sont signalés).'],
-      ['Transmettre la fiche à l\'exportateur', 'Onglet *Fiches d\'accompagnement* → **Transmettre à l\'exportateur** : choisissez le compte exportateur. La fiche ne peut plus être modifiée, l\'exportateur est notifié et la télécharge au format Excel.'],
+      ['Transmettre la fiche à l\'exportateur', 'Onglet *Fiches d\'accompagnement* → **Transmettre** : choisissez l\'**exportateur lié** (ou un compte exportateur de la coopérative). Vers un exportateur lié, la fiche devient chez lui une livraison attendue ; vous la suivez dans **Livraisons → Mes livraisons envoyées**. La fiche ne peut plus être modifiée, l\'exportateur est notifié et la télécharge au format Excel.'],
       ['Tracer un lot', 'Menu **Stocks et lots** (si accessible) ou la fiche du lot : bouton *Traçabilité* pour voir producteurs, parcelles, connaissements et pesées.'],
     ],
     exos: [
@@ -255,6 +257,26 @@ const MOD = {
       ['Créez un connaissement (28 sacs, 1 800 kg annoncés) sans saisir de numéro.', 'Le logiciel attribue le numéro : code CCC, année, 3 premières lettres de votre nom, n° d\'ordre (ex. {{CV1}} pour le 1er connaissement de Brahima). Le connaissement apparaît « En route » côté magasin.'],
     ],
   },
+  pont_bascule: {
+    niveau: 'Niveau 1 — Opérateur', duree: '1 h',
+    objectifs: ['Repérer la livraison attendue', 'Peser l\'entrée (camion chargé)', 'Peser la sortie (camion vide) et lire le poids net'],
+    pas: [
+      ['Ouvrir les livraisons', 'Menu **Pont bascule et analyse** : chaque fiche d\'accompagnement transmise par une coopérative liée est une livraison **Attendue** (camion, poids déclaré). Vous êtes notifié à l\'arrivée.'],
+      ['Peser l\'entrée', '**Peser l\'entrée** : saisissez le **poids brut** lu au pont bascule, camion chargé. La livraison passe à « Entrée pesée ».'],
+      ['Peser la sortie', 'Après déchargement : **Peser la sortie** → saisissez la **tare** (camion vide) et les sacs comptés. Le **poids net** (brut − tare) et l\'écart avec le poids déclaré s\'affichent, la coopérative est prévenue. La tare doit être inférieure au brut.'],
+    ],
+    exos: [['Pesez l\'entrée d\'une livraison attendue (brut = déclaré + 9 000 kg).', 'Statut « Entrée pesée ».'], ['Pesez la sortie avec une tare de 9 000 kg.', 'Poids net = poids déclaré ; statut « Pesée terminée » ; le bouton d\'analyse n\'apparaît pas pour vous (rôle analyste).']],
+  },
+  analyste: {
+    niveau: 'Niveau 1 — Opérateur', duree: '1 h',
+    objectifs: ['Saisir les résultats de l\'analyse', 'Décider : acceptée ou rejetée', 'Produire et imprimer le bulletin de pesée'],
+    pas: [
+      ['Choisir une livraison pesée', 'Menu **Pont bascule et analyse** : les livraisons « Pesée terminée » portent le bouton **Analyser**.'],
+      ['Saisir l\'analyse', 'Humidité (%), grainage (fèves / 100 g), défauts (moisies, ardoisées, mitées, germées, plates), qualité. **Décision** : acceptée ou rejetée (le motif du rejet est obligatoire).'],
+      ['Produire le bulletin de pesée', '**Enregistrer et produire le bulletin** : le bulletin est numéroté (BP-aaaa-nnnnn). Bouton **Bulletin** : fenêtre d\'impression, enregistrable en PDF. Les poids ne sont plus modifiables après l\'analyse.'],
+    ],
+    exos: [['Analysez la livraison pesée : humidité 7,4 %, 98 fèves / 100 g, décision acceptée.', 'Statut « Analysée » et bulletin BP-… disponible.'], ['Tentez de rejeter une livraison sans motif.', 'Le logiciel exige le motif du rejet.']],
+  },
   exportateur: {
     niveau: 'Niveau 1 — Opérateur', duree: '1 h',
     objectifs: ['Proposer un module de formation à l\'ADG', 'Suivre le sort de ses propositions', 'Consulter les résultats transmis par l\'ADG'],
@@ -297,7 +319,7 @@ const MOD = {
   },
 };
 
-const ORDER = ['coop_admin', 'magasinier', 'caissier', 'comptable', 'direction', 'responsable_financier', 'responsable_magasin', 'responsable_tracabilite', 'responsable_cartographie', 'cartographe', 'agent_terrain', 'responsable_qualite', 'responsable_logistique', 'auditeur', 'acheteur', 'délégué', 'adg', 'coach', 'exportateur'];
+const ORDER = ['coop_admin', 'magasinier', 'caissier', 'comptable', 'direction', 'responsable_financier', 'responsable_magasin', 'responsable_tracabilite', 'responsable_cartographie', 'cartographe', 'agent_terrain', 'responsable_qualite', 'responsable_logistique', 'auditeur', 'acheteur', 'délégué', 'adg', 'coach', 'exportateur', 'pont_bascule', 'analyste'];
 const rel = (f) => `captures/formation/${f}`;
 const mob = (f) => `captures/mobile/${f}`;
 const hasMobile = (f) => fs.existsSync(path.join(dir, 'captures', 'mobile', f));

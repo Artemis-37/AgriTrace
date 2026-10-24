@@ -85,6 +85,7 @@ const PROFILS = [
   await call('POST', '/products', { ...A, body: { name: 'Café (cerises sèches)', buy_price_per_kg: '600', sell_price_per_kg: '900', campaign_id: camp.id } });
 
   // ── Comptes : un par profil
+  let exporterOrg = null;
   const accounts = [{ role: 'coop_admin', label: 'Administrateur de la coopérative', name: 'Adjoua Konan', email: adminEmail }];
   const users = {};
   for (const [code, label, name] of PROFILS) {
@@ -237,6 +238,24 @@ const PROFILS = [
   });
   await soft('rapport programmé', () => call('POST', '/report-schedules', { ...A, body: { report: 'finance', frequency: 'weekly', weekday: 1, recipients: [users.direction.id] } }));
 
+  // ── Exportateur de démonstration : organisation à part entière, liée à la coopérative (elle lui livre)
+  await soft('exportateur de démonstration', async () => {
+    const ex = await call('POST', '/organizations', { token: adm, body: { code: 'EXPORT' + run.toUpperCase(), name: 'Exportateur de Démonstration', kind: 'exporter' } });
+    const EDOM = 'exportateur-demo.test';
+    await call('POST', `/organizations/${ex.id}/admins`, { token: adm, body: { email: `admin@${EDOM}`, full_name: 'Yves Kouadio (administrateur)', password: PASSWORD } });
+    const EA = { token: await login(`admin@${EDOM}`), org: ex.id };
+    for (const [code, key2, label, name] of [['pont_bascule', 'pont_bascule', 'Responsable pont bascule (exportateur)', 'Seydou Bamba'], ['analyste', 'analyste', 'Analyste (exportateur)', 'Carine Amani'], ['caissier', 'exp_caissier', 'Caissier (exportateur)', 'Paul Zézé']]) {
+      const r = await call('POST', '/roles/standard', { ...EA, body: { code } });
+      const email = `${key2.replace(/_/g, '.')}@${EDOM}`;
+      await call('POST', '/users', { ...EA, body: { email, full_name: name, password: PASSWORD, role_id: r.id } });
+      accounts.push({ role: key2, label, name, email, org: ex.id });
+    }
+    accounts.push({ role: 'exp_admin', label: 'Administrateur (exportateur)', name: 'Yves Kouadio', email: `admin@${EDOM}`, org: ex.id });
+    const lk = await call('POST', '/org-links', { ...A, body: { code: 'EXPORT' + run.toUpperCase(), direction: 'supply_to' } });
+    await call('POST', `/org-links/${lk.id}/accept`, { ...EA });
+    exporterOrg = { id: ex.id, name: 'Exportateur de Démonstration' };
+  });
+
   // ── Écriture du fichier d'accès
   const MOBILE_ONLY = new Set(['collecteur', 'agent_terrain', 'coach']);
   const rows = accounts.map((a) => `| ${a.label}${MOBILE_ONLY.has(a.role) ? ' — **application mobile uniquement**' : ''} | ${a.name} | \`${a.email}\` |`).join('\n');
@@ -245,7 +264,7 @@ const PROFILS = [
     const out = path.join(__dirname, '..', '..', 'docs', 'COMPTES_DEMO.md');
     fs.writeFileSync(out, doc);
   }
-  fs.writeFileSync(process.env.DEMO_JSON || '/tmp/demo-accounts.json', JSON.stringify({ org: org.id, password: PASSWORD, accounts, convoys: [cv1, cv2, cv3], delegate2 }, null, 2));
+  fs.writeFileSync(process.env.DEMO_JSON || '/tmp/demo-accounts.json', JSON.stringify({ org: org.id, exporter: exporterOrg, password: PASSWORD, accounts, convoys: [cv1, cv2, cv3], delegate2 }, null, 2));
   console.log(`\nCoopérative de démonstration prête : ${org.name}\n  ${accounts.length} comptes (mot de passe : ${PASSWORD})`);
   if (warnings.length) console.log(`\n${warnings.length} étape(s) facultative(s) ignorée(s) :\n - ` + warnings.join('\n - '));
 })().catch((e) => { console.error(e.message); process.exit(1); });

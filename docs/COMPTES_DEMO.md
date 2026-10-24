@@ -3,7 +3,7 @@
 > Données **entièrement fictives**. Ne jamais utiliser en production.
 
 - Mot de passe commun : `Demo-AgriTrace-2026!`
-- Coopérative : « Coopérative Agricole de Démonstration » (code DEMOCA58)
+- Coopérative : « Coopérative Agricole de Démonstration » (code DEMOAE68)
 
 | Profil | Utilisateur fictif | Identifiant |
 |---|---|---|
@@ -26,3 +26,7 @@
 | Assistant de direction générale | Mireille Ouattara | `adg@demo.agritrace.test` |
 | Coach / conseiller agricole — **application mobile uniquement** | Gilbert Koffi | `coach@demo.agritrace.test` |
 | Exportateur (partenaire) | Karim Diallo | `exportateur@demo.agritrace.test` |
+| Responsable pont bascule (exportateur) | Seydou Bamba | `pont.bascule@exportateur-demo.test` |
+| Analyste (exportateur) | Carine Amani | `analyste@exportateur-demo.test` |
+| Caissier (exportateur) | Paul Zézé | `exp.caissier@exportateur-demo.test` |
+| Administrateur (exportateur) | Yves Kouadio | `admin@exportateur-demo.test` |

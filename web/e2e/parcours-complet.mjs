@@ -233,15 +233,61 @@ console.log('6 bis. Fiche d\'accompagnement');
   await snap(page, 'responsable_tracabilite', 'fiche-nouvelle', 'Créer la fiche du chargement', 'Cochez les convois du chargement puis **Créer la fiche** : les producteurs sont repris automatiquement. Renseignez le chauffeur, le camion, la remorque, le LOT ID DSE, le n° de connaissement, la date de départ, le type de cacao et les certifications.');
   await modalOf(page).getByRole('button', { name: 'Créer la fiche' }).click(); await page.waitForTimeout(1500);
   await page.getByRole('button', { name: /Transmettre à l'exportateur/ }).first().click(); await page.waitForTimeout(700);
-  await modalOf(page).locator('select').selectOption({ index: 1 }); await page.waitForTimeout(300);
-  await snap(page, 'responsable_tracabilite', 'fiche-transmission', 'Transmettre la fiche à l\'exportateur', 'Une fiche peut aussi être **importée** (bouton *Importer une fiche (Excel)*) si elle a été remplie ailleurs sur le même modèle. Choisissez l\'exportateur : la fiche lui est transmise, il est notifié, et elle ne peut plus être modifiée.');
-  await modalOf(page).getByRole('button', { name: /Transmettre à l'exportateur/ }).click(); await page.waitForTimeout(1500);
+  await modalOf(page).locator('select').selectOption({ label: `${demo.exporter.name} (exportateur)` }); await page.waitForTimeout(300);
+  await snap(page, 'responsable_tracabilite', 'fiche-transmission', 'Transmettre la fiche à l\'exportateur', 'Le destinataire est l\'**exportateur lié** à la coopérative (lien accepté des deux côtés) : la fiche devient chez lui une livraison attendue. Une fiche peut aussi être **importée** (bouton *Importer une fiche (Excel)*) si elle a été remplie ailleurs sur le même modèle. Choisissez l\'exportateur : la fiche lui est transmise, il est notifié, et elle ne peut plus être modifiée.');
+  await modalOf(page).getByRole('button', { name: 'Transmettre', exact: true }).click(); await page.waitForTimeout(1500);
+  await close();
+}
+
+// ═══ 6 ter. Chez l'exportateur : pont bascule, analyse, bulletin de pesée, règlement
+console.log('6 ter. Exportateur');
+{
+  const { page, go, close } = await actor('exp_admin');
+  await go('/organisations-liees');
+  await snap(page, 'exp_admin', 'coop-fournisseuses', 'L\'exportateur : coopératives fournisseuses', 'L\'exportateur est une **organisation à part entière** (ses employés, sa caisse, sa comptabilité, ses stocks) sans agents de terrain. L\'écran **Coopératives** donne, pour chaque coopérative qui lui livre, les livraisons en cours, les poids acceptés ou rejetés, ce qui reste à régler et ce qui est payé. Les liens se proposent avec le code de l\'autre organisation et s\'activent quand elle les accepte.');
   await close();
 }
 {
-  const { page, go, close } = await actor('exportateur');
-  await go('/fiches-accompagnement');
-  await snap(page, 'exportateur', 'fiche-recue', 'Fiche d\'accompagnement reçue', 'L\'exportateur ne voit que les fiches qui lui sont transmises : il les consulte (producteurs du chargement) et les **télécharge au format Excel**.');
+  const { page, go, close } = await actor('pont_bascule');
+  await go('/livraisons');
+  await snap(page, 'pont_bascule', 'livraison-attendue', 'Pont bascule : la livraison attendue', 'La fiche transmise par la coopérative apparaît ici (**Attendue**), avec le camion et le poids déclaré ; le responsable du pont bascule est notifié.');
+  await page.getByRole('button', { name: "Peser l'entrée" }).first().click(); await page.waitForTimeout(500);
+  const decl = Number((await page.locator('.modal').innerText()).match(/déclaré ([\d\s\u202f\u00a0,]+) kg/)?.[1]?.replace(/[\s\u202f\u00a0]/g, '').replace(',', '.') ?? 1000);
+  await modalOf(page).locator('input').first().fill(String(decl + 9000)); await page.waitForTimeout(300);
+  await snap(page, 'pont_bascule', 'pesee-entree', 'Pesée d\'entrée (camion chargé)', 'Le camion se présente chargé : on saisit le **poids brut** lu au pont bascule.');
+  await modalOf(page).getByRole('button', { name: "Enregistrer l'entrée" }).click(); await page.waitForTimeout(1200);
+  await page.getByRole('button', { name: 'Peser la sortie' }).first().click(); await page.waitForTimeout(500);
+  await modalOf(page).locator('input').first().fill('9000'); await modalOf(page).locator('input').nth(1).fill('100'); await page.waitForTimeout(300);
+  await snap(page, 'pont_bascule', 'pesee-sortie', 'Pesée de sortie (camion vide) : poids net', 'Une fois déchargé, le camion repasse au pont bascule : on saisit la **tare** ; le **poids net** (brut − tare) et l\'écart avec le poids déclaré s\'affichent.');
+  await modalOf(page).getByRole('button', { name: 'Enregistrer la sortie' }).click(); await page.waitForTimeout(1200);
+  await close();
+}
+{
+  const { page, go, close } = await actor('analyste');
+  await go('/livraisons');
+  await page.getByRole('button', { name: 'Analyser' }).first().click(); await page.waitForTimeout(500);
+  await modalOf(page).locator('input').nth(0).fill('7.4'); await modalOf(page).locator('input').nth(1).fill('98'); await modalOf(page).locator('input').nth(2).fill('1'); await modalOf(page).locator('input').nth(3).fill('2'); await modalOf(page).locator('input[placeholder]').first().fill('Grade 1'); await page.waitForTimeout(300);
+  await snap(page, 'analyste', 'analyse', 'Analyse de la livraison', 'L\'analyste saisit l\'**humidité**, le grainage et les défauts, choisit la décision (acceptée ou rejetée, avec motif obligatoire en cas de rejet) puis produit le **bulletin de pesée**.');
+  await modalOf(page).getByRole('button', { name: /produire le bulletin/ }).click(); await page.waitForTimeout(1200);
+  const [pop] = await Promise.all([page.context().waitForEvent('page'), page.getByRole('button', { name: 'Bulletin' }).first().click()]); await pop.waitForTimeout(900);
+  n += 1; { const file = `${String(n).padStart(2, '0')}-analyste-bulletin.png`; await pop.setViewportSize({ width: 900, height: 1100 }); await pop.screenshot({ path: path.join(OUT, file) });
+    steps.push({ n, role: 'analyste', who: acc.analyste.name, title: 'Bulletin de pesée', text: 'Le bulletin reprend la livraison, les pesées d\'entrée et de sortie, le poids net, l\'analyse, la décision et les signataires. Il s\'imprime ou s\'enregistre en PDF depuis la fenêtre d\'impression.', file }); console.log('  ✓', file); }
+  await pop.close(); await close();
+}
+{
+  const { page, go, close } = await actor('exp_caissier');
+  await go('/livraisons');
+  await page.getByRole('button', { name: 'Régler' }).first().click(); await page.waitForTimeout(500);
+  await modalOf(page).locator('input').first().fill('1000'); await modalOf(page).locator('input').nth(1).fill('VIR-2026-001'); await page.waitForTimeout(300);
+  await snap(page, 'exp_caissier', 'reglement', 'Règlement de la coopérative', 'Pour une livraison **acceptée**, la caisse fixe le prix au kilo : le montant est le poids net × le prix. Il est communiqué à la coopérative ; l\'écriture comptable se passe dans Comptabilité.');
+  await modalOf(page).getByRole('button', { name: 'Régler', exact: true }).last().click(); await page.waitForTimeout(1300);
+  await close();
+}
+{
+  const { page, go, close } = await actor('responsable_tracabilite');
+  await go('/livraisons');
+  await page.getByRole('tab', { name: /envoyées/ }).click().catch(() => {}); await page.waitForTimeout(800);
+  await snap(page, 'responsable_tracabilite', 'suivi-livraison', 'La coopérative suit sa livraison', 'Dans **Livraisons → Mes livraisons envoyées**, la coopérative voit le poids net pesé chez l\'exportateur, l\'écart, la décision de l\'analyse, le bulletin et le règlement ; elle est notifiée à chaque étape.');
   await close();
 }
 

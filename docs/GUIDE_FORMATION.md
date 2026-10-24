@@ -58,6 +58,10 @@ Mot de passe commun : `Demo-AgriTrace-2026!` (à changer pour toute utilisation 
 | Assistant de direction générale | Mireille Ouattara | `adg@demo.agritrace.test` |
 | Coach / conseiller agricole | Gilbert Koffi | `coach@demo.agritrace.test` |
 | Exportateur (partenaire) | Karim Diallo | `exportateur@demo.agritrace.test` |
+| Responsable pont bascule (exportateur) | Seydou Bamba | `pont.bascule@exportateur-demo.test` |
+| Analyste (exportateur) | Carine Amani | `analyste@exportateur-demo.test` |
+| Caissier (exportateur) | Paul Zézé | `exp.caissier@exportateur-demo.test` |
+| Administrateur (exportateur) | Yves Kouadio | `admin@exportateur-demo.test` |
 
 ## 4. Parcours conseillés
 
@@ -242,47 +246,89 @@ Cochez les convois du chargement puis **Créer la fiche** : les producteurs sont
 
 ### Étape 29 — Éric Tano : Transmettre la fiche à l'exportateur
 
-Une fiche peut aussi être **importée** (bouton *Importer une fiche (Excel)*) si elle a été remplie ailleurs sur le même modèle. Choisissez l'exportateur : la fiche lui est transmise, il est notifié, et elle ne peut plus être modifiée.
+Le destinataire est l'**exportateur lié** à la coopérative (lien accepté des deux côtés) : la fiche devient chez lui une livraison attendue. Une fiche peut aussi être **importée** (bouton *Importer une fiche (Excel)*) si elle a été remplie ailleurs sur le même modèle. Choisissez l'exportateur : la fiche lui est transmise, il est notifié, et elle ne peut plus être modifiée.
 
 ![Transmettre la fiche à l'exportateur](captures/parcours/29-responsable_tracabilite-fiche-transmission.png)
 
-### Étape 30 — Karim Diallo : Fiche d'accompagnement reçue
+### Étape 30 — Yves Kouadio : L'exportateur : coopératives fournisseuses
 
-L'exportateur ne voit que les fiches qui lui sont transmises : il les consulte (producteurs du chargement) et les **télécharge au format Excel**.
+L'exportateur est une **organisation à part entière** (ses employés, sa caisse, sa comptabilité, ses stocks) sans agents de terrain. L'écran **Coopératives** donne, pour chaque coopérative qui lui livre, les livraisons en cours, les poids acceptés ou rejetés, ce qui reste à régler et ce qui est payé. Les liens se proposent avec le code de l'autre organisation et s'activent quand elle les accepte.
 
-![Fiche d'accompagnement reçue](captures/parcours/30-exportateur-fiche-recue.png)
+![L'exportateur : coopératives fournisseuses](captures/parcours/30-exp_admin-coop-fournisseuses.png)
 
-### Étape 31 — Daouda Fofana : Stock mis à jour
+### Étape 31 — Seydou Bamba : Pont bascule : la livraison attendue
+
+La fiche transmise par la coopérative apparaît ici (**Attendue**), avec le camion et le poids déclaré ; le responsable du pont bascule est notifié.
+
+![Pont bascule : la livraison attendue](captures/parcours/31-pont_bascule-livraison-attendue.png)
+
+### Étape 32 — Seydou Bamba : Pesée d'entrée (camion chargé)
+
+Le camion se présente chargé : on saisit le **poids brut** lu au pont bascule.
+
+![Pesée d'entrée (camion chargé)](captures/parcours/32-pont_bascule-pesee-entree.png)
+
+### Étape 33 — Seydou Bamba : Pesée de sortie (camion vide) : poids net
+
+Une fois déchargé, le camion repasse au pont bascule : on saisit la **tare** ; le **poids net** (brut − tare) et l'écart avec le poids déclaré s'affichent.
+
+![Pesée de sortie (camion vide) : poids net](captures/parcours/33-pont_bascule-pesee-sortie.png)
+
+### Étape 34 — Carine Amani : Analyse de la livraison
+
+L'analyste saisit l'**humidité**, le grainage et les défauts, choisit la décision (acceptée ou rejetée, avec motif obligatoire en cas de rejet) puis produit le **bulletin de pesée**.
+
+![Analyse de la livraison](captures/parcours/34-analyste-analyse.png)
+
+### Étape 35 — Carine Amani : Bulletin de pesée
+
+Le bulletin reprend la livraison, les pesées d'entrée et de sortie, le poids net, l'analyse, la décision et les signataires. Il s'imprime ou s'enregistre en PDF depuis la fenêtre d'impression.
+
+![Bulletin de pesée](captures/parcours/35-analyste-bulletin.png)
+
+### Étape 36 — Paul Zézé : Règlement de la coopérative
+
+Pour une livraison **acceptée**, la caisse fixe le prix au kilo : le montant est le poids net × le prix. Il est communiqué à la coopérative ; l'écriture comptable se passe dans Comptabilité.
+
+![Règlement de la coopérative](captures/parcours/36-exp_caissier-reglement.png)
+
+### Étape 37 — Éric Tano : La coopérative suit sa livraison
+
+Dans **Livraisons → Mes livraisons envoyées**, la coopérative voit le poids net pesé chez l'exportateur, l'écart, la décision de l'analyse, le bulletin et le règlement ; elle est notifiée à chaque étape.
+
+![La coopérative suit sa livraison](captures/parcours/37-responsable_tracabilite-suivi-livraison.png)
+
+### Étape 38 — Daouda Fofana : Stock mis à jour
 
 Les pesées réglées alimentent le stock du magasin ; chaque lot garde sa traçabilité jusqu'au producteur.
 
-![Stock mis à jour](captures/parcours/31-responsable_magasin-stock.png)
+![Stock mis à jour](captures/parcours/38-responsable_magasin-stock.png)
 
-### Étape 32 — Fanta Kamara : Vente aux acheteurs
+### Étape 39 — Fanta Kamara : Vente aux acheteurs
 
 L'acheteur suit contrats et commandes ; les quantités vendues sortent du stock.
 
-![Vente aux acheteurs](captures/parcours/32-acheteur-commerce.png)
+![Vente aux acheteurs](captures/parcours/39-acheteur-commerce.png)
 
-### Étape 33 — Mireille Ouattara : Modules proposés par l'exportateur
+### Étape 40 — Mireille Ouattara : Modules proposés par l'exportateur
 
 L'exportateur propose ses modules ; l'ADG les transmet aux coachs.
 
-![Modules proposés par l'exportateur](captures/parcours/33-adg-modules.png)
+![Modules proposés par l'exportateur](captures/parcours/40-adg-modules.png)
 
-### Étape 34 — Mireille Ouattara : Résultats des coachs
+### Étape 41 — Mireille Ouattara : Résultats des coachs
 
 Les résultats saisis par les coachs sur le terrain sont transmis à l'exportateur.
 
-![Résultats des coachs](captures/parcours/34-adg-resultats.png)
+![Résultats des coachs](captures/parcours/41-adg-resultats.png)
 
-### Étape 35 — Karim Diallo : Suivi par l'exportateur
+### Étape 42 — Karim Diallo : Suivi par l'exportateur
 
 L'exportateur suit ses propositions et reçoit les résultats transmis : la boucle du terrain à l'exportateur est bouclée.
 
-![Suivi par l'exportateur](captures/parcours/35-exportateur-suivi.png)
+![Suivi par l'exportateur](captures/parcours/42-exportateur-suivi.png)
 
-### Étape 36 — Gilbert Koffi : Résultats saisis sur le terrain
+### Étape 43 — Gilbert Koffi : Résultats saisis sur le terrain
 
 Le coach saisit le résultat de la séance (village, participants, note moyenne) sur son téléphone ; il remonte à l'ADG puis à l'exportateur.
 
@@ -740,7 +786,7 @@ Valide les déclarations d'achat, suit les lots et les certificats, contrôle la
 
 1. **Vérifier les déclarations.** Menu **Déclarations d'achat** : les déclarations « Reçue » attendent une mise en vérification, puis validation.
 2. **Préparer la fiche d'accompagnement.** Menu **Fiches d'accompagnement** → onglet *Convois pesés* : **Consulter** liste les producteurs d'un convoi (nom, genre, section, code, date de livraison, poids net, sacs, n° de reçu) et **Exporter (Excel)** produit la fiche sur le modèle de la coopérative. Pour un chargement de plusieurs convois, cochez-les puis **Créer la fiche** : renseignez chauffeur, camion, remorque, LOT ID DSE, n° de connaissement, date de départ, type de cacao et certifications. Une fiche déjà remplie ailleurs s'**importe** par *Importer une fiche (Excel)* (les codes absents du registre sont signalés).
-3. **Transmettre la fiche à l'exportateur.** Onglet *Fiches d'accompagnement* → **Transmettre à l'exportateur** : choisissez le compte exportateur. La fiche ne peut plus être modifiée, l'exportateur est notifié et la télécharge au format Excel.
+3. **Transmettre la fiche à l'exportateur.** Onglet *Fiches d'accompagnement* → **Transmettre** : choisissez l'**exportateur lié** (ou un compte exportateur de la coopérative). Vers un exportateur lié, la fiche devient chez lui une livraison attendue ; vous la suivez dans **Livraisons → Mes livraisons envoyées**. La fiche ne peut plus être modifiée, l'exportateur est notifié et la télécharge au format Excel.
 4. **Tracer un lot.** Menu **Stocks et lots** (si accessible) ou la fiche du lot : bouton *Traçabilité* pour voir producteurs, parcelles, connaissements et pesées.
 
 ### Ce que ce profil ne voit pas
@@ -1258,7 +1304,107 @@ Partenaire exportateur : propose des modules de formation à l'ADG reçoit, par 
 
 ---
 
-## 24. Évaluation finale (30 min)
+## 24. Responsable pont bascule
+
+**Niveau 1 — Opérateur** · durée indicative : 1 h · compte de démonstration : `pont.bascule@exportateur-demo.test`
+
+Chez l'exportateur : pèse l'entrée (camion chargé) et la sortie (camion vide) de chaque livraison pour obtenir le poids net.
+
+### Objectifs
+
+- Repérer la livraison attendue
+- Peser l'entrée (camion chargé)
+- Peser la sortie (camion vide) et lire le poids net
+
+### Ce que vous voyez
+
+![Tableau de bord : les indicateurs affichés dépendent de vos droits.](captures/formation/pont_bascule-accueil.png)
+
+*Tableau de bord : les indicateurs affichés dépendent de vos droits.*
+
+![Livraisons : pont bascule, analyse, bulletin de pesée et règlement.](captures/formation/pont_bascule-livraisons.png)
+
+*Livraisons : pont bascule, analyse, bulletin de pesée et règlement.*
+
+### Pas à pas
+
+1. **Ouvrir les livraisons.** Menu **Pont bascule et analyse** : chaque fiche d'accompagnement transmise par une coopérative liée est une livraison **Attendue** (camion, poids déclaré). Vous êtes notifié à l'arrivée.
+2. **Peser l'entrée.** **Peser l'entrée** : saisissez le **poids brut** lu au pont bascule, camion chargé. La livraison passe à « Entrée pesée ».
+3. **Peser la sortie.** Après déchargement : **Peser la sortie** → saisissez la **tare** (camion vide) et les sacs comptés. Le **poids net** (brut − tare) et l'écart avec le poids déclaré s'affichent, la coopérative est prévenue. La tare doit être inférieure au brut.
+
+### Ce que ce profil ne voit pas
+
+- Caisse et comptabilité
+- Finances
+- Équipe
+- Préfinancement
+
+### Exercices
+
+| # | À faire | Résultat attendu |
+|---|---|---|
+| 1 | Pesez l'entrée d'une livraison attendue (brut = déclaré + 9 000 kg). | Statut « Entrée pesée ». |
+| 2 | Pesez la sortie avec une tare de 9 000 kg. | Poids net = poids déclaré ; statut « Pesée terminée » ; le bouton d'analyse n'apparaît pas pour vous (rôle analyste). |
+
+### Acquis (à cocher)
+
+- [ ] Repérer la livraison attendue
+- [ ] Peser l'entrée (camion chargé)
+- [ ] Peser la sortie (camion vide) et lire le poids net
+
+---
+
+## 25. Analyste
+
+**Niveau 1 — Opérateur** · durée indicative : 1 h · compte de démonstration : `analyste@exportateur-demo.test`
+
+Chez l'exportateur : saisit les résultats de l'analyse des livraisons (humidité, grainage, défauts), décide et produit le bulletin de pesée.
+
+### Objectifs
+
+- Saisir les résultats de l'analyse
+- Décider : acceptée ou rejetée
+- Produire et imprimer le bulletin de pesée
+
+### Ce que vous voyez
+
+![Tableau de bord : les indicateurs affichés dépendent de vos droits.](captures/formation/analyste-accueil.png)
+
+*Tableau de bord : les indicateurs affichés dépendent de vos droits.*
+
+![Livraisons : pont bascule, analyse, bulletin de pesée et règlement.](captures/formation/analyste-livraisons.png)
+
+*Livraisons : pont bascule, analyse, bulletin de pesée et règlement.*
+
+### Pas à pas
+
+1. **Choisir une livraison pesée.** Menu **Pont bascule et analyse** : les livraisons « Pesée terminée » portent le bouton **Analyser**.
+2. **Saisir l'analyse.** Humidité (%), grainage (fèves / 100 g), défauts (moisies, ardoisées, mitées, germées, plates), qualité. **Décision** : acceptée ou rejetée (le motif du rejet est obligatoire).
+3. **Produire le bulletin de pesée.** **Enregistrer et produire le bulletin** : le bulletin est numéroté (BP-aaaa-nnnnn). Bouton **Bulletin** : fenêtre d'impression, enregistrable en PDF. Les poids ne sont plus modifiables après l'analyse.
+
+### Ce que ce profil ne voit pas
+
+- Caisse et comptabilité
+- Finances
+- Équipe
+- Préfinancement
+
+### Exercices
+
+| # | À faire | Résultat attendu |
+|---|---|---|
+| 1 | Analysez la livraison pesée : humidité 7,4 %, 98 fèves / 100 g, décision acceptée. | Statut « Analysée » et bulletin BP-… disponible. |
+| 2 | Tentez de rejeter une livraison sans motif. | Le logiciel exige le motif du rejet. |
+
+### Acquis (à cocher)
+
+- [ ] Saisir les résultats de l'analyse
+- [ ] Décider : acceptée ou rejetée
+- [ ] Produire et imprimer le bulletin de pesée
+
+---
+
+## 26. Évaluation finale (30 min)
 
 Scénario commun, à dérouler à plusieurs comptes :
 

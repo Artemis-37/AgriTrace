@@ -22,7 +22,7 @@ la comptabilité et la vente, pour finir chez l'exportateur, et revenir au villa
 
 scene('parcours', 'Le parcours en un coup d\'œil', """
 Voici le parcours. Sur le terrain, le coach suit les producteurs et le délégué leur achète le cacao, puis déclare son connaissement. L'Administrateur de groupe organise les missions. La traçabilité vérifie. Le magasinier pèse et réceptionne. Le caissier règle et met en compte.
-Le comptable passe les écritures. Le stock est vendu, et l'exportateur reçoit le lot. Puis les formations qu'il propose redescendent vers les coachs, et les résultats remontent jusqu'à lui.""",
+Le comptable passe les écritures. Le stock est vendu, et l'exportateur reçoit le lot. L'exportateur pèse, analyse et règle la livraison. Puis les formations qu'il propose redescendent vers les coachs, et les résultats remontent jusqu'à lui.""",
   card('flow', title='Du village à l\'exportateur', nodes=['Terrain\ncoach + délégué', 'Traçabilité\nvérification', 'Magasinier\npesée + stock', 'Caissier\nrèglement + compte', 'Comptable\nécritures', 'Exportateur\nlot + formations'],
        foot='Chaque étape notifie la suivante · rien n\'est jamais supprimé, tout s\'annule par écriture inverse'))
 
@@ -71,6 +71,31 @@ scene('compta', 'La comptabilité', """
 Le comptable retrouve les opérations dans le journal des achats et le journal de caisse, passe les écritures, et rapproche le relevé de la banque.
 L'évolution de chaque compte bancaire montre ce qui y est ajouté ou retiré, avec le solde cumulé.""",
   live('coop_admin', [{'goto': '/finances', 'w': 3}, {'tab': 'Comptabilité', 'w': 3}, {'scroll': 400, 'w': 2}, {'tab': 'Rapprochement bancaire', 'w': 3}]))
+
+scene('fiche-transmise', 'La fiche d\'accompagnement part chez l\'exportateur', """
+Avant le départ du camion, le responsable de traçabilité prépare la fiche d'accompagnement : les producteurs de chaque connaissement pesé, avec leur code, leur section et leur poids net.
+Il l'exporte en Excel, ou l'importe si elle a été remplie ailleurs, puis la transmet à l'exportateur lié à la coopérative. La fiche ne peut plus changer, et devient, chez l'exportateur, une livraison attendue.""",
+  live('responsable_tracabilite', [{'goto': '/fiches-accompagnement', 'w': 4}, {'scroll': 300, 'w': 3}, {'scroll': -300, 'w': 1}]))
+
+scene('exp-organisation', 'L\'exportateur : une organisation à part entière', """
+L'exportateur a son propre espace, avec ses employés, sa caisse, sa comptabilité et ses stocks, séparés de ceux des coopératives. Il n'a pas d'agents de terrain.
+Son écran Coopératives montre, pour chaque coopérative qui lui livre, les livraisons, les poids acceptés ou rejetés, ce qui reste à régler et ce qui est payé. Les liens entre organisations se proposent avec un code, et s'activent quand l'autre les accepte.""",
+  live('exp_admin', [{'goto': '/organisations-liees', 'w': 4}, {'tab': 'Liens', 'w': 3}, {'goto': '/', 'w': 2}]))
+
+scene('exp-pont-bascule', 'Le pont bascule', """
+Le responsable du pont bascule voit la livraison attendue, avec le camion et le poids déclaré par la coopérative. Camion chargé, il pèse l'entrée : le poids brut.
+Une fois le camion déchargé, il pèse la sortie : la tare. Le poids net est calculé, avec l'écart par rapport au poids déclaré, et la coopérative est prévenue.""",
+  live('pont_bascule', [{'goto': '/livraisons', 'w': 5}, {'scroll': 250, 'w': 3}]))
+
+scene('exp-analyse', 'L\'analyse et le bulletin de pesée', """
+L'analyste saisit les résultats de l'analyse : humidité, grainage, défauts et qualité. Il décide si la livraison est acceptée ou rejetée, avec un motif obligatoire en cas de rejet.
+Le bulletin de pesée est alors produit, avec les deux pesées, le poids net, l'analyse et les signataires. Après cela, les poids ne peuvent plus être modifiés.""",
+  live('analyste', [{'goto': '/livraisons', 'w': 5}, {'scroll': 250, 'w': 3}]))
+
+scene('exp-reglement', 'Le règlement de la coopérative', """
+Pour une livraison acceptée, la caisse de l'exportateur fixe le prix au kilo : le montant est le poids net multiplié par le prix. Il est communiqué à la coopérative, qui suit chaque étape dans ses livraisons envoyées : poids net, décision, bulletin et règlement.
+La même chaîne fonctionne entre deux coopératives, dans un sens ou dans les deux.""",
+  live('exp_caissier', [{'goto': '/livraisons', 'w': 5}, {'scroll': 250, 'w': 3}]))
 
 scene('stock-vente', 'Le stock et la vente', """
 Le lot réceptionné rejoint le stock du magasin, suivi par lot. Il est ensuite vendu : l'acheteur partenaire, ici l'exportateur de la chaîne, ne voit que ses propres commandes, expéditions et documents.

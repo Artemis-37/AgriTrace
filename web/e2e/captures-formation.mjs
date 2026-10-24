@@ -28,6 +28,10 @@ const PAGES = {
   responsable_logistique: [['accueil', '/'], ['convois', '/convois'], ['stocks', '/stocks']],
   auditeur: [['accueil', '/'], ['finances', '/finances'], ['rapports', '/rapports']],
   acheteur: [['accueil', '/'], ['commerce', '/commerce']],
+  pont_bascule: [['accueil', '/'], ['livraisons', '/livraisons']],
+  analyste: [['accueil', '/'], ['livraisons', '/livraisons']],
+  exp_admin: [['accueil', '/'], ['organisations-liees', '/organisations-liees'], ['equipe', '/equipe'], ['finances', '/finances']],
+  exp_caissier: [['accueil', '/'], ['livraisons', '/livraisons'], ['caisse', '/caisse']],
   exportateur: [['accueil', '/'], ['modules-exportateurs', '/modules-exportateurs'], ['fiches-accompagnement', '/fiches-accompagnement']],
   adg: [['accueil', '/'], ['modules-formation', '/modules-formation'], ['modules-exportateurs', '/modules-exportateurs'], ['resultats-exportateurs', '/modules-exportateurs', 'Résultats (1)'], ['transmission-nature-cible', '/modules-exportateurs', null, 'tr:has-text("Séchage et stockage") button:has-text("Transmettre aux coachs")'], ['affectations', '/modules-exportateurs', 'Affectations aux producteurs'], ['producteurs', '/producteurs'], ['missions', '/missions'], ['rapports', '/rapports'], ['operations', '/operations']],
 };

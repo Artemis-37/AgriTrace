@@ -231,59 +231,115 @@
       "role": "responsable_tracabilite",
       "who": "Éric Tano",
       "title": "Transmettre la fiche à l'exportateur",
-      "text": "Une fiche peut aussi être **importée** (bouton *Importer une fiche (Excel)*) si elle a été remplie ailleurs sur le même modèle. Choisissez l'exportateur : la fiche lui est transmise, il est notifié, et elle ne peut plus être modifiée.",
+      "text": "Le destinataire est l'**exportateur lié** à la coopérative (lien accepté des deux côtés) : la fiche devient chez lui une livraison attendue. Une fiche peut aussi être **importée** (bouton *Importer une fiche (Excel)*) si elle a été remplie ailleurs sur le même modèle. Choisissez l'exportateur : la fiche lui est transmise, il est notifié, et elle ne peut plus être modifiée.",
       "file": "29-responsable_tracabilite-fiche-transmission.png"
     },
     {
       "n": 30,
-      "role": "exportateur",
-      "who": "Karim Diallo",
-      "title": "Fiche d'accompagnement reçue",
-      "text": "L'exportateur ne voit que les fiches qui lui sont transmises : il les consulte (producteurs du chargement) et les **télécharge au format Excel**.",
-      "file": "30-exportateur-fiche-recue.png"
+      "role": "exp_admin",
+      "who": "Yves Kouadio",
+      "title": "L'exportateur : coopératives fournisseuses",
+      "text": "L'exportateur est une **organisation à part entière** (ses employés, sa caisse, sa comptabilité, ses stocks) sans agents de terrain. L'écran **Coopératives** donne, pour chaque coopérative qui lui livre, les livraisons en cours, les poids acceptés ou rejetés, ce qui reste à régler et ce qui est payé. Les liens se proposent avec le code de l'autre organisation et s'activent quand elle les accepte.",
+      "file": "30-exp_admin-coop-fournisseuses.png"
     },
     {
       "n": 31,
+      "role": "pont_bascule",
+      "who": "Seydou Bamba",
+      "title": "Pont bascule : la livraison attendue",
+      "text": "La fiche transmise par la coopérative apparaît ici (**Attendue**), avec le camion et le poids déclaré ; le responsable du pont bascule est notifié.",
+      "file": "31-pont_bascule-livraison-attendue.png"
+    },
+    {
+      "n": 32,
+      "role": "pont_bascule",
+      "who": "Seydou Bamba",
+      "title": "Pesée d'entrée (camion chargé)",
+      "text": "Le camion se présente chargé : on saisit le **poids brut** lu au pont bascule.",
+      "file": "32-pont_bascule-pesee-entree.png"
+    },
+    {
+      "n": 33,
+      "role": "pont_bascule",
+      "who": "Seydou Bamba",
+      "title": "Pesée de sortie (camion vide) : poids net",
+      "text": "Une fois déchargé, le camion repasse au pont bascule : on saisit la **tare** ; le **poids net** (brut − tare) et l'écart avec le poids déclaré s'affichent.",
+      "file": "33-pont_bascule-pesee-sortie.png"
+    },
+    {
+      "n": 34,
+      "role": "analyste",
+      "who": "Carine Amani",
+      "title": "Analyse de la livraison",
+      "text": "L'analyste saisit l'**humidité**, le grainage et les défauts, choisit la décision (acceptée ou rejetée, avec motif obligatoire en cas de rejet) puis produit le **bulletin de pesée**.",
+      "file": "34-analyste-analyse.png"
+    },
+    {
+      "n": 35,
+      "role": "analyste",
+      "who": "Carine Amani",
+      "title": "Bulletin de pesée",
+      "text": "Le bulletin reprend la livraison, les pesées d'entrée et de sortie, le poids net, l'analyse, la décision et les signataires. Il s'imprime ou s'enregistre en PDF depuis la fenêtre d'impression.",
+      "file": "35-analyste-bulletin.png"
+    },
+    {
+      "n": 36,
+      "role": "exp_caissier",
+      "who": "Paul Zézé",
+      "title": "Règlement de la coopérative",
+      "text": "Pour une livraison **acceptée**, la caisse fixe le prix au kilo : le montant est le poids net × le prix. Il est communiqué à la coopérative ; l'écriture comptable se passe dans Comptabilité.",
+      "file": "36-exp_caissier-reglement.png"
+    },
+    {
+      "n": 37,
+      "role": "responsable_tracabilite",
+      "who": "Éric Tano",
+      "title": "La coopérative suit sa livraison",
+      "text": "Dans **Livraisons → Mes livraisons envoyées**, la coopérative voit le poids net pesé chez l'exportateur, l'écart, la décision de l'analyse, le bulletin et le règlement ; elle est notifiée à chaque étape.",
+      "file": "37-responsable_tracabilite-suivi-livraison.png"
+    },
+    {
+      "n": 38,
       "role": "responsable_magasin",
       "who": "Daouda Fofana",
       "title": "Stock mis à jour",
       "text": "Les pesées réglées alimentent le stock du magasin ; chaque lot garde sa traçabilité jusqu'au producteur.",
-      "file": "31-responsable_magasin-stock.png"
+      "file": "38-responsable_magasin-stock.png"
     },
     {
-      "n": 32,
+      "n": 39,
       "role": "acheteur",
       "who": "Fanta Kamara",
       "title": "Vente aux acheteurs",
       "text": "L'acheteur suit contrats et commandes ; les quantités vendues sortent du stock.",
-      "file": "32-acheteur-commerce.png"
+      "file": "39-acheteur-commerce.png"
     },
     {
-      "n": 33,
+      "n": 40,
       "role": "adg",
       "who": "Mireille Ouattara",
       "title": "Modules proposés par l'exportateur",
       "text": "L'exportateur propose ses modules ; l'ADG les transmet aux coachs.",
-      "file": "33-adg-modules.png"
+      "file": "40-adg-modules.png"
     },
     {
-      "n": 34,
+      "n": 41,
       "role": "adg",
       "who": "Mireille Ouattara",
       "title": "Résultats des coachs",
       "text": "Les résultats saisis par les coachs sur le terrain sont transmis à l'exportateur.",
-      "file": "34-adg-resultats.png"
+      "file": "41-adg-resultats.png"
     },
     {
-      "n": 35,
+      "n": 42,
       "role": "exportateur",
       "who": "Karim Diallo",
       "title": "Suivi par l'exportateur",
       "text": "L'exportateur suit ses propositions et reçoit les résultats transmis : la boucle du terrain à l'exportateur est bouclée.",
-      "file": "35-exportateur-suivi.png"
+      "file": "42-exportateur-suivi.png"
     },
     {
-      "n": 36,
+      "n": 43,
       "role": "coach",
       "who": "Gilbert Koffi",
       "title": "Résultats saisis sur le terrain",
