@@ -40,6 +40,7 @@ import Producers from './pages/Producers';
 import Quality from './pages/Quality';
 import FichesAccompagnement from './pages/FichesAccompagnement';
 import Livraisons from './pages/Livraisons';
+import Audits from './pages/Audits';
 import OrganisationsLiees from './pages/OrganisationsLiees';
 import Stocks from './pages/Stocks';
 import { Loading } from './ui';
@@ -71,6 +72,7 @@ const NAV: { to: string; label: string; icon: string; perm: string[]; any?: bool
   { to: '/declarations', label: 'Déclarations d\'achat', icon: '✎', perm: ['declarations:read'], notFor: 'collector' },
   { to: '/fiches-accompagnement', label: 'Fiches d\'accompagnement', icon: '📋', perm: ['dispatch:manage', 'dispatch:read'], any: true },
   { to: '/livraisons', label: 'Livraisons', icon: '🚚', perm: ['deliveries:read', 'dispatch:manage'], any: true },
+  { to: '/audits', label: 'Audits', icon: '🔍', perm: ['audits:read', 'audits:manage'], any: true },
   { to: '/organisations-liees', label: 'Organisations liées', icon: '🔗', perm: ['links:manage', 'deliveries:read'], any: true },
   { to: '/missions', label: 'Missions', icon: '⚑', perm: ['tasks:read'] },
   { to: '/operations', label: 'Mes opérations', icon: '🧾', perm: ['cancellations:request'] },
@@ -174,6 +176,7 @@ export default function App() {
           <Route path="/historique" element={<Historique />} />
           <Route path="/convois" element={<Convois />} />
           <Route path="/livraisons" element={<Livraisons />} />
+          <Route path="/audits" element={<Audits />} />
           <Route path="/organisations-liees" element={<OrganisationsLiees />} />
           <Route path="/pesees" element={<Pesees />} />
           <Route path="/mise-en-compte" element={<MiseEnCompte />} />

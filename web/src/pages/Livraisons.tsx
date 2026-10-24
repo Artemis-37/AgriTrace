@@ -7,7 +7,7 @@ import { Card, Empty, ErrorBox, Field, Loading, Modal, PageHeader, StatusBadge, 
 const KG = (v: any) => (v === null || v === undefined || v === '' ? '' : Number(v).toLocaleString('fr-FR', { maximumFractionDigits: 3 }));
 const M = (v: any) => (v === null || v === undefined || v === '' ? '' : Number(v).toLocaleString('fr-FR', { maximumFractionDigits: 2 }));
 const STATUS: Record<string, [string, any]> = {
-  arrived: ['Attendue', 'neutral'], weighing_in: ['Entrée pesée', 'warn'], weighed: ['Pesée terminée', 'warn'], analysed: ['Analysée', 'info'], settled: ['Réglée', 'ok'], refused: ['Refoulée', 'danger'],
+  arrived: ['Attendue', 'neutral'], weighing_in: ['Entrée pesée', 'warn'], weighed: ['Pesée terminée', 'warn'], analysed: ['Analysée', 'info'], settled: ['Réglée', 'ok'], refused: ['Refoulée', 'bad'],
 };
 // Analyse : [clé, libellé] ; les lignes marquées « calculé » se déduisent des autres.
 const ANALYSIS_COL1: [string, string][] = [['foreign', 'Matières étrangères'], ['broken_beans', 'Fèves brisées'], ['brisures', 'Brisures'], ['waste', 'Déchet']];
