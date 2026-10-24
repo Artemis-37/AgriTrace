@@ -58,7 +58,7 @@ async function bootstrap() {
   app.setGlobalPrefix('v1');
   // CORS : uniquement les origines listées (CORS_ORIGINS, séparées par des virgules). Rien par défaut : le portail passe par le même domaine.
   const origins = (process.env.CORS_ORIGINS ?? '').split(',').map((o) => o.trim()).filter(Boolean);
-  if (origins.length) app.enableCors({ origin: origins, allowedHeaders: ['Authorization', 'Content-Type', 'X-Organization-Id'], exposedHeaders: ['Content-Disposition'] });
+  if (origins.length) app.enableCors({ origin: origins, allowedHeaders: ['Authorization', 'Content-Type', 'X-Organization-Id'], exposedHeaders: ['Content-Disposition', 'X-Transfer-Rows', 'X-Transfer-Last-Txid', 'X-Transfer-Truncated'] });
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
 
   const doc = SwaggerModule.createDocument(

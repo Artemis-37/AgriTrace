@@ -21,7 +21,7 @@ La transmission d'une fiche d'accompagnement à une organisation liée (exportat
 
 ## 3. À décider et à documenter par la coopérative
 1. **Base légale et consentement** : recueillir et conserver la preuve du consentement des producteurs (collecte des données, photos, tracés GPS) ; informer sur les finalités et les destinataires (acheteurs, certificateurs).
-2. **Durées de conservation** : le champ `retention_until` existe sur chaque document ; fixer une durée par catégorie (ex. pièces d'identité : durée de la relation + délai légal) et purger à l'échéance.
+2. **Durées de conservation** : au serveur **central**, la décision est de **tout conserver sans limite** (aucune purge ; les suppressions venues des serveurs locaux sont archivées). Conséquence à assumer : une demande d'effacement d'une personne ne peut être traitée que par une procédure manuelle hors application, à définir avec le conseil juridique. Pour les autres serveurs : le champ `retention_until` existe sur chaque document ; fixer une durée par catégorie (ex. pièces d'identité : durée de la relation + délai légal) et purger à l'échéance.
 3. **Droits des personnes** (accès, rectification, suppression, opposition) : désigner un responsable, définir la procédure ; aucune fonction dédiée d'export ou d'effacement par personne n'existe aujourd'hui (à traiter au cas par cas par l'équipe technique) ; la suppression ne doit pas casser la traçabilité exigée par la loi : arbitrage à faire avec le juriste.
 4. **Déclaration / autorisation** auprès de l'autorité compétente si la loi l'exige ; désignation d'un délégué ou responsable du traitement.
 5. **Transferts hors du pays** (hébergement, acheteurs étrangers) : clauses contractuelles et information.

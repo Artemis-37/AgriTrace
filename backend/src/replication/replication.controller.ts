@@ -1,7 +1,8 @@
-import { BadRequestException, Body, ConflictException, Controller, ForbiddenException, Get, Headers, HttpCode, NotFoundException, Param, ParseUUIDPipe, Post, Req, Res } from '@nestjs/common';
+import { BadRequestException, Body, ConflictException, Controller, ForbiddenException, Get, Headers, HttpCode, NotFoundException, Param, ParseUUIDPipe, Post, Req, Res, StreamableFile, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { assertStrongPassword } from '../auth/password-policy';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { IsBoolean, IsIn, IsOptional, IsString, Length, Matches } from 'class-validator';
+import { IsBoolean, IsInt, Min, IsIn, IsOptional, IsString, Length, Matches } from 'class-validator';
 import { Public, PlatformAdminOnly, RequirePermissions } from '../access/decorators';
 import { AuditService } from '../audit/audit.service';
 import { AuthService } from '../auth/auth.service';
@@ -20,7 +21,8 @@ class CreateSiteDto {
   @IsOptional() @IsString() public_url?: string;
 }
 class SiteStatusDto { @IsIn(['active', 'suspended']) status: 'active' | 'suspended'; }
-class LinkDto { @IsString() @Length(10, 4000) pairing_code: string; }
+class LinkDto { @IsString() @Length(10, 4000) pairing_code: string; @IsOptional() @IsBoolean() offline?: boolean; }
+class AckDto { @IsInt() @Min(0) last_txid: number; }
 class BootstrapDto {
   @IsString() @Length(2, 200) admin_name: string;
   @IsString() @Length(5, 200) admin_email: string;
@@ -149,7 +151,7 @@ export class ReplicationController {
   @Post('replication/link')
   async link(@Body() b: LinkDto, @Req() req: any) {
     if (!isLocal()) throw new ForbiddenException('Réservé au mode serveur local');
-    const out = await this.svc.linkTo(req.org.id, b.pairing_code);
+    const out = await this.svc.linkTo(req.org.id, b.pairing_code, !!b.offline);
     await this.audit.log({ organizationId: req.org.id, actorUserId: req.user.id, action: 'replication.link', entityType: 'organization', entityId: req.org.id });
     return out;
   }
@@ -250,6 +252,49 @@ export class ReplicationController {
     if (!s) throw new NotFoundException('Site inconnu');
     await this.audit.log({ actorUserId: req.user.id, action: 'replication.site_status', entityType: 'site', entityId: id, details: { status: b.status } });
     return s;
+  }
+
+  // ---------- Transfert par support (clé USB, disque) quand il n'y a pas d'internet ----------
+  /** Local : télécharge le fichier de transfert (tout ce que le central n'a pas encore confirmé). */
+  @ApiBearerAuth()
+  @RequirePermissions('replication:manage')
+  @Get('replication/transfer/export')
+  async exportTransfer(@Req() req: any, @Res({ passthrough: true }) res: any) {
+    if (!isLocal()) throw new ForbiddenException('Réservé au mode serveur local');
+    const r = await this.svc.exportTransfer();
+    await this.audit.log({ organizationId: req.org.id, actorUserId: req.user.id, action: 'replication.transfer_export', entityType: 'organization', entityId: req.org.id, details: { rows: r.rows, last_txid: r.last_txid } });
+    res.set({ 'Content-Type': 'application/octet-stream', 'Content-Disposition': `attachment; filename="${r.name}"`, 'X-Transfer-Rows': String(r.rows), 'X-Transfer-Last-Txid': String(r.last_txid), 'X-Transfer-Truncated': String(r.truncated), 'Access-Control-Expose-Headers': 'X-Transfer-Rows, X-Transfer-Last-Txid, X-Transfer-Truncated' });
+    return new StreamableFile(r.file);
+  }
+
+  /** Local : le central a confirmé la réception jusqu'au numéro indiqué (affiché à l'import) : la file peut être allégée. */
+  @ApiBearerAuth()
+  @RequirePermissions('replication:manage')
+  @Post('replication/transfer/acknowledge')
+  async acknowledge(@Body() b: AckDto, @Req() req: any) {
+    if (!isLocal()) throw new ForbiddenException('Réservé au mode serveur local');
+    await this.audit.log({ organizationId: req.org.id, actorUserId: req.user.id, action: 'replication.transfer_ack', entityType: 'organization', entityId: req.org.id, details: { last_txid: b.last_txid } });
+    return this.svc.acknowledgeTransfer(b.last_txid);
+  }
+
+  /** Central : importe un fichier de transfert apporté par un serveur local. Sans doublon, signature vérifiée, jamais de suppression. */
+  @ApiBearerAuth()
+  @PlatformAdminOnly()
+  @Post('replication/transfer/import')
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 600 * 1024 * 1024, files: 1 } }))
+  async importTransfer(@UploadedFile() file: Express.Multer.File, @Req() req: any) {
+    if (!isCentral()) throw new ForbiddenException('Réservé au serveur central');
+    if (!file?.buffer?.length) throw new BadRequestException('Aucun fichier reçu');
+    const r = await this.svc.importTransfer(file.buffer, file.originalname ?? 'transfert.atx', req.user.id);
+    await this.audit.log({ actorUserId: req.user.id, action: 'replication.transfer_import', entityType: 'site', entityId: r.organization_id, details: { rows: r.rows, applied: r.applied, last_txid: r.last_txid } });
+    return r;
+  }
+
+  @ApiBearerAuth()
+  @PlatformAdminOnly()
+  @Get('replication/transfer/imports')
+  imports() {
+    return this.db.query(`SELECT i.id, i.file_name, i.batches, i.rows_total, i.rows_applied, i.last_txid, i.imported_at, o.name AS organization_name FROM transfer_imports i JOIN replication_sites s ON s.id = i.site_id JOIN organizations o ON o.id = s.organization_id ORDER BY i.imported_at DESC LIMIT 100`);
   }
 
   /** Vue consolidée de toutes les coopératives rattachées. */

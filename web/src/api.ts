@@ -175,6 +175,14 @@ export async function getBlob(path: string): Promise<Blob | null> {
   return res.blob();
 }
 
+/** Récupère un fichier avec ses en-têtes (transfert par clé USB : numéro confirmé, nombre de lignes). */
+export async function getFile(path: string): Promise<{ blob: Blob; headers: Headers; name: string }> {
+  const res = await raw(path);
+  if (!res.ok) { let b: any = null; try { b = await res.json(); } catch { /* corps vide */ } throw new ApiError(res.status, errorMessage(b, `Lecture impossible (${res.status})`), b); }
+  const m = /filename="([^"]+)"/.exec(res.headers.get('content-disposition') ?? '');
+  return { blob: await res.blob(), headers: res.headers, name: m?.[1] ?? 'transfert.atx' };
+}
+
 export async function putForm<T = any>(path: string, form: FormData): Promise<T> {
   const res = await raw(path, { method: 'PUT', body: form });
   const text = await res.text();

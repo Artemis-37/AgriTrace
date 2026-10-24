@@ -229,6 +229,46 @@ async function mkInstance(tag, mode, port, { postgis = true } = {}) {
   await call(L2.base, 'POST', '/producers', { ...J2, body: { last_name: 'Local seul', first_names: 'A', village: 'B', value_chain_ids: [vc2.id] } });
   check('après dissociation rien ne se met en file', (await call(L2.base, 'GET', '/replication/status', J2)).body.pending_rows === 0);
 
+  console.log('Transfert par support (clé USB) et conservation au central');
+  const zlib = require('zlib');
+  const site2 = sites.body.find((x) => x.organization_id === org2);
+  const rot = await call(C.base, 'POST', `/replication/sites/${site2.id}/rotate-token`, { token: cadm });
+  check('nouveau code de jumelage pour le transfert', rot.status === 201 && rot.body.pairing_code, rot.body);
+  const lk = await call(L2.base, 'POST', '/replication/link', { ...J2, body: { pairing_code: rot.body.pairing_code, offline: true } });
+  check('jumelage hors ligne (sans joindre le central)', lk.status === 201 && lk.body.linked, lk.body);
+  check('le jumelage hors ligne n\'envoie rien tout seul', (await call(L2.base, 'GET', '/replication/status', J2)).body.enabled === false);
+  await call(L2.base, 'POST', '/producers', { ...J2, body: { last_name: 'ParCleUSB', first_names: 'Awa', village: 'Soubré', value_chain_ids: [vc2.id] } });
+  const exp = await fetch(L2.base + '/replication/transfer/export', { headers: { authorization: 'Bearer ' + t2, 'x-organization-id': org2 } });
+  const fileBuf = Buffer.from(await exp.arrayBuffer());
+  const lastTx = Number(exp.headers.get('x-transfer-last-txid'));
+  check('export : fichier de transfert', exp.status === 200 && fileBuf.length > 500 && Number(exp.headers.get('x-transfer-rows')) > 5 && lastTx > 0, [exp.status, fileBuf.length]);
+  const imp = async (buf, name = 'transfert.atx') => { const f = new FormData(); f.append('file', new Blob([buf]), name); const r = await fetch(C.base + '/replication/transfer/import', { method: 'POST', headers: { authorization: 'Bearer ' + cadm }, body: f }); return { status: r.status, body: await r.json().catch(() => ({})) }; };
+  const tampered = (() => { const lines = zlib.gunzipSync(fileBuf).toString().split('\n'); lines[1] = lines[1].replace('ParCleUSB', 'Pirate'); return zlib.gzipSync(Buffer.from(lines.join('\n'))); })();
+  check('fichier modifié : signature refusée', (await imp(tampered)).status === 400);
+  check('fichier tronqué refusé', (await imp(zlib.gzipSync(Buffer.from(zlib.gunzipSync(fileBuf).toString().split('\n').slice(0, 2).join('\n'))))).status === 400);
+  const noadm = await fetch(C.base + '/replication/transfer/import', { method: 'POST', headers: { authorization: 'Bearer ' + t2, 'x-organization-id': org2 }, body: new FormData() });
+  check('import réservé à l\'administrateur de plateforme', noadm.status === 403 || noadm.status === 404);
+  const im = await imp(fileBuf);
+  check('import au central', im.status === 201 && im.body.rows > 5 && im.body.last_txid === lastTx, im.body);
+  check('la donnée est arrivée au central', (await C.owner.query(`SELECT 1 FROM producers WHERE last_name='ParCleUSB' AND organization_id=$1`, [org2])).rowCount === 1);
+  check('le même fichier ne s\'importe pas deux fois', (await imp(fileBuf)).status === 409);
+  check('journal des imports', (await call(C.base, 'GET', '/replication/transfer/imports', { token: cadm })).body.length === 1);
+  const ak = await call(L2.base, 'POST', '/replication/transfer/acknowledge', { ...J2, body: { last_txid: lastTx } });
+  check('accusé de réception : la file locale s\'allège', ak.status === 201 && (await call(L2.base, 'GET', '/replication/status', J2)).body.pending_rows === 0, ak.body);
+  // Le central ne supprime jamais : une suppression venue du local est archivée
+  const secret = JSON.parse(Buffer.from(rot.body.pairing_code.slice(5), 'base64url').toString()).t;
+  const vcId = (await C.owner.query(`SELECT id FROM value_chains WHERE organization_id=$1 LIMIT 1`, [org2])).rows[0].id;
+  const craft = (rows) => { const head = JSON.stringify({ format: 'agritrace-transfer-1', site_id: site2.id, organization_id: org2, schema_version: lk.body.schema_version ?? '' , created_at: new Date().toISOString() });
+    const sv = JSON.parse(zlib.gunzipSync(fileBuf).toString().split('\n')[0]).schema_version;
+    const h = head.replace(/"schema_version":"[^"]*"/, `"schema_version":"${sv}"`);
+    const batch = JSON.stringify({ schema_version: sv, last_txid: lastTx + 5, rows });
+    const mac = require('crypto').createHmac('sha256', require('crypto').createHash('sha256').update(secret).digest('hex')).update(h + '\n' + batch).digest('hex');
+    return zlib.gzipSync(Buffer.from([h, batch, JSON.stringify({ end: true, batches: 1, rows: rows.length, last_txid: lastTx + 5, hmac: mac })].join('\n'))); };
+  const del = await imp(craft([{ txid: lastTx + 5, tbl: 'value_chains', op: 'D', pk: { id: vcId } }]));
+  check('suppression reçue du local : acceptée sans effacer', del.status === 201, del.body);
+  check('la donnée existe toujours au central', (await C.owner.query(`SELECT 1 FROM value_chains WHERE id=$1`, [vcId])).rowCount === 1);
+  check('la suppression est archivée', (await C.owner.query(`SELECT 1 FROM replication_archive WHERE tbl='value_chains' AND pk->>'id'=$1`, [vcId])).rowCount === 1);
+
   for (const i of [C, L1, L2]) { await i.owner.end(); }
   console.log(`\n${ok} vérifications réussies, ${ko} échec(s)`);
   if (ko) for (const i of [C, L1, L2]) console.log(`--- journal ${i.tag}\n` + i.log().split('\n').filter((l) => /error|Error/.test(l)).slice(-8).join('\n'));

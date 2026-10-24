@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { api, get, post, postForm } from '../api';
+import { api, get, getFile, post, postForm } from '../api';
 import { useAuth } from '../auth';
 import { dateTime } from '../format';
 import { Badge, Card, ErrorBox, Field, Loading, PageHeader, Stat, useAction, useAsync } from '../ui';
@@ -54,8 +54,10 @@ export default function Synchronisation() {
           </dl>
           <Field label="Code de jumelage"><textarea rows={3} value={code} onChange={(e) => setCode(e.target.value)} placeholder="AGT1-…" /></Field>
           <button className="btn" disabled={act.busy || code.trim().length < 10} onClick={() => act.run(async () => { await post('/replication/link', { pairing_code: code.trim() }); setCode(''); await post('/replication/sync-now'); reload(); })}>Relier et envoyer les données existantes</button>
+          <button className="btn btn-secondary" disabled={act.busy || code.trim().length < 10} onClick={() => act.run(async () => { await post('/replication/link', { pairing_code: code.trim(), offline: true }); setCode(''); reload(); })}>Jumeler hors ligne (sans internet)</button>
         </Card>
       )}
+      <TransferCard s={s} reload={reload} />
       <AppUpdateCard />
       <MapPackCard />
     </>
@@ -63,6 +65,25 @@ export default function Synchronisation() {
 }
 
 /** Mise à jour de l'application de bureau : l'administrateur dépose le nouvel installateur, les postes le reçoivent sur le réseau local. */
+
+function TransferCard({ s, reload }: { s: any; reload: () => void }) {
+  const act = useAction(); const [info, setInfo] = useState<{ rows: number; last: number; truncated: boolean } | null>(null); const [ack, setAck] = useState(''); const [msg, setMsg] = useState<string | null>(null);
+  return <Card title="Transfert par clé USB (sans internet)">
+    <p>Quand le serveur n'a pas internet, exportez ce qu'il n'a pas encore envoyé dans un <strong>fichier</strong>, copiez-le sur une clé USB ou un disque, puis importez-le au serveur central (console de l'administrateur de plateforme, onglet « Transferts »). Le fichier est signé : il ne peut être ni modifié ni importé deux fois, et les données déjà reçues sont ignorées.</p>
+    {!s.linked ? <p className="muted">Reliez d'abord ce serveur au central (au besoin « hors ligne », ci-dessus) avec le code de jumelage.</p> : <>
+      <button className="btn btn-secondary" disabled={act.busy} onClick={() => act.run(async () => {
+        const f = await getFile('/replication/transfer/export');
+        const url = URL.createObjectURL(f.blob); const l = document.createElement('a'); l.href = url; l.download = f.name; document.body.appendChild(l); l.click(); l.remove(); setTimeout(() => URL.revokeObjectURL(url), 5000);
+        setInfo({ rows: Number(f.headers.get('x-transfer-rows') ?? 0), last: Number(f.headers.get('x-transfer-last-txid') ?? 0), truncated: f.headers.get('x-transfer-truncated') === 'true' }); })}>Exporter un fichier de transfert</button>
+      {info && <p>{info.rows ? <>Fichier prêt : <strong>{info.rows}</strong> ligne(s). Après l'import, le central affiche un <strong>dernier numéro</strong> (attendu : <code>{info.last}</code>). {info.truncated && 'Le fichier est partiel : confirmez puis exportez de nouveau.'}</> : 'Rien à envoyer : le central est à jour.'}</p>}
+      <Field label="Dernier numéro confirmé par le central" hint="Une fois l'import réussi, saisissez-le pour alléger la file de ce serveur"><input inputMode="numeric" value={ack} onChange={(e) => setAck(e.target.value.replace(/\D/g, ''))} /></Field>
+      <button className="btn btn-secondary" disabled={act.busy || !ack} onClick={() => act.run(async () => { await post('/replication/transfer/acknowledge', { last_txid: Number(ack) }); setAck(''); setInfo(null); setMsg('Réception confirmée.'); reload(); })}>Confirmer la réception</button>
+      {msg && <p role="status">{msg}</p>}</>}
+    {act.error && <p className="error" role="alert">{act.error}</p>}
+    <p className="muted">Les données restent aussi sur ce serveur : la sauvegarde complète vers un support se fait depuis l'application de bureau (menu Fichier → Sauvegarder maintenant).</p>
+  </Card>;
+}
+
 function AppUpdateCard() {
   const { can } = useAuth();
   const { data, reload } = useAsync(() => get<any>('/app/update?current=0.0.0'), []);

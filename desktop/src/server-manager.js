@@ -164,6 +164,24 @@ class LocalServer {
     } finally { await this.start(); }
     return target;
   }
+
+  /** Restaure une sauvegarde (dossier « AgriTrace-sauvegarde-… ») : le serveur s'arrête, les données actuelles sont mises de côté (jamais effacées), puis le serveur redémarre. */
+  async restore(sourceDir) {
+    if (!fs.existsSync(path.join(sourceDir, 'pgdata'))) throw new Error('Ce dossier n\'est pas une sauvegarde AgriTrace (dossier « pgdata » absent).');
+    const stamp = new Date().toISOString().replace(/[:T]/g, '-').slice(0, 16);
+    const aside = path.join(this.dataDir, '..', `server-avant-restauration-${stamp}`);
+    await this.stop();
+    try {
+      fs.mkdirSync(aside, { recursive: true });
+      for (const part of ['pgdata', 'documents', 'server.json', 'tls']) {
+        const cur = path.join(this.dataDir, part);
+        if (fs.existsSync(cur)) fs.renameSync(cur, path.join(aside, part));
+        const from = path.join(sourceDir, part);
+        if (fs.existsSync(from)) fs.cpSync(from, cur, { recursive: true });
+      }
+    } finally { await this.start(); }
+    return aside;
+  }
 }
 
 module.exports = { LocalServer };

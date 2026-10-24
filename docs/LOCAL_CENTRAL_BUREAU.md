@@ -60,7 +60,7 @@ Au premier lancement : **serveur de la coopérative** ou **poste client** (adres
 
 * **Poste serveur** : PostgreSQL embarqué (port 54329, local au poste), API et portail sur le port **3000**, accessibles aux autres postes du réseau local. Données dans `%APPDATA%\AgriTrace\server`. Fermer la fenêtre ne coupe pas le serveur (icône dans la zone de notification) ; menu *Fichier* : sauvegarde, adresses pour les autres postes, démarrage avec Windows. L'installateur ouvre le port 3000 dans le pare-feu pour les réseaux **privés et de domaine** uniquement.
 * **Poste client** : ouvre le portail du serveur indiqué.
-* **Sauvegarde** : copie complète de la base et des pièces jointes vers un dossier choisi (clé USB, disque externe). Le serveur est arrêté quelques secondes pendant la copie. Une sauvegarde qui reste sur le même disque ne protège pas d'une panne du disque.
+* **Sauvegarde** : copie complète de la base et des pièces jointes vers un dossier choisi (clé USB, disque externe). Menu *Fichier* → *Sauvegarde automatique quotidienne…* : une copie par jour (13 h ou 19 h) vers le support choisi, reportée si le support est absent ; l'application ne supprime jamais une ancienne sauvegarde. *Fichier → Restaurer une sauvegarde…* remet les données d'une sauvegarde sur ce poste ou sur un autre : les données actuelles sont mises de côté (dossier `server-avant-restauration-…`), jamais effacées. Le serveur est arrêté quelques secondes pendant la copie. Une sauvegarde qui reste sur le même disque ne protège pas d'une panne du disque.
 * PostgreSQL refuse de tourner avec des droits d'administrateur : lancer l'application normalement, pas « en tant qu'administrateur ».
 * Le trafic sur le réseau local est en HTTP (pas de TLS). Acceptable sur un réseau de bureau de confiance ; pas pour un Wi-Fi ouvert.
 
@@ -100,3 +100,17 @@ Le fichier est vérifié par son empreinte SHA-256 ; l'installateur n'est pas si
 - L'installateur affiche le **contrat de licence (EULA)** `desktop/build/license_fr.txt` ; il faut cliquer « J'accepte » pour continuer. **Ce texte est un modèle** : le nom de l'éditeur, son adresse, son contact, le pays et la ville du tribunal sont à compléter entre crochets, puis le texte doit être relu par un juriste avant toute diffusion. Le fichier doit rester en UTF-8 avec BOM.
 - L'icône de l'installateur, du désinstallateur, de l'exécutable, des raccourcis et de la fenêtre est le logo AgriTrace (emblème de la charte graphique, fond transparent pour la barre des tâches) : `desktop/build/icon.ico` (7 tailles de 16 à 256 px) et `icon.png`. L'emblème a été extrait de `brand/charte-graphique.png` (basse définition) : fournir le fichier vectoriel ou PNG haute définition du logo pour une icône plus nette.
 - Non vérifié ici : la construction de l'installateur exige Windows (ou Wine) ; elle n'est faite que par la CI (`desktop-windows.yml`).
+
+
+## Transfert par clé USB vers le central (sans internet)
+Quand le serveur local n'a pas de connexion, ses données peuvent rejoindre le central **par un fichier** :
+1. Jumeler le serveur avec le code de jumelage, en choisissant **Jumeler hors ligne** (*Synchronisation*) : rien n'est envoyé tout seul.
+2. *Synchronisation → Transfert par clé USB → Exporter un fichier de transfert* : un fichier `.atx` (compressé, **signé** avec le secret du site) contient tout ce que le central n'a pas encore confirmé, pièces jointes comprises. Le copier sur la clé.
+3. Au central, console de l'administrateur de plateforme → **Transferts** → importer le fichier. Le central vérifie la signature, ignore ce qu'il a déjà reçu, refuse un fichier modifié ou déjà importé, et affiche un **dernier numéro** à confirmer.
+4. Retour sur le serveur local : saisir ce numéro dans *Confirmer la réception* ; la file locale s'allège. Tant que ce n'est pas fait, les exports suivants renferment encore les mêmes lignes (sans risque : le central les ignore).
+Un export contient au plus ~400 000 lignes ; au-delà, confirmer puis exporter de nouveau. Un serveur local peut aussi repasser en ligne plus tard : le même mécanisme d'envoi automatique reprend sans doublon.
+
+## Le central conserve tout
+* Aucune purge automatique ni manuelle des données au central.
+* Une suppression faite sur un serveur local **n'efface rien au central** : elle est consignée dans un journal d'archive (table `replication_archive`, non modifiable). Seules les affectations de droits suivent le local.
+* Les sauvegardes du central peuvent être conservées sans limite (`RETENTION_DAYS=0` dans `scripts/backup.sh`).

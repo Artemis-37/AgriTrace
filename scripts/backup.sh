@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Sauvegarde : base (pg_dump format custom) + dossier des documents. Rotation par ancienneté.
-# Usage : BACKUP_DIR=/sauvegardes PGURL=postgres://... DOCS_DIR=/data/documents RETENTION_DAYS=30 ./scripts/backup.sh
+# Usage : BACKUP_DIR=/sauvegardes PGURL=postgres://... DOCS_DIR=/data/documents RETENTION_DAYS=30 ./scripts/backup.sh   (RETENTION_DAYS=0 : ne jamais supprimer d'ancienne sauvegarde)
 # BACKUP_PASSPHRASE_FILE=/chemin/phrase.txt chiffre les sauvegardes (openssl AES-256, PBKDF2) ; restaurer avec restore-test.sh (même variable).
 # Avec docker-compose.prod.yml : voir docs/EXPLOITATION.md (exécuter dans le service db / avec le volume documents).
 set -euo pipefail
@@ -20,6 +20,6 @@ if [ -n "${BACKUP_PASSPHRASE_FILE:-}" ]; then
   done
 fi
 ( cd "$BACKUP_DIR" && sha256sum db-$ts.dump* $( ls docs-$ts.tar.gz* 2>/dev/null ) > "manifest-$ts.sha256" )
-find "$BACKUP_DIR" -type f \( -name 'db-*' -o -name 'docs-*' -o -name 'manifest-*' \) -mtime +"$RETENTION_DAYS" -delete
+[ "$RETENTION_DAYS" -gt 0 ] && find "$BACKUP_DIR" -type f \( -name 'db-*' -o -name 'docs-*' -o -name 'manifest-*' \) -mtime +"$RETENTION_DAYS" -delete
 echo "Sauvegarde $ts terminée dans $BACKUP_DIR"
 echo "Rappel : copier hors du serveur (autre site / stockage objet chiffré). Une sauvegarde non restaurée n'est pas une sauvegarde."

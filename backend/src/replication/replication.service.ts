@@ -1,5 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, Logger, OnModuleDestroy, OnModuleInit, UnauthorizedException } from '@nestjs/common';
 import * as fs from 'fs/promises';
+import { createHash, createHmac } from 'crypto';
+import { gunzipSync, gzipSync } from 'zlib';
 import * as path from 'path';
 import { DbService } from '../db/db.service';
 import { Pairing, decodePairing, isLocal, safeEqual, sha256 } from './replication.config';
@@ -7,9 +9,11 @@ import { Pairing, decodePairing, isLocal, safeEqual, sha256 } from './replicatio
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const IDENT_RE = /^[a-z][a-z0-9_]*$/;
 const BATCH_ROWS = 1000;
+const MAX_TRANSFER_BATCHES = 400;
 const BATCH_BLOB_BYTES = 8 * 1024 * 1024;
 import { decryptFile, encryptFile } from '../common/crypto';
 const docsDir = () => process.env.DOCUMENTS_DIR ?? path.join(process.cwd(), 'storage', 'documents');
+const KEEP_SYNCED_DELETES = new Set(['user_organizations']);
 const qi = (id: string) => '"' + id.replace(/"/g, '""') + '"';
 
 export interface PushRow { txid: number; tbl: string; op: 'U' | 'D'; pk: Record<string, unknown>; row?: Record<string, any> | null }
@@ -129,7 +133,11 @@ export class ReplicationService implements OnModuleInit, OnModuleDestroy {
           if (!ok.rowCount) throw new BadRequestException('Rôle hors de l\'organisation du site');
         }
         if (r.op === 'U') await c.query(info.upsert, [JSON.stringify(r.row)]);
-        else if (!info.serial) await c.query(info.del, [JSON.stringify(r.pk)]);
+        else if (!info.serial) {
+          // Le central conserve tout : une suppression venue du local est archivée, pas appliquée. Seules les affectations de droits suivent (elles ne sont pas des données métier).
+          if (info.viaRole || KEEP_SYNCED_DELETES.has(r.tbl)) await c.query(info.del, [JSON.stringify(r.pk)]);
+          else await c.query(`INSERT INTO replication_archive(site_id, organization_id, tbl, pk, txid) VALUES ($1,$2,$3,$4::jsonb,$5)`, [site.id, org, r.tbl, JSON.stringify(r.pk), Number(r.txid)]);
+        }
         maxTx = Math.max(maxTx, Number(r.txid));
         applied++;
       }
@@ -139,6 +147,64 @@ export class ReplicationService implements OnModuleInit, OnModuleDestroy {
         [site.id, maxTx, applied, body.schema_version, body.app_version ?? null]);
     });
     return { ok: true, last_txid: maxTx, applied, skipped: body.rows.length - fresh.length };
+  }
+
+  // ======================= Transfert par support (clé USB) =======================
+
+  /** Côté local : fichier signé contenant tout ce que le central n'a pas encore confirmé. Le local ne se vide pas : seul l'accusé du central le fait. */
+  async exportTransfer(): Promise<{ file: Buffer; name: string; rows: number; batches: number; last_txid: number; truncated: boolean }> {
+    const l = await this.link();
+    if (!l) throw new BadRequestException('Ce serveur n\'est pas rattaché à un central : saisissez le code de jumelage (hors ligne si besoin).');
+    const lines: string[] = [JSON.stringify({ format: 'agritrace-transfer-1', site_id: l.site_id, organization_id: l.organization_id, schema_version: await this.schemaVersion(), created_at: new Date().toISOString() })];
+    let cursor = Number(l.acked_txid) || 0, rows = 0, batches = 0, truncated = false;
+    for (;;) {
+      if (batches >= MAX_TRANSFER_BATCHES) { truncated = true; break; }
+      const b = await this.nextBatch(cursor, l.organization_id);
+      if (!b) break;
+      lines.push(JSON.stringify(b.body)); cursor = b.lastTxid; rows += b.body.rows.length; batches++;
+    }
+    const secret = l.site_token.split('.').slice(1).join('.');
+    const mac = createHmac('sha256', sha256(secret)).update(lines.join('\n')).digest('hex');
+    lines.push(JSON.stringify({ end: true, batches, rows, last_txid: cursor, hmac: mac }));
+    const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
+    return { file: gzipSync(Buffer.from(lines.join('\n'))), name: `AgriTrace-transfert-${stamp}.atx`, rows, batches, last_txid: cursor, truncated };
+  }
+
+  /** Côté local : le central a confirmé la réception jusqu'à ce numéro ; on peut alléger la file. */
+  async acknowledgeTransfer(lastTxid: number) {
+    const l = await this.link();
+    if (!l) throw new BadRequestException('Serveur non rattaché');
+    await this.db.query(`DELETE FROM sync_outbox WHERE txid <= $1`, [lastTxid]);
+    await this.db.query(`UPDATE replication_link SET acked_txid = GREATEST(acked_txid, $1)`, [lastTxid]);
+    return { acknowledged: lastTxid };
+  }
+
+  /** Côté central : applique un fichier de transfert (idempotent). */
+  async importTransfer(fileBuf: Buffer, fileName: string, userId: string) {
+    let text: string;
+    try { text = gunzipSync(fileBuf, { maxOutputLength: 600 * 1024 * 1024 }).toString('utf8'); } catch { throw new BadRequestException('Fichier de transfert illisible'); }
+    const lines = text.split('\n');
+    let head: any, tail: any;
+    try { head = JSON.parse(lines[0]); tail = JSON.parse(lines[lines.length - 1]); } catch { throw new BadRequestException('Fichier de transfert incomplet'); }
+    if (head.format !== 'agritrace-transfer-1' || !tail.end) throw new BadRequestException('Fichier de transfert incomplet ou d\'un autre format');
+    const [site] = await this.db.query(`SELECT * FROM replication_sites WHERE id = $1`, [head.site_id]);
+    if (!site || site.organization_id !== head.organization_id) throw new BadRequestException('Site inconnu de ce serveur central');
+    if (site.status !== 'active') throw new BadRequestException('Site suspendu');
+    const mac = createHmac('sha256', site.token_hash).update(lines.slice(0, -1).join('\n')).digest('hex');
+    if (!safeEqual(mac, String(tail.hmac))) throw new BadRequestException('Signature invalide : le fichier a été modifié ou ne vient pas de ce site');
+    const fileSha = createHash('sha256').update(fileBuf).digest('hex');
+    if ((await this.db.query(`SELECT 1 FROM transfer_imports WHERE file_sha256 = $1`, [fileSha])).length) throw new ConflictException('Ce fichier a déjà été importé');
+    let applied = 0, total = 0, last = Number(site.last_txid);
+    for (const ln of lines.slice(1, -1)) {
+      const batch: PushBody = JSON.parse(ln);
+      batch.schema_version = batch.schema_version ?? head.schema_version;
+      const cur = (await this.db.query(`SELECT * FROM replication_sites WHERE id = $1`, [site.id]))[0];
+      const r = await this.receive(cur, batch);
+      applied += r.applied; total += batch.rows.length; last = Math.max(last, r.last_txid);
+    }
+    await this.db.query(`INSERT INTO transfer_imports(site_id, file_sha256, file_name, batches, rows_total, rows_applied, last_txid, imported_by) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+      [site.id, fileSha, fileName.slice(0, 200), Number(tail.batches) || 0, total, applied, last, userId]);
+    return { site: site.name, organization_id: site.organization_id, batches: Number(tail.batches) || 0, rows: total, applied, skipped: total - applied, last_txid: last };
   }
 
   async recordSiteError(siteId: string, message: string) {
@@ -172,17 +238,17 @@ export class ReplicationService implements OnModuleInit, OnModuleDestroy {
   }
 
   /** Relie ce serveur local à un central et met en file l'état actuel de la coopérative. */
-  async linkTo(orgId: string, pairingCode: string) {
+  async linkTo(orgId: string, pairingCode: string, offline = false) {
     let p: Pairing;
     try { p = decodePairing(pairingCode); } catch (e: any) { throw new BadRequestException(e.message); }
     if (p.o !== orgId) throw new BadRequestException(`Ce code est prévu pour « ${p.n} » (${p.c}), pas pour cette coopérative.`);
-    await this.hello(p);
+    if (!offline) await this.hello(p);
     const queued = await this.db.tx(orgId, async (c) => {
       await c.query(`DELETE FROM sync_outbox`);
       await c.query(`DELETE FROM replication_link`);
       await c.query(
-        `INSERT INTO replication_link(id, central_url, site_id, site_token, organization_id) VALUES (1,$1,$2,$3,$4)`,
-        [p.u.replace(/\/+$/, ''), p.s, `${p.s}.${p.t}`, orgId]);
+        `INSERT INTO replication_link(id, central_url, site_id, site_token, organization_id, enabled) VALUES (1,$1,$2,$3,$4,$5)`,
+        [p.u.replace(/\/+$/, ''), p.s, `${p.s}.${p.t}`, orgId, !offline]);
       const [r] = (await c.query(`SELECT replication_backfill($1) AS n`, [orgId])).rows;
       return Number(r.n);
     });
@@ -294,5 +360,4 @@ export class ReplicationService implements OnModuleInit, OnModuleDestroy {
   }
 }
 
-import { createHash } from 'crypto';
 const sha256Buf = (b: Buffer) => createHash('sha256').update(b).digest('hex');

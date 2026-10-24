@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { get, post } from '../api';
+import { get, post, postForm } from '../api';
 import { useAuth } from '../auth';
 import { dateTime, kg, money } from '../format';
 import { Badge, Card, ErrorBox, Field, Loading, Modal, PageHeader, Stat, Table, Tabs, useAction, useAsync } from '../ui';
@@ -7,7 +7,7 @@ import { Badge, Card, ErrorBox, Field, Loading, Modal, PageHeader, Stat, Table, 
 /** Console du serveur central (administrateur de plateforme) : sites reliés et vue consolidée de toutes les coopératives. */
 export default function CentralConsole() {
   const { me, signOut } = useAuth();
-  const [tab, setTab] = useState<'sites' | 'conso'>('sites');
+  const [tab, setTab] = useState<'sites' | 'conso' | 'transferts'>('sites');
   return (
     <div className="shell">
       <aside className="sidebar open">
@@ -17,8 +17,8 @@ export default function CentralConsole() {
       </aside>
       <main className="main">
         <PageHeader title="Serveur central" subtitle="Les coopératives gardent leur serveur local ; leurs données arrivent ici et se consolident." />
-        <Tabs tabs={[['sites', 'Sites reliés'], ['conso', 'Vue consolidée']]} value={tab} onChange={setTab} />
-        {tab === 'sites' ? <Sites /> : <Consolidation />}
+        <Tabs tabs={[['sites', 'Sites reliés'], ['conso', 'Vue consolidée'], ['transferts', 'Transferts']]} value={tab} onChange={setTab} />
+        {tab === 'sites' ? <Sites /> : tab === 'conso' ? <Consolidation /> : <Transferts />}
       </main>
     </div>
   );
@@ -56,6 +56,22 @@ function Sites() {
       {code && <PairingCode code={code} onClose={() => setCode(null)} />}
     </Card>
   );
+}
+
+function Transferts() {
+  const imps = useAsync(() => get<any[]>('/replication/transfer/imports'), []); const act = useAction(); const [res, setRes] = useState<any>(null);
+  return <>
+    <Card title="Importer un fichier de transfert">
+      <p>Fichier <code>.atx</code> exporté par un serveur local sans internet. L'import vérifie la signature, ignore ce qui est déjà reçu et <strong>n'efface jamais rien</strong> au central : une suppression venue du local est archivée.</p>
+      <input type="file" accept=".atx" disabled={act.busy} onChange={(e) => { const f = e.target.files?.[0]; if (!f) return; setRes(null); act.run(async () => { const fd = new FormData(); fd.append('file', f); setRes(await postForm('/replication/transfer/import', fd)); imps.reload(); }); e.target.value = ''; }} />
+      {res && <p role="status"><strong>{res.site}</strong> : {res.applied} ligne(s) appliquée(s), {res.skipped} déjà reçue(s). <strong>Dernier numéro à confirmer au serveur local : <code>{res.last_txid}</code></strong></p>}
+      {act.error && <p className="error" role="alert">{act.error}</p>}
+    </Card>
+    <Card title="Fichiers importés">
+      {imps.loading ? <Loading /> : !(imps.data ?? []).length ? <p className="empty">Aucun import.</p> :
+        <table><thead><tr><th>Date</th><th>Coopérative</th><th>Fichier</th><th className="num">Lignes</th><th className="num">Appliquées</th><th className="num">Dernier n°</th></tr></thead>
+          <tbody>{imps.data!.map((i) => <tr key={i.id}><td>{new Date(i.imported_at).toLocaleString('fr-FR')}</td><td>{i.organization_name}</td><td>{i.file_name}</td><td className="num">{i.rows_total}</td><td className="num">{i.rows_applied}</td><td className="num">{i.last_txid}</td></tr>)}</tbody></table>}
+    </Card></>;
 }
 
 function PairingCode({ code, onClose }: { code: string; onClose: () => void }) {

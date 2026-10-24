@@ -170,6 +170,8 @@ function buildMenu() {
     { label: 'Fichier', submenu: [
       ...(isServer ? [
         { label: 'Sauvegarder maintenant…', click: backupNow },
+        { label: cfg?.autoBackupDir ? `Sauvegarde automatique : chaque jour (${cfg.autoBackupDir}) — modifier…` : 'Sauvegarde automatique quotidienne…', click: setAutoBackup },
+        { label: 'Restaurer une sauvegarde…', click: restoreBackup },
         { label: 'Ouvrir le dossier des données', click: () => shell.openPath(app.getPath('userData')) },
         { label: 'Démarrer avec Windows', type: 'checkbox', checked: app.getLoginItemSettings().openAtLogin, click: (i) => app.setLoginItemSettings({ openAtLogin: i.checked }) },
         { type: 'separator' },
@@ -183,6 +185,36 @@ function buildMenu() {
     { label: 'Affichage', submenu: [{ role: 'reload', label: 'Actualiser' }, { role: 'togglefullscreen', label: 'Plein écran' }, { type: 'separator' }, { role: 'zoomIn', label: 'Agrandir' }, { role: 'zoomOut', label: 'Réduire' }, { role: 'resetZoom', label: 'Taille normale' }] },
     { label: 'Aide', submenu: [{ label: 'À propos', click: () => dialog.showMessageBox({ title: 'AgriTrace', message: `AgriTrace ${app.getVersion()}`, detail: isServer ? `Poste « ${cfg?.stationName ?? 'serveur'} » — serveur de la coopérative.\nLes autres postes le trouvent automatiquement sur le réseau du bureau.` : `Poste « ${cfg?.stationName ?? 'client'} » relié au serveur de la coopérative (connexion automatique).\nSi le serveur est éteint, ce poste continue de fonctionner et enverra son travail au retour du serveur.` }) }] },
   ]));
+}
+
+// Sauvegarde automatique : une copie par jour vers le support choisi, à partir de l'heure fixée (le serveur s'arrête quelques secondes). Aucune sauvegarde n'est jamais supprimée par l'application.
+async function setAutoBackup() {
+  const r = await dialog.showOpenDialog({ title: 'Support des sauvegardes automatiques (clé USB, disque externe…)', properties: ['openDirectory', 'createDirectory'] });
+  if (r.canceled || !r.filePaths[0]) return;
+  const a = await dialog.showMessageBox({ type: 'question', buttons: ['Chaque jour à 13 h', 'Chaque jour à 19 h', 'Désactiver', 'Annuler'], defaultId: 1, cancelId: 3, message: 'Quand sauvegarder ?', detail: 'Le serveur s\'arrête quelques secondes pendant la copie. Si le support est absent, la sauvegarde est reportée.' });
+  if (a.response === 3) return;
+  saveCfg({ ...cfg, autoBackupDir: a.response === 2 ? null : r.filePaths[0], autoBackupHour: a.response === 0 ? 13 : 19 });
+  buildMenu();
+}
+let lastAutoBackup = '';
+function autoBackupTick() {
+  if (!cfg?.autoBackupDir || !server || (cfg.role !== 'server' && cfg.role !== 'single')) return;
+  const now = new Date(), day = now.toISOString().slice(0, 10);
+  if (day === lastAutoBackup || now.getHours() < (cfg.autoBackupHour ?? 19) || !fs.existsSync(cfg.autoBackupDir)) return;
+  lastAutoBackup = day;
+  server.backup(cfg.autoBackupDir).then((t) => log('sauvegarde automatique : ' + t)).catch((e) => { lastAutoBackup = ''; log('sauvegarde automatique impossible : ' + e.message); });
+}
+setInterval(autoBackupTick, 10 * 60 * 1000).unref?.();
+
+async function restoreBackup() {
+  const r = await dialog.showOpenDialog({ title: 'Choisir le dossier « AgriTrace-sauvegarde-… » à restaurer', properties: ['openDirectory'] });
+  if (r.canceled || !r.filePaths[0]) return;
+  const c = await dialog.showMessageBox({ type: 'warning', buttons: ['Restaurer', 'Annuler'], defaultId: 1, cancelId: 1, message: 'Remplacer les données de ce serveur par cette sauvegarde ?', detail: 'Les données actuelles sont mises de côté dans un dossier « server-avant-restauration-… » : rien n\'est effacé. Les postes clients se reconnectent ensuite ; si le serveur change de certificat, utilisez « Changer de rôle » sur chaque poste.' });
+  if (c.response !== 0) return;
+  try {
+    const aside = await server.restore(r.filePaths[0]);
+    dialog.showMessageBox({ message: 'Sauvegarde restaurée', detail: `Anciennes données conservées dans : ${aside}` });
+  } catch (e) { dialog.showErrorBox('Restauration impossible', e.message); }
 }
 
 async function backupNow() {
