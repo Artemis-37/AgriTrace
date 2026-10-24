@@ -41,7 +41,10 @@ def title_card(s):
     im, d = base(); logo_panel(im, int((W - 419 * 1.3 - 36) // 2), 150, 1.3)
     center(d, s['title'], 400, font(120, 'Bold'), LIGHT)
     center(d, s['subtitle'], 560, font(40, 'Medium'), LIME)
-    if s.get('note'): center(d, s['note'], 700, font(32), (200, 214, 196))
+    if s.get('note'): center(d, s['note'], 640 if s.get('contact') else 700, font(32), (200, 214, 196))
+    if s.get('contact'):  # coordonnées du concepteur (carte finale)
+        rbox(d, (360, 720, 1560, 940), (247, 250, 242), 26)
+        for i, (t, f, col) in enumerate(s['contact']): center(d, t, 745 + i * 58, font(f[0], f[1]), tuple(col))
     return im
 
 def arch_card(s):

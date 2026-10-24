@@ -128,8 +128,10 @@ L'exportateur est notifié, par la cloche en haut à droite, et voit les résult
 
 
 scene('fin', 'Merci', """
-Voilà le parcours complet : du village à l\'exportateur, de la parcelle à la comptabilité, sur ordinateur et sur téléphone, avec une traçabilité sans trou, et des formations qui reviennent au village. Merci de votre attention.""",
-  card('title', title='AgriTrace', subtitle='Du terrain à l\'exportateur', note='Guides, démonstration et comptes d\'essai fournis'))
+Voilà le parcours complet : du village à l\'exportateur, de la parcelle à la comptabilité, sur ordinateur et sur téléphone, avec une traçabilité sans trou, et des formations qui reviennent au village.
+Agri Trace a été conçu par Dominique N\'Guessan. Ses coordonnées sont à l\'écran. Merci de votre attention.""",
+  card('title', title='AgriTrace', subtitle='Du terrain à l\'exportateur', note='Merci de votre attention',
+       contact=[('Concepteur : Dominique N\'Guessan', (40, 'Bold'), (34, 61, 48)), ('Téléphone : 0505054563 / 0788170404', (36, 'Medium'), (40, 52, 46)), ('E-mail : dominiquengessan414@gmail.com', (36, 'Medium'), (40, 52, 46))]))
 
 json.dump(S, open('scenario-terrain.json', 'w'), ensure_ascii=False, indent=1)
 print(len(S), 'scènes ;', sum(len(s['narration'].split()) for s in S), 'mots')

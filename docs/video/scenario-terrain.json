@@ -512,13 +512,51 @@
  {
   "id": "fin",
   "title": "Merci",
-  "narration": "Voilà le parcours complet : du village à l'exportateur, de la parcelle à la comptabilité, sur ordinateur et sur téléphone, avec une traçabilité sans trou, et des formations qui reviennent au village. Merci de votre attention.",
+  "narration": "Voilà le parcours complet : du village à l'exportateur, de la parcelle à la comptabilité, sur ordinateur et sur téléphone, avec une traçabilité sans trou, et des formations qui reviennent au village. Agri Trace a été conçu par Dominique N'Guessan. Ses coordonnées sont à l'écran. Merci de votre attention.",
   "visual": {
    "type": "card",
    "kind": "title",
    "title": "AgriTrace",
    "subtitle": "Du terrain à l'exportateur",
-   "note": "Guides, démonstration et comptes d'essai fournis"
+   "note": "Merci de votre attention",
+   "contact": [
+    [
+     "Concepteur : Dominique N'Guessan",
+     [
+      40,
+      "Bold"
+     ],
+     [
+      34,
+      61,
+      48
+     ]
+    ],
+    [
+     "Téléphone : 0505054563 / 0788170404",
+     [
+      36,
+      "Medium"
+     ],
+     [
+      40,
+      52,
+      46
+     ]
+    ],
+    [
+     "E-mail : dominiquengessan414@gmail.com",
+     [
+      36,
+      "Medium"
+     ],
+     [
+      40,
+      52,
+      46
+     ]
+    ]
+   ]
   }
  }
 ]
