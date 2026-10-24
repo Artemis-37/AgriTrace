@@ -135,7 +135,7 @@ const MOD = {
     pas: [
       ['Vérifier les déclarations', 'Menu **Déclarations d\'achat** : les déclarations « Reçue » attendent une mise en vérification, puis validation.'],
       ['Préparer la fiche d\'accompagnement', 'Menu **Fiches d\'accompagnement** → onglet *Convois pesés* : **Consulter** liste les producteurs d\'un convoi (nom, genre, section, code, date de livraison, poids net, sacs, n° de reçu) et **Exporter (Excel)** produit la fiche sur le modèle de la coopérative. Pour un chargement de plusieurs convois, cochez-les puis **Créer la fiche** : renseignez chauffeur, camion, remorque, LOT ID DSE, n° de connaissement, date de départ, type de cacao et certifications. Une fiche déjà remplie ailleurs s\'**importe** par *Importer une fiche (Excel)* (les codes absents du registre sont signalés).'],
-      ['Transmettre la fiche à l\'exportateur', 'Onglet *Fiches d\'accompagnement* → **Transmettre** : choisissez l\'**exportateur lié** (ou un compte exportateur de la coopérative). Vers un exportateur lié, la fiche devient chez lui une livraison attendue ; vous la suivez dans **Livraisons → Mes livraisons envoyées**. La fiche ne peut plus être modifiée, l\'exportateur est notifié et la télécharge au format Excel.'],
+      ['Transmettre la fiche à l\'exportateur', 'Onglet *Fiches d\'accompagnement* → **Transmettre** : choisissez l\'**exportateur lié** (ou un compte exportateur de la coopérative) ; vous pouvez **joindre la fiche (Excel ou PDF) et le connaissement CCC (PDF)**, qui partent avec le chargement. Vers un exportateur lié, la fiche devient chez lui une livraison attendue ; vous la suivez dans **Livraisons → Mes livraisons envoyées**. La fiche ne peut plus être modifiée, l\'exportateur est notifié et la télécharge au format Excel.'],
       ['Tracer un lot', 'Menu **Stocks et lots** (si accessible) ou la fiche du lot : bouton *Traçabilité* pour voir producteurs, parcelles, connaissements et pesées.'],
     ],
     exos: [
@@ -259,10 +259,11 @@ const MOD = {
   },
   pont_bascule: {
     niveau: 'Niveau 1 — Opérateur', duree: '1 h',
-    objectifs: ['Repérer la livraison attendue', 'Peser l\'entrée (camion chargé)', 'Peser la sortie (camion vide) et lire le poids net'],
+    objectifs: ['Repérer la livraison attendue', 'Peser l\'entrée (camion chargé)', 'Peser la sortie (camion vide) et lire le poids net', 'Refouler un chargement non conforme'],
     pas: [
       ['Ouvrir les livraisons', 'Menu **Pont bascule et analyse** : chaque fiche d\'accompagnement transmise par une coopérative liée est une livraison **Attendue** (camion, poids déclaré). Vous êtes notifié à l\'arrivée.'],
       ['Peser l\'entrée', '**Peser l\'entrée** : saisissez le **poids brut** lu au pont bascule, camion chargé. La livraison passe à « Entrée pesée ».'],
+      ['Refouler un chargement', 'Si le chargement ne peut pas être reçu : **Refouler**, motif obligatoire. Le volume **retourne dans le stock de la coopérative**, qui peut réutiliser ses convois pour un autre chargement. Le bouton **Pièces** donne la fiche d\'accompagnement et le connaissement CCC joints par la coopérative.'],
       ['Peser la sortie', 'Après déchargement : **Peser la sortie** → saisissez la **tare** (camion vide) et les sacs comptés. Le **poids net** (brut − tare) et l\'écart avec le poids déclaré s\'affichent, la coopérative est prévenue. La tare doit être inférieure au brut.'],
     ],
     exos: [['Pesez l\'entrée d\'une livraison attendue (brut = déclaré + 9 000 kg).', 'Statut « Entrée pesée ».'], ['Pesez la sortie avec une tare de 9 000 kg.', 'Poids net = poids déclaré ; statut « Pesée terminée » ; le bouton d\'analyse n\'apparaît pas pour vous (rôle analyste).']],
@@ -273,7 +274,7 @@ const MOD = {
     pas: [
       ['Choisir une livraison pesée', 'Menu **Pont bascule et analyse** : les livraisons « Pesée terminée » portent le bouton **Analyser**.'],
       ['Saisir l\'analyse', 'Humidité (%), grainage (fèves / 100 g), défauts (moisies, ardoisées, mitées, germées, plates), qualité. **Décision** : acceptée ou rejetée (le motif du rejet est obligatoire).'],
-      ['Produire le bulletin de pesée', '**Enregistrer et produire le bulletin** : le bulletin est numéroté (BP-aaaa-nnnnn). Bouton **Bulletin** : fenêtre d\'impression, enregistrable en PDF. Les poids ne sont plus modifiables après l\'analyse.'],
+      ['Produire le bulletin de pesée', '**Enregistrer et produire le bulletin** : le bulletin est numéroté (BP-aaaa-nnnnn). Pour un chargement accepté, c\'est le **bon retour** : bouton **Bon retour** (impression) ou **PDF** (téléchargement) ; la coopérative peut aussi l\'imprimer ou l\'exporter. Les poids ne sont plus modifiables après l\'analyse.'],
     ],
     exos: [['Analysez la livraison pesée : humidité 7,4 %, 98 fèves / 100 g, décision acceptée.', 'Statut « Analysée » et bulletin BP-… disponible.'], ['Tentez de rejeter une livraison sans motif.', 'Le logiciel exige le motif du rejet.']],
   },

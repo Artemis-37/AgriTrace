@@ -27,11 +27,21 @@ Rôles à créer depuis Équipe → rôles types : *Responsable pont bascule*, *
 1. **Coopérative** : le responsable de traçabilité crée la fiche d'accompagnement (convois pesés) et la **transmet** à l'organisation liée (Fiches d'accompagnement → Transmettre → organisation liée).
 2. **Exportateur** : la livraison apparaît (**Attendue**, numéro DL-aaaa-nnnnn), les responsables du pont bascule sont notifiés.
 3. **Pont bascule** : *Peser l'entrée* (brut), puis *Peser la sortie* (tare) : poids net = brut − tare, écart avec le poids déclaré par la coopérative. La tare doit être inférieure au brut.
-4. **Analyste** : *Analyser* → décision et **bulletin de pesée** (BP-aaaa-nnnnn), imprimable ou enregistrable en PDF depuis la fenêtre d'impression.
+4. **Analyste** : *Analyser* → décision et **bulletin de pesée** (BP-aaaa-nnnnn). Pour un chargement **accepté**, ce bulletin est le **bon retour** : le bouton *Bon retour* l'imprime, le bouton *PDF* le télécharge. L'exportateur **et** la coopérative peuvent l'imprimer ou l'exporter en PDF.
 5. **Caisse** : *Régler* (livraison acceptée) : prix au kg, montant = poids net × prix, référence du paiement. L'écriture comptable se passe dans Comptabilité (le règlement de la livraison n'écrit pas automatiquement en comptabilité).
 6. **Retour à la coopérative** : *Livraisons → Mes livraisons envoyées* : poids net, écart, décision, bulletin, montant, avec une notification à chaque étape.
 
 Après l'analyse, les poids ne peuvent plus changer ; une livraison réglée ne peut plus être modifiée ; aucune livraison ne se supprime.
+
+## Pièces jointes du chargement
+En transmettant une fiche, la coopérative peut joindre la **fiche d'accompagnement** (Excel ou PDF) et le **connaissement CCC** (PDF). Elles partent avec le chargement : le destinataire les retrouve dans *Livraisons → Pièces* et les télécharge. Une fois le chargement transmis, les pièces ne changent plus. Le fichier Excel d'une fiche peut aussi être importé pour créer la fiche (*Importer une fiche*).
+
+## Refoulement d'un chargement
+Tant que la livraison n'est pas réglée, l'exportateur (ou la coopérative destinataire) peut **refouler** le chargement : bouton *Refouler*, motif obligatoire. Alors :
+* la livraison passe à **Refoulée** (décision « rejetée », plus de règlement, plus de modification) ;
+* le **volume revient dans le stock de la coopérative** fournisseuse (*État du stock* : colonne « dont refoulé revenu ») et ses convois redeviennent disponibles : elle peut les mettre dans **un autre chargement** ;
+* la coopérative est notifiée avec le motif, et la fiche refusée est marquée « Refoulée — volume revenu au stock » ; le journal d'audit des deux côtés garde la trace.
+Le stock d'une coopérative est désormais : poids reçu au magasin, moins les chargements transmis non refoulés.
 
 ## Coopérative ↔ coopérative
 Même circuit : un lien actif entre deux coopératives (dans un sens, ou dans les deux) permet à l'une de transmettre une fiche à l'autre, qui la reçoit comme livraison (pesée, analyse, bulletin, règlement). Pour livrer dans les deux sens, cocher « dans les deux sens » à la création du lien. Pour recevoir, la coopérative destinataire crée les rôles *Responsable pont bascule* et *Analyste* (ou les droits équivalents).
@@ -43,6 +53,6 @@ Même circuit : un lien actif entre deux coopératives (dans un sens, ou dans le
 
 ## Limites actuelles
 * Écrans de livraison dans le **portail** seulement (pas dans l'application mobile).
-* Le règlement n'écrit pas dans la comptabilité ; la transmission est à sens unique par fiche (pas de retour de marchandise).
+* Le règlement n'écrit pas dans la comptabilité ; un chargement refoulé revient au stock mais le retour physique (transport) n'est pas suivi.
 * Un serveur local de coopérative (mode « local ») ne réplique pas encore les livraisons vers le central : la transmission se fait depuis le serveur qui héberge à la fois la coopérative et l'exportateur.
 * Pas de rapports spécifiques exportateur (les rapports existants restent disponibles).

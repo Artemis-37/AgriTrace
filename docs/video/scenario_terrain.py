@@ -89,13 +89,28 @@ Une fois le camion déchargé, il pèse la sortie : la tare. Le poids net est ca
 
 scene('exp-analyse', 'L\'analyse et le bulletin de pesée', """
 L'analyste saisit les résultats de l'analyse : humidité, grainage, défauts et qualité. Il décide si la livraison est acceptée ou rejetée, avec un motif obligatoire en cas de rejet.
-Le bulletin de pesée est alors produit, avec les deux pesées, le poids net, l'analyse et les signataires. Après cela, les poids ne peuvent plus être modifiés.""",
+Le bulletin de pesée, appelé bon retour quand le chargement est accepté, est alors produit, avec les deux pesées, le poids net, l'analyse et les signataires. Après cela, les poids ne peuvent plus être modifiés.""",
   live('analyste', [{'goto': '/livraisons', 'w': 5}, {'scroll': 250, 'w': 3}]))
 
 scene('exp-reglement', 'Le règlement de la coopérative', """
 Pour une livraison acceptée, la caisse de l'exportateur fixe le prix au kilo : le montant est le poids net multiplié par le prix. Il est communiqué à la coopérative, qui suit chaque étape dans ses livraisons envoyées : poids net, décision, bulletin et règlement.
 La même chaîne fonctionne entre deux coopératives, dans un sens ou dans les deux.""",
   live('exp_caissier', [{'goto': '/livraisons', 'w': 5}, {'scroll': 250, 'w': 3}]))
+
+scene('exp-bon-retour', 'Les pièces jointes et le bon retour', """
+En transmettant sa fiche, la coopérative peut joindre la fiche d'accompagnement, en Excel ou en PDF, et le connaissement CCC en PDF. L'exportateur les retrouve dans le bouton Pièces de la livraison.
+Pour un chargement accepté, le bulletin de pesée est le bon retour. Les deux parties peuvent l'imprimer, ou le télécharger en PDF.""",
+  live('pont_bascule', [{'goto': '/livraisons', 'w': 5}, {'scroll': 250, 'w': 3}]))
+
+scene('exp-refoulement', 'Le refoulement d\'un chargement', """
+L'exportateur peut refouler un chargement, avec un motif obligatoire. La livraison passe à Refoulée et ne se règle pas.
+Le volume revient dans le stock de la coopérative, et ses convois redeviennent disponibles : elle peut les mettre dans un autre chargement. La coopérative est prévenue, et la fiche refusée est marquée comme refoulée.""",
+  live('pont_bascule', [{'goto': '/livraisons', 'w': 5}, {'scroll': 250, 'w': 3}]))
+
+scene('exp-audit', 'L\'audit de la coopérative', """
+L'exportateur est le supérieur hiérarchique de la coopérative, et l'audite. Il propose d'abord sa supervision, que la coopérative accepte, et peut révoquer quand aucun audit n'est en cours.
+Dans le module Audits, il programme une mission, puis chaque partie désigne ses participants et partage des copies figées de ses données, des documents ou des notes. Seuls les participants les voient, et chaque lecture est inscrite dans un journal. L'exportateur saisit ses constats, la coopérative répond avec un plan d'action, et l'audit est clos.""",
+  live('exp_admin', [{'goto': '/audits', 'w': 4}, {'tab': 'Supervision', 'w': 4}]))
 
 scene('stock-vente', 'Le stock et la vente', """
 Le lot réceptionné rejoint le stock du magasin, suivi par lot. Il est ensuite vendu : l'acheteur partenaire, ici l'exportateur de la chaîne, ne voit que ses propres commandes, expéditions et documents.
