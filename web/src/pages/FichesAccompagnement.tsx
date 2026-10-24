@@ -69,16 +69,21 @@ function NewSheet({ ids, onClose, onDone }: { ids: string[]; onClose: () => void
 
 function Transmit({ sheet, onClose, onDone }: { sheet: any; onClose: () => void; onDone: () => void }) {
   const ex = useAsync(() => get<any[]>('/dispatch-sheets/exporters'), []);
+  const dest = useAsync(() => get<any[]>('/org-links/destinations'), []);
   const { busy, error, run } = useAction();
-  const [to, setTo] = useState('');
+  const [to, setTo] = useState('');   // "u:<id>" compte exportateur interne, "o:<id>" organisation liée
+  const none = !(ex.data ?? []).length && !(dest.data ?? []).length;
   return (
     <Modal title={`Transmettre la fiche ${sheet.number}`} onClose={onClose}>
-      <p className="muted">Une fois transmise à l'exportateur, la fiche ne peut plus être modifiée. L'exportateur est prévenu et peut la télécharger.</p>
-      {ex.loading ? <Loading /> : !(ex.data ?? []).length ? <p className="empty">Aucun compte exportateur dans la coopérative. Créez-en un dans Équipe (rôle « Exportateur »).</p> :
-        <Field label="Exportateur destinataire"><select value={to} onChange={(e) => setTo(e.target.value)}><option value="">Choisir…</option>{(ex.data ?? []).map((u) => <option key={u.id} value={u.id}>{u.full_name} ({u.email})</option>)}</select></Field>}
+      <p className="muted">Une fois transmise, la fiche ne peut plus être modifiée. Vers une organisation liée, elle devient une livraison attendue (pont bascule, analyse, bulletin de pesée) et vous en suivez l'avancement dans Livraisons.</p>
+      {ex.loading || dest.loading ? <Loading /> : none ? <p className="empty">Aucun destinataire. Faites accepter un lien dans « Organisations liées », ou créez un compte exportateur dans Équipe.</p> :
+        <Field label="Destinataire"><select value={to} onChange={(e) => setTo(e.target.value)}><option value="">Choisir…</option>
+          {(dest.data ?? []).length > 0 && <optgroup label="Organisations liées">{(dest.data ?? []).map((o) => <option key={o.id} value={`o:${o.id}`}>{o.name} ({o.kind === 'exporter' ? 'exportateur' : 'coopérative'})</option>)}</optgroup>}
+          {(ex.data ?? []).length > 0 && <optgroup label="Comptes exportateur de la coopérative">{(ex.data ?? []).map((u) => <option key={u.id} value={`u:${u.id}`}>{u.full_name} ({u.email})</option>)}</optgroup>}
+        </select></Field>}
       {error && <p className="error" role="alert">{error}</p>}
       <div className="modal-foot"><button className="btn btn-ghost" onClick={onClose}>Annuler</button>
-        <button className="btn btn-primary" disabled={busy || !to} onClick={() => run(async () => { await post(`/dispatch-sheets/${sheet.id}/transmit`, { exporter_user_id: to }); onDone(); })}>Transmettre à l'exportateur</button></div>
+        <button className="btn btn-primary" disabled={busy || !to} onClick={() => run(async () => { await post(`/dispatch-sheets/${sheet.id}/transmit`, to.startsWith('o:') ? { destination_org_id: to.slice(2) } : { exporter_user_id: to.slice(2) }); onDone(); })}>Transmettre</button></div>
     </Modal>
   );
 }

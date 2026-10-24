@@ -1,7 +1,7 @@
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import * as client from './api';
 
-export interface Org { id: string; code: string; name: string }
+export interface Org { id: string; code: string; name: string; kind?: 'cooperative' | 'exporter' }
 interface Me { user: { id: string; email: string; full_name: string }; must_change_password?: boolean; must_setup_2fa?: boolean; permissions: string[]; account_kind?: 'collector' | 'coach' | 'staff'; mobile_first?: boolean }
 interface AuthState {
   status: 'loading' | 'anonymous' | 'choose-org' | 'ready' | 'platform';

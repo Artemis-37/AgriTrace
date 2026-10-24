@@ -31,9 +31,10 @@ function Sites() {
   const act = useAction();
   const [creating, setCreating] = useState(false);
   const [code, setCode] = useState<string | null>(null);
+  const [orgForm, setOrgForm] = useState(false);
   return (
     <Card title="Sites">
-      <div className="toolbar"><button className="btn" onClick={() => setCreating(true)}>Ajouter une coopérative</button></div>
+      <div className="toolbar"><button className="btn" onClick={() => setCreating(true)}>Ajouter une coopérative</button> <button className="btn btn-secondary" onClick={() => setOrgForm(true)}>Créer une organisation (coopérative ou exportateur)</button></div>
       {(error || act.error) && <ErrorBox message={(error ?? act.error)!} onRetry={reload} />}
       {loading ? <Loading /> : (
         <Table rows={data ?? []} empty="Aucun site relié pour l'instant." columns={[
@@ -51,6 +52,7 @@ function Sites() {
         ]} />
       )}
       {creating && <CreateSite onClose={() => setCreating(false)} onCreated={(c) => { setCreating(false); setCode(c); reload(); }} />}
+      {orgForm && <CreateOrg onClose={() => setOrgForm(false)} />}
       {code && <PairingCode code={code} onClose={() => setCode(null)} />}
     </Card>
   );
@@ -116,5 +118,31 @@ function Consolidation() {
         ]} />
       </Card>
     </>
+  );
+}
+
+/** Crée une organisation hébergée sur ce serveur (coopérative ou exportateur) et son premier administrateur. */
+function CreateOrg({ onClose }: { onClose: () => void }) {
+  const [f, setF] = useState({ code: '', name: '', kind: 'exporter', email: '', admin: '', password: '' });
+  const [done, setDone] = useState<string | null>(null);
+  const act = useAction();
+  const set = (k: keyof typeof f) => (e: any) => setF({ ...f, [k]: e.target.value });
+  return (
+    <Modal title="Créer une organisation" onClose={onClose}>
+      {done ? <><p>{done}</p><div className="modal-actions"><button className="btn" onClick={onClose}>Fermer</button></div></> : <>
+        <Field label="Type"><select value={f.kind} onChange={set('kind')}><option value="exporter">Exportateur (pont bascule, analyse, coopératives fournisseuses)</option><option value="cooperative">Coopérative</option></select></Field>
+        <Field label="Code" hint="Majuscules, chiffres, - ou _ : les autres organisations s'en servent pour proposer un lien"><input value={f.code} onChange={(e) => setF({ ...f, code: e.target.value.toUpperCase() })} /></Field>
+        <Field label="Nom"><input value={f.name} onChange={set('name')} /></Field>
+        <Field label="Premier administrateur : nom"><input value={f.admin} onChange={set('admin')} /></Field>
+        <Field label="Courriel"><input type="email" value={f.email} onChange={set('email')} /></Field>
+        <Field label="Mot de passe provisoire" hint="12 caractères au moins ; à transmettre par un autre canal que le courriel"><input type="password" value={f.password} onChange={set('password')} autoComplete="new-password" /></Field>
+        {act.error && <ErrorBox message={act.error} />}
+        <div className="modal-actions"><button className="btn btn-secondary" onClick={onClose}>Annuler</button>
+          <button className="btn" disabled={act.busy || f.code.length < 2 || f.name.length < 2 || !f.email || f.admin.length < 2 || f.password.length < 10} onClick={() => act.run(async () => {
+            const o = await post<any>('/organizations', { code: f.code, name: f.name, kind: f.kind });
+            await post(`/organizations/${o.id}/admins`, { email: f.email, full_name: f.admin, password: f.password });
+            setDone(`« ${f.name} » est créée (${f.kind === 'exporter' ? 'exportateur' : 'coopérative'}). L'administrateur se connecte avec ${f.email}.`);
+          })}>Créer</button></div></>}
+    </Modal>
   );
 }

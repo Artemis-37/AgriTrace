@@ -14,6 +14,7 @@ const DOCS = [
   ['DEPLOIEMENT.md', 'AgriTrace - Deploiement et installation', 'Déploiement et installation', false],
   ['DEPLOIEMENT_MULTI_COOPERATIVES.md', 'AgriTrace - Deploiement multi-cooperatives', 'Déploiement pour plusieurs coopératives', false],
   ['DEPLOIEMENT_HETZNER.md', 'AgriTrace - Deploiement Hetzner', 'Déploiement sur Hetzner', false],
+  ['EXPORTATEUR.md', 'AgriTrace - Exportateur et echanges entre organisations', 'Exportateur et échanges entre organisations', false],
   ['EXPLOITATION.md', 'AgriTrace - Exploitation', 'Exploitation', false],
   ['DEMO.md', 'AgriTrace - Version de demonstration', 'Version de démonstration', false],
   ['MATRICE_ROLES.md', 'AgriTrace - Matrice des roles et permissions', 'Matrice des rôles et permissions', true],

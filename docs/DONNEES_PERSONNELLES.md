@@ -16,6 +16,9 @@
 ## 2. Mesures techniques en place
 Cloisonnement strict entre coopératives (sécurité par ligne), droits par rôle, journal d'audit non modifiable, chiffrement des échanges (HTTPS), mots de passe hachés (argon2id), double authentification, chiffrement des documents au repos (`DOCUMENTS_KEY`), base mobile chiffrée (SQLCipher) purgée à la révocation, sauvegardes chiffrables, téléchargements de documents sensibles journalisés.
 
+## 2 bis. Échanges entre organisations
+La transmission d'une fiche d'accompagnement à une organisation liée (exportateur ou autre coopérative) copie la liste des producteurs (noms, codes, poids) chez le destinataire. Le lien est accepté par les deux parties et révocable ; la durée de conservation chez le destinataire est à fixer par contrat (voir EXPORTATEUR.md).
+
 ## 3. À décider et à documenter par la coopérative
 1. **Base légale et consentement** : recueillir et conserver la preuve du consentement des producteurs (collecte des données, photos, tracés GPS) ; informer sur les finalités et les destinataires (acheteurs, certificateurs).
 2. **Durées de conservation** : le champ `retention_until` existe sur chaque document ; fixer une durée par catégorie (ex. pièces d'identité : durée de la relation + délai légal) et purger à l'échéance.

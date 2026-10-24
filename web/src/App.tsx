@@ -39,6 +39,8 @@ import Parcels from './pages/Parcels';
 import Producers from './pages/Producers';
 import Quality from './pages/Quality';
 import FichesAccompagnement from './pages/FichesAccompagnement';
+import Livraisons from './pages/Livraisons';
+import OrganisationsLiees from './pages/OrganisationsLiees';
 import Stocks from './pages/Stocks';
 import { Loading } from './ui';
 import { MenuBar } from './MenuBar';
@@ -68,6 +70,8 @@ const NAV: { to: string; label: string; icon: string; perm: string[]; any?: bool
   { to: '/equipe', label: 'Équipe', icon: '⚙', perm: ['users:read'] },
   { to: '/declarations', label: 'Déclarations d\'achat', icon: '✎', perm: ['declarations:read'], notFor: 'collector' },
   { to: '/fiches-accompagnement', label: 'Fiches d\'accompagnement', icon: '📋', perm: ['dispatch:manage', 'dispatch:read'], any: true },
+  { to: '/livraisons', label: 'Livraisons', icon: '🚚', perm: ['deliveries:read', 'dispatch:manage'], any: true },
+  { to: '/organisations-liees', label: 'Organisations liées', icon: '🔗', perm: ['links:manage', 'deliveries:read'], any: true },
   { to: '/missions', label: 'Missions', icon: '⚑', perm: ['tasks:read'] },
   { to: '/operations', label: 'Mes opérations', icon: '🧾', perm: ['cancellations:request'] },
   { to: '/terrain', label: 'Données de terrain', icon: '❖', perm: ['field_records:read', 'field_records:manage', 'field_templates:manage'], any: true },
@@ -79,6 +83,11 @@ const NAV: { to: string; label: string; icon: string; perm: string[]; any?: bool
   { to: '/qualite', label: 'Qualité et conformité', icon: '✔', perm: ['inspections:read'] },
 ];
 
+
+/** Chez un exportateur, il n'y a pas d'agents de terrain : les menus de collecte et de suivi du terrain n'existent pas. */
+const EXPORTER_HIDDEN = new Set(['/producteurs', '/parcelles', '/cartographie', '/delegues', '/pesees', '/convois', '/declarations', '/mise-en-compte', '/missions', '/terrain', '/modules-formation', '/modules-exportateurs', '/fiches-accompagnement', '/mes-achats', '/mon-stock', '/historique']);
+
+const EXPORTER_LABEL: Record<string, string> = { '/livraisons': 'Pont bascule et analyse', '/organisations-liees': 'Coopératives' };
 
 /** Icône de profil de la personne connectée : un clic ouvre un menu (profil, déconnexion). */
 function ProfileMenu({ name, onSignOut }: { name: string; onSignOut: () => void }) {
@@ -149,7 +158,7 @@ export default function App() {
         </div>
       </header>
       <MenuBar open={open} onNavigate={() => setOpen(false)}
-        items={NAV.filter((n) => (n.any ? n.perm.some((p) => can(p)) : can(...n.perm)) && (!n.only || me?.account_kind === n.only) && (!n.notFor || me?.account_kind !== n.notFor)).map(({ to, label, icon }) => ({ to, label, icon }))} />
+        items={NAV.filter((n) => !(org?.kind === 'exporter' && EXPORTER_HIDDEN.has(n.to)) && (n.any ? n.perm.some((p) => can(p)) : can(...n.perm)) && (!n.only || me?.account_kind === n.only) && (!n.notFor || me?.account_kind !== n.notFor)).map(({ to, label, icon }) => ({ to, label: org?.kind === 'exporter' ? (EXPORTER_LABEL[to] ?? label) : label, icon }))} />
       <main className="main">
         <OfflineBar />
         {managed && <p className="notice" role="status">Lecture seule : cette coopérative est gérée par son serveur local (« {managed} »). Les modifications se font là-bas ; elles arrivent ici par synchronisation.</p>}
@@ -164,6 +173,8 @@ export default function App() {
           <Route path="/mon-stock" element={<MonStock />} />
           <Route path="/historique" element={<Historique />} />
           <Route path="/convois" element={<Convois />} />
+          <Route path="/livraisons" element={<Livraisons />} />
+          <Route path="/organisations-liees" element={<OrganisationsLiees />} />
           <Route path="/pesees" element={<Pesees />} />
           <Route path="/mise-en-compte" element={<MiseEnCompte />} />
           <Route path="/delegues" element={<Delegues />} />
