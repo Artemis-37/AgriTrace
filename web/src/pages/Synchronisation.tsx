@@ -28,7 +28,7 @@ export default function Synchronisation() {
   return (
     <>
       <PageHeader title="Synchronisation" subtitle="Ce serveur fonctionne seul ; il envoie ses données au serveur central, qui les consolide avec les autres coopératives."
-        actions={s.linked && <button className="btn" disabled={act.busy} onClick={() => act.run(async () => { const r = await post<any>('/replication/sync-now'); setMsg(r.error ? null : `${r.sent} ligne(s) envoyée(s).`); reload(); })}>{act.busy ? 'Envoi…' : 'Synchroniser maintenant'}</button>} />
+        actions={s.linked && !s.offline && <button className="btn" disabled={act.busy} onClick={() => act.run(async () => { const r = await post<any>('/replication/sync-now'); setMsg(r.error ? null : `${r.sent} ligne(s) envoyée(s).`); reload(); })}>{act.busy ? 'Envoi…' : 'Synchroniser maintenant'}</button>} />
       {act.error && <ErrorBox message={act.error} />}
       {msg && <p className="notice" role="status">{msg}</p>}
       <div className="grid">
@@ -40,7 +40,7 @@ export default function Synchronisation() {
       {s.last_error && <Card title="Dernier incident"><p><Badge tone="bad">Erreur</Badge> {s.last_error}</p><p className="muted">Rien n'est perdu : les changements restent en file et repartent dès que le central répond.</p></Card>}
       {s.linked ? (
         <Card title="Serveur central">
-          <p>Relié au <strong>serveur central</strong> (connexion automatique).</p>
+          <p>{s.offline ? <>Jumelé <strong>hors ligne</strong> : rien n'est envoyé automatiquement, utilisez le transfert par clé USB ci-dessous. Pour passer en envoi automatique, dissociez puis reliez de nouveau.</> : <>Relié au <strong>serveur central</strong> (connexion automatique).</>}</p>
           <button className="btn btn-secondary" onClick={() => setUnlink(true)}>Dissocier ce serveur du central</button>
           {unlink && <Confirm title="Dissocier du serveur central" intro="Les données déjà envoyées restent au central. Les prochains changements ne seront plus envoyés tant que le serveur n'est pas relié de nouveau." onClose={() => setUnlink(false)}
             onSubmit={async () => { await post('/replication/unlink'); setUnlink(false); reload(); }} />}

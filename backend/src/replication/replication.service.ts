@@ -247,8 +247,8 @@ export class ReplicationService implements OnModuleInit, OnModuleDestroy {
       await c.query(`DELETE FROM sync_outbox`);
       await c.query(`DELETE FROM replication_link`);
       await c.query(
-        `INSERT INTO replication_link(id, central_url, site_id, site_token, organization_id, enabled) VALUES (1,$1,$2,$3,$4,$5)`,
-        [p.u.replace(/\/+$/, ''), p.s, `${p.s}.${p.t}`, orgId, !offline]);
+        `INSERT INTO replication_link(id, central_url, site_id, site_token, organization_id, offline) VALUES (1,$1,$2,$3,$4,$5)`,
+        [p.u.replace(/\/+$/, ''), p.s, `${p.s}.${p.t}`, orgId, offline]);
       const [r] = (await c.query(`SELECT replication_backfill($1) AS n`, [orgId])).rows;
       return Number(r.n);
     });
@@ -265,7 +265,7 @@ export class ReplicationService implements OnModuleInit, OnModuleDestroy {
     const [q] = await this.db.query(`SELECT count(*)::int AS pending, min(created_at) AS oldest FROM sync_outbox`);
     return {
       mode: 'local' as const,
-      linked: !!l, enabled: !!l?.enabled,
+      linked: !!l, enabled: !!l?.enabled, offline: !!(l as any)?.offline,
       central_url: l?.central_url ?? null,
       pending_rows: q.pending, oldest_pending_at: q.oldest,
       last_ok_at: l?.last_ok_at ?? null, last_attempt_at: l?.last_attempt_at ?? null, last_error: l?.last_error ?? null,
@@ -277,7 +277,7 @@ export class ReplicationService implements OnModuleInit, OnModuleDestroy {
   async syncOnce(): Promise<{ sent: number; batches: number; error?: string }> {
     if (this.running) return { sent: 0, batches: 0 };
     const l = await this.link();
-    if (!l || !l.enabled) return { sent: 0, batches: 0 };
+    if (!l || !l.enabled || (l as any).offline) return { sent: 0, batches: 0 };
     this.running = true;
     let sent = 0, batches = 0;
     try {
