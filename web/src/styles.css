@@ -345,7 +345,7 @@ dl.kv dd { margin: 0; }
 @media (max-width: 900px) { .today-date { display: none; } }
 
 /* Fenêtres liées (écran ouvert par-dessus un autre) */
-.peek-backdrop { position: fixed; inset: 0; background: rgba(20, 30, 24, .45); z-index: 60; display: flex; align-items: flex-start; justify-content: center; padding: 4vh 2vw; overflow: auto; }
+.peek-backdrop { position: fixed; inset: 0; background: rgba(20, 30, 24, .45); z-index: 60; display: flex; align-items: center; justify-content: center; padding: 4vh 2vw; overflow: auto; }
 .peek { background: var(--bg, #efeade); border-radius: 10px; width: min(1100px, 100%); box-shadow: 0 12px 40px rgba(0,0,0,.35); overflow: hidden; }
 .peek-head { display: flex; align-items: center; gap: .75rem; background: var(--forest); color: var(--on-forest); padding: .5rem .9rem; }
 .peek-head .btn-ghost { color: var(--on-forest); border-color: rgba(255,255,255,.4); }
@@ -367,5 +367,3 @@ dl.kv dd { margin: 0; }
 .profile-pop button { text-align: left; background: none; border: 0; padding: .55rem .6rem; border-radius: 8px; cursor: pointer; font: inherit; color: inherit; }
 .profile-pop button:hover { background: rgba(47,93,70,.1); }
 .profile-pop button.out { color: #b3261e; }
-.peek.peek-wide { width: min(1320px, 100%); }
-.peek.peek-wide .peek-body { max-height: 82vh; }

@@ -2,7 +2,7 @@
  {
   "id": "intro",
   "title": "Du terrain à l'exportateur",
-  "narration": "Cette présentation suit le chemin d'un lot de cacao, du village jusqu'à l'exportateur. Nous partons du téléphone du délégué, sur le terrain, puis nous passons par la traçabilité, le magasin, la caisse, la comptabilité et la vente, pour finir chez l'exportateur, et revenir au village avec les formations qu'il propose. À chaque étape, nous voyons qui fait quoi, et ce qui est tracé.",
+  "narration": "Cette présentation suit le chemin d'un lot de cacao, du village jusqu'à l'exportateur, et passe par chaque utilisateur. Sur le terrain, le délégué et le coach, tous deux sur téléphone. Puis, au bureau, l'Administrateur de groupe, la traçabilité, le magasin, la caisse, la comptabilité et la vente, pour finir chez l'exportateur, et revenir au village avec les formations qu'il propose. À chaque étape, nous voyons qui fait quoi, et ce qui est tracé.",
   "visual": {
    "type": "card",
    "kind": "title",
@@ -14,13 +14,13 @@
  {
   "id": "parcours",
   "title": "Le parcours en un coup d'œil",
-  "narration": "Voici le parcours. Le délégué achète au producteur et déclare son connaissement. La traçabilité vérifie. Le magasinier pèse et réceptionne. Le caissier règle et met en compte. Le comptable passe les écritures. Le stock est vendu, et l'exportateur reçoit le lot. Puis les formations qu'il propose redescendent vers les coachs, et les résultats remontent jusqu'à lui.",
+  "narration": "Voici le parcours. Sur le terrain, le coach suit les producteurs et le délégué leur achète le cacao, puis déclare son connaissement. L'Administrateur de groupe organise les missions. La traçabilité vérifie. Le magasinier pèse et réceptionne. Le caissier règle et met en compte. Le comptable passe les écritures. Le stock est vendu, et l'exportateur reçoit le lot. Puis les formations qu'il propose redescendent vers les coachs, et les résultats remontent jusqu'à lui.",
   "visual": {
    "type": "card",
    "kind": "flow",
    "title": "Du village à l'exportateur",
    "nodes": [
-    "Délégué\nachat + connaissement",
+    "Terrain\ncoach + délégué",
     "Traçabilité\nvérification",
     "Magasinier\npesée + stock",
     "Caissier\nrèglement + compte",
@@ -63,6 +63,49 @@
     "Déclarer le connaissement",
     "Mon stock",
     "Fiche de compte"
+   ]
+  }
+ },
+ {
+  "id": "terrain-coach",
+  "title": "Sur le terrain : le coach",
+  "narration": "Le coach est l'autre utilisateur du terrain. Sur son téléphone, il retrouve les producteurs de ses sections, par nom, code ou téléphone. La fiche du producteur donne ses tâches, ses parcelles et ses informations. Il enregistre un nouveau producteur, relève une parcelle, dispense les formations, et saisit ses relevés. Tout reste sur le téléphone, puis part à la synchronisation.",
+  "visual": {
+   "type": "phones",
+   "images": [
+    "../captures/mobile/coach-accueil.png",
+    "../captures/mobile/coach-producteurs.png",
+    "../captures/mobile/coach-producteur-taches.png",
+    "../captures/mobile/coach-formation.png"
+   ],
+   "captions": [
+    "Accueil du coach",
+    "Producteurs par section",
+    "Tâches du producteur",
+    "Séance de formation"
+   ]
+  }
+ },
+ {
+  "id": "groupe-missions",
+  "title": "L'Administrateur de groupe et les missions",
+  "narration": "Au bureau, l'Administrateur de groupe organise le travail des coachs. Il crée les missions : titre, priorité, échéance, producteur concerné et consignes. Le coach les exécute et joint ses preuves, puis l'Administrateur de groupe les valide ou demande une correction. Une tâche validée est grisée, puis disparaît de la liste.",
+  "visual": {
+   "type": "live",
+   "role": "adg",
+   "steps": [
+    {
+     "goto": "/missions",
+     "w": 3
+    },
+    {
+     "scroll": 350,
+     "w": 3
+    },
+    {
+     "scroll": -350,
+     "w": 1
+    }
    ]
   }
  },

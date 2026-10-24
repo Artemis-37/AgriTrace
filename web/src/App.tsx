@@ -44,39 +44,6 @@ import { MenuBar } from './MenuBar';
 import { PeekProvider } from './peek';
 
 
-/** Écrans ouverts depuis le menu : plein écran (route) ou fenêtre contextuelle (entrée de menu). */
-const PAGES: Record<string, () => JSX.Element> = {
-  '/producteurs': () => <Producers />,
-  '/parcelles': () => <Parcels />,
-  '/cartographie': () => <Cartographie />,
-  '/commerce': () => <Commerce />,
-  '/mes-achats': () => <MesAchats />,
-  '/mon-stock': () => <MonStock />,
-  '/historique': () => <Historique />,
-  '/convois': () => <Convois />,
-  '/pesees': () => <Pesees />,
-  '/mise-en-compte': () => <MiseEnCompte />,
-  '/delegues': () => <Delegues />,
-  '/parametres': () => <Parametres />,
-  '/partenaires': () => <Partenaires />,
-  '/caisse': () => <Caisse />,
-  '/comptabilite': () => <Comptabilite />,
-  '/inventaire': () => <Inventaire />,
-  '/prefinancement': () => <Prefinancement />,
-  '/synchronisation': () => <Synchronisation />,
-  '/equipe': () => <Equipe />,
-  '/rapports': () => <Rapports />,
-  '/declarations': () => <Declarations />,
-  '/missions': () => <Missions />,
-  '/terrain': () => <Terrain />,
-  '/operations': () => <Operations />,
-  '/modules-formation': () => <ModulesFormation />,
-  '/modules-exportateurs': () => <ModulesExportateurs />,
-  '/stocks': () => <Stocks />,
-  '/finances': () => <Finance />,
-  '/qualite': () => <Quality />,
-};
-
 const NAV: { to: string; label: string; icon: string; perm: string[]; any?: boolean; only?: 'collector'; notFor?: 'collector' }[] = [
   { to: '/', label: 'Tableau de bord', icon: '▦', perm: [] },
   { to: '/mes-achats', label: 'Mes achats', icon: '✚', perm: ['declarations:create'], only: 'collector' },
@@ -179,7 +146,7 @@ export default function App() {
           <span className="today-date">{new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
         </div>
       </header>
-      <MenuBar pages={PAGES} open={open} onNavigate={() => setOpen(false)}
+      <MenuBar open={open} onNavigate={() => setOpen(false)}
         items={NAV.filter((n) => (n.any ? n.perm.some((p) => can(p)) : can(...n.perm)) && (!n.only || me?.account_kind === n.only) && (!n.notFor || me?.account_kind !== n.notFor)).map(({ to, label, icon }) => ({ to, label, icon }))} />
       <main className="main">
         <OfflineBar />
@@ -187,10 +154,38 @@ export default function App() {
         {me?.mobile_first && <p className="notice" role="status">Votre compte ({me.account_kind === 'collector' ? 'délégué' : 'coach'}) est conçu pour l'application mobile, qui fonctionne aussi dans les villages sans réseau. Ce portail affiche uniquement ce qui vous concerne.</p>}
         <Routes key={loc.key}>
           <Route path="/" element={<Dashboard />} />
-          {Object.entries(PAGES).map(([p, make]) => <Route key={p} path={p} element={make()} />)}
+          <Route path="/producteurs" element={<Producers />} />
+          <Route path="/parcelles" element={<Parcels />} />
+          <Route path="/cartographie" element={<Cartographie />} />
+          <Route path="/commerce" element={<Commerce />} />
+          <Route path="/mes-achats" element={<MesAchats />} />
+          <Route path="/mon-stock" element={<MonStock />} />
+          <Route path="/historique" element={<Historique />} />
+          <Route path="/convois" element={<Convois />} />
+          <Route path="/pesees" element={<Pesees />} />
+          <Route path="/mise-en-compte" element={<MiseEnCompte />} />
+          <Route path="/delegues" element={<Delegues />} />
+          <Route path="/parametres" element={<Parametres />} />
+          <Route path="/partenaires" element={<Partenaires />} />
+          <Route path="/caisse" element={<Caisse />} />
+          <Route path="/comptabilite" element={<Comptabilite />} />
+          <Route path="/inventaire" element={<Inventaire />} />
+          <Route path="/prefinancement" element={<Prefinancement />} />
           <Route path="/messages" element={<Messages onChange={refreshUnread} />} />
+          <Route path="/synchronisation" element={<Synchronisation />} />
+          <Route path="/equipe" element={<Equipe />} />
+          <Route path="/rapports" element={<Rapports />} />
           <Route path="/notifications" element={<Notifications onChange={refreshUnread} />} />
+          <Route path="/declarations" element={<Declarations />} />
+          <Route path="/missions" element={<Missions />} />
+          <Route path="/terrain" element={<Terrain />} />
+          <Route path="/operations" element={<Operations />} />
           <Route path="/compte" element={<Compte />} />
+          <Route path="/modules-formation" element={<ModulesFormation />} />
+          <Route path="/modules-exportateurs" element={<ModulesExportateurs />} />
+          <Route path="/stocks" element={<Stocks />} />
+          <Route path="/finances" element={<Finance />} />
+          <Route path="/qualite" element={<Quality />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>

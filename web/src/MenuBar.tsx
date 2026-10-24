@@ -1,6 +1,5 @@
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { usePeek } from './peek';
 
 export interface MenuItem { to: string; label: string; icon: string }
 const GROUP_OF: Record<string, string> = {
@@ -15,8 +14,7 @@ const ORDER = ['Fichier', 'Opérations', 'Comptabilité', 'Stock', 'Suivi', 'Par
 const LABEL: Record<string, string> = { '/parcelles': 'Plantations (parcelles)' };
 
 /** Barre de menus à la manière d'un logiciel de bureau (Fichier, Opérations, Comptabilité…), aux couleurs AgriTrace. */
-export function MenuBar({ items, open, onNavigate, pages }: { items: MenuItem[]; open: boolean; onNavigate: () => void; pages: Record<string, () => ReactNode> }) {
-  const peek = usePeek();
+export function MenuBar({ items, open, onNavigate }: { items: MenuItem[]; open: boolean; onNavigate: () => void }) {
   const loc = useLocation();
   const [cur, setCur] = useState<string | null>(null);
   const ref = useRef<HTMLElement>(null);
@@ -37,7 +35,7 @@ export function MenuBar({ items, open, onNavigate, pages }: { items: MenuItem[];
           <button className="menu-top" aria-haspopup="true" aria-expanded={cur === g} onClick={() => setCur(cur === g ? null : g)}>{g}</button>
           {(
             <ul className="menu-drop" role="menu" hidden={cur !== g}>
-              {list.map((i) => <li key={i.to} role="none"><NavLink role="menuitem" to={i.to} onClick={(e) => { onNavigate(); const make = pages[i.to]; if (!make || e.ctrlKey || e.metaKey || e.shiftKey || e.button !== 0) return; e.preventDefault(); setCur(null); peek.open(LABEL[i.to] ?? i.label, make(), { path: i.to }); }}><span aria-hidden="true">{i.icon}</span>{LABEL[i.to] ?? i.label}</NavLink></li>)}
+              {list.map((i) => <li key={i.to} role="none"><NavLink role="menuitem" to={i.to} onClick={onNavigate}><span aria-hidden="true">{i.icon}</span>{LABEL[i.to] ?? i.label}</NavLink></li>)}
             </ul>
           )}
         </div>

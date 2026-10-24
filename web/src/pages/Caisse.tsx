@@ -3,7 +3,7 @@ import { get, idem, post } from '../api';
 import { useAuth } from '../auth';
 import { useDeepLink } from '../notifTarget';
 import { Card, ErrorBox, Field, Loading, PageHeader, useAction, useAsync } from '../ui';
-import { PeekLink } from '../peek';
+import { PeekLink, usePeek } from '../peek';
 import { Accounts, Cash, Variance } from './Convois';
 
 export const FR = (v: number | string | null | undefined) => (v === null || v === undefined || v === '' ? '' : Number(v).toLocaleString('fr-FR', { maximumFractionDigits: 0 }));
@@ -32,7 +32,10 @@ export default function Caisse() {
   const groups = GROUPS.map((g) => ({ ...g, items: g.items.filter(([k]) => (k !== 'variance' || can('weighings:approve')) && (k !== 'entry' || can('cash:operate')) && (k !== 'desk' || can('cash:manage'))) })).filter((g) => can(g.perm) && g.items.length);
   const dl = useDeepLink(['cash', 'journal']);
   const first = (dl.tab as Key) ?? groups[0]?.items[0]?.[0] ?? 'journal';
-  const [cur, setCur] = useState<Key>(first);
+  const [cur] = useState<Key>(first);
+  const peek = usePeek();
+  const [tick, setTick] = useState(0); // rechargement de l'écran de fond à la fermeture d'une fenêtre
+  const view = (k: Key) => (k === 'cash' ? <Cash /> : k === 'variance' ? <Variance /> : k === 'accounts' ? <Accounts /> : k === 'desk' ? <CashDesk /> : k === 'entry' ? <CashEntry /> : k === 'bank' ? <BankEvolution /> : <Journal kind={k === 'in' ? 'in' : k === 'out' ? 'out' : ''} />);
   const [open, setOpen] = useState<string>(groups.find((g) => g.items.some(([k]) => k === first))?.title ?? groups[0]?.title ?? '');
   if (!groups.length) return <Card><p className="muted">Votre rôle ne donne accès à aucune opération de caisse.</p></Card>;
   return (
@@ -43,19 +46,13 @@ export default function Caisse() {
           {groups.map((g) => (
             <div key={g.title} className={open === g.title ? 'open' : ''}>
               <button className="acc-head" aria-expanded={open === g.title} onClick={() => setOpen(open === g.title ? '' : g.title)}>{g.title}<span aria-hidden="true">{open === g.title ? '▴' : '▾'}</span></button>
-              {open === g.title && <ul>{g.items.map(([k, l]) => <li key={k + l}><button className={cur === k ? 'on' : ''} onClick={() => setCur(k)}>{l}</button></li>)}</ul>}
+              {open === g.title && <ul>{g.items.map(([k, l]) => <li key={k + l}><button className={cur === k ? 'on' : ''} onClick={() => peek.open(l, view(k), () => setTick((t) => t + 1))}>{l}</button></li>)}</ul>}
             </div>
           ))}
         </nav>
-        <div className="caisse-main">
+        <div className="caisse-main" key={tick}>
           <FundBar />
-          {cur === 'cash' && <Cash />}
-          {cur === 'variance' && <Variance />}
-          {cur === 'accounts' && <Accounts />}
-          {cur === 'desk' && <CashDesk />}
-          {cur === 'entry' && <CashEntry />}
-          {cur === 'bank' && <BankEvolution />}
-          {(cur === 'journal' || cur === 'in' || cur === 'out') && <Journal key={cur} kind={cur === 'in' ? 'in' : cur === 'out' ? 'out' : ''} />}
+          {view(cur)}
         </div>
       </div>
     </>

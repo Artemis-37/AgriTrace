@@ -28,10 +28,9 @@ check('✕ Fermer revient à l\'écran d\'origine', !(await p2.locator('.peek').
 await p2.locator('.peek-link').filter({ hasText: /Brahima|Yao|Sylla|Kouassi/ }).first().click().catch(() => {}); await p2.waitForTimeout(1500);
 const n = await p2.locator('.peek').count(); check('délégué de la file de la caisse -> fiche de suivi', n === 1 && /Fiche de suivi/.test(await p2.locator('.peek-body').innerText()));
 if (n) await p2.screenshot({ path: '/tmp/peek3.png' });
-// 4. entrée de menu -> fenêtre contextuelle ; « Plein écran » navigue
-await p2.getByRole('button', { name: /Fermer/ }).click().catch(() => {}); await go(p2, '/');
-await p2.locator('.menu-top', { hasText: 'Comptabilité' }).click(); await p2.locator('.menu-drop a', { hasText: /Mise en compte/ }).click(); await p2.waitForTimeout(1500);
-check('entrée de menu ouverte en fenêtre (écran d\'origine conservé)', await p2.locator('.peek').count() === 1 && new URL(p2.url()).pathname === '/');
-await p2.getByRole('button', { name: /plein écran/i }).click(); await p2.waitForTimeout(1200);
-check('« Plein écran » ouvre la page', new URL(p2.url()).pathname === '/mise-en-compte' && !(await p2.locator('.peek').count()));
+// 4. menus du haut : navigation normale ; sous-rubrique de la caisse : fenêtre centrée
+await go(p2, '/'); await p2.locator('.menu-top', { hasText: 'Opérations' }).click(); await p2.locator('.menu-drop a', { hasText: /^.?\s*Caisse/ }).click(); await p2.waitForTimeout(1500);
+check('menu du haut : navigation comme avant', new URL(p2.url()).pathname === '/caisse' && !(await p2.locator('.peek').count()));
+await p2.locator('.acc-head', { hasText: 'Solde délégué' }).click(); await p2.locator('.accordion button', { hasText: /Solde et fiche/ }).click(); await p2.waitForTimeout(1200);
+check('sous-rubrique ouverte en fenêtre contextuelle', await p2.locator('.peek').count() === 1);
 console.log(ok + ' ok, ' + ko + ' ko'); await b.close();

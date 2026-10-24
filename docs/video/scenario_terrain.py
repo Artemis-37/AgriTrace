@@ -16,14 +16,14 @@ def stills(*imgs): return {'type': 'stills', 'images': [f'{CAP}/{i}' for i in im
 
 
 scene('intro', 'Du terrain à l\'exportateur', """
-Cette présentation suit le chemin d'un lot de cacao, du village jusqu'à l'exportateur. Nous partons du téléphone du délégué, sur le terrain, puis nous passons par la traçabilité, le magasin, la caisse,
+Cette présentation suit le chemin d'un lot de cacao, du village jusqu'à l'exportateur, et passe par chaque utilisateur. Sur le terrain, le délégué et le coach, tous deux sur téléphone. Puis, au bureau, l'Administrateur de groupe, la traçabilité, le magasin, la caisse,
 la comptabilité et la vente, pour finir chez l'exportateur, et revenir au village avec les formations qu'il propose. À chaque étape, nous voyons qui fait quoi, et ce qui est tracé.""",
   card('title', title='AgriTrace', subtitle='Du terrain à l\'exportateur', note='Le parcours complet d\'un lot'))
 
 scene('parcours', 'Le parcours en un coup d\'œil', """
-Voici le parcours. Le délégué achète au producteur et déclare son connaissement. La traçabilité vérifie. Le magasinier pèse et réceptionne. Le caissier règle et met en compte.
+Voici le parcours. Sur le terrain, le coach suit les producteurs et le délégué leur achète le cacao, puis déclare son connaissement. L'Administrateur de groupe organise les missions. La traçabilité vérifie. Le magasinier pèse et réceptionne. Le caissier règle et met en compte.
 Le comptable passe les écritures. Le stock est vendu, et l'exportateur reçoit le lot. Puis les formations qu'il propose redescendent vers les coachs, et les résultats remontent jusqu'à lui.""",
-  card('flow', title='Du village à l\'exportateur', nodes=['Délégué\nachat + connaissement', 'Traçabilité\nvérification', 'Magasinier\npesée + stock', 'Caissier\nrèglement + compte', 'Comptable\nécritures', 'Exportateur\nlot + formations'],
+  card('flow', title='Du village à l\'exportateur', nodes=['Terrain\ncoach + délégué', 'Traçabilité\nvérification', 'Magasinier\npesée + stock', 'Caissier\nrèglement + compte', 'Comptable\nécritures', 'Exportateur\nlot + formations'],
        foot='Chaque étape notifie la suivante · rien n\'est jamais supprimé, tout s\'annule par écriture inverse'))
 
 scene('terrain-achat', 'Sur le terrain : l\'achat', """
@@ -36,6 +36,16 @@ scene('terrain-connaissement', 'Sur le terrain : le connaissement', """
 Quand le camion est prêt, le délégué déclare son connaissement : chauffeur, camion, nombre de sacs et poids annoncés. Il ne saisit pas le numéro : le logiciel le fabrique,
 avec le code C C C de la coopérative, l'année, les trois premières lettres du nom du délégué et un numéro d'ordre. Le délégué consulte aussi son stock et sa fiche de compte, qui retrace ce qu'il a apporté et ce qu'il a reçu.""",
   phones('collecteur-convoi-saisi', 'collecteur-mon-stock', 'collecteur-fiche', captions=['Déclarer le connaissement', 'Mon stock', 'Fiche de compte']))
+
+scene('terrain-coach', 'Sur le terrain : le coach', """
+Le coach est l'autre utilisateur du terrain. Sur son téléphone, il retrouve les producteurs de ses sections, par nom, code ou téléphone. La fiche du producteur donne ses tâches, ses parcelles et ses informations.
+Il enregistre un nouveau producteur, relève une parcelle, dispense les formations, et saisit ses relevés. Tout reste sur le téléphone, puis part à la synchronisation.""",
+  phones('coach-accueil', 'coach-producteurs', 'coach-producteur-taches', 'coach-formation', captions=['Accueil du coach', 'Producteurs par section', 'Tâches du producteur', 'Séance de formation']))
+
+scene('groupe-missions', 'L\'Administrateur de groupe et les missions', """
+Au bureau, l'Administrateur de groupe organise le travail des coachs. Il crée les missions : titre, priorité, échéance, producteur concerné et consignes.
+Le coach les exécute et joint ses preuves, puis l'Administrateur de groupe les valide ou demande une correction. Une tâche validée est grisée, puis disparaît de la liste.""",
+  live('adg', [{'goto': '/missions', 'w': 3}, {'scroll': 350, 'w': 3}, {'scroll': -350, 'w': 1}]))
 
 scene('tracabilite', 'La traçabilité vérifie les achats', """
 Au bureau, le responsable de traçabilité reçoit les déclarations d'achat. Chaque ligne affiche la fiche du producteur importée par la coopérative : code, nom et prénoms, section, village, téléphone, superficie et estimation.
