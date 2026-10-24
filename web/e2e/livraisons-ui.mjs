@@ -30,7 +30,7 @@ check('fiche transmise à l\'exportateur', /Transmise à Exportateur Démo/.test
 const pa = await login(`admin.${sfx}@exp.test`, PWD); const nav = await pa.locator('header + nav, nav').first().evaluate((e) => e.textContent);
 check('exportateur : pas de menus des agents terrain (producteurs, délégués, missions)', !/Producteurs|Délégués|Missions|Données de terrain/.test(nav));
 check('exportateur : modules de gestion conservés (caisse, comptabilité, stocks, équipe)', /Caisse/.test(nav) && /Comptabilité|Compta/.test(nav) && /Équipe|Equipe/.test(nav));
-check('exportateur : écrans Livraisons et Coopératives', /Livraisons/.test(nav) && /Coopératives|Organisations liées/.test(nav));
+check('exportateur : écrans Livraisons et Coopératives', /Pont bascule|Livraisons/.test(nav) && /Coopératives|Organisations liées/.test(nav));
 await go(pa, '/organisations-liees'); await pa.screenshot({ path: '/tmp/exp-coops.png' });
 check('écran Coopératives (exportateur)', /Coopératives/.test(await pa.locator('h1').first().innerText()));
 // pont bascule
@@ -49,8 +49,8 @@ const pn = await login(mk.analyste, PWD); await go(pn, '/livraisons');
 await pn.getByRole('button', { name: 'Analyser' }).click(); await pn.waitForTimeout(500);
 await pn.getByLabel('Humidité (%)', { exact: true }).fill('7.4'); await pn.screenshot({ path: '/tmp/exp-analyse.png' });
 await pn.getByRole('button', { name: /produire le bulletin/ }).click(); await pn.waitForTimeout(1200);
-check('analyse enregistrée, bulletin disponible', /Analysée/.test(await pn.locator('table').innerText()) && await pn.getByRole('button', { name: 'Bulletin' }).count() === 1);
-const [pop] = await Promise.all([pn.context().waitForEvent('page'), pn.getByRole('button', { name: 'Bulletin' }).click()]); await pop.waitForTimeout(800);
+check('analyse enregistrée, bulletin disponible', /Analysée/.test(await pn.locator('table').innerText()) && await pn.getByRole('button', { name: 'Bon retour', exact: true }).count() === 1);
+const [pop] = await Promise.all([pn.context().waitForEvent('page'), pn.getByRole('button', { name: 'Bon retour', exact: true }).click()]); await pop.waitForTimeout(800);
 check('bulletin de pesée au modèle de l\'exportateur (connaissement, pesée, analyse, livraison produit, visas)', /BULLETIN DE PESEE/.test(await pop.locator('body').innerText()) && /Poids Net Payé/.test(await pop.locator('body').innerText()) && /INDICATION CONNAISSEMENT/.test(await pop.locator('body').innerText()) && /Analyste Labo/.test(await pop.locator('body').innerText()));
 await pop.screenshot({ path: '/tmp/exp-bulletin.png' });
 // caissier

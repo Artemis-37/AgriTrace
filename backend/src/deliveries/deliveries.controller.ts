@@ -44,7 +44,7 @@ class SettleDto {
   @IsOptional() @IsString() @Length(0, 120) payment_ref?: string;
 }
 
-const LIST = `d.id, d.number, d.source_org_id, d.source_org_name, d.source_sheet_no, d.truck_no, d.driver_name, d.bl_no, d.lot_id_dse, d.departure_date, d.declared_kg, d.declared_bags,
+const LIST = `d.id, d.number, d.source_sheet_id, d.source_org_id, d.source_org_name, d.source_sheet_no, d.truck_no, d.driver_name, d.bl_no, d.lot_id_dse, d.departure_date, d.declared_kg, d.declared_bags,
   d.status, d.refusal_reason, d.refused_at, d.gross_kg, d.tare_kg, d.net_kg, d.net_delivered_kg, d.net_payable_kg, d.variance_kg, d.variance_pct, d.moisture_pct, d.decision, d.bulletin_no, d.unit_price, d.amount, d.settled_at, d.created_at, d.organization_id`;
 
 /** Liens entre organisations et livraisons : l'exportateur (ou une coopérative destinataire) pèse, analyse et règle ce que lui livre une coopérative. */

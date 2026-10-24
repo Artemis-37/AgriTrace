@@ -22,9 +22,9 @@ export default function EtatStock() {
       {error && <ErrorBox message={error} onRetry={reload} />}
       {loading ? <Loading /> : <Table rows={rows} empty="Aucune pesée sur ces critères." columns={[
         { header: 'Produit', render: (r) => <strong>{r.product}</strong> }, { header: 'Pesées', align: 'right', render: (r) => r.receptions },
-        { header: 'Nb sacs', align: 'right', render: (r) => FR(r.bags) }, { header: 'Stock (kg)', align: 'right', render: (r) => <strong>{FR(r.kg)}</strong> },
+        { header: 'Nb sacs', align: 'right', render: (r) => FR(r.bags) }, { header: 'Reçu (kg)', align: 'right', render: (r) => FR(r.received_kg) }, { header: 'Expédié (kg)', align: 'right', render: (r) => FR(r.shipped_kg) }, { header: 'dont refoulé revenu (kg)', align: 'right', render: (r) => FR(r.returned_kg) }, { header: 'Stock (kg)', align: 'right', render: (r) => <strong>{FR(r.kg)}</strong> },
       ]} />}
-      <p className="muted">Stock = poids net reçu au magasin par les pesées. Les sorties (ventes, expéditions) ne sont pas encore déduites ici.</p>
+      <p className="muted">Stock = poids net reçu au magasin par les pesées, moins les chargements transmis à un exportateur ou à une autre coopérative. Un chargement refoulé revient dans le stock (colonne « refoulé revenu ») et ses convois peuvent partir dans un autre chargement.</p>
     </Card>
   );
 }

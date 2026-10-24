@@ -7,12 +7,12 @@ import { Card, Empty, ErrorBox, Field, Loading, Modal, PageHeader, StatusBadge, 
 const KG = (v: any) => (v === null || v === undefined || v === '' ? '' : Number(v).toLocaleString('fr-FR', { maximumFractionDigits: 3 }));
 const M = (v: any) => (v === null || v === undefined || v === '' ? '' : Number(v).toLocaleString('fr-FR', { maximumFractionDigits: 2 }));
 const STATUS: Record<string, [string, any]> = {
-  arrived: ['Attendue', 'neutral'], weighing_in: ['Entrée pesée', 'warn'], weighed: ['Pesée terminée', 'warn'], analysed: ['Analysée', 'info'], settled: ['Réglée', 'ok'],
+  arrived: ['Attendue', 'neutral'], weighing_in: ['Entrée pesée', 'warn'], weighed: ['Pesée terminée', 'warn'], analysed: ['Analysée', 'info'], settled: ['Réglée', 'ok'], refused: ['Refoulée', 'danger'],
 };
 // Analyse : [clé, libellé] ; les lignes marquées « calculé » se déduisent des autres.
 const ANALYSIS_COL1: [string, string][] = [['foreign', 'Matières étrangères'], ['broken_beans', 'Fèves brisées'], ['brisures', 'Brisures'], ['waste', 'Déchet']];
 const ANALYSIS_COL2: [string, string][] = [['crabots', 'Crabots'], ['mouldy', 'Fèves moisies'], ['slaty', 'Fèves ardoisées'], ['insect', 'Fèves mitées'], ['germinated', 'Fèves germées']];
-type Act = { kind: 'in' | 'out' | 'analysis' | 'settle'; d: any } | null;
+type Act = { kind: 'in' | 'out' | 'analysis' | 'settle' | 'refuse' | 'pieces'; d: any } | null;
 
 function esc(s: any) { return String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] as string)); }
 const N2 = (v: any) => (v === null || v === undefined || v === '' ? '' : Number(v).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
@@ -152,6 +152,35 @@ function Settle({ d, onClose, onDone }: { d: any; onClose: () => void; onDone: (
   </Modal>;
 }
 
+
+async function saveBlob(path: string, name: string) {
+  const b = await getBlob(path); if (!b) throw new Error('Fichier introuvable');
+  const url = URL.createObjectURL(b); const l = document.createElement('a'); l.href = url; l.download = name; document.body.appendChild(l); l.click(); l.remove(); setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+
+function Refuse({ d, onClose, onDone }: { d: any; onClose: () => void; onDone: () => void }) {
+  const [reason, setReason] = useState(''); const a = useAction();
+  return <Modal title={`Refouler le chargement · ${d.number}`} onClose={onClose}>
+    <p className="muted">{d.source_org_name} · fiche {d.source_sheet_no} · {KG(d.declared_kg)} kg déclarés.</p>
+    <Field label="Motif du refoulement (obligatoire)"><textarea rows={3} autoFocus value={reason} onChange={(e) => setReason(e.target.value)} placeholder="humidité excessive, qualité non conforme, documents manquants…" /></Field>
+    <p className="muted">Le volume retourne dans le stock de la coopérative, qui peut réutiliser ses convois pour un autre chargement. Un chargement refoulé ne se règle pas et ne change plus.</p>
+    {a.error && <p className="error" role="alert">{a.error}</p>}
+    <div className="modal-foot"><button className="btn btn-ghost" onClick={onClose}>Annuler</button><button className="btn btn-danger" disabled={a.busy || reason.trim().length < 3} onClick={() => a.run(async () => { await post(`/deliveries/${d.id}/refuse`, { reason }); onDone(); })}>Refouler</button></div>
+  </Modal>;
+}
+
+const PIECE: Record<string, string> = { fiche: 'Fiche d\'accompagnement', connaissement_ccc: 'Connaissement CCC' };
+function Pieces({ d, onClose }: { d: any; onClose: () => void }) {
+  const list = useAsync(() => get<any[]>(`/dispatch-sheets/${d.source_sheet_id}/attachments`), [d.id]); const a = useAction();
+  return <Modal title={`Pièces du chargement · ${d.source_sheet_no}`} onClose={onClose}>
+    {list.loading ? <Loading /> : !(list.data ?? []).length ? <Empty>Aucune pièce jointe à ce chargement.</Empty> :
+      <table><thead><tr><th>Pièce</th><th>Fichier</th><th></th></tr></thead><tbody>{(list.data ?? []).map((p) => <tr key={p.id}><td>{PIECE[p.kind] ?? p.kind}</td><td>{p.filename}</td>
+        <td><button className="btn btn-small btn-secondary" disabled={a.busy} onClick={() => a.run(() => saveBlob(`/dispatch-attachments/${p.id}/file`, p.filename))}>Télécharger</button></td></tr>)}</tbody></table>}
+    {a.error && <p className="error" role="alert">{a.error}</p>}
+    <div className="modal-foot"><button className="btn btn-ghost" onClick={onClose}>Fermer</button></div>
+  </Modal>;
+}
+
 /** Livraisons reçues d'une coopérative (pont bascule, analyse, bulletin de pesée, règlement) et suivi des livraisons envoyées. */
 export default function Livraisons() {
   const { can, org } = useAuth();
@@ -187,7 +216,11 @@ export default function Livraisons() {
                   {tab === 'recues' && d.status === 'weighing_in' && can('deliveries:weigh') && <button className="btn btn-small btn-primary" onClick={() => setAct({ kind: 'out', d })}>Peser la sortie</button>}
                   {tab === 'recues' && d.status === 'weighed' && can('deliveries:analyse') && <button className="btn btn-small btn-primary" onClick={() => setAct({ kind: 'analysis', d })}>Analyser</button>}
                   {tab === 'recues' && d.status === 'analysed' && d.decision === 'accepted' && can('deliveries:settle') && <button className="btn btn-small btn-primary" onClick={() => setAct({ kind: 'settle', d })}>Régler</button>}
-                  {d.bulletin_no && <button className="btn btn-small btn-secondary" disabled={a.busy} onClick={() => a.run(() => printBulletin(d.id))}>Bulletin</button>}
+                  {tab === 'recues' && ['arrived', 'weighing_in', 'weighed', 'analysed'].includes(d.status) && can('deliveries:refuse') && <button className="btn btn-small btn-danger" onClick={() => setAct({ kind: 'refuse', d })}>Refouler</button>}
+                  <button className="btn btn-small btn-secondary" onClick={() => setAct({ kind: 'pieces', d })}>Pièces</button>
+                  {d.bulletin_no && d.decision === 'accepted' && <button className="btn btn-small btn-secondary" disabled={a.busy} onClick={() => a.run(() => printBulletin(d.id))}>Bon retour</button>}
+                  {d.bulletin_no && d.decision === 'accepted' && <button className="btn btn-small btn-secondary" disabled={a.busy} onClick={() => a.run(() => saveBlob(`/deliveries/${d.id}/bulletin.pdf`, `bon-retour-${d.bulletin_no}.pdf`))}>PDF</button>}
+                  {d.status === 'refused' && <span className="muted" title={d.refusal_reason}>{d.refusal_reason}</span>}
                 </span></td>
               </tr>))}</tbody>
           </table></div>}
@@ -195,6 +228,8 @@ export default function Livraisons() {
       {act?.kind === 'in' && <WeighIn d={act.d} onClose={() => setAct(null)} onDone={done} />}
       {act?.kind === 'out' && <WeighOut d={act.d} onClose={() => setAct(null)} onDone={done} />}
       {act?.kind === 'analysis' && <Analysis d={act.d} onClose={() => setAct(null)} onDone={done} />}
+      {act?.kind === 'refuse' && <Refuse d={act.d} onClose={() => setAct(null)} onDone={done} />}
+      {act?.kind === 'pieces' && <Pieces d={act.d} onClose={() => setAct(null)} />}
       {act?.kind === 'settle' && <Settle d={act.d} onClose={() => setAct(null)} onDone={done} />}
     </>
   );

@@ -71,6 +71,7 @@ function Transmit({ sheet, onClose, onDone }: { sheet: any; onClose: () => void;
   const ex = useAsync(() => get<any[]>('/dispatch-sheets/exporters'), []);
   const dest = useAsync(() => get<any[]>('/org-links/destinations'), []);
   const { busy, error, run } = useAction();
+  const [ficheF, setFicheF] = useState<File | null>(null); const [cccF, setCccF] = useState<File | null>(null);
   const [to, setTo] = useState('');   // "u:<id>" compte exportateur interne, "o:<id>" organisation liée
   const none = !(ex.data ?? []).length && !(dest.data ?? []).length;
   return (
@@ -81,9 +82,14 @@ function Transmit({ sheet, onClose, onDone }: { sheet: any; onClose: () => void;
           {(dest.data ?? []).length > 0 && <optgroup label="Organisations liées">{(dest.data ?? []).map((o) => <option key={o.id} value={`o:${o.id}`}>{o.name} ({o.kind === 'exporter' ? 'exportateur' : 'coopérative'})</option>)}</optgroup>}
           {(ex.data ?? []).length > 0 && <optgroup label="Comptes exportateur de la coopérative">{(ex.data ?? []).map((u) => <option key={u.id} value={`u:${u.id}`}>{u.full_name} ({u.email})</option>)}</optgroup>}
         </select></Field>}
+      <Field label="Fiche d'accompagnement à joindre (Excel ou PDF, facultatif)"><input type="file" accept=".xlsx,.pdf" onChange={(e) => setFicheF(e.target.files?.[0] ?? null)} /></Field>
+      <Field label="Connaissement CCC à joindre (PDF, facultatif)"><input type="file" accept=".pdf" onChange={(e) => setCccF(e.target.files?.[0] ?? null)} /></Field>
+      <p className="muted">Les pièces jointes sont envoyées avec le chargement à son destinataire.</p>
       {error && <p className="error" role="alert">{error}</p>}
       <div className="modal-foot"><button className="btn btn-ghost" onClick={onClose}>Annuler</button>
-        <button className="btn btn-primary" disabled={busy || !to} onClick={() => run(async () => { await post(`/dispatch-sheets/${sheet.id}/transmit`, to.startsWith('o:') ? { destination_org_id: to.slice(2) } : { exporter_user_id: to.slice(2) }); onDone(); })}>Transmettre</button></div>
+        <button className="btn btn-primary" disabled={busy || !to} onClick={() => run(async () => {
+          for (const [kind, f] of [['fiche', ficheF], ['connaissement_ccc', cccF]] as const) if (f) { const fd = new FormData(); fd.append('file', f); await postForm(`/dispatch-sheets/${sheet.id}/attachments/${kind}`, fd); }
+          await post(`/dispatch-sheets/${sheet.id}/transmit`, to.startsWith('o:') ? { destination_org_id: to.slice(2) } : { exporter_user_id: to.slice(2) }); onDone(); })}>Transmettre</button></div>
     </Modal>
   );
 }
@@ -146,7 +152,7 @@ export default function FichesAccompagnement() {
               <tbody>{(sheets.data ?? []).map((s) => (
                 <tr key={s.id}>
                   <td><code>{s.number}</code></td><td>{s.source === 'imported' ? 'Importée' : `Convois (${s.convoys})`}</td><td>{s.bl_no}</td><td>{s.truck_no}</td><td>{D(s.departure_date)}</td><td className="r">{KG(s.declared_kg)}</td><td className="r">{s.declared_bags}</td><td className="r">{s.producers}</td>
-                  <td>{s.status === 'transmitted' ? <Badge tone="ok">Transmise à {s.exporter_name}</Badge> : <Badge tone="warn">Brouillon</Badge>}</td>
+                  <td>{s.returned_at ? <Badge tone="bad">Refoulée — volume revenu au stock</Badge> : s.status === 'transmitted' ? <Badge tone="ok">Transmise à {s.exporter_name}</Badge> : <Badge tone="warn">Brouillon</Badge>}</td>
                   <td className="actions">
                     <button className="btn btn-ghost btn-small" onClick={() => setView({ kind: 'sheet', id: s.id, title: `Producteurs de la fiche ${s.number}` })}>Consulter</button>
                     <button className="btn btn-ghost btn-small" onClick={() => dl(`/dispatch-sheets/${s.id}/export`, `Fiche_accompagnement_${s.number}.xlsx`)}>{manage ? 'Exporter (Excel)' : 'Télécharger (Excel)'}</button>
