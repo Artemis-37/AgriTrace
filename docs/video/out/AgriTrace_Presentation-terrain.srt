@@ -275,213 +275,213 @@ poids net, décision, bulletin et règlement.
 La même chaîne fonctionne entre deux coopératives, dans un sens ou dans les deux.
 
 70
-00:06:28,740 --> 00:06:36,705
+00:06:28,740 --> 00:06:37,109
 En transmettant sa fiche, la coopérative peut joindre la fiche d'accompagnement, en Excel ou en PDF, et le connaissement CCC en PDF.
 
 71
-00:06:36,705 --> 00:06:40,626
+00:06:37,109 --> 00:06:41,231
 L'exportateur les retrouve dans le bouton Pièces de la livraison.
 
 72
-00:06:40,626 --> 00:06:44,669
+00:06:41,231 --> 00:06:45,479
 Pour un chargement accepté, le bulletin de pesée est le bon retour.
 
 73
-00:06:44,669 --> 00:06:48,410
+00:06:45,479 --> 00:06:49,410
 Les deux parties peuvent l'imprimer, ou le télécharger en PDF.
 
 74
-00:06:48,710 --> 00:06:52,885
+00:06:49,710 --> 00:06:53,885
 L'exportateur peut refouler un chargement, avec un motif obligatoire.
 
 75
-00:06:52,885 --> 00:06:55,850
+00:06:53,885 --> 00:06:56,850
 La livraison passe à Refoulée et ne se règle pas.
 
 76
-00:06:55,850 --> 00:07:01,418
+00:06:56,850 --> 00:07:02,418
 Le volume revient dans le stock de la coopérative, et ses convois redeviennent disponibles :
 
 77
-00:07:01,418 --> 00:07:04,201
+00:07:02,418 --> 00:07:05,201
 elle peut les mettre dans un autre chargement.
 
 78
-00:07:04,201 --> 00:07:08,800
+00:07:05,201 --> 00:07:09,800
 La coopérative est prévenue, et la fiche refusée est marquée comme refoulée.
 
 79
-00:07:09,100 --> 00:07:13,499
+00:07:10,100 --> 00:07:14,499
 L'exportateur est le supérieur hiérarchique de la coopérative, et l'audite.
 
 80
-00:07:13,499 --> 00:07:20,127
+00:07:14,499 --> 00:07:21,127
 Il propose d'abord sa supervision, que la coopérative accepte, et peut révoquer quand aucun audit n'est en cours.
 
 81
-00:07:20,127 --> 00:07:29,805
+00:07:21,127 --> 00:07:30,805
 Dans le module Audits, il programme une mission, puis chaque partie désigne ses participants et partage des copies figées de ses données, des documents ou des notes.
 
 82
-00:07:29,805 --> 00:07:34,615
+00:07:30,805 --> 00:07:35,615
 Seuls les participants les voient, et chaque lecture est inscrite dans un journal.
 
 83
-00:07:34,615 --> 00:07:40,480
+00:07:35,615 --> 00:07:41,480
 L'exportateur saisit ses constats, la coopérative répond avec un plan d'action, et l'audit est clos.
 
 84
-00:07:40,780 --> 00:07:46,171
+00:07:41,780 --> 00:07:47,171
 Le lot réceptionné rejoint le stock du magasin, suivi par lot. Il est ensuite vendu :
 
 85
-00:07:46,171 --> 00:07:53,464
+00:07:47,171 --> 00:07:54,464
 l'acheteur partenaire, ici l'exportateur de la chaîne, ne voit que ses propres commandes, expéditions et documents.
 
 86
-00:07:53,464 --> 00:07:58,220
+00:07:54,464 --> 00:07:59,220
 Le contrôle qualité et les certificats accompagnent le lot jusqu'au départ.
 
 87
-00:07:58,520 --> 00:08:03,850
+00:07:59,520 --> 00:08:04,850
 Voici la vue de l'acheteur partenaire : uniquement ses commandes et ses documents.
 
 88
-00:08:03,850 --> 00:08:11,130
+00:08:04,850 --> 00:08:12,130
 La traçabilité remonte de son lot jusqu'au producteur, avec chaque pesée, chaque règlement et chaque validation.
 
 89
-00:08:11,430 --> 00:08:14,056
+00:08:12,430 --> 00:08:15,056
 La boucle se referme avec les formations.
 
 90
-00:08:14,056 --> 00:08:19,757
+00:08:15,056 --> 00:08:20,757
 L'exportateur propose un module à l'Administrateur de groupe, qui le transmet aux coachs.
 
 91
-00:08:19,757 --> 00:08:27,508
+00:08:20,757 --> 00:08:28,508
 Les coachs le dispensent au village et saisissent les résultats, que l'Administrateur de groupe transmet à l'exportateur.
 
 92
-00:08:27,508 --> 00:08:30,070
+00:08:28,508 --> 00:08:31,070
 Toujours en un clic, sans rien modifier.
 
 93
-00:08:30,370 --> 00:08:35,300
+00:08:31,370 --> 00:08:36,300
 Voici l'espace de l'exportateur. À l'accueil, il retrouve ses indicateurs :
 
 94
-00:08:35,300 --> 00:08:40,624
+00:08:36,300 --> 00:08:41,624
 propositions en attente, transmises aux coachs, non retenues, et résultats reçus.
 
 95
-00:08:40,624 --> 00:08:47,394
+00:08:41,624 --> 00:08:48,394
 Il ne voit que ses propres propositions et les résultats que l'Administrateur de groupe lui a transmis.
 
 96
-00:08:47,394 --> 00:08:53,638
+00:08:48,394 --> 00:08:54,638
 Il clique sur proposer un module : titre, thème, résumé, objectifs, sections avec leurs points.
 
 97
-00:08:53,638 --> 00:09:00,080
+00:08:54,638 --> 00:09:01,080
 Une fois envoyé, le module n'est plus modifiable. L'Administrateur de groupe est aussitôt notifié.
 
 98
-00:09:00,380 --> 00:09:08,012
+00:09:01,380 --> 00:09:09,012
 Du côté de l'Administrateur de groupe, la proposition apparaît dans l'onglet propositions, avec le nom de l'exportateur.
 
 99
-00:09:08,012 --> 00:09:13,163
+00:09:09,012 --> 00:09:14,163
 L'Administrateur de groupe lit le module, puis clique sur transmettre aux coachs.
 
 100
-00:09:13,163 --> 00:09:17,933
+00:09:14,163 --> 00:09:18,933
 Une fenêtre lui demande alors deux choses. D'abord la nature de l'élément :
 
 101
-00:09:17,933 --> 00:09:21,876
+00:09:18,933 --> 00:09:22,876
 module de formation, distribution ou tâche. Ensuite la cible :
 
 102
-00:09:21,876 --> 00:09:27,791
+00:09:22,876 --> 00:09:28,791
 tous les producteurs, ou certains seulement, qu'il retrouve par nom, par code ou par section.
 
 103
-00:09:27,791 --> 00:09:30,653
+00:09:28,791 --> 00:09:31,653
 Il peut ajouter une échéance et une consigne.
 
 104
-00:09:30,653 --> 00:09:36,250
+00:09:31,653 --> 00:09:37,250
 L'élément s'ajoute au profil de chaque producteur concerné, et les coachs sont prévenus.
 
 105
-00:09:36,250 --> 00:09:42,610
+00:09:37,250 --> 00:09:43,610
 Le contenu du module reste exactement celui de l'exportateur, il n'est ni modifiable ni supprimable.
 
 106
-00:09:42,610 --> 00:09:46,680
+00:09:43,610 --> 00:09:47,680
 Il peut aussi décliner la proposition, avec un motif facultatif.
 
 107
-00:09:46,980 --> 00:09:59,081
+00:09:47,980 --> 00:10:00,081
 Sur l'application, la fiche du producteur affiche, dans la liste des tâches, les formations, distributions et tâches ajoutées par l'Administrateur de groupe, avec la consigne et l'échéance.
 
 108
-00:09:59,081 --> 00:10:06,060
+00:10:00,081 --> 00:10:07,060
 Une fois la séance ou la distribution réalisée, le coach touche fait, avec du réseau, et l'élément est grisé.
 
 109
-00:10:06,360 --> 00:10:08,419
+00:10:07,360 --> 00:10:09,419
 Le coach dispense la formation.
 
 110
-00:10:08,419 --> 00:10:14,329
+00:10:09,419 --> 00:10:15,329
 Ensuite, sur le module marqué proposé par l'exportateur, il touche saisir les résultats :
 
 111
-00:10:14,329 --> 00:10:19,642
+00:10:15,329 --> 00:10:20,642
 date de la séance, village, nombre de participants, score moyen et observations.
 
 112
-00:10:19,642 --> 00:10:21,634
+00:10:20,642 --> 00:10:22,634
 L'envoi demande une connexion.
 
 113
-00:10:21,634 --> 00:10:26,748
+00:10:22,634 --> 00:10:27,748
 Les résultats vont à l'Administrateur de groupe et ne sont plus modifiables ;
 
 114
-00:10:26,748 --> 00:10:31,330
+00:10:27,748 --> 00:10:32,330
 le coach voit, dans la liste, s'ils ont été transmis à l'exportateur.
 
 115
-00:10:31,630 --> 00:10:36,425
+00:10:32,630 --> 00:10:37,425
 Les résultats arrivent dans l'onglet résultats de l'Administrateur de groupe :
 
 116
-00:10:36,425 --> 00:10:41,159
+00:10:37,425 --> 00:10:42,159
 coach, module, exportateur, village, participants, score moyen, observations.
 
 117
-00:10:41,159 --> 00:10:48,720
+00:10:42,159 --> 00:10:49,720
 L'Administrateur de groupe clique sur transmettre à l'exportateur, et les résultats partent tels que le coach les a saisis.
 
 118
-00:10:49,020 --> 00:10:57,985
+00:10:50,020 --> 00:10:58,985
 L'exportateur est notifié, par la cloche en haut à droite, et voit les résultats de ses propres modules, uniquement ceux que l'Administrateur de groupe a transmis.
 
 119
-00:10:57,985 --> 00:11:01,120
+00:10:58,985 --> 00:11:02,120
 Il ne voit jamais le reste des données de la coopérative.
 
 120
-00:11:01,420 --> 00:11:03,136
+00:11:02,420 --> 00:11:04,136
 Voilà le parcours complet :
 
 121
-00:11:03,136 --> 00:11:14,006
+00:11:04,136 --> 00:11:15,006
 du village à l'exportateur, de la parcelle à la comptabilité, sur ordinateur et sur téléphone, avec une traçabilité sans trou, et des formations qui reviennent au village.
 
 122
-00:11:14,006 --> 00:11:20,680
+00:11:15,006 --> 00:11:21,680
 Agri Trace a été conçu par Dominique N'Guessan. Ses coordonnées sont à l'écran. Merci de votre attention.

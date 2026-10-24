@@ -5,7 +5,7 @@ import json, os, re, subprocess, sys, wave
 HERE = os.path.dirname(os.path.abspath(__file__))
 VOICE = os.environ.get('PIPER_VOICE', '/tmp/video/voices/fr_FR-siwis-medium.onnx')
 OUT = os.path.join(HERE, 'build'+SUF, 'audio'); os.makedirs(OUT, exist_ok=True)
-PRON = [('PDF', 'P D F'), ('AgriTrace', 'Agri Trace'), ('PostgreSQL', 'Post-gresse-Q-L'), ('GeoJSON', 'Géo-Jeï-sonne'), ('Shapefile', 'Chèpe-faïle'), ('GeoPackage', 'Géo-Pakèdje'), ('Excel', 'Èxel'), ('Android', 'Androïde'), ('Wi-Fi', 'Ouifi'), ('APK', 'A P K'), ('RLS', 'R L S')]
+PRON = [('PDF', 'pé dé èffe'), ('AgriTrace', 'Agri Trace'), ('PostgreSQL', 'Post-gresse-Q-L'), ('GeoJSON', 'Géo-Jeï-sonne'), ('Shapefile', 'Chèpe-faïle'), ('GeoPackage', 'Géo-Pakèdje'), ('Excel', 'Èxel'), ('Android', 'Androïde'), ('Wi-Fi', 'Ouifi'), ('APK', 'A P K'), ('RLS', 'R L S')]
 scenes = json.load(open(os.path.join(HERE, 'scenario'+SUF+'.json')))
 durs = {}
 only = set(sys.argv[1:])
