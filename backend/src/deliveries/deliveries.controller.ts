@@ -14,15 +14,26 @@ class LinkDto {
   @IsIn(['supply_to', 'receive_from']) direction: 'supply_to' | 'receive_from';
   @IsOptional() @IsBoolean() bidirectional?: boolean;
 }
-class WeighInDto { @Type(() => Number) @IsNumber({ maxDecimalPlaces: 3 }) @Min(0.001) @Max(100000000) gross_kg: number; }
+class WeighInDto {
+  @Type(() => Number) @IsNumber({ maxDecimalPlaces: 3 }) @Min(0.001) @Max(100000000) gross_kg: number;
+  @IsOptional() @Type(() => Number) @IsNumber({ maxDecimalPlaces: 3 }) @Min(0) @Max(100000000) declared_gross_kg?: number;
+  @IsOptional() @IsString() @Length(0, 120) origin?: string;
+  @IsOptional() @IsString() @Length(0, 120) transporter?: string;
+  @IsOptional() @IsString() @Length(0, 120) bridge_in?: string;
+}
 class WeighOutDto {
   @Type(() => Number) @IsNumber({ maxDecimalPlaces: 3 }) @Min(0) @Max(100000000) tare_kg: number;
-  @IsOptional() @Type(() => Number) @IsInt() @Min(0) bags_counted?: number;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(0) bags_discharged?: number;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(0) bags_refused?: number;
+  @IsOptional() @Type(() => Number) @IsNumber({ maxDecimalPlaces: 3 }) @Min(0) @Max(1000000) sack_tare_kg?: number;
+  @IsOptional() @Type(() => Number) @IsNumber({ maxDecimalPlaces: 3 }) @Min(0) @Max(1000000) pallet_tare_kg?: number;
+  @IsOptional() @IsString() @Length(0, 120) bridge_out?: string;
 }
 class AnalysisDto {
   @Type(() => Number) @IsNumber({ maxDecimalPlaces: 2 }) @Min(0) @Max(100) moisture_pct: number;
   @IsOptional() @Type(() => Number) @IsInt() @Min(0) @Max(10000) bean_count?: number;
   @IsOptional() @IsObject() defects?: Record<string, number>;
+  @IsOptional() @Type(() => Number) @IsNumber({ maxDecimalPlaces: 3 }) @Min(0) @Max(1000000) refaction_kg?: number;
   @IsOptional() @IsString() @Length(0, 60) grade?: string;
   @IsIn(['accepted', 'rejected']) decision: 'accepted' | 'rejected';
   @IsOptional() @IsString() @Length(0, 1000) notes?: string;
@@ -33,7 +44,7 @@ class SettleDto {
 }
 
 const LIST = `d.id, d.number, d.source_org_id, d.source_org_name, d.source_sheet_no, d.truck_no, d.driver_name, d.bl_no, d.lot_id_dse, d.departure_date, d.declared_kg, d.declared_bags,
-  d.status, d.gross_kg, d.tare_kg, d.net_kg, d.variance_kg, d.variance_pct, d.moisture_pct, d.decision, d.bulletin_no, d.unit_price, d.amount, d.settled_at, d.created_at, d.organization_id`;
+  d.status, d.gross_kg, d.tare_kg, d.net_kg, d.net_delivered_kg, d.net_payable_kg, d.variance_kg, d.variance_pct, d.moisture_pct, d.decision, d.bulletin_no, d.unit_price, d.amount, d.settled_at, d.created_at, d.organization_id`;
 
 /** Liens entre organisations et livraisons : l'exportateur (ou une coopérative destinataire) pèse, analyse et règle ce que lui livre une coopérative. */
 @ApiTags('deliveries')
@@ -135,10 +146,10 @@ export class DeliveriesController {
     this.need(req, 'deliveries:read');
     return this.db.tx(req.org.id, async (c) => (await c.query(
       `SELECT d.source_org_id AS id, d.source_org_name AS name, count(*)::int AS deliveries,
-              coalesce(sum(d.net_kg) FILTER (WHERE d.decision = 'accepted'), 0) AS accepted_kg,
-              coalesce(sum(d.net_kg) FILTER (WHERE d.decision = 'rejected'), 0) AS rejected_kg,
+              coalesce(sum(coalesce(d.net_payable_kg, d.net_delivered_kg, d.net_kg)) FILTER (WHERE d.decision = 'accepted'), 0) AS accepted_kg,
+              coalesce(sum(coalesce(d.net_payable_kg, d.net_delivered_kg, d.net_kg)) FILTER (WHERE d.decision = 'rejected'), 0) AS rejected_kg,
               coalesce(sum(d.amount) FILTER (WHERE d.status = 'settled'), 0) AS paid,
-              coalesce(sum(d.net_kg) FILTER (WHERE d.decision = 'accepted' AND d.status = 'analysed'), 0) AS to_settle_kg,
+              coalesce(sum(coalesce(d.net_payable_kg, d.net_delivered_kg, d.net_kg)) FILTER (WHERE d.decision = 'accepted' AND d.status = 'analysed'), 0) AS to_settle_kg,
               count(*) FILTER (WHERE d.status IN ('arrived','weighing_in','weighed'))::int AS in_progress
          FROM deliveries d WHERE d.organization_id = $1 GROUP BY d.source_org_id, d.source_org_name ORDER BY d.source_org_name`, [req.org.id])).rows);
   }
@@ -178,44 +189,65 @@ export class DeliveriesController {
   @Post('deliveries/:id/weigh-in') @RequirePermissions('deliveries:weigh')
   weighIn(@Param('id', ParseUUIDPipe) id: string, @Body() b: WeighInDto, @Req() req: any) {
     return this.mutate(req, id, ['arrived'],
-      `UPDATE deliveries SET status = 'weighing_in', gross_kg = $2, gross_at = now(), gross_by = $3 WHERE id = $1 RETURNING *`, [b.gross_kg, req.user.id], 'delivery.weigh_in');
+      `UPDATE deliveries SET status = 'weighing_in', gross_kg = $2, gross_at = now(), gross_by = $3, declared_gross_kg = $4, origin = $5, transporter = $6, bridge_in = $7 WHERE id = $1 RETURNING *`,
+      [b.gross_kg, req.user.id, b.declared_gross_kg ?? null, b.origin?.trim() || null, b.transporter?.trim() || null, b.bridge_in?.trim() || null], 'delivery.weigh_in');
   }
 
   @Post('deliveries/:id/weigh-out') @RequirePermissions('deliveries:weigh')
   async weighOut(@Param('id', ParseUUIDPipe) id: string, @Body() b: WeighOutDto, @Req() req: any) {
-    const cur = await this.db.tx(req.org.id, async (c) => (await c.query(`SELECT gross_kg, declared_kg FROM deliveries WHERE id = $1 AND organization_id = $2`, [id, req.org.id])).rows[0]);
+    const cur = await this.db.tx(req.org.id, async (c) => (await c.query(`SELECT gross_kg, declared_kg, declared_bags FROM deliveries WHERE id = $1 AND organization_id = $2`, [id, req.org.id])).rows[0]);
     if (!cur) throw new NotFoundException();
-    if (cur.gross_kg == null) throw new ConflictException('Peser d\'abord l\'entrée (poids brut)');
-    if (b.tare_kg >= Number(cur.gross_kg)) throw new UnprocessableEntityException('La tare (sortie) doit être inférieure au poids brut (entrée)');
-    const net = Math.round((Number(cur.gross_kg) - b.tare_kg) * 1000) / 1000;
+    if (cur.gross_kg == null) throw new ConflictException('Peser d\'abord l\'entrée (poids d\'entrée)');
+    if (b.tare_kg >= Number(cur.gross_kg)) throw new UnprocessableEntityException('Le poids de sortie doit être inférieur au poids d\'entrée');
+    const r3 = (x: number) => Math.round(x * 1000) / 1000;
+    const brutLivre = r3(Number(cur.gross_kg) - b.tare_kg);                 // poids brut livré
+    const sackTare = b.sack_tare_kg ?? 0, palletTare = b.pallet_tare_kg ?? 0;
+    const net = r3(brutLivre - sackTare - palletTare);                         // poids net livré
+    if (net <= 0) throw new UnprocessableEntityException('Les tares dépassent le poids livré');
+    const discharged = b.bags_discharged ?? null, refused = b.bags_refused ?? 0;
+    if (discharged != null && refused > discharged) throw new UnprocessableEntityException('Les sacs refusés dépassent les sacs déchargés');
     const decl = Number(cur.declared_kg ?? 0);
-    const variance = Math.round((net - decl) * 1000) / 1000;
+    const variance = r3(net - decl);
     return this.mutate(req, id, ['weighing_in'],
-      `UPDATE deliveries SET status = 'weighed', tare_kg = $2, tare_at = now(), tare_by = $3, net_kg = $4, bags_counted = $5, variance_kg = $6, variance_pct = $7 WHERE id = $1 RETURNING *`,
-      [b.tare_kg, req.user.id, net, b.bags_counted ?? null, variance, decl > 0 ? Math.round(variance / decl * 100000) / 1000 : null], 'delivery.weigh_out',
-      (d) => ({ title: `Livraison ${d.source_sheet_no} pesée`, body: `Poids net ${Number(d.net_kg)} kg (déclaré ${Number(d.declared_kg)} kg, écart ${Number(d.variance_kg)} kg)` }));
+      `UPDATE deliveries SET status = 'weighed', tare_kg = $2, tare_at = now(), tare_by = $3, net_kg = $4, net_delivered_kg = $5, bags_counted = $6, bags_discharged = $6, bags_refused = $7,
+              sack_tare_kg = $8, pallet_tare_kg = $9, bridge_out = $10, variance_kg = $11, variance_pct = $12 WHERE id = $1 RETURNING *`,
+      [b.tare_kg, req.user.id, brutLivre, net, discharged, refused, sackTare, palletTare, b.bridge_out?.trim() || null, variance, decl > 0 ? Math.round(variance / decl * 100000) / 1000 : null], 'delivery.weigh_out',
+      (d) => ({ title: `Livraison ${d.source_sheet_no} pesée`, body: `Poids net livré ${Number(d.net_delivered_kg)} kg (déclaré ${Number(d.declared_kg)} kg, écart ${Number(d.variance_kg)} kg)` }));
   }
 
   @Post('deliveries/:id/analysis') @RequirePermissions('deliveries:analyse')
-  analysis(@Param('id', ParseUUIDPipe) id: string, @Body() b: AnalysisDto, @Req() req: any) {
+  async analysis(@Param('id', ParseUUIDPipe) id: string, @Body() b: AnalysisDto, @Req() req: any) {
     if (b.decision === 'rejected' && !b.notes?.trim()) throw new UnprocessableEntityException('Indiquez le motif du rejet');
+    // En-tête de l'exportateur figé sur le bulletin : lisible aussi par la coopérative fournisseuse
+    const issuer = await this.db.tx(req.org.id, async (c) => {
+      const o = (await c.query(
+        `SELECT o.name, coalesce(p.commercial_name, o.name) AS commercial_name, p.address, p.phone, p.email, p.ccc_code,
+                (SELECT name FROM campaigns ORDER BY starts_on DESC LIMIT 1) AS campaign, (SELECT name FROM warehouses WHERE status = 'active' ORDER BY created_at LIMIT 1) AS plant
+           FROM organizations o LEFT JOIN organization_profile p ON p.organization_id = o.id WHERE o.id = $1`, [req.org.id])).rows[0];
+      return { ...o, printed_by: (await c.query(`SELECT full_name FROM users WHERE id = $1`, [req.user.id])).rows[0]?.full_name ?? '' };
+    }).catch(() => ({}));
+    const cur = await this.db.tx(req.org.id, async (c) => (await c.query(`SELECT net_delivered_kg FROM deliveries WHERE id = $1 AND organization_id = $2`, [id, req.org.id])).rows[0]);
+    if (!cur) throw new NotFoundException();
+    const refaction = b.refaction_kg ?? 0;
+    if (cur.net_delivered_kg != null && refaction >= Number(cur.net_delivered_kg)) throw new UnprocessableEntityException('La réfaction dépasse le poids net livré');
+    const payable = cur.net_delivered_kg == null ? null : Math.round((Number(cur.net_delivered_kg) - refaction) * 1000) / 1000;
     return this.mutate(req, id, ['weighed'],
       `UPDATE deliveries SET status = 'analysed', moisture_pct = $2, bean_count = $3, defects = $4::jsonb, grade = $5, decision = $6, analysis_notes = $7, analysed_by = $8, analysed_at = now(),
-              bulletin_no = 'BP-' || substr(number, 4) WHERE id = $1 RETURNING *`,
-      [b.moisture_pct, b.bean_count ?? null, JSON.stringify(b.defects ?? {}), b.grade || null, b.decision, b.notes?.trim() || null, req.user.id], 'delivery.analysis',
+              refaction_kg = $9, net_payable_kg = $10, issuer = $11::jsonb, bulletin_no = 'BP-' || substr(number, 4) WHERE id = $1 RETURNING *`,
+      [b.moisture_pct, b.bean_count ?? null, JSON.stringify(b.defects ?? {}), b.grade || null, b.decision, b.notes?.trim() || null, req.user.id, refaction, payable, JSON.stringify(issuer)], 'delivery.analysis',
       (d) => ({ title: `Livraison ${d.source_sheet_no} : ${d.decision === 'accepted' ? 'acceptée' : 'rejetée'}`, body: `Bulletin ${d.bulletin_no} · humidité ${Number(d.moisture_pct)} %${d.analysis_notes ? ` · ${d.analysis_notes}` : ''}` }));
   }
 
   @Post('deliveries/:id/settle') @RequirePermissions('deliveries:settle')
   async settle(@Param('id', ParseUUIDPipe) id: string, @Body() b: SettleDto, @Req() req: any) {
-    const cur = await this.db.tx(req.org.id, async (c) => (await c.query(`SELECT net_kg, decision FROM deliveries WHERE id = $1 AND organization_id = $2`, [id, req.org.id])).rows[0]);
+    const cur = await this.db.tx(req.org.id, async (c) => (await c.query(`SELECT net_kg, net_payable_kg, decision FROM deliveries WHERE id = $1 AND organization_id = $2`, [id, req.org.id])).rows[0]);
     if (!cur) throw new NotFoundException();
     if (cur.decision !== 'accepted') throw new UnprocessableEntityException('Seule une livraison acceptée se règle');
-    const amount = Math.round(Number(cur.net_kg) * b.unit_price * 100) / 100;
+    const amount = Math.round(Number(cur.net_payable_kg ?? cur.net_kg) * b.unit_price * 100) / 100;   // poids net payé × prix
     return this.mutate(req, id, ['analysed'],
       `UPDATE deliveries SET status = 'settled', unit_price = $2, amount = $3, settled_by = $4, settled_at = now(), payment_ref = $5 WHERE id = $1 RETURNING *`,
       [b.unit_price, amount, req.user.id, b.payment_ref || null], 'delivery.settle',
-      (d) => ({ title: `Livraison ${d.source_sheet_no} réglée`, body: `${Number(d.net_kg)} kg × ${Number(d.unit_price)} = ${Number(d.amount)}` }));
+      (d) => ({ title: `Livraison ${d.source_sheet_no} réglée`, body: `${Number(d.net_payable_kg ?? d.net_kg)} kg × ${Number(d.unit_price)} = ${Number(d.amount)}` }));
   }
 
   /** Données du bulletin de pesée (impression côté portail). Visible du destinataire et du fournisseur. */

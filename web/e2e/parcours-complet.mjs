@@ -253,11 +253,11 @@ console.log('6 ter. Exportateur');
   await snap(page, 'pont_bascule', 'livraison-attendue', 'Pont bascule : la livraison attendue', 'La fiche transmise par la coopérative apparaît ici (**Attendue**), avec le camion et le poids déclaré ; le responsable du pont bascule est notifié.');
   await page.getByRole('button', { name: "Peser l'entrée" }).first().click(); await page.waitForTimeout(500);
   const decl = Number((await page.locator('.modal').innerText()).match(/déclaré ([\d\s\u202f\u00a0,]+) kg/)?.[1]?.replace(/[\s\u202f\u00a0]/g, '').replace(',', '.') ?? 1000);
-  await modalOf(page).locator('input').first().fill(String(decl + 9000)); await page.waitForTimeout(300);
+  await modalOf(page).getByLabel("Poids d'entrée (kg)").fill(String(decl + 9000)); await modalOf(page).getByLabel('Origine').fill('Hiré'); await modalOf(page).getByLabel('Transporteur').fill('Transports de démonstration'); await page.waitForTimeout(300);
   await snap(page, 'pont_bascule', 'pesee-entree', 'Pesée d\'entrée (camion chargé)', 'Le camion se présente chargé : on saisit le **poids brut** lu au pont bascule.');
   await modalOf(page).getByRole('button', { name: "Enregistrer l'entrée" }).click(); await page.waitForTimeout(1200);
   await page.getByRole('button', { name: 'Peser la sortie' }).first().click(); await page.waitForTimeout(500);
-  await modalOf(page).locator('input').first().fill('9000'); await modalOf(page).locator('input').nth(1).fill('100'); await page.waitForTimeout(300);
+  await modalOf(page).getByLabel('Poids de sortie (kg)').fill('9000'); await modalOf(page).getByLabel('Sacs déchargés').fill('100'); await modalOf(page).getByLabel('Sacs refusés').fill('1'); await modalOf(page).getByLabel('Tare des sacs acceptés (kg)').fill('60'); await modalOf(page).getByLabel('Pont de sortie').fill('PONT BASCULE 2'); await page.waitForTimeout(300);
   await snap(page, 'pont_bascule', 'pesee-sortie', 'Pesée de sortie (camion vide) : poids net', 'Une fois déchargé, le camion repasse au pont bascule : on saisit la **tare** ; le **poids net** (brut − tare) et l\'écart avec le poids déclaré s\'affichent.');
   await modalOf(page).getByRole('button', { name: 'Enregistrer la sortie' }).click(); await page.waitForTimeout(1200);
   await close();
@@ -266,12 +266,12 @@ console.log('6 ter. Exportateur');
   const { page, go, close } = await actor('analyste');
   await go('/livraisons');
   await page.getByRole('button', { name: 'Analyser' }).first().click(); await page.waitForTimeout(500);
-  await modalOf(page).locator('input').nth(0).fill('7.4'); await modalOf(page).locator('input').nth(1).fill('98'); await modalOf(page).locator('input').nth(2).fill('1'); await modalOf(page).locator('input').nth(3).fill('2'); await modalOf(page).locator('input[placeholder]').first().fill('Grade 1'); await page.waitForTimeout(300);
-  await snap(page, 'analyste', 'analyse', 'Analyse de la livraison', 'L\'analyste saisit l\'**humidité**, le grainage et les défauts, choisit la décision (acceptée ou rejetée, avec motif obligatoire en cas de rejet) puis produit le **bulletin de pesée**.');
+  const M = modalOf(page); await M.getByLabel('Humidité (%)', { exact: true }).fill('7.8'); await M.getByLabel('Grainage').fill('109'); for (const [l, v] of [['Matières étrangères', '1.3'], ['Fèves brisées', '0.33'], ['Brisures', '1.7'], ['Déchet', '0.8'], ['Crabots', '2'], ['Fèves moisies', '3.33'], ['Fèves ardoisées', '4'], ['Fèves mitées', '0.33'], ['Fèves germées', '1'], ['Fèves plates', '2.33'], ['Fèves violettes', '4.66'], ['Résidus', '2.03'], ['FFA', '0']]) await M.getByLabel(`${l} (%)`, { exact: true }).fill(v); await M.getByLabel('Réfaction (kg)').fill('18'); await M.getByLabel('Classement (grade)').fill('GRADE 2'); await page.waitForTimeout(300);
+  await snap(page, 'analyste', 'analyse', 'Analyse de la livraison', 'L\'analyste saisit l\'**humidité**, le grainage, les matières étrangères et tous les défauts (brisures, crabots, fèves moisies, ardoisées, mitées, germées, plates, violettes, résidus, FFA), la **réfaction**, le classement et la décision (acceptée ou refusée, avec motif obligatoire en cas de refus), puis produit le **bulletin de pesée**.');
   await modalOf(page).getByRole('button', { name: /produire le bulletin/ }).click(); await page.waitForTimeout(1200);
   const [pop] = await Promise.all([page.context().waitForEvent('page'), page.getByRole('button', { name: 'Bulletin' }).first().click()]); await pop.waitForTimeout(900);
   n += 1; { const file = `${String(n).padStart(2, '0')}-analyste-bulletin.png`; await pop.setViewportSize({ width: 900, height: 1100 }); await pop.screenshot({ path: path.join(OUT, file) });
-    steps.push({ n, role: 'analyste', who: acc.analyste.name, title: 'Bulletin de pesée', text: 'Le bulletin reprend la livraison, les pesées d\'entrée et de sortie, le poids net, l\'analyse, la décision et les signataires. Il s\'imprime ou s\'enregistre en PDF depuis la fenêtre d\'impression.', file }); console.log('  ✓', file); }
+    steps.push({ n, role: 'analyste', who: acc.analyste.name, title: 'Bulletin de pesée', text: 'Le bulletin de pesée de l\'exportateur reprend, dans l\'ordre : l\'indication connaissement, la pesée (entrée et sortie avec les ponts), l\'analyse, la livraison produit (poids brut, tares, **poids net livré**, réfaction, **poids net payé**, classement, manquants et écarts), le QR code et les trois visas (pont bascule, fournisseur, chef d\'usine). Il s\'imprime ou s\'enregistre en PDF.', file }); console.log('  ✓', file); }
   await pop.close(); await close();
 }
 {

@@ -14,7 +14,7 @@
  {
   "id": "parcours",
   "title": "Le parcours en un coup d'œil",
-  "narration": "Voici le parcours. Sur le terrain, le coach suit les producteurs et le délégué leur achète le cacao, puis déclare son connaissement. L'Administrateur de groupe organise les missions. La traçabilité vérifie. Le magasinier pèse et réceptionne. Le caissier règle et met en compte. Le comptable passe les écritures. Le stock est vendu, et l'exportateur reçoit le lot. Puis les formations qu'il propose redescendent vers les coachs, et les résultats remontent jusqu'à lui.",
+  "narration": "Voici le parcours. Sur le terrain, le coach suit les producteurs et le délégué leur achète le cacao, puis déclare son connaissement. L'Administrateur de groupe organise les missions. La traçabilité vérifie. Le magasinier pèse et réceptionne. Le caissier règle et met en compte. Le comptable passe les écritures. Le stock est vendu, et l'exportateur reçoit le lot. L'exportateur pèse, analyse et règle la livraison. Puis les formations qu'il propose redescendent vers les coachs, et les résultats remontent jusqu'à lui.",
   "visual": {
    "type": "card",
    "kind": "flow",
@@ -227,6 +227,109 @@
     },
     {
      "tab": "Rapprochement bancaire",
+     "w": 3
+    }
+   ]
+  }
+ },
+ {
+  "id": "fiche-transmise",
+  "title": "La fiche d'accompagnement part chez l'exportateur",
+  "narration": "Avant le départ du camion, le responsable de traçabilité prépare la fiche d'accompagnement : les producteurs de chaque connaissement pesé, avec leur code, leur section et leur poids net. Il l'exporte en Excel, ou l'importe si elle a été remplie ailleurs, puis la transmet à l'exportateur lié à la coopérative. La fiche ne peut plus changer, et devient, chez l'exportateur, une livraison attendue.",
+  "visual": {
+   "type": "live",
+   "role": "responsable_tracabilite",
+   "steps": [
+    {
+     "goto": "/fiches-accompagnement",
+     "w": 4
+    },
+    {
+     "scroll": 300,
+     "w": 3
+    },
+    {
+     "scroll": -300,
+     "w": 1
+    }
+   ]
+  }
+ },
+ {
+  "id": "exp-organisation",
+  "title": "L'exportateur : une organisation à part entière",
+  "narration": "L'exportateur a son propre espace, avec ses employés, sa caisse, sa comptabilité et ses stocks, séparés de ceux des coopératives. Il n'a pas d'agents de terrain. Son écran Coopératives montre, pour chaque coopérative qui lui livre, les livraisons, les poids acceptés ou rejetés, ce qui reste à régler et ce qui est payé. Les liens entre organisations se proposent avec un code, et s'activent quand l'autre les accepte.",
+  "visual": {
+   "type": "live",
+   "role": "exp_admin",
+   "steps": [
+    {
+     "goto": "/organisations-liees",
+     "w": 4
+    },
+    {
+     "tab": "Liens",
+     "w": 3
+    },
+    {
+     "goto": "/",
+     "w": 2
+    }
+   ]
+  }
+ },
+ {
+  "id": "exp-pont-bascule",
+  "title": "Le pont bascule",
+  "narration": "Le responsable du pont bascule voit la livraison attendue, avec le camion et le poids déclaré par la coopérative. Camion chargé, il pèse l'entrée : le poids brut. Une fois le camion déchargé, il pèse la sortie : la tare. Le poids net est calculé, avec l'écart par rapport au poids déclaré, et la coopérative est prévenue.",
+  "visual": {
+   "type": "live",
+   "role": "pont_bascule",
+   "steps": [
+    {
+     "goto": "/livraisons",
+     "w": 5
+    },
+    {
+     "scroll": 250,
+     "w": 3
+    }
+   ]
+  }
+ },
+ {
+  "id": "exp-analyse",
+  "title": "L'analyse et le bulletin de pesée",
+  "narration": "L'analyste saisit les résultats de l'analyse : humidité, grainage, défauts et qualité. Il décide si la livraison est acceptée ou rejetée, avec un motif obligatoire en cas de rejet. Le bulletin de pesée est alors produit, avec les deux pesées, le poids net, l'analyse et les signataires. Après cela, les poids ne peuvent plus être modifiés.",
+  "visual": {
+   "type": "live",
+   "role": "analyste",
+   "steps": [
+    {
+     "goto": "/livraisons",
+     "w": 5
+    },
+    {
+     "scroll": 250,
+     "w": 3
+    }
+   ]
+  }
+ },
+ {
+  "id": "exp-reglement",
+  "title": "Le règlement de la coopérative",
+  "narration": "Pour une livraison acceptée, la caisse de l'exportateur fixe le prix au kilo : le montant est le poids net multiplié par le prix. Il est communiqué à la coopérative, qui suit chaque étape dans ses livraisons envoyées : poids net, décision, bulletin et règlement. La même chaîne fonctionne entre deux coopératives, dans un sens ou dans les deux.",
+  "visual": {
+   "type": "live",
+   "role": "exp_caissier",
+   "steps": [
+    {
+     "goto": "/livraisons",
+     "w": 5
+    },
+    {
+     "scroll": 250,
      "w": 3
     }
    ]

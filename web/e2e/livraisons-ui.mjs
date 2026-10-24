@@ -40,18 +40,18 @@ await pb.getByRole('button', { name: "Peser l'entrée" }).click(); await pb.wait
 await pb.locator('.modal input').first().fill('20000'); await pb.getByRole('button', { name: "Enregistrer l'entrée" }).click(); await pb.waitForTimeout(1200);
 check('entrée pesée', /Entrée pesée/.test(await pb.locator('table').innerText()));
 await pb.getByRole('button', { name: 'Peser la sortie' }).click(); await pb.waitForTimeout(500);
-await pb.locator('.modal input').first().fill('8000'); await pb.waitForTimeout(300); await pb.screenshot({ path: '/tmp/exp-sortie.png' });
-check('poids net calculé à l\'écran', /Poids net : 12/.test(await pb.locator('.modal').innerText()));
+await pb.getByLabel('Poids de sortie (kg)').fill('8000'); await pb.waitForTimeout(300); await pb.screenshot({ path: '/tmp/exp-sortie.png' });
+check('poids net calculé à l\'écran', /poids net livré : 12/.test(await pb.locator('.modal').innerText()));
 await pb.getByRole('button', { name: 'Enregistrer la sortie' }).click(); await pb.waitForTimeout(1200);
 check('pesée terminée, pas de bouton d\'analyse pour le pont bascule', /Pesée terminée/.test(await pb.locator('table').innerText()) && !(await pb.getByRole('button', { name: 'Analyser' }).count()));
 // analyste
 const pn = await login(mk.analyste, PWD); await go(pn, '/livraisons');
 await pn.getByRole('button', { name: 'Analyser' }).click(); await pn.waitForTimeout(500);
-await pn.locator('.modal input').first().fill('7.4'); await pn.screenshot({ path: '/tmp/exp-analyse.png' });
+await pn.getByLabel('Humidité (%)', { exact: true }).fill('7.4'); await pn.screenshot({ path: '/tmp/exp-analyse.png' });
 await pn.getByRole('button', { name: /produire le bulletin/ }).click(); await pn.waitForTimeout(1200);
 check('analyse enregistrée, bulletin disponible', /Analysée/.test(await pn.locator('table').innerText()) && await pn.getByRole('button', { name: 'Bulletin' }).count() === 1);
 const [pop] = await Promise.all([pn.context().waitForEvent('page'), pn.getByRole('button', { name: 'Bulletin' }).click()]); await pop.waitForTimeout(800);
-check('bulletin de pesée imprimable (poids net, humidité, signataires)', /Bulletin de pesée n° BP-/.test(await pop.locator('body').innerText()) && /12\s?000/.test(await pop.locator('body').innerText()) && /Analyste Labo/.test(await pop.locator('body').innerText()));
+check('bulletin de pesée au modèle de l\'exportateur (connaissement, pesée, analyse, livraison produit, visas)', /BULLETIN DE PESEE/.test(await pop.locator('body').innerText()) && /Poids Net Payé/.test(await pop.locator('body').innerText()) && /INDICATION CONNAISSEMENT/.test(await pop.locator('body').innerText()) && /Analyste Labo/.test(await pop.locator('body').innerText()));
 await pop.screenshot({ path: '/tmp/exp-bulletin.png' });
 // caissier
 const pc = await login(mk.caissier, PWD); await go(pc, '/livraisons');
