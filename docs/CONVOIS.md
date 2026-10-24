@@ -159,3 +159,6 @@ Sur l'accueil, la tuile **Membres** devient **Délégués**.
 
 ## Icône de profil (en haut à droite)
 Le bouton « Se déconnecter » et le lien « Mon compte » de la barre du haut sont remplacés par l'icône de profil de la personne connectée. Un clic ouvre un menu : nom, « Mon profil » (mot de passe, double authentification) et « Se déconnecter ». Le menu se ferme au clic extérieur ou avec Échap.
+
+## Entrées de menu en fenêtre contextuelle
+Chaque entrée des menus (Fichier, Opérations, Comptabilité, Stock, Suivi…) s'ouvre dans une fenêtre par-dessus l'écran en cours : on retrouve son travail tel quel en la fermant (✕ Fermer ou Échap). Le bouton « ↗ Plein écran » ouvre la même page à la place de l'écran ; Ctrl + clic ou Maj + clic ouvre directement la page. « Accueil » reste un changement d'écran.

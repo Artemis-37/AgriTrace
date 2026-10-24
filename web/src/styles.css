@@ -367,3 +367,5 @@ dl.kv dd { margin: 0; }
 .profile-pop button { text-align: left; background: none; border: 0; padding: .55rem .6rem; border-radius: 8px; cursor: pointer; font: inherit; color: inherit; }
 .profile-pop button:hover { background: rgba(47,93,70,.1); }
 .profile-pop button.out { color: #b3261e; }
+.peek.peek-wide { width: min(1320px, 100%); }
+.peek.peek-wide .peek-body { max-height: 82vh; }

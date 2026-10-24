@@ -310,6 +310,8 @@ let md = `# AgriTrace — Guide de formation par profil
 
 **Ouvrir un écran sur un autre.** Dans les listes, les noms soulignés en pointillés (producteur dans les déclarations d\'achat, délégué dans la file de la caisse, les convois et l\'état des délégués, compte bancaire dans le bandeau « Fonds disponible ») ouvrent l\'écran lié **par-dessus** l\'écran courant. Le fil d\'Ariane en haut de la fenêtre rappelle d\'où l\'on vient ; **← Retour** revient à la fenêtre précédente, **✕ Fermer** ou la touche **Échap** ramène à l\'écran d\'origine, resté exactement comme on l\'a laissé.
 
+**Entrées de menu en fenêtre.** Chaque entrée des menus (Opérations, Comptabilité, Stock…) s\'ouvre aussi dans une fenêtre par-dessus l\'écran en cours : fermez-la (✕ Fermer ou Échap) pour retrouver votre travail tel quel, ou cliquez sur « ↗ Plein écran » pour ouvrir la page à la place de l\'écran.
+
 ![Fiche du producteur ouverte par-dessus la liste des déclarations d\'achat](captures/fenetre-liee-producteur.png)
 
 Les captures ont été prises sur la version de démonstration ; les libellés des boutons peuvent différer légèrement selon la version installée.
