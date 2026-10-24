@@ -12,6 +12,7 @@ const DOCS = [
   ['GUIDE_UTILISATEUR.md', 'AgriTrace - Guide utilisateur', 'Guide utilisateur', false],
   ['GUIDE_FORMATION.md', 'AgriTrace - Guide de formation par profil', 'Guide de formation par profil', false],
   ['DEPLOIEMENT.md', 'AgriTrace - Deploiement et installation', 'Déploiement et installation', false],
+  ['DEPLOIEMENT_MULTI_COOPERATIVES.md', 'AgriTrace - Deploiement multi-cooperatives', 'Déploiement pour plusieurs coopératives', false],
   ['EXPLOITATION.md', 'AgriTrace - Exploitation', 'Exploitation', false],
   ['DEMO.md', 'AgriTrace - Version de demonstration', 'Version de démonstration', false],
   ['MATRICE_ROLES.md', 'AgriTrace - Matrice des roles et permissions', 'Matrice des rôles et permissions', true],
