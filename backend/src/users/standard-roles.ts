@@ -7,16 +7,22 @@ export const STANDARD_ROLES: Record<string, { name: string; description: string;
     permissions: ['products:read', 'campaigns:read', 'convoys:read', 'convoys:receive', 'warehouses:read', 'lots:read', 'receipts:create', 'stock:move', 'stock:count', 'cancellations:request', 'messages:use', 'sync:use'],
     hidden: ['Conformité / qualité', 'Cartographie', 'Caisse et comptabilité', 'Finances', 'Équipe', 'Missions', 'Préfinancement'],
   },
+  auditeur_exportateur: {
+    name: 'Auditeur (exportateur)',
+    description: 'Chez l\'exportateur : programme et conduit les audits des coopératives supervisées, saisit les constats, consulte les données partagées par la coopérative et émet le rapport.',
+    permissions: ['audits:manage', 'audits:read', 'audits:share', 'deliveries:read', 'messages:use', 'sync:use'],
+    hidden: ['Caisse et comptabilité', 'Finances', 'Équipe', 'Préfinancement'],
+  },
   pont_bascule: {
     name: 'Responsable pont bascule',
     description: 'Chez l\'exportateur : pèse l\'entrée (camion chargé) et la sortie (camion vide) de chaque livraison pour obtenir le poids net.',
-    permissions: ['products:read', 'campaigns:read', 'warehouses:read', 'lots:read', 'deliveries:read', 'deliveries:weigh', 'messages:use', 'sync:use'],
+    permissions: ['products:read', 'campaigns:read', 'warehouses:read', 'lots:read', 'deliveries:read', 'deliveries:weigh', 'deliveries:refuse', 'messages:use', 'sync:use'],
     hidden: ['Caisse et comptabilité', 'Finances', 'Équipe', 'Préfinancement'],
   },
   analyste: {
     name: 'Analyste',
     description: 'Chez l\'exportateur : saisit les résultats de l\'analyse des livraisons (humidité, grainage, défauts), décide et produit le bulletin de pesée.',
-    permissions: ['products:read', 'quality:read', 'deliveries:read', 'deliveries:analyse', 'messages:use', 'sync:use'],
+    permissions: ['products:read', 'quality:read', 'deliveries:read', 'deliveries:analyse', 'deliveries:refuse', 'messages:use', 'sync:use'],
     hidden: ['Caisse et comptabilité', 'Finances', 'Équipe', 'Préfinancement'],
   },
   caissier: {
@@ -40,7 +46,7 @@ export const STANDARD_ROLES: Record<string, { name: string; description: string;
   responsable_tracabilite: {
     name: 'Responsable de traçabilité',
     description: 'Valide les déclarations d\'achat, suit les lots et les certificats, contrôle la chaîne de traçabilité.',
-    permissions: ['declarations:read', 'declarations:validate', 'producers:read', 'parcels:read', 'lots:read', 'lots:manage', 'receipts:search', 'certificates:read', 'documents:read', 'reports:read', 'alerts:read', 'dispatch:manage', 'deliveries:read', 'messages:use', 'sync:use'],
+    permissions: ['declarations:read', 'declarations:validate', 'producers:read', 'parcels:read', 'lots:read', 'lots:manage', 'receipts:search', 'certificates:read', 'documents:read', 'reports:read', 'alerts:read', 'dispatch:manage', 'deliveries:read', 'audits:read', 'audits:share', 'audits:respond', 'messages:use', 'sync:use'],
     hidden: ['Caisse et comptabilité', 'Finances'],
   },
   responsable_cartographie: {

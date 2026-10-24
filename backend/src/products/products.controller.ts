@@ -117,9 +117,14 @@ export class ProductsController {
     if (campaignId && !/^[0-9a-f-]{36}$/i.test(campaignId)) throw new BadRequestException('Campagne invalide');
     return this.db.tx(req.org.id, async (c) => (await c.query(
       `SELECT coalesce(p.name, 'Non précisé') AS product, count(*)::int AS receptions,
-              coalesce(sum(coalesce(r.bags_unloaded, r.bags)), 0)::int AS bags, coalesce(sum(r.total_kg), 0) AS kg
+              coalesce(sum(coalesce(r.bags_unloaded, r.bags)), 0)::int AS bags, coalesce(sum(r.total_kg), 0) AS received_kg,
+              coalesce(sum(r.total_kg) FILTER (WHERE EXISTS (SELECT 1 FROM dispatch_sheet_convoys sc JOIN dispatch_sheets s ON s.id = sc.sheet_id
+                 WHERE sc.convoy_id = r.convoy_id AND s.status = 'transmitted' AND s.returned_at IS NULL)), 0) AS shipped_kg,
+              coalesce(sum(r.total_kg) FILTER (WHERE EXISTS (SELECT 1 FROM dispatch_sheet_convoys sc JOIN dispatch_sheets s ON s.id = sc.sheet_id
+                 WHERE sc.convoy_id = r.convoy_id AND s.returned_at IS NOT NULL) AND NOT EXISTS (SELECT 1 FROM dispatch_sheet_convoys sc JOIN dispatch_sheets s ON s.id = sc.sheet_id
+                 WHERE sc.convoy_id = r.convoy_id AND s.status = 'transmitted' AND s.returned_at IS NULL)), 0) AS returned_kg
          FROM convoy_receptions r LEFT JOIN products p ON p.id = r.product_id
         WHERE ($1::uuid IS NULL OR r.campaign_id = $1) AND ($2::date IS NULL OR r.received_at >= $2::date) AND ($3::date IS NULL OR r.received_at < $3::date + 1)
-        GROUP BY p.name ORDER BY 1`, [campaignId ?? null, d(from), d(to)])).rows);
+        GROUP BY p.name ORDER BY 1`, [campaignId ?? null, d(from), d(to)])).rows.map((r) => ({ ...r, kg: Number(r.received_kg) - Number(r.shipped_kg) })));
   }
 }

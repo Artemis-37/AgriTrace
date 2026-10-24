@@ -111,5 +111,23 @@ const PWD = 'Exportateur-Test-2026!';
   const d2 = (await call('GET', '/deliveries', { token: A2, org: c2.body.id })).body;
   check('la coopérative destinataire reçoit la livraison (même circuit)', d2.length === 1 && d2[0].source_org_name && d2[0].status === 'arrived', d2);
   check('elle pèse (administrateur de coopérative : droits complets)', (await call('POST', `/deliveries/${d2[0].id}/weigh-in`, { token: A2, org: c2.body.id, body: { gross_kg: Number(d2[0].declared_kg) + 5000 } })).status === 201);
+  // 9. Refoulement : le volume revient au stock de la coopérative fournisseuse
+  const kgOf = async () => (await call('GET', '/stock-state', { token: CAD, org: C })).body.reduce((a, r) => a + Number(r.kg ?? 0), 0);
+  const before = await kgOf(), declared = Number(d2[0].declared_kg);
+  check('le refoulement exige un motif', (await call('POST', `/deliveries/${d2[0].id}/refuse`, { token: A2, org: c2.body.id, body: {} })).status === 400);
+  check('sans le droit de refouler, refusé', (await call('POST', `/deliveries/${d2[0].id}/refuse`, { token: T, org: C, body: { reason: 'Test' } })).status === 403);
+  const rf = await call('POST', `/deliveries/${d2[0].id}/refuse`, { token: A2, org: c2.body.id, body: { reason: 'Humidité excessive, chargement refusé' } });
+  check('chargement refoulé', rf.status === 201 && rf.body.status === 'refused' && rf.body.decision === 'rejected', rf.body);
+  check('un chargement refoulé ne se refoule pas deux fois', (await call('POST', `/deliveries/${d2[0].id}/refuse`, { token: A2, org: c2.body.id, body: { reason: 'Encore' } })).status === 409);
+  check('le volume revient dans le stock de la coopérative', Math.abs((await kgOf()) - before - declared) < 0.01, [before, declared, await kgOf()]);
+  const sent2 = (await call('GET', '/deliveries/sent', { token: T, org: C })).body.find((x) => x.id === d2[0].id);
+  check('la coopérative voit « refoulée » et le motif', sent2?.status === 'refused' && /Humidité/.test(sent2.refusal_reason), sent2);
+  check('notification de refoulement à la coopérative', JSON.stringify((await call('GET', '/notifications', { token: T, org: C })).body).includes('refoulé'));
+  const sh3 = await call('POST', '/dispatch-sheets', { token: T, org: C, body: { convoy_ids: [convs[1].id], bl_no: 'BL-REUSE-' + sfx } });
+  check('les convois refoulés servent à un autre chargement', sh3.status === 201, sh3.body);
+  const tr3 = await call('POST', `/dispatch-sheets/${sh3.body.id}/transmit`, { token: T, org: C, body: { destination_org_id: c2.body.id } });
+  check('nouvelle transmission avec les mêmes convois', tr3.status === 201, tr3.body);
+  check('la nouvelle livraison est attendue chez le destinataire', (await call('GET', '/deliveries', { token: A2, org: c2.body.id })).body.some((x) => x.status === 'arrived'));
+  { const z = await call('POST', `/deliveries/${d2[0].id}/settle`, { token: A2, org: c2.body.id, body: { unit_price: 1 } }); check('le règlement d\'un chargement refoulé est impossible', z.status >= 400 && z.status < 500, z); }
   console.log(`${ok} contrôles réussis, ${ko} en échec`); process.exit(ko ? 1 : 0);
 })();

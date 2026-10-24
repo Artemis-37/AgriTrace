@@ -159,7 +159,8 @@ export class DispatchController {
     return this.db.tx(req.org.id, async (c) => (await c.query(
       `SELECT v.id, v.convoy_no, v.driver_name, v.truck_no, v.trailer_no, r.received_at, r.total_kg AS net_kg, r.bags, cu.full_name AS collector_name,
               (SELECT count(*)::int FROM convoy_declarations x WHERE x.convoy_id = v.id) AS producers,
-              (SELECT string_agg(s.number, ', ' ORDER BY s.number) FROM dispatch_sheet_convoys sc JOIN dispatch_sheets s ON s.id = sc.sheet_id WHERE sc.convoy_id = v.id) AS sheets
+              (SELECT string_agg(s.number, ', ' ORDER BY s.number) FROM dispatch_sheet_convoys sc JOIN dispatch_sheets s ON s.id = sc.sheet_id WHERE sc.convoy_id = v.id AND s.returned_at IS NULL) AS sheets,
+              (SELECT string_agg(s.number, ', ' ORDER BY s.number) FROM dispatch_sheet_convoys sc JOIN dispatch_sheets s ON s.id = sc.sheet_id WHERE sc.convoy_id = v.id AND s.returned_at IS NOT NULL) AS returned_sheets
          FROM convoys v JOIN convoy_receptions r ON r.convoy_id = v.id JOIN collectors col ON col.id = v.collector_id JOIN users cu ON cu.id = col.user_id
         ORDER BY r.received_at DESC LIMIT 500`)).rows);
   }
@@ -186,7 +187,7 @@ export class DispatchController {
   async create(@Body() b: CreateSheetDto, @Req() req: any) {
     const row = await this.db.tx(req.org.id, async (c) => {
       const { convoys, lines } = await convoyLines(c, [...new Set(b.convoy_ids)]);
-      const taken = (await c.query(`SELECT DISTINCT s.number FROM dispatch_sheet_convoys sc JOIN dispatch_sheets s ON s.id = sc.sheet_id WHERE sc.convoy_id = ANY($1::uuid[]) AND s.status = 'transmitted'`, [convoys.map((v) => v.id)])).rows;
+      const taken = (await c.query(`SELECT DISTINCT s.number FROM dispatch_sheet_convoys sc JOIN dispatch_sheets s ON s.id = sc.sheet_id WHERE sc.convoy_id = ANY($1::uuid[]) AND s.status = 'transmitted' AND s.returned_at IS NULL`, [convoys.map((v) => v.id)])).rows;
       if (taken.length) throw new ConflictException(`Des convois sont déjà sur une fiche transmise (${taken.map((t) => t.number).join(', ')})`);
       const org = (await c.query(`SELECT name FROM organizations WHERE id = $1`, [req.org.id])).rows[0];
       const first = convoys[0]; const kg = lines.reduce((a, l) => a + l.kg, 0); const bags = lines.reduce((a, l) => a + l.bags, 0);
@@ -208,7 +209,7 @@ export class DispatchController {
     const all = this.has(req, 'dispatch:manage');
     if (!all && !this.has(req, 'dispatch:read')) throw new ForbiddenException('Permission insuffisante');
     return this.db.tx(req.org.id, async (c) => (await c.query(
-      `SELECT s.id, s.number, s.source, s.status, s.bl_no, s.truck_no, s.driver_name, s.declared_kg, s.declared_bags, s.departure_date, s.exporter_name, s.transmitted_at, s.created_at, jsonb_array_length(s.lines) AS producers,
+      `SELECT s.id, s.number, s.source, s.status, s.bl_no, s.truck_no, s.driver_name, s.declared_kg, s.declared_bags, s.departure_date, s.exporter_name, s.transmitted_at, s.returned_at, s.return_reason, s.created_at, jsonb_array_length(s.lines) AS producers,
               (SELECT count(*)::int FROM dispatch_sheet_convoys x WHERE x.sheet_id = s.id) AS convoys
          FROM dispatch_sheets s WHERE ($1::boolean OR (s.status = 'transmitted' AND s.exporter_user_id = $2)) ORDER BY s.created_at DESC LIMIT 500`, [all, req.user.id])).rows);
   }

@@ -38,13 +38,14 @@ class AnalysisDto {
   @IsIn(['accepted', 'rejected']) decision: 'accepted' | 'rejected';
   @IsOptional() @IsString() @Length(0, 1000) notes?: string;
 }
+class RefuseDto { @IsString() @Length(3, 1000) reason: string; }
 class SettleDto {
   @Type(() => Number) @IsNumber({ maxDecimalPlaces: 4 }) @Min(0.0001) @Max(1000000) unit_price: number;
   @IsOptional() @IsString() @Length(0, 120) payment_ref?: string;
 }
 
 const LIST = `d.id, d.number, d.source_org_id, d.source_org_name, d.source_sheet_no, d.truck_no, d.driver_name, d.bl_no, d.lot_id_dse, d.departure_date, d.declared_kg, d.declared_bags,
-  d.status, d.gross_kg, d.tare_kg, d.net_kg, d.net_delivered_kg, d.net_payable_kg, d.variance_kg, d.variance_pct, d.moisture_pct, d.decision, d.bulletin_no, d.unit_price, d.amount, d.settled_at, d.created_at, d.organization_id`;
+  d.status, d.refusal_reason, d.refused_at, d.gross_kg, d.tare_kg, d.net_kg, d.net_delivered_kg, d.net_payable_kg, d.variance_kg, d.variance_pct, d.moisture_pct, d.decision, d.bulletin_no, d.unit_price, d.amount, d.settled_at, d.created_at, d.organization_id`;
 
 /** Liens entre organisations et livraisons : l'exportateur (ou une coopérative destinataire) pèse, analyse et règle ce que lui livre une coopérative. */
 @ApiTags('deliveries')
@@ -147,10 +148,11 @@ export class DeliveriesController {
     return this.db.tx(req.org.id, async (c) => (await c.query(
       `SELECT d.source_org_id AS id, d.source_org_name AS name, count(*)::int AS deliveries,
               coalesce(sum(coalesce(d.net_payable_kg, d.net_delivered_kg, d.net_kg)) FILTER (WHERE d.decision = 'accepted'), 0) AS accepted_kg,
-              coalesce(sum(coalesce(d.net_payable_kg, d.net_delivered_kg, d.net_kg)) FILTER (WHERE d.decision = 'rejected'), 0) AS rejected_kg,
+              coalesce(sum(coalesce(d.net_payable_kg, d.net_delivered_kg, d.net_kg, d.declared_kg)) FILTER (WHERE d.decision = 'rejected' OR d.status = 'refused'), 0) AS rejected_kg,
               coalesce(sum(d.amount) FILTER (WHERE d.status = 'settled'), 0) AS paid,
               coalesce(sum(coalesce(d.net_payable_kg, d.net_delivered_kg, d.net_kg)) FILTER (WHERE d.decision = 'accepted' AND d.status = 'analysed'), 0) AS to_settle_kg,
-              count(*) FILTER (WHERE d.status IN ('arrived','weighing_in','weighed'))::int AS in_progress
+              count(*) FILTER (WHERE d.status IN ('arrived','weighing_in','weighed'))::int AS in_progress,
+              count(*) FILTER (WHERE d.status = 'refused')::int AS refused, coalesce(sum(d.declared_kg) FILTER (WHERE d.status = 'refused'), 0) AS refused_kg
          FROM deliveries d WHERE d.organization_id = $1 GROUP BY d.source_org_id, d.source_org_name ORDER BY d.source_org_name`, [req.org.id])).rows);
   }
 
@@ -236,6 +238,21 @@ export class DeliveriesController {
               refaction_kg = $9, net_payable_kg = $10, issuer = $11::jsonb, bulletin_no = 'BP-' || substr(number, 4) WHERE id = $1 RETURNING *`,
       [b.moisture_pct, b.bean_count ?? null, JSON.stringify(b.defects ?? {}), b.grade || null, b.decision, b.notes?.trim() || null, req.user.id, refaction, payable, JSON.stringify(issuer)], 'delivery.analysis',
       (d) => ({ title: `Livraison ${d.source_sheet_no} : ${d.decision === 'accepted' ? 'acceptée' : 'rejetée'}`, body: `Bulletin ${d.bulletin_no} · humidité ${Number(d.moisture_pct)} %${d.analysis_notes ? ` · ${d.analysis_notes}` : ''}` }));
+  }
+
+  /** Refoulement : l'exportateur refuse le chargement ; le volume retourne dans le stock de la coopérative et ses convois redeviennent disponibles. */
+  @Post('deliveries/:id/refuse') @RequirePermissions('deliveries:refuse')
+  async refuse(@Param('id', ParseUUIDPipe) id: string, @Body() b: RefuseDto, @Req() req: any) {
+    const d = await this.mutate(req, id, ['arrived', 'weighing_in', 'weighed', 'analysed'],
+      `UPDATE deliveries SET status = 'refused', decision = 'rejected', refused_at = now(), refused_by = $2, refusal_reason = $3 WHERE id = $1 RETURNING *`,
+      [req.user.id, b.reason.trim()], 'delivery.refuse');
+    // Côté coopérative : la fiche est marquée refoulée, ses convois reviennent au stock et redeviennent utilisables pour un autre chargement
+    await this.db.tx(d.source_org_id, async (c: PoolClient) => {
+      await c.query(`UPDATE dispatch_sheets SET returned_at = now(), returned_by = $2, return_reason = $3 WHERE id = $1 AND returned_at IS NULL`, [d.source_sheet_id, req.user.id, b.reason.trim()]);
+    });
+    await this.audit.log({ organizationId: d.source_org_id, actorUserId: req.user.id, action: 'delivery.refused_returned_to_stock', entityType: 'dispatch_sheet', entityId: d.source_sheet_id, details: { delivery: d.number, sheet: d.source_sheet_no, kg: Number(d.declared_kg), reason: b.reason.trim() } });
+    await this.notifySource(d, { title: `Chargement ${d.source_sheet_no} refoulé`, body: `${b.reason.trim().slice(0, 160)} · ${Number(d.declared_kg)} kg reviennent dans votre stock.` }).catch(() => undefined);
+    return d;
   }
 
   @Post('deliveries/:id/settle') @RequirePermissions('deliveries:settle')
