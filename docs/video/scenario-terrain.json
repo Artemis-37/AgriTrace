@@ -300,7 +300,7 @@
  {
   "id": "exp-analyse",
   "title": "L'analyse et le bulletin de pesée",
-  "narration": "L'analyste saisit les résultats de l'analyse : humidité, grainage, défauts et qualité. Il décide si la livraison est acceptée ou rejetée, avec un motif obligatoire en cas de rejet. Le bulletin de pesée est alors produit, avec les deux pesées, le poids net, l'analyse et les signataires. Après cela, les poids ne peuvent plus être modifiés.",
+  "narration": "L'analyste saisit les résultats de l'analyse : humidité, grainage, défauts et qualité. Il décide si la livraison est acceptée ou rejetée, avec un motif obligatoire en cas de rejet. Le bulletin de pesée, appelé bon retour quand le chargement est accepté, est alors produit, avec les deux pesées, le poids net, l'analyse et les signataires. Après cela, les poids ne peuvent plus être modifiés.",
   "visual": {
    "type": "live",
    "role": "analyste",
@@ -331,6 +331,63 @@
     {
      "scroll": 250,
      "w": 3
+    }
+   ]
+  }
+ },
+ {
+  "id": "exp-bon-retour",
+  "title": "Les pièces jointes et le bon retour",
+  "narration": "En transmettant sa fiche, la coopérative peut joindre la fiche d'accompagnement, en Excel ou en PDF, et le connaissement CCC en PDF. L'exportateur les retrouve dans le bouton Pièces de la livraison. Pour un chargement accepté, le bulletin de pesée est le bon retour. Les deux parties peuvent l'imprimer, ou le télécharger en PDF.",
+  "visual": {
+   "type": "live",
+   "role": "pont_bascule",
+   "steps": [
+    {
+     "goto": "/livraisons",
+     "w": 5
+    },
+    {
+     "scroll": 250,
+     "w": 3
+    }
+   ]
+  }
+ },
+ {
+  "id": "exp-refoulement",
+  "title": "Le refoulement d'un chargement",
+  "narration": "L'exportateur peut refouler un chargement, avec un motif obligatoire. La livraison passe à Refoulée et ne se règle pas. Le volume revient dans le stock de la coopérative, et ses convois redeviennent disponibles : elle peut les mettre dans un autre chargement. La coopérative est prévenue, et la fiche refusée est marquée comme refoulée.",
+  "visual": {
+   "type": "live",
+   "role": "pont_bascule",
+   "steps": [
+    {
+     "goto": "/livraisons",
+     "w": 5
+    },
+    {
+     "scroll": 250,
+     "w": 3
+    }
+   ]
+  }
+ },
+ {
+  "id": "exp-audit",
+  "title": "L'audit de la coopérative",
+  "narration": "L'exportateur est le supérieur hiérarchique de la coopérative, et l'audite. Il propose d'abord sa supervision, que la coopérative accepte, et peut révoquer quand aucun audit n'est en cours. Dans le module Audits, il programme une mission, puis chaque partie désigne ses participants et partage des copies figées de ses données, des documents ou des notes. Seuls les participants les voient, et chaque lecture est inscrite dans un journal. L'exportateur saisit ses constats, la coopérative répond avec un plan d'action, et l'audit est clos.",
+  "visual": {
+   "type": "live",
+   "role": "exp_admin",
+   "steps": [
+    {
+     "goto": "/audits",
+     "w": 4
+    },
+    {
+     "tab": "Supervision",
+     "w": 4
     }
    ]
   }

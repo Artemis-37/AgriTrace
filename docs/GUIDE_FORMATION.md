@@ -276,13 +276,13 @@ Une fois déchargé, le camion repasse au pont bascule : on saisit la **tare** ;
 
 ### Étape 34 — Carine Amani : Analyse de la livraison
 
-L'analyste saisit l'**humidité**, le grainage et les défauts, choisit la décision (acceptée ou rejetée, avec motif obligatoire en cas de rejet) puis produit le **bulletin de pesée**.
+L'analyste saisit l'**humidité**, le grainage, les matières étrangères et tous les défauts (brisures, crabots, fèves moisies, ardoisées, mitées, germées, plates, violettes, résidus, FFA), la **réfaction**, le classement et la décision (acceptée ou refusée, avec motif obligatoire en cas de refus), puis produit le **bulletin de pesée**.
 
 ![Analyse de la livraison](captures/parcours/34-analyste-analyse.png)
 
 ### Étape 35 — Carine Amani : Bulletin de pesée
 
-Le bulletin reprend la livraison, les pesées d'entrée et de sortie, le poids net, l'analyse, la décision et les signataires. Il s'imprime ou s'enregistre en PDF depuis la fenêtre d'impression.
+Le bulletin de pesée de l'exportateur reprend, dans l'ordre : l'indication connaissement, la pesée (entrée et sortie avec les ponts), l'analyse, la livraison produit (poids brut, tares, **poids net livré**, réfaction, **poids net payé**, classement, manquants et écarts), le QR code et les trois visas (pont bascule, fournisseur, chef d'usine). Il s'imprime ou s'enregistre en PDF.
 
 ![Bulletin de pesée](captures/parcours/35-analyste-bulletin.png)
 
@@ -786,7 +786,7 @@ Valide les déclarations d'achat, suit les lots et les certificats, contrôle la
 
 1. **Vérifier les déclarations.** Menu **Déclarations d'achat** : les déclarations « Reçue » attendent une mise en vérification, puis validation.
 2. **Préparer la fiche d'accompagnement.** Menu **Fiches d'accompagnement** → onglet *Convois pesés* : **Consulter** liste les producteurs d'un convoi (nom, genre, section, code, date de livraison, poids net, sacs, n° de reçu) et **Exporter (Excel)** produit la fiche sur le modèle de la coopérative. Pour un chargement de plusieurs convois, cochez-les puis **Créer la fiche** : renseignez chauffeur, camion, remorque, LOT ID DSE, n° de connaissement, date de départ, type de cacao et certifications. Une fiche déjà remplie ailleurs s'**importe** par *Importer une fiche (Excel)* (les codes absents du registre sont signalés).
-3. **Transmettre la fiche à l'exportateur.** Onglet *Fiches d'accompagnement* → **Transmettre** : choisissez l'**exportateur lié** (ou un compte exportateur de la coopérative). Vers un exportateur lié, la fiche devient chez lui une livraison attendue ; vous la suivez dans **Livraisons → Mes livraisons envoyées**. La fiche ne peut plus être modifiée, l'exportateur est notifié et la télécharge au format Excel.
+3. **Transmettre la fiche à l'exportateur.** Onglet *Fiches d'accompagnement* → **Transmettre** : choisissez l'**exportateur lié** (ou un compte exportateur de la coopérative) ; vous pouvez **joindre la fiche (Excel ou PDF) et le connaissement CCC (PDF)**, qui partent avec le chargement. Vers un exportateur lié, la fiche devient chez lui une livraison attendue ; vous la suivez dans **Livraisons → Mes livraisons envoyées**. La fiche ne peut plus être modifiée, l'exportateur est notifié et la télécharge au format Excel.
 4. **Tracer un lot.** Menu **Stocks et lots** (si accessible) ou la fiche du lot : bouton *Traçabilité* pour voir producteurs, parcelles, connaissements et pesées.
 
 ### Ce que ce profil ne voit pas
@@ -1315,6 +1315,7 @@ Chez l'exportateur : pèse l'entrée (camion chargé) et la sortie (camion vide)
 - Repérer la livraison attendue
 - Peser l'entrée (camion chargé)
 - Peser la sortie (camion vide) et lire le poids net
+- Refouler un chargement non conforme
 
 ### Ce que vous voyez
 
@@ -1330,7 +1331,8 @@ Chez l'exportateur : pèse l'entrée (camion chargé) et la sortie (camion vide)
 
 1. **Ouvrir les livraisons.** Menu **Pont bascule et analyse** : chaque fiche d'accompagnement transmise par une coopérative liée est une livraison **Attendue** (camion, poids déclaré). Vous êtes notifié à l'arrivée.
 2. **Peser l'entrée.** **Peser l'entrée** : saisissez le **poids brut** lu au pont bascule, camion chargé. La livraison passe à « Entrée pesée ».
-3. **Peser la sortie.** Après déchargement : **Peser la sortie** → saisissez la **tare** (camion vide) et les sacs comptés. Le **poids net** (brut − tare) et l'écart avec le poids déclaré s'affichent, la coopérative est prévenue. La tare doit être inférieure au brut.
+3. **Refouler un chargement.** Si le chargement ne peut pas être reçu : **Refouler**, motif obligatoire. Le volume **retourne dans le stock de la coopérative**, qui peut réutiliser ses convois pour un autre chargement. Le bouton **Pièces** donne la fiche d'accompagnement et le connaissement CCC joints par la coopérative.
+4. **Peser la sortie.** Après déchargement : **Peser la sortie** → saisissez la **tare** (camion vide) et les sacs comptés. Le **poids net** (brut − tare) et l'écart avec le poids déclaré s'affichent, la coopérative est prévenue. La tare doit être inférieure au brut.
 
 ### Ce que ce profil ne voit pas
 
@@ -1351,6 +1353,7 @@ Chez l'exportateur : pèse l'entrée (camion chargé) et la sortie (camion vide)
 - [ ] Repérer la livraison attendue
 - [ ] Peser l'entrée (camion chargé)
 - [ ] Peser la sortie (camion vide) et lire le poids net
+- [ ] Refouler un chargement non conforme
 
 ---
 
@@ -1380,7 +1383,7 @@ Chez l'exportateur : saisit les résultats de l'analyse des livraisons (humidit�
 
 1. **Choisir une livraison pesée.** Menu **Pont bascule et analyse** : les livraisons « Pesée terminée » portent le bouton **Analyser**.
 2. **Saisir l'analyse.** Humidité (%), grainage (fèves / 100 g), défauts (moisies, ardoisées, mitées, germées, plates), qualité. **Décision** : acceptée ou rejetée (le motif du rejet est obligatoire).
-3. **Produire le bulletin de pesée.** **Enregistrer et produire le bulletin** : le bulletin est numéroté (BP-aaaa-nnnnn). Bouton **Bulletin** : fenêtre d'impression, enregistrable en PDF. Les poids ne sont plus modifiables après l'analyse.
+3. **Produire le bulletin de pesée.** **Enregistrer et produire le bulletin** : le bulletin est numéroté (BP-aaaa-nnnnn). Pour un chargement accepté, c'est le **bon retour** : bouton **Bon retour** (impression) ou **PDF** (téléchargement) ; la coopérative peut aussi l'imprimer ou l'exporter. Les poids ne sont plus modifiables après l'analyse.
 
 ### Ce que ce profil ne voit pas
 
