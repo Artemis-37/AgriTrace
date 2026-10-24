@@ -310,7 +310,7 @@ let md = `# AgriTrace — Guide de formation par profil
 
 **Ouvrir un écran sur un autre.** Dans les listes, les noms soulignés en pointillés (producteur dans les déclarations d\'achat, délégué dans la file de la caisse, les convois et l\'état des délégués, compte bancaire dans le bandeau « Fonds disponible ») ouvrent l\'écran lié **par-dessus** l\'écran courant. Le fil d\'Ariane en haut de la fenêtre rappelle d\'où l\'on vient ; **← Retour** revient à la fenêtre précédente, **✕ Fermer** ou la touche **Échap** ramène à l\'écran d\'origine, resté exactement comme on l\'a laissé.
 
-**Sous-rubriques en fenêtre.** Dans la Caisse et la Comptabilité, chaque sous-rubrique du menu de gauche s\'ouvre dans une fenêtre centrée par-dessus l\'écran ; fermez-la (✕ Fermer ou Échap) pour retrouver votre travail.
+**Saisies courtes en fenêtre.** Dans la Caisse, « Enregistrer une entrée / sortie » et « Créer une caisse » s\'ouvrent dans une fenêtre centrée par-dessus l\'écran ; fermez-la (✕ Fermer ou Échap) pour retrouver votre travail. Les états larges (journaux, soldes des délégués) restent dans l\'écran.
 
 ![Fiche du producteur ouverte par-dessus la liste des déclarations d\'achat](captures/fenetre-liee-producteur.png)
 

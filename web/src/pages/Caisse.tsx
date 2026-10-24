@@ -26,13 +26,16 @@ const GROUPS: { title: string; perm: string; items: [Key, string][] }[] = [
   { title: 'Mouvements de caisse', perm: 'finance:read', items: [['desk', 'Créer une caisse'], ['entry', 'Enregistrer une entrée / sortie'], ['journal', 'Mouvements de caisse'], ['in', 'Les entrées en caisse'], ['out', 'Les sorties de caisse'], ['bank', 'Évolution des comptes bancaires']] },
 ];
 
+/** Rubriques de saisie courte : elles s'ouvrent en fenêtre contextuelle centrée ; les états larges (journaux, soldes, listes) restent dans l'écran. */
+const SMALL: Key[] = ['entry', 'desk'];
+
 /** Caisse : menu à gauche en rubriques dépliantes, journal de caisse avec solde d'ouverture et solde actuel. */
 export default function Caisse() {
   const { can } = useAuth();
   const groups = GROUPS.map((g) => ({ ...g, items: g.items.filter(([k]) => (k !== 'variance' || can('weighings:approve')) && (k !== 'entry' || can('cash:operate')) && (k !== 'desk' || can('cash:manage'))) })).filter((g) => can(g.perm) && g.items.length);
   const dl = useDeepLink(['cash', 'journal']);
   const first = (dl.tab as Key) ?? groups[0]?.items[0]?.[0] ?? 'journal';
-  const [cur] = useState<Key>(first);
+  const [cur, setCur] = useState<Key>(first);
   const peek = usePeek();
   const [tick, setTick] = useState(0); // rechargement de l'écran de fond à la fermeture d'une fenêtre
   const view = (k: Key) => (k === 'cash' ? <Cash /> : k === 'variance' ? <Variance /> : k === 'accounts' ? <Accounts /> : k === 'desk' ? <CashDesk /> : k === 'entry' ? <CashEntry /> : k === 'bank' ? <BankEvolution /> : <Journal kind={k === 'in' ? 'in' : k === 'out' ? 'out' : ''} />);
@@ -46,7 +49,7 @@ export default function Caisse() {
           {groups.map((g) => (
             <div key={g.title} className={open === g.title ? 'open' : ''}>
               <button className="acc-head" aria-expanded={open === g.title} onClick={() => setOpen(open === g.title ? '' : g.title)}>{g.title}<span aria-hidden="true">{open === g.title ? '▴' : '▾'}</span></button>
-              {open === g.title && <ul>{g.items.map(([k, l]) => <li key={k + l}><button className={cur === k ? 'on' : ''} onClick={() => peek.open(l, view(k), () => setTick((t) => t + 1))}>{l}</button></li>)}</ul>}
+              {open === g.title && <ul>{g.items.map(([k, l]) => <li key={k + l}><button className={cur === k ? 'on' : ''} onClick={() => (SMALL.includes(k) ? peek.open(l, view(k), () => setTick((t) => t + 1)) : setCur(k))}>{l}</button></li>)}</ul>}
             </div>
           ))}
         </nav>

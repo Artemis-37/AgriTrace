@@ -32,5 +32,7 @@ if (n) await p2.screenshot({ path: '/tmp/peek3.png' });
 await go(p2, '/'); await p2.locator('.menu-top', { hasText: 'Opérations' }).click(); await p2.locator('.menu-drop a', { hasText: /^.?\s*Caisse/ }).click(); await p2.waitForTimeout(1500);
 check('menu du haut : navigation comme avant', new URL(p2.url()).pathname === '/caisse' && !(await p2.locator('.peek').count()));
 await p2.locator('.acc-head', { hasText: 'Solde délégué' }).click(); await p2.locator('.accordion button', { hasText: /Solde et fiche/ }).click(); await p2.waitForTimeout(1200);
-check('sous-rubrique ouverte en fenêtre contextuelle', await p2.locator('.peek').count() === 1);
+check('état large (soldes) : reste dans l\'écran', await p2.locator('.peek').count() === 0);
+await p2.locator('.acc-head', { hasText: 'Mouvements de caisse' }).click(); await p2.locator('.accordion button', { hasText: /Enregistrer une entrée/ }).click(); await p2.waitForTimeout(1200);
+check('saisie courte : fenêtre contextuelle centrée', await p2.locator('.peek').count() === 1);
 console.log(ok + ' ok, ' + ko + ' ko'); await b.close();

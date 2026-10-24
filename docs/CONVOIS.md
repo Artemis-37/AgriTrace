@@ -160,5 +160,5 @@ Sur l'accueil, la tuile **Membres** devient **Délégués**.
 ## Icône de profil (en haut à droite)
 Le bouton « Se déconnecter » et le lien « Mon compte » de la barre du haut sont remplacés par l'icône de profil de la personne connectée. Un clic ouvre un menu : nom, « Mon profil » (mot de passe, double authentification) et « Se déconnecter ». Le menu se ferme au clic extérieur ou avec Échap.
 
-## Sous-rubriques en fenêtre contextuelle (centrée)
-Les menus du haut (Fichier, Opérations, Comptabilité…) s'ouvrent comme avant. Dans Caisse et Comptabilité, chaque sous-rubrique du menu de gauche (ex. « Solde et fiche des délégués », « Journal de caisse ») s'ouvre dans une fenêtre centrée par-dessus l'écran ; ✕ Fermer ou Échap la ferme et l'écran de fond est rechargé.
+## Sous-rubriques : fenêtre contextuelle seulement pour les saisies courtes
+Les menus du haut (Fichier, Opérations, Comptabilité…) s'ouvrent comme avant. Dans la Caisse, les rubriques qui demandent une saisie courte (« Enregistrer une entrée / sortie », « Créer une caisse ») s'ouvrent dans une fenêtre centrée par-dessus l'écran ; ✕ Fermer ou Échap la ferme et l'écran de fond est rechargé. Les états larges (journaux, soldes et fiches des délégués, listes de pesées, Comptabilité) restent dans l'écran.

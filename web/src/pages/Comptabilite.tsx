@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { get, post } from '../api';
 import { useAuth } from '../auth';
 import { LOAN_KIND, date } from '../format';
-import { PeekLink, usePeek } from '../peek';
+import { PeekLink } from '../peek';
 import { Fiche } from './Convois';
 import { Card, ErrorBox, Field, Loading, Modal, PageHeader, Table, useAction, useAsync, soldeClass } from '../ui';
 import { FR, Journal } from './Caisse';
@@ -38,9 +38,7 @@ export default function Comptabilite() {
   const { can } = useAuth();
   const GROUPS = GROUPS_ALL.map((g) => ({ ...g, items: g.items.filter(([, v]) => can(v.perm)) })).filter((g) => g.items.length);
   const first = GROUPS[0]?.items[0]?.[0] ?? 'journal';
-  const [cur] = useState<Key>(first);
-  const peek = usePeek();
-  const [tick, setTick] = useState(0);
+  const [cur, setCur] = useState<Key>(first);
   const [open, setOpen] = useState(GROUPS[0]?.title ?? '');
   const view = GROUPS.flatMap((g) => g.items).find(([k]) => k === cur)?.[1];
   return (
@@ -51,11 +49,11 @@ export default function Comptabilite() {
           {GROUPS.map((g) => (
             <div key={g.title} className={open === g.title ? 'open' : ''}>
               <button className="acc-head" aria-expanded={open === g.title} onClick={() => setOpen(open === g.title ? '' : g.title)}>{g.title}<span aria-hidden="true">{open === g.title ? '▴' : '▾'}</span></button>
-              {open === g.title && <ul>{g.items.map(([k, v]) => <li key={k}><button className={cur === k ? 'on' : ''} onClick={() => peek.open(v.label, v.el(), () => setTick((t) => t + 1))}>{v.label}</button></li>)}</ul>}
+              {open === g.title && <ul>{g.items.map(([k, v]) => <li key={k}><button className={cur === k ? 'on' : ''} onClick={() => setCur(k)}>{v.label}</button></li>)}</ul>}
             </div>
           ))}
         </nav>
-        <div className="caisse-main" key={tick}>{view?.el()}</div>
+        <div className="caisse-main">{view?.el()}</div>
       </div>
     </>
   );
