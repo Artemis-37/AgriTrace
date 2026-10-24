@@ -38,6 +38,7 @@ import Compte, { ForcedPasswordChange, ForcedTwoFactor } from './pages/Compte';
 import Parcels from './pages/Parcels';
 import Producers from './pages/Producers';
 import Quality from './pages/Quality';
+import FichesAccompagnement from './pages/FichesAccompagnement';
 import Stocks from './pages/Stocks';
 import { Loading } from './ui';
 import { MenuBar } from './MenuBar';
@@ -66,6 +67,7 @@ const NAV: { to: string; label: string; icon: string; perm: string[]; any?: bool
   { to: '/synchronisation', label: 'Synchronisation', icon: '⇅', perm: ['replication:manage'] },
   { to: '/equipe', label: 'Équipe', icon: '⚙', perm: ['users:read'] },
   { to: '/declarations', label: 'Déclarations d\'achat', icon: '✎', perm: ['declarations:read'], notFor: 'collector' },
+  { to: '/fiches-accompagnement', label: 'Fiches d\'accompagnement', icon: '📋', perm: ['dispatch:manage', 'dispatch:read'], any: true },
   { to: '/missions', label: 'Missions', icon: '⚑', perm: ['tasks:read'] },
   { to: '/operations', label: 'Mes opérations', icon: '🧾', perm: ['cancellations:request'] },
   { to: '/terrain', label: 'Données de terrain', icon: '❖', perm: ['field_records:read', 'field_records:manage', 'field_templates:manage'], any: true },
@@ -186,6 +188,7 @@ export default function App() {
           <Route path="/stocks" element={<Stocks />} />
           <Route path="/finances" element={<Finance />} />
           <Route path="/qualite" element={<Quality />} />
+          <Route path="/fiches-accompagnement" element={<FichesAccompagnement />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>

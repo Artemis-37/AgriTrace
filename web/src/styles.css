@@ -367,3 +367,6 @@ dl.kv dd { margin: 0; }
 .profile-pop button { text-align: left; background: none; border: 0; padding: .55rem .6rem; border-radius: 8px; cursor: pointer; font: inherit; color: inherit; }
 .profile-pop button:hover { background: rgba(47,93,70,.1); }
 .profile-pop button.out { color: #b3261e; }
+.chips { display: flex; flex-wrap: wrap; gap: .4rem .8rem; }
+.chips .chip { background: transparent; border: 1px solid var(--line); padding: 3px 10px; }
+.modal .grid-2 > *, .modal input, .modal select { min-width: 0; max-width: 100%; box-sizing: border-box; }

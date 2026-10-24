@@ -28,7 +28,7 @@ export const STANDARD_ROLES: Record<string, { name: string; description: string;
   responsable_tracabilite: {
     name: 'Responsable de traçabilité',
     description: 'Valide les déclarations d\'achat, suit les lots et les certificats, contrôle la chaîne de traçabilité.',
-    permissions: ['declarations:read', 'declarations:validate', 'producers:read', 'parcels:read', 'lots:read', 'lots:manage', 'receipts:search', 'certificates:read', 'documents:read', 'reports:read', 'alerts:read', 'messages:use', 'sync:use'],
+    permissions: ['declarations:read', 'declarations:validate', 'producers:read', 'parcels:read', 'lots:read', 'lots:manage', 'receipts:search', 'certificates:read', 'documents:read', 'reports:read', 'alerts:read', 'dispatch:manage', 'messages:use', 'sync:use'],
     hidden: ['Caisse et comptabilité', 'Finances'],
   },
   responsable_cartographie: {
@@ -88,8 +88,8 @@ export const STANDARD_ROLES: Record<string, { name: string; description: string;
   },
   exportateur: {
     name: 'Exportateur (partenaire)',
-    description: 'Partenaire exportateur : propose des modules de formation à l\'ADG et reçoit, par l\'ADG, les résultats obtenus par les coachs sur ces modules.',
-    permissions: ['training:propose', 'messages:use'],
+    description: 'Partenaire exportateur : propose des modules de formation à l\'ADG reçoit, par l\'ADG, les résultats obtenus par les coachs sur ces modules, et consulte les fiches d\'accompagnement que le responsable de traçabilité lui transmet.',
+    permissions: ['training:propose', 'dispatch:read', 'messages:use'],
     hidden: ['Tout sauf ses propositions de modules et les résultats que l\'ADG lui a transmis'],
   },
   collecteur: {

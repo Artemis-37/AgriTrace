@@ -118,7 +118,7 @@ const PROFILS = [
   let n = 0;
   for (const [l, f, v] of noms) {
     n++;
-    producers.push((await call('POST', '/producers', { ...U('agent_terrain'), body: { last_name: l, first_names: f, village: v, section: v === 'Hiré' ? 'S1' : v === 'Tiassalé' ? 'S3' : 'S2', phone: '+2250700' + String(10000 + n * 137).slice(0, 5) + String(n).padStart(1, '0'), area_ha: String(2 + (n % 7) + 0.5), estimated_kg: String(1500 + n * 250), value_chain_ids: [vc.id] } })).producer);
+    producers.push((await call('POST', '/producers', { ...U('agent_terrain'), body: { gender: n % 3 === 0 ? 'female' : 'male', last_name: l, first_names: f, village: v, section: v === 'Hiré' ? 'S1' : v === 'Tiassalé' ? 'S3' : 'S2', phone: '+2250700' + String(10000 + n * 137).slice(0, 5) + String(n).padStart(1, '0'), area_ha: String(2 + (n % 7) + 0.5), estimated_kg: String(1500 + n * 250), value_chain_ids: [vc.id] } })).producer);
   }
   const centres = [[-5.9, 7.0], [-5.89, 7.01], [-5.91, 7.02], [-5.88, 7.0], [-5.92, 7.03], [-5.87, 7.02], [-5.93, 7.01], [-5.86, 7.03], [-5.9, 7.04], [-5.88, 7.05]];
   const parcels = [];
@@ -132,10 +132,10 @@ const PROFILS = [
 
   // ── Achats : déclarations (collecteur) → validation → pesées (admin) → reçus (magasinier)
   let lotId = null;
-  for (let i = 0; i < 12; i++) {
+  for (let i = 0; i < 20; i++) {
     const id = crypto.randomUUID();
     const q = 2 + (i % 4);
-    await call('POST', '/purchase-declarations', { ...U('collecteur'), body: { id, idempotency_key: key('decl'), producer_id: producers[i % producers.length].id, value_chain_id: vc.id, campaign_id: camp.id, operation_date: days(-14 + i), quantity: String(q), unit: 'sac', bags: q, purchase_receipt_no: 'ACH-' + String(i + 1).padStart(4, '0') } });
+    await call('POST', '/purchase-declarations', { ...U('collecteur'), body: { id, idempotency_key: key('decl'), producer_id: producers[i % producers.length].id, value_chain_id: vc.id, campaign_id: camp.id, operation_date: days(Math.min(-14 + i, -1)), quantity: String(q), unit: 'sac', bags: q, purchase_receipt_no: 'ACH-' + String(i + 1).padStart(4, '0') } });
     await call('POST', `/purchase-declarations/${id}/submit`, U('collecteur'));
     if (i >= 9) continue; // les dernières restent « soumises » : à valider par le responsable traçabilité
     await call('POST', `/purchase-declarations/${id}/transition`, { ...A, body: { to: 'in_review' } });
@@ -146,8 +146,10 @@ const PROFILS = [
   }
 
   // ── Convois : l'un réceptionné et réglé, l'autre seulement en route
-  const cv = (kg) => call('POST', '/convoys', { ...U('collecteur'), body: { idempotency_key: key('cv'), driver_name: 'Traoré Moussa', truck_no: 'AB 1234 CI', declared_bags: 40, declared_kg: kg } });
-  const cv1 = (await cv('2600')).convoy_no; // numéro généré : SC000000-<année>-BRA-1
+  const avail = await soft('achats à charger', () => call('GET', '/convoys/available-declarations', U('collecteur'))) ?? []; // achats rattachés aux convois : producteurs de la fiche d'accompagnement
+  let takeAt = 0; const take = (n) => { const r = avail.slice(takeAt, takeAt + n).map((d) => d.id); takeAt += n; return r; };
+  const cv = (kg, n = 0) => call('POST', '/convoys', { ...U('collecteur'), body: { idempotency_key: key('cv'), driver_name: 'Traoré Moussa', truck_no: 'AB 1234 CI', declared_bags: 40, declared_kg: kg, ...(n ? { declaration_ids: take(n) } : {}) } });
+  const cv1 = (await cv('2600', 4)).convoy_no; // numéro généré : SC000000-<année>-BRA-1
   const rec = await call('POST', '/convoys/receive', { ...U('magasinier'), body: { idempotency_key: key('rc'), collector_id: col.id, convoy_no: cv1, warehouse_id: wh.id, product_id: cacao.id, campaign_id: camp.id, total_kg: '2587.500', bags: 40 } });
   const reg = await call('POST', '/cash-registers', { ...A, body: { name: 'Caisse principale' } });
   const sess = await call('POST', `/cash-registers/${reg.id}/sessions`, { ...U('caissier'), body: { opening_amount: '5000000' } });
@@ -157,9 +159,9 @@ const PROFILS = [
     const bank = await call('POST', '/financial-accounts', { ...A, body: { owner_type: 'other', name: 'Banque (compte courant) — fictif' } });
     await call('POST', '/financial-transactions', { ...A, body: { idempotency_key: key('bank'), account_id: bank.id, direction: 'in', amount: '10000000', reason: 'Approvisionnement du compte bancaire' } });
   });
-  const cv2 = (await cv('1800')).convoy_no;
+  const cv2 = (await cv('1800', 3)).convoy_no;
   const rec2 = await soft('2e réception', () => call('POST', '/convoys/receive', { ...U('magasinier'), body: { idempotency_key: key('rc'), collector_id: col.id, convoy_no: cv2, warehouse_id: wh.id, product_id: cacao.id, campaign_id: camp.id, total_kg: '1795', bags: 28 } }));
-  const cv3 = (await cv('2100')).convoy_no; // reste « en route » : visible dans les convois attendus du magasin
+  const cv3 = (await cv('2100', 3)).convoy_no; // reste « en route » : visible dans les convois attendus du magasin
 
   // ── Caisse, comptabilité
   const tx = (direction, amount, reason) => call('POST', '/financial-transactions', { ...U('caissier'), body: { idempotency_key: key('tx'), account_id: reg.account_id, cash_session_id: sess.id, direction, amount, reason } });
