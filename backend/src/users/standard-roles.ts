@@ -7,16 +7,28 @@ export const STANDARD_ROLES: Record<string, { name: string; description: string;
     permissions: ['products:read', 'campaigns:read', 'convoys:read', 'convoys:receive', 'warehouses:read', 'lots:read', 'receipts:create', 'stock:move', 'stock:count', 'cancellations:request', 'messages:use', 'sync:use'],
     hidden: ['Conformité / qualité', 'Cartographie', 'Caisse et comptabilité', 'Finances', 'Équipe', 'Missions', 'Préfinancement'],
   },
+  pont_bascule: {
+    name: 'Responsable pont bascule',
+    description: 'Chez l\'exportateur : pèse l\'entrée (camion chargé) et la sortie (camion vide) de chaque livraison pour obtenir le poids net.',
+    permissions: ['products:read', 'campaigns:read', 'warehouses:read', 'lots:read', 'deliveries:read', 'deliveries:weigh', 'messages:use', 'sync:use'],
+    hidden: ['Caisse et comptabilité', 'Finances', 'Équipe', 'Préfinancement'],
+  },
+  analyste: {
+    name: 'Analyste',
+    description: 'Chez l\'exportateur : saisit les résultats de l\'analyse des livraisons (humidité, grainage, défauts), décide et produit le bulletin de pesée.',
+    permissions: ['products:read', 'quality:read', 'deliveries:read', 'deliveries:analyse', 'messages:use', 'sync:use'],
+    hidden: ['Caisse et comptabilité', 'Finances', 'Équipe', 'Préfinancement'],
+  },
   caissier: {
     name: 'Caissier',
     description: 'Traite les convois reçus, règle les délégués, tient la caisse et les comptes des délégués.',
-    permissions: ['cash:session', 'products:read', 'partners:read', 'dues:read', 'dues:settle', 'campaigns:read', 'convoys:read', 'convoys:settle', 'cash:operate', 'cash:read', 'savings:read', 'savings:request', 'finance:read', 'accounting:read', 'cancellations:request', 'messages:use', 'sync:use'],
+    permissions: ['deliveries:read', 'deliveries:settle', 'cash:session', 'products:read', 'partners:read', 'dues:read', 'dues:settle', 'campaigns:read', 'convoys:read', 'convoys:settle', 'cash:operate', 'cash:read', 'savings:read', 'savings:request', 'finance:read', 'accounting:read', 'cancellations:request', 'messages:use', 'sync:use'],
     hidden: ['Cartographie', 'Conformité / qualité', 'Équipe', 'Missions', 'Stocks'],
   },
   comptable: {
     name: 'Comptable',
     description: 'Passe et consulte les écritures comptables, suit les comptes financiers ; peut demander l\'annulation de ses écritures.',
-    permissions: ['savings:read', 'savings:request', 'products:read', 'partners:read', 'partners:manage', 'dues:read', 'dues:manage', 'dues:settle', 'loans:read', 'prefinancing:read', 'campaigns:read', 'accounting:read', 'accounting:post', 'finance:read', 'convoys:read', 'cancellations:request', 'messages:use', 'sync:use'],
+    permissions: ['deliveries:read', 'deliveries:settle', 'savings:read', 'savings:request', 'products:read', 'partners:read', 'partners:manage', 'dues:read', 'dues:manage', 'dues:settle', 'loans:read', 'prefinancing:read', 'campaigns:read', 'accounting:read', 'accounting:post', 'finance:read', 'convoys:read', 'cancellations:request', 'messages:use', 'sync:use'],
     hidden: ['Cartographie', 'Conformité / qualité', 'Équipe', 'Missions', 'Stocks'],
   },
   direction: {
@@ -28,7 +40,7 @@ export const STANDARD_ROLES: Record<string, { name: string; description: string;
   responsable_tracabilite: {
     name: 'Responsable de traçabilité',
     description: 'Valide les déclarations d\'achat, suit les lots et les certificats, contrôle la chaîne de traçabilité.',
-    permissions: ['declarations:read', 'declarations:validate', 'producers:read', 'parcels:read', 'lots:read', 'lots:manage', 'receipts:search', 'certificates:read', 'documents:read', 'reports:read', 'alerts:read', 'dispatch:manage', 'messages:use', 'sync:use'],
+    permissions: ['declarations:read', 'declarations:validate', 'producers:read', 'parcels:read', 'lots:read', 'lots:manage', 'receipts:search', 'certificates:read', 'documents:read', 'reports:read', 'alerts:read', 'dispatch:manage', 'deliveries:read', 'messages:use', 'sync:use'],
     hidden: ['Caisse et comptabilité', 'Finances'],
   },
   responsable_cartographie: {

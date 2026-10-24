@@ -1,7 +1,7 @@
 import { Body, Controller, Get, NotFoundException, Param, ParseUUIDPipe, Post, Req } from '@nestjs/common';
 import { assertStrongPassword } from '../auth/password-policy';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { IsEmail, IsOptional, IsString, Length, Matches, MinLength } from 'class-validator';
+import { IsEmail, IsIn, IsOptional, IsString, Length, Matches, MinLength } from 'class-validator';
 import { NoOrg, PlatformAdminOnly } from '../access/decorators';
 import { AuditService } from '../audit/audit.service';
 import { AuthService } from '../auth/auth.service';
@@ -17,6 +17,7 @@ class CreateOrganizationDto {
   @Matches(/^[A-Z0-9_-]{2,20}$/) code: string;
   @IsString() @Length(2, 200) name: string;
   @IsOptional() @Length(2, 2) country_code?: string;
+  @IsOptional() @IsIn(['cooperative', 'exporter']) kind?: 'cooperative' | 'exporter';
 }
 
 @ApiTags('organizations')
@@ -34,7 +35,7 @@ export class OrganizationsController {
   @Get()
   mine(@Req() req: any) {
     return this.db.query(
-      `SELECT DISTINCT o.id, o.code, o.name, o.country_code
+      `SELECT DISTINCT o.id, o.code, o.name, o.country_code, o.kind
          FROM organizations o JOIN user_organizations uo ON uo.organization_id = o.id
         WHERE uo.user_id = $1 AND uo.status = 'active' AND o.status = 'active'
         ORDER BY o.name`,
@@ -69,9 +70,9 @@ export class OrganizationsController {
   @Post()
   async create(@Body() b: CreateOrganizationDto, @Req() req: any) {
     const [org] = await this.db.query(
-      `INSERT INTO organizations(code, name, country_code, created_by) VALUES ($1,$2,$3,$4)
-       RETURNING id, code, name, country_code, status`,
-      [b.code, b.name, (b.country_code ?? 'CI').toUpperCase(), req.user.id],
+      `INSERT INTO organizations(code, name, country_code, kind, created_by) VALUES ($1,$2,$3,$4,$5)
+       RETURNING id, code, name, country_code, kind, status`,
+      [b.code, b.name, (b.country_code ?? 'CI').toUpperCase(), b.kind ?? 'cooperative', req.user.id],
     );
     // Rôles de l'organisation : copie du jeu minimal (administrateur de coopérative)
     await this.db.tx(org.id, async (c) => {

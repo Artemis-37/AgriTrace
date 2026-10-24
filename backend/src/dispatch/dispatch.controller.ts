@@ -10,6 +10,7 @@ import { AuditService } from '../audit/audit.service';
 import { DbService } from '../db/db.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { FICHE_TEMPLATE_B64 } from './template';
+import { nextDeliveryNumber } from '../deliveries/deliveries.controller';
 
 const XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 const MAX_IMPORT_BYTES = 5 * 1024 * 1024;
@@ -32,7 +33,7 @@ export class CreateSheetDto {
   @IsOptional() @IsString() @Length(0, 120) adg_name?: string;
   @IsOptional() @IsString() @Length(0, 120) warehouse_keeper_name?: string;
 }
-export class TransmitDto { @IsUUID() exporter_user_id: string; }
+export class TransmitDto { @IsOptional() @IsUUID() exporter_user_id?: string; @IsOptional() @IsUUID() destination_org_id?: string; }
 
 /** Lignes (un producteur par achat) d'un ou plusieurs convois reçus. Le poids net livré répartit le poids net pesé au magasin au prorata des quantités déclarées. */
 async function convoyLines(c: PoolClient, ids: string[]) {
@@ -267,6 +268,28 @@ export class DispatchController {
     const row = await this.db.tx(req.org.id, async (c) => {
       const s = await this.sheetFor(c, req, id);
       if (s.status === 'transmitted') throw new ConflictException('Cette fiche a déjà été transmise');
+      if (!!b.exporter_user_id === !!b.destination_org_id) throw new BadRequestException('Choisissez un destinataire : un compte exportateur de la coopérative, ou une organisation liée');
+      if (b.destination_org_id) {
+        const dest = (await c.query(
+          `SELECT o.id, o.name FROM org_links l JOIN organizations o ON o.id = CASE WHEN l.from_org_id = $1 THEN l.to_org_id ELSE l.from_org_id END
+            WHERE l.status = 'active' AND o.status = 'active' AND o.id = $2 AND (l.from_org_id = $1 OR l.bidirectional) LIMIT 1`, [req.org.id, b.destination_org_id])).rows[0];
+        if (!dest) throw new BadRequestException('Aucun lien actif vous autorise à livrer à cette organisation');
+        const t = (await c.query(`UPDATE dispatch_sheets SET status = 'transmitted', destination_org_id = $2, exporter_name = $3, transmitted_at = now(), transmitted_by = $4 WHERE id = $1 RETURNING *`, [id, dest.id, dest.name, req.user.id])).rows[0];
+        const srcName = (await c.query(`SELECT name FROM organizations WHERE id = $1`, [req.org.id])).rows[0]?.name ?? '';
+        // Création de la livraison chez le destinataire (transaction propre : si elle échoue, la transmission est annulée)
+        const deliveryId = await this.db.tx(dest.id, async (dc) => {
+          const number = await nextDeliveryNumber(dc, dest.id);
+          const d = (await dc.query(
+            `INSERT INTO deliveries(organization_id, source_org_id, source_org_name, source_sheet_id, source_sheet_no, number, driver_name, truck_no, trailer_no, declared_kg, declared_bags, lot_id_dse, bl_no, departure_date, cocoa_type, certifications, lines)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17::jsonb) ON CONFLICT (organization_id, source_org_id, source_sheet_id) DO NOTHING RETURNING id`,
+            [dest.id, req.org.id, srcName, t.id, t.number, number, t.driver_name, t.truck_no, t.trailer_no, t.declared_kg ?? 0, t.declared_bags ?? 0, t.lot_id_dse, t.bl_no, t.departure_date, t.cocoa_type, t.certifications ?? [], JSON.stringify(t.lines ?? [])])).rows[0];
+          const did = d?.id ?? (await dc.query(`SELECT id FROM deliveries WHERE source_org_id = $1 AND source_sheet_id = $2`, [req.org.id, t.id])).rows[0].id;
+          const ids = (await dc.query(`SELECT DISTINCT uo.user_id FROM user_organizations uo JOIN role_permissions rp ON rp.role_id = uo.role_id WHERE uo.organization_id = $1 AND uo.status = 'active' AND rp.permission_code = 'deliveries:weigh'`, [dest.id])).rows.map((r) => r.user_id);
+          if (ids.length) await this.notif.notifyUsers(dc, dest.id, ids, { kind: 'delivery', severity: 'info', title: `Livraison de ${srcName} attendue`, body: `${Number(t.declared_kg ?? 0)} kg · camion ${t.truck_no ?? ''} · fiche ${t.number}`, entityType: 'delivery', entityId: did, dedupe: `delivery:${did}:new` });
+          return did;
+        });
+        return t;
+      }
       const ex = (await c.query(
         `SELECT u.id, u.full_name FROM users u JOIN user_organizations uo ON uo.user_id = u.id AND uo.organization_id = $2 AND uo.status = 'active'
            JOIN role_permissions rp ON rp.role_id = uo.role_id AND rp.permission_code = 'dispatch:read'
