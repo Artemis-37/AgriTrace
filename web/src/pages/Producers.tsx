@@ -27,6 +27,7 @@ export default function Producers() {
   const [importing, setImporting] = useState(false);
   const [editing, setEditing] = useState(false);
   const [chg, setChg] = useState<any | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [prof, setProf] = useState<any | null>(null);
   const [sel, setSel] = useState<string | null>(null);
   const [tab, setTab] = useState<PTab>('info');
@@ -67,6 +68,7 @@ export default function Producers() {
           {can('producers:import') && can('producers:create') && <button className="btn btn-secondary" onClick={() => setImporting(true)}>Importer (Excel)</button>}
           {can('producers:update') && <button className="btn btn-secondary" disabled={!cur} onClick={() => setEditing(true)}>Modifier</button>}
           {can('producers:status') && <button className="btn btn-secondary" disabled={!cur || cur.status === 'archived'} onClick={() => cur && setChg(cur)}>Statut</button>}
+          {can('producers:delete') && <button className="btn btn-secondary" onClick={() => setDeleting(true)}>Supprimer…</button>}
           <button className="btn btn-secondary" onClick={() => window.print()}>Imprimer</button>
         </>}>
         {loading && !rows.length ? <Loading /> : !cur ? <p className="muted">Choisissez un producteur dans la liste.</p> : (
@@ -102,6 +104,7 @@ export default function Producers() {
         )}
       </Registre>
       {prof && <ProducerProfile p={prof} onClose={() => setProf(null)} />}
+      {deleting && <DeleteProducers initial={cur?.id ?? null} onClose={() => setDeleting(false)} onDone={() => { setSel(null); reload(); }} />}
       {chg && <ChangeStatus p={chg} onClose={() => setChg(null)} onDone={() => { setChg(null); reload(); }} />}
       {importing && <ImportProducers onClose={() => setImporting(false)} onDone={() => reload()} />}
       {creating && <NewProducer onClose={() => setCreating(false)} onDone={() => { setCreating(false); reload(); }} />}
@@ -183,6 +186,45 @@ function NewProducer({ onClose, onDone }: { onClose: () => void; onDone: () => v
         {error && <ErrorBox message={error} />}
         <div className="modal-foot"><button type="button" className="btn btn-secondary" onClick={onClose}>Annuler</button><button className="btn" disabled={busy || !codeOk}>{busy ? 'Enregistrement…' : 'Enregistrer'}</button></div>
       </form>
+    </Modal>
+  );
+}
+
+function DeleteProducers({ initial, onClose, onDone }: { initial: string | null; onClose: () => void; onDone: () => void }) {
+  const [q, setQ] = useState('');
+  const [qd, setQd] = useState('');
+  const [picked, setPicked] = useState<Map<string, string>>(new Map());
+  const [confirmText, setConfirmText] = useState('');
+  const [result, setResult] = useState<{ deleted: any[]; blocked: any[] } | null>(null);
+  const { busy, error, run } = useAction();
+  useEffect(() => { const t = setTimeout(() => setQd(q.trim()), 250); return () => clearTimeout(t); }, [q]);
+  const list = useAsync(() => get<any[]>(`/producers?limit=200${qd ? `&q=${encodeURIComponent(qd)}` : ''}`), [qd]);
+  const rows = list.data ?? [];
+  const toggle = (p: any) => setPicked((m) => { const n = new Map(m); if (n.has(p.id)) n.delete(p.id); else n.set(p.id, p.internal_code); return n; });
+  const allShown = rows.length > 0 && rows.every((p) => picked.has(p.id));
+  const toggleAll = () => setPicked((m) => { const n = new Map(m); for (const p of rows) { if (allShown) n.delete(p.id); else n.set(p.id, p.internal_code); } return n; });
+  useEffect(() => { if (initial && rows.length) { const p = rows.find((x) => x.id === initial); if (p && !picked.size) toggle(p); } /* présélection : le producteur affiché */ }, [list.data]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (result) return (
+    <Modal title="Suppression terminée" onClose={() => { onDone(); onClose(); }}>
+      <p><strong>{result.deleted.length}</strong> producteur(s) supprimé(s).</p>
+      {result.blocked.length > 0 && <><p>{result.blocked.length} non supprimé(s) :</p><ul>{result.blocked.map((b) => <li key={b.id}><code>{b.code ?? '?'}</code> {b.reason}</li>)}</ul></>}
+      <div className="modal-foot"><button className="btn" onClick={() => { onDone(); onClose(); }}>Fermer</button></div>
+    </Modal>
+  );
+  return (
+    <Modal title="Supprimer des producteurs" onClose={onClose}>
+      <p className="muted">Suppression définitive. Un producteur qui a déjà des opérations (déclarations, paiements, missions…) ou des parcelles ne peut pas être supprimé : archivez-le avec « Statut ».</p>
+      <input type="search" aria-label="Rechercher" placeholder="Rechercher (nom, code)" value={q} onChange={(e) => setQ(e.target.value)} />
+      <label style={{ display: 'block', margin: '.5rem 0' }}><input type="checkbox" checked={allShown} onChange={toggleAll} /> Tout sélectionner dans la liste affichée ({rows.length})</label>
+      <div style={{ maxHeight: '16rem', overflow: 'auto', border: '1px solid var(--line)', borderRadius: 8, padding: '.25rem .5rem' }}>
+        {list.loading ? <Loading /> : rows.map((p) => (
+          <label key={p.id} style={{ display: 'flex', gap: '.5rem', padding: '.2rem 0' }}><input type="checkbox" checked={picked.has(p.id)} onChange={() => toggle(p)} /><code>{p.internal_code}</code> {p.last_name} {p.first_names}{p.parcels_count ? <span className="muted"> · {p.parcels_count} parcelle(s)</span> : null}</label>
+        ))}
+      </div>
+      {error && <ErrorBox message={error} />}
+      <Field label={`Pour confirmer la suppression de ${picked.size} producteur(s), écrire SUPPRIMER`}><input value={confirmText} onChange={(e) => setConfirmText(e.target.value)} /></Field>
+      <div className="modal-foot"><button className="btn btn-secondary" onClick={onClose}>Annuler</button>
+        <button className="btn" disabled={busy || !picked.size || confirmText !== 'SUPPRIMER'} onClick={() => run(async () => { setResult(await post<any>('/producers/delete', { ids: [...picked.keys()] })); })}>{busy ? 'Suppression…' : `Supprimer ${picked.size} producteur(s)`}</button></div>
     </Modal>
   );
 }

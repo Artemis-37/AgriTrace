@@ -198,8 +198,10 @@ export class SyncController {
         { key: 'producers', sql: `SELECT p.id, p.internal_code, p.last_name, p.first_names, p.phone, p.region, p.department, p.section, p.village, p.status,
                                           coalesce((SELECT array_agg(value_chain_id) FROM producer_value_chains x WHERE x.producer_id = p.id), '{}') AS value_chain_ids,
                                           p.updated_at AS ts FROM producers p` },
-        { key: 'parcels', sql: `SELECT id, code, producer_id, value_chain_id, declared_area_ha, geometry_area_ha, geometry, verification_status, status, updated_at AS ts FROM parcels
-                                  WHERE status = 'active' AND ($3::boolean OR created_by = $4)`, params: [req.org.permissions.has('parcels:update'), req.user.id] },
+        { key: 'parcels', sql: `SELECT id, code, producer_id, value_chain_id, declared_area_ha, geometry_area_ha, geometry, verification_status, status,
+                                         -- les parcelles importées (créées par un autre utilisateur) sont désormais envoyées : on les représente une fois (horodatage étalé)
+                                         GREATEST(updated_at, TIMESTAMPTZ '2026-10-25 22:15:00+00' + (abs(hashtext(id::text)) % 100000000) * interval '1 microsecond') AS ts FROM parcels
+                                  WHERE status = 'active' AND ($3::boolean OR created_by = $4)`, params: [req.org.permissions.has('parcels:update') || req.org.permissions.has('parcels:read'), req.user.id] },
         { key: 'warehouses', sql: `SELECT id, code, name, status, updated_at AS ts FROM warehouses` },
         { key: 'my_assignments', sql: `SELECT id, collector_id, value_chain_id, zone, created_at AS ts FROM collector_assignments WHERE collector_id = $3`, params: [mine] },
         { key: 'declarations', sql: `SELECT id, collector_id, producer_id, value_chain_id, campaign_id, operation_date, bags, quantity, unit, unit_price, currency, amount,

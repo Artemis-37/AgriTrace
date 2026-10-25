@@ -14,6 +14,10 @@ import {
   duplicateKeys, findInFileDuplicates, ParsedRow, resolveMapping, TARGET_FIELDS, TEMPLATE_HEADERS, validateRow,
 } from './producer-import';
 
+export class DeleteProducersDto {
+  @IsArray() @IsUUID('all', { each: true }) ids: string[];
+}
+
 export class CreateProducerDto {
   /** Identifiant fourni par l'appareil (création hors connexion) : le producteur est utilisable tout de suite sur le téléphone. */
   @IsOptional() @IsUUID() id?: string;
@@ -111,6 +115,42 @@ export class ProducersController {
   sections(@Req() req: any) {
     return this.db.tx(req.org.id, async (c) => (await c.query(
       `SELECT section, count(*)::int AS producers, count(DISTINCT village)::int AS villages FROM producers WHERE section IS NOT NULL AND btrim(section) <> '' GROUP BY section ORDER BY section`)).rows);
+  }
+
+  /**
+   * Suppression définitive d'un ou plusieurs producteurs (administrateur de la coopérative).
+   * Refusée pour un producteur qui a des opérations enregistrées (déclarations, paiements, missions…) : l'archiver à la place.
+   * Un producteur qui a des parcelles est aussi refusé : l'historique des parcelles est immuable (traçabilité).
+   */
+  @Post('delete')
+  @RequirePermissions('producers:delete')
+  async remove(@Body() b: DeleteProducersDto, @Req() req: any) {
+    const ids = [...new Set(b.ids ?? [])];
+    if (!ids.length) throw new BadRequestException('Aucun producteur sélectionné');
+    if (ids.length > 500) throw new BadRequestException('500 producteurs au maximum par opération');
+    const out = await this.db.tx(req.org.id, async (c) => {
+      const deleted: { id: string; code: string; parcels: number }[] = []; const blocked: { id: string; code: string | null; reason: string }[] = [];
+      for (const id of ids) {
+        const p = (await c.query(`SELECT internal_code FROM producers WHERE id = $1`, [id])).rows[0];
+        if (!p) { blocked.push({ id, code: null, reason: 'introuvable' }); continue; }
+        await c.query('SAVEPOINT del');
+        try {
+          const np = (await c.query(`SELECT count(*)::int AS n FROM parcels WHERE producer_id = $1`, [id])).rows[0].n;
+          if (np) { await c.query('ROLLBACK TO SAVEPOINT del'); blocked.push({ id, code: p.internal_code, reason: `a ${np} parcelle(s) : leur historique de traçabilité est conservé, l'archiver plutôt (Statut)` }); continue; }
+          await c.query(`DELETE FROM producer_status_history WHERE producer_id = $1`, [id]);
+          await c.query(`DELETE FROM producers WHERE id = $1`, [id]);
+          await c.query('RELEASE SAVEPOINT del');
+          deleted.push({ id, code: p.internal_code, parcels: 0 });
+        } catch (e: any) {
+          await c.query('ROLLBACK TO SAVEPOINT del');
+          if (e.code !== '23503' && !/immuable/.test(String(e.message))) throw e;
+          blocked.push({ id, code: p.internal_code, reason: 'a des opérations enregistrées (déclarations, paiements, missions…) : l\'archiver plutôt' });
+        }
+      }
+      return { deleted, blocked };
+    });
+    if (out.deleted.length) await this.audit.log({ organizationId: req.org.id, actorUserId: req.user.id, action: 'producer.delete', entityType: 'producer', entityId: out.deleted[0].id, details: { count: out.deleted.length, codes: out.deleted.map((d) => d.code).slice(0, 200) } });
+    return out;
   }
 
   @Get('imports/template')
