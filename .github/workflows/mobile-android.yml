@@ -1,24 +1,40 @@
 name: Application Android
-# Compile l'APK (release) et le publie en artefact. Lancement manuel : onglet Actions → « Application Android » → Run workflow,
-# en indiquant l'adresse de votre serveur (api_base). Sans clé de signature, l'APK est signé avec la clé de débogage :
+# Compile l'APK (release) et le publie en artefact, branché sur VOTRE serveur Render de test :
+#  1. Dépôt GitHub → Settings → Secrets and variables → Actions → onglet « Variables » → New repository variable
+#     nom : RENDER_URL   valeur : l'adresse du service Render, ex. https://agritrace-xxxx.onrender.com  (sans /v1)
+#  2. L'APK se compile alors tout seul à chaque mise à jour du dossier mobile/ ; ou à la main : onglet Actions → « Application Android » → Run workflow
+#     (api_base facultatif : il remplace RENDER_URL). Sans clé de signature, l'APK est signé avec la clé de débogage :
 # suffisant pour l'installer sur des téléphones de test, PAS pour le Play Store (voir docs/DEPOT_ET_COMPILATION.md).
 on:
+  push:
+    branches: [main]
+    paths: ['mobile/**', '.github/workflows/mobile-android.yml']
   workflow_dispatch:
     inputs:
       api_base:
-        description: "Adresse de l'API (ex. https://api.ma-cooperative.org/v1)"
-        required: true
-        default: 'https://api.agritrace.example/v1'
+        description: "Adresse de l'API, facultatif (sinon : variable RENDER_URL + /v1)"
+        required: false
+        default: ''
       version:
         description: 'Version affichée'
-        required: true
-        default: '0.1.0'
+        required: false
+        default: ''
 jobs:
   apk:
     runs-on: ubuntu-latest
     defaults: { run: { working-directory: mobile } }
     steps:
       - uses: actions/checkout@v4
+      - name: Adresse du serveur Render (réveille le service gratuit, vérifie qu'il répond)
+        env: { INPUT_API: '${{ inputs.api_base }}', RENDER_URL: '${{ vars.RENDER_URL }}', INPUT_VER: '${{ inputs.version }}' }
+        run: |
+          API="$INPUT_API"
+          if [ -z "$API" ] && [ -n "$RENDER_URL" ]; then API="${RENDER_URL%/}/v1"; fi
+          if [ -z "$API" ]; then echo "::error::Aucune adresse de serveur : créez la variable de dépôt RENDER_URL (ex. https://agritrace-xxxx.onrender.com) ou renseignez api_base"; exit 1; fi
+          echo "API_BASE_URL=$API" >> "$GITHUB_ENV"
+          echo "APP_VER=${INPUT_VER:-0.1.${{ github.run_number }}}" >> "$GITHUB_ENV"
+          for i in 1 2 3 4 5 6; do code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 60 "${API%/v1}/v1/health" || true); echo "essai $i : HTTP $code"; [ "$code" = 200 ] && break; sleep 20; done
+          [ "$code" = 200 ] || echo "::warning::Le serveur ne répond pas encore (200 attendu) : l'APK est compilé quand même, mais vérifiez le déploiement Render"
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: 17 }
       - uses: subosito/flutter-action@v2
@@ -36,7 +52,7 @@ jobs:
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          B="--release --dart-define=API_BASE=${{ inputs.api_base }} --dart-define=APP_VERSION=${{ inputs.version }}"
+          B="--release --dart-define=API_BASE=$API_BASE_URL --dart-define=APP_VERSION=$APP_VER"
           flutter build apk $B || (rm -rf $ANDROID_HOME/ndk && flutter build apk $B)
       - uses: actions/upload-artifact@v4
         with: { name: agritrace-apk, path: mobile/build/app/outputs/flutter-apk/app-release.apk }

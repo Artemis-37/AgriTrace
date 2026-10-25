@@ -280,7 +280,8 @@ export class ConvoysController {
     return this.db.tx(req.org.id, async (c) => (await c.query(
       `SELECT r.id, r.bulletin_no, v.convoy_no, r.received_at, u.full_name AS collector_name,
               (SELECT mc.code FROM member_codes mc WHERE mc.user_id = k.user_id AND mc.organization_id = k.organization_id) AS collector_code,
-              k.origin, r.bags, r.gross_kg, r.refaction_kg, r.total_kg, r.grade, r.status, r.unit_price, r.amount, r.settled_at, r.variance_kg, r.product_id, r.campaign_id, p.name AS product, cp.name AS campaign
+              k.origin, r.bags, r.gross_kg, r.refaction_kg, r.total_kg, r.grade, r.status, r.unit_price, r.amount, r.settled_at, r.variance_kg, r.product_id, r.campaign_id, p.name AS product, cp.name AS campaign, cp.traite,
+              (SELECT pp.buy_price_per_kg FROM product_prices pp WHERE pp.product_id = r.product_id AND pp.campaign_id = r.campaign_id AND pp.buy_price_per_kg IS NOT NULL ORDER BY pp.created_at DESC LIMIT 1) AS traite_price
          FROM convoy_receptions r LEFT JOIN products p ON p.id = r.product_id LEFT JOIN campaigns cp ON cp.id = r.campaign_id JOIN convoys v ON v.id = r.convoy_id JOIN collectors k ON k.id = v.collector_id JOIN users u ON u.id = k.user_id
         WHERE ($1::boolean OR k.user_id = $2)
           AND ($3::text IS NULL OR ($3 = 'settled' AND r.status = 'settled') OR ($3 = 'pending' AND r.status <> 'settled'))
@@ -496,7 +497,7 @@ export class ConvoysController {
       if (b.unit_price !== undefined && Number(b.unit_price) !== Number(official ?? NaN) && !mayPrice)
         throw new ForbiddenException("Le prix au kilo est fixé par l'administrateur de la coopérative : il ne peut pas être saisi en caisse");
       const unitPrice = mayPrice && b.unit_price !== undefined ? b.unit_price : official;
-      if (unitPrice == null) throw new ConflictException("Prix au kilo non fixé pour ce produit et cette traite : l'administrateur doit le renseigner dans Paramètres → Produits et campagnes");
+      if (unitPrice == null) throw new ConflictException("Prix au kilo non fixé pour ce produit dans cette traite : l'administrateur doit le renseigner dans Paramètres → Produits et prix → Traites (bouton « Prix »)");
       if (Number(unitPrice) <= 0) throw new BadRequestException('Prix unitaire doit être supérieur à zéro');
       if (r.status === 'pending_variance') throw new ConflictException('Écart de poids non validé : la réception doit d\'abord être validée par un responsable');
       const v = (await c.query(`SELECT * FROM convoys WHERE id = $1`, [r.convoy_id])).rows[0];

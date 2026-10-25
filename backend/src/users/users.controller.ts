@@ -128,6 +128,8 @@ export class UsersController {
       const role = await this.db.tx(req.org.id, async (c) => {
         const known = await c.query(`SELECT code FROM permissions WHERE code = ANY($1)`, [b.permissions]);
         if (known.rowCount !== new Set(b.permissions).size) throw new BadRequestException('Permission inconnue');
+        // Un rôle type créé automatiquement et encore inutilisé peut être remplacé par un rôle propre de même code.
+        if (STANDARD_ROLES[b.code]) await c.query(`DELETE FROM roles r WHERE r.organization_id = $1 AND r.code = $2 AND NOT EXISTS (SELECT 1 FROM user_organizations uo WHERE uo.role_id = r.id)`, [req.org.id, b.code]);
         const r = await c.query(`INSERT INTO roles(organization_id, code, name, mobile_only) VALUES ($1,$2,$3,$4) RETURNING id, code, name, mobile_only`, [req.org.id, b.code, b.name, b.mobile_only === true]);
         for (const p of new Set(b.permissions))
           await c.query(`INSERT INTO role_permissions(role_id, permission_code) VALUES ($1,$2)`, [r.rows[0].id, p]);
