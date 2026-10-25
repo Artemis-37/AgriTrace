@@ -1,0 +1,19 @@
+# Base de données : une machine avec un volume, joignable uniquement par le réseau privé Fly (aucune adresse publique).
+app = "REMPLACER-agritrace-db"
+primary_region = "cdg"
+
+[build]
+  dockerfile = "Dockerfile.db"
+
+[env]
+  POSTGRES_USER = "agritrace_owner"
+  POSTGRES_DB = "agritrace"
+  PGDATA = "/var/lib/postgresql/data/pgdata"
+
+[[mounts]]
+  source = "pgdata"
+  destination = "/var/lib/postgresql/data"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"
