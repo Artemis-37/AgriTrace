@@ -21,7 +21,7 @@ export interface Item {
 }
 
 const CANDIDATES: Record<string, string[]> = {
-  producer_field: ['producer_code', 'code_producteur', 'codeproducteur', 'producteur', 'prod_code', 'producer_c', 'producer', 'code_prod'],
+  producer_field: ['producer_code', 'code_producteur', 'codeproducteur', 'producteur', 'prod_code', 'producer_c', 'producer', 'code_prod', 'id_producteur', 'idproducteur', 'id_producer', 'matricule', 'code_planteur'],
   parcel_code_field: ['parcel_code', 'code_parcelle', 'parcel_cod', 'parcelle', 'codeparcelle'],
   value_chain_field: ['filiere', 'filière', 'value_chain', 'chain', 'culture'],
   declared_area_field: ['declared_area_ha', 'declared_a', 'decl_ha', 'superficie_declaree', 'surface_declaree', 'declared_ha', 'superficie_ha'],
@@ -35,11 +35,13 @@ export function detectFields(features: RawFeature[], opt: ImportOptions): { opt:
   const cols = new Set<string>();
   for (const f of features.slice(0, 200)) for (const k of Object.keys(f.props)) cols.add(k);
   const columns = [...cols];
-  const lower = new Map(columns.map((c) => [c.toLowerCase(), c]));
+  // « Id Producteur », « id-producteur » et « ID_PRODUCTEUR » sont la même colonne ; accents ignorés
+  const norm = (c: string) => c.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/[\s-]+/g, '_');
+  const lower = new Map(columns.map((c) => [norm(c), c]));
   const out: any = { ...opt };
   for (const [field, names] of Object.entries(CANDIDATES)) {
     if (out[field]) continue;
-    for (const n of names) if (lower.has(n)) { out[field] = lower.get(n); break; }
+    for (const n of names) if (lower.has(norm(n))) { out[field] = lower.get(norm(n)); break; }
   }
   return { opt: out, columns };
 }
