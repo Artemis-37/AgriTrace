@@ -1,9 +1,9 @@
 # Application : API + portail web. Le nom doit être unique sur Fly (adresse : https://<nom>.fly.dev).
-app = "REMPLACER-agritrace"
+app = "agritrace"
 primary_region = "cdg"
 
 [build]
-  dockerfile = "Dockerfile.app"
+  dockerfile = "Dockerfile"
 
 [env]
   NODE_ENV = "production"

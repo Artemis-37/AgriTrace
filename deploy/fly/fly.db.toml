@@ -1,5 +1,5 @@
 # Base de données : une machine avec un volume, joignable uniquement par le réseau privé Fly (aucune adresse publique).
-app = "REMPLACER-agritrace-db"
+app = "agritrace-db"
 primary_region = "cdg"
 
 [build]

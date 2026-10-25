@@ -8,12 +8,12 @@ winget install Fly-io.flyctl      # ou : iwr https://fly.io/install.ps1 -useb | 
 fly auth login
 cd <dossier du dépôt>             # la racine (là où se trouvent backend, web, deploy)
 ```
-Choisissez deux noms uniques, par exemple `monessai-agritrace` et `monessai-agritrace-db`, et remplacez `REMPLACER-agritrace` / `REMPLACER-agritrace-db` dans `deploy/fly/fly.app.toml` et `fly.db.toml`. Ci-dessous : `$APP` et `$DB`.
+Les fichiers sont prêts pour deux applications nommées `agritrace` (le `fly.toml` à la racine du dépôt) et `agritrace-db` (`deploy/fly/fly.db.toml`). Si un nom est déjà pris sur Fly, changez-le dans le fichier correspondant et dans les variables ci-dessous. L'application peut aussi être déployée depuis le tableau de bord Fly (« Launch from GitHub ») : il trouve le `Dockerfile` et le `fly.toml` à la racine ; **mais il faut d'abord créer la base (étape 1) et saisir les secrets (étape 2)**, sinon la migration échoue.
 
 Mots de passe et clés (à garder dans un coffre, surtout `DOCUMENTS_KEY` et `SECRETS_KEY` : sans elles, documents et secrets sont perdus) :
 ```powershell
 function Cle($n){ $b = New-Object byte[] $n; [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b); [Convert]::ToBase64String($b) }
-$APP="monessai-agritrace"; $DB="monessai-agritrace-db"
+$APP="agritrace"; $DB="agritrace-db"
 $OWNER=(Cle 24).Replace("+","A").Replace("/","B").Replace("=","")
 $APPPW=(Cle 24).Replace("+","A").Replace("/","B").Replace("=","")
 ```
@@ -28,16 +28,16 @@ fly deploy --config deploy/fly/fly.db.toml --app $DB --ha=false
 
 ## 2. L'application
 ```powershell
-fly apps create $APP
+fly apps create $APP   # inutile si l'application existe déjà (créée depuis le tableau de bord)
 fly volumes create documents --app $APP --region cdg --size 1 -y
 fly secrets set --app $APP `
   DATABASE_URL="postgres://agritrace_app:$APPPW@$DB.internal:5432/agritrace" `
   OWNER_DATABASE_URL="postgres://agritrace_owner:$OWNER@$DB.internal:5432/agritrace" `
   JWT_SECRET="$(Cle 48)" DOCUMENTS_KEY="$(Cle 32)" SECRETS_KEY="$(Cle 32)" `
   CORS_ORIGINS="https://$APP.fly.dev" BOOTSTRAP_TOKEN="$(Cle 24)" --stage
-fly deploy --config deploy/fly/fly.app.toml --app $APP --ha=false
+fly deploy --app $APP --ha=false
 ```
-Le déploiement lance les migrations (« release command ») avant de démarrer l'API. Adresse : `https://monessai-agritrace.fly.dev`.
+Le déploiement lance les migrations (« release command ») avant de démarrer l'API. Adresse : `https://agritrace.fly.dev`.
 
 ## 3. Premier compte et données fictives
 ```powershell
