@@ -47,13 +47,19 @@ if [ -n "${ADMIN_EMAIL:-}" ] && [ -n "${ADMIN_PASSWORD:-}" ]; then
   DATABASE_URL="$OWNER_URL" gosu postgres node scripts/create-platform-admin.js "$ADMIN_EMAIL" "Administrateur de la plateforme" || true
 fi
 
+SEED_NOW=0
+if [ "${SEED_DEMO:-0}" = 1 ] && [ -n "${ADMIN_EMAIL:-}" ] && [ ! -f /data/.demo-seeded ]; then
+  SEED_NOW=1
+  # Le chargement de la démonstration ouvre une session par compte : limites de débit relevées jusqu'au prochain redémarrage.
+  export LOGIN_THROTTLE_LIMIT=100000 THROTTLE_LIMIT=100000
+fi
 echo "[start] API"
 gosu postgres node dist/main &
 API=$!
 trap 'kill -TERM $API 2>/dev/null || true; wait $API 2>/dev/null || true; gosu postgres "$PGBIN/pg_ctl" -D "$PGDATA" -m fast -w stop || true; exit 0' TERM INT
 
 # Données fictives de démonstration, une seule fois, si SEED_DEMO=1 (et ADMIN_EMAIL / ADMIN_PASSWORD définis).
-if [ "${SEED_DEMO:-0}" = 1 ] && [ -n "${ADMIN_EMAIL:-}" ] && [ ! -f /data/.demo-seeded ]; then
+if [ "$SEED_NOW" = 1 ]; then
   ( for i in $(seq 1 60); do node -e "fetch('http://127.0.0.1:3000/v1/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))" && break; sleep 2; done
     API=http://127.0.0.1:3000/v1 DEMO_NO_DOC=1 gosu postgres node scripts/seed-demo-complet.js && touch /data/.demo-seeded ) &
 fi
