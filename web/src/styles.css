@@ -676,3 +676,10 @@ tbody tr:hover { background: color-mix(in srgb, var(--c-lime) 35%, transparent);
 @media (max-width: 760px) { .form-grid { grid-template-columns: 1fr; } }
 .row-menu > summary { white-space: nowrap; }
 .chips { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: .6rem; } .chip .link-btn { padding: 0 .4rem; font-weight: 700; }
+
+/* Panneaux déroulants de la barre de titre : texte foncé sur fond clair (ne pas hériter du blanc de la barre) */
+.bell-panel, .conn-panel { color: var(--carbon); }
+.bell-panel .muted, .conn-panel .muted { color: var(--muted); }
+.bell-panel .btn-secondary { color: var(--carbon); }
+.bell-panel small { opacity: 1; color: var(--muted); }
+.bell-panel li.is-read { opacity: .75; }
