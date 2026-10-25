@@ -273,7 +273,7 @@ function ProfileCard() {
         <Field label="Langue par défaut"><select value={v.default_language ?? 'fr'} onChange={set('default_language')}><option value="fr">Français</option><option value="en">English</option></select></Field>
       </div>}
       {act.error && <ErrorBox message={act.error} />}
-      <div className="toolbar"><button className="btn" disabled={act.busy || !f} onClick={async () => { if (await act.run(() => put('/organization/profile', f))) { setF(null); reload(); } }}>Enregistrer le profil</button></div>
+      <div className="toolbar"><button className="btn" disabled={act.busy || !f} onClick={async () => { if (await act.run(() => put('/organization/profile', Object.fromEntries(['commercial_name', 'address', 'phone', 'email', 'currency', 'default_language', 'ccc_code'].filter((k) => f[k] !== undefined && f[k] !== null).map((k) => [k, f[k]]))))) { setF(null); reload(); } }}>Enregistrer le profil</button></div>
     </Card>
   );
 }
