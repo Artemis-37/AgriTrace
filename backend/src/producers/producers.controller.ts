@@ -1,6 +1,6 @@
 import {
   BadRequestException, Body, ConflictException, Controller, Get, NotFoundException, Param, ParseUUIDPipe,
-  Post, Query, Req, StreamableFile, UploadedFile, UseInterceptors,
+  Post, Put, Query, Req, StreamableFile, UploadedFile, UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiHeader, ApiTags } from '@nestjs/swagger';
@@ -43,6 +43,23 @@ const MAX_IMPORT_ROWS = 5000;
 @ApiTags('producteurs')
 @ApiBearerAuth()
 @ApiHeader({ name: 'X-Organization-Id', required: true })
+export class UpdateProducerDto {
+  @IsOptional() @IsIn(['male', 'female']) gender?: string;
+  @IsOptional() @IsString() @Length(1, 100) last_name?: string;
+  @IsOptional() @IsString() @Length(1, 150) first_names?: string;
+  @IsOptional() @IsString() @Length(0, 20) phone?: string;
+  @IsOptional() @IsString() @Length(0, 100) region?: string;
+  @IsOptional() @IsString() @Length(0, 100) department?: string;
+  @IsOptional() @IsString() @Length(0, 100) section?: string;
+  @IsOptional() @IsString() @Length(0, 100) village?: string;
+  @IsOptional() @IsString() @Length(0, 10) birth_date?: string;
+  @IsOptional() @IsString() @Length(0, 40) id_doc_type?: string;
+  @IsOptional() @IsString() @Length(0, 60) id_doc_number?: string;
+  @IsOptional() @IsString() @Length(0, 20) area_ha?: string;
+  @IsOptional() @IsString() @Length(0, 20) estimated_kg?: string;
+  @IsOptional() @IsArray() @IsUUID('all', { each: true }) value_chain_ids?: string[];
+}
+
 @Controller('producers')
 export class ProducersController {
   constructor(private readonly db: DbService, private readonly audit: AuditService) {}
@@ -72,7 +89,8 @@ export class ProducersController {
     const staff = req.org.permissions.has('declarations:validate');
     return this.db.tx(req.org.id, async (c) =>
       (await c.query(
-        `SELECT p.id, p.internal_code, p.last_name, p.first_names, p.phone, p.region, p.department, p.section, p.village, p.joined_on, p.status, p.area_ha, p.estimated_kg
+        `SELECT p.id, p.internal_code, p.last_name, p.first_names, p.phone, p.region, p.department, p.section, p.village, p.joined_on, p.status, p.area_ha, p.estimated_kg, p.gender,
+                (SELECT coalesce(json_agg(x.value_chain_id), '[]') FROM producer_value_chains x WHERE x.producer_id = p.id) AS value_chain_ids
            FROM producers p
           WHERE ($1::text IS NULL OR lower(p.internal_code) LIKE $1 OR lower(p.last_name) LIKE $1 OR lower(p.first_names) LIKE $1 OR coalesce(p.phone,'') LIKE $1)
             AND ($2::text IS NULL OR p.section = $2) AND ($3::text IS NULL OR p.village = $3)
@@ -154,6 +172,36 @@ export class ProducersController {
     });
     await this.audit.log({ organizationId: req.org.id, actorUserId: req.user.id, action: 'producer.create', entityType: 'producer', entityId: out.producer.id });
     return out; // les doublons potentiels sont signalés, jamais fusionnés automatiquement
+  }
+
+  /** Modification de la fiche d'un producteur (identité, localisation, pièce, superficie, filières). Le code et le statut ne changent pas ici. */
+  @Put(':id')
+  @RequirePermissions('producers:update')
+  async update(@Param('id', ParseUUIDPipe) id: string, @Body() b: UpdateProducerDto, @Req() req: any) {
+    const cols = ['gender', 'last_name', 'first_names', 'phone', 'region', 'department', 'section', 'village', 'birth_date', 'id_doc_type', 'id_doc_number', 'area_ha', 'estimated_kg'] as const;
+    if (b.phone && !/^\+?\d{8,15}$/.test(b.phone)) throw new BadRequestException('Téléphone : format international, par exemple +2250701020304');
+    if (b.area_ha && !/^\d+(\.\d{1,4})?$/.test(b.area_ha)) throw new BadRequestException('Superficie invalide');
+    if (b.estimated_kg && !/^\d+(\.\d{1,2})?$/.test(b.estimated_kg)) throw new BadRequestException('Estimation invalide');
+    if (b.birth_date && !/^\d{4}-\d{2}-\d{2}$/.test(b.birth_date)) throw new BadRequestException('Date de naissance : AAAA-MM-JJ');
+    const out = await this.db.tx(req.org.id, async (c) => {
+      const sets: string[] = []; const vals: any[] = [id, req.user.id];
+      for (const k of cols) if (b[k] !== undefined) { vals.push((b[k] as string).trim?.() === '' ? null : b[k]); sets.push(`${k} = $${vals.length}`); }
+      if (b.value_chain_ids) {
+        for (const vc of b.value_chain_ids) if (!(await c.query(`SELECT 1 FROM value_chains WHERE id = $1`, [vc])).rowCount) throw new BadRequestException('Filière inconnue');
+      }
+      if (!sets.length && !b.value_chain_ids) throw new BadRequestException('Aucune information à modifier');
+      const row = sets.length
+        ? (await c.query(`UPDATE producers SET ${sets.join(', ')}, updated_at = now(), updated_by = $2, version = version + 1 WHERE id = $1 RETURNING *`, vals)).rows[0]
+        : (await c.query(`SELECT * FROM producers WHERE id = $1`, [id])).rows[0];
+      if (!row) throw new NotFoundException();
+      if (b.value_chain_ids) {
+        await c.query(`DELETE FROM producer_value_chains WHERE producer_id = $1`, [id]);
+        for (const vc of b.value_chain_ids) await c.query(`INSERT INTO producer_value_chains(producer_id, value_chain_id, organization_id) VALUES ($1,$2,$3)`, [id, vc, req.org.id]);
+      }
+      return row;
+    });
+    await this.audit.log({ organizationId: req.org.id, actorUserId: req.user.id, action: 'producer.update', entityType: 'producer', entityId: id, details: { fields: cols.filter((k) => b[k] !== undefined), value_chains: b.value_chain_ids !== undefined } });
+    return out;
   }
 
   /**

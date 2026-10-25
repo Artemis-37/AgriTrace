@@ -2,14 +2,15 @@ import { useState } from 'react';
 import { del, get, post, put } from '../api';
 import { getChains } from '../chains';
 import { useAuth } from '../auth';
-import { Card, ErrorBox, Field, Loading, Modal, PageHeader, Tabs, useAction, useAsync } from '../ui';
+import { ErrorBox, Field, Loading, Modal, Tabs, useAction, useAsync } from '../ui';
+import { FicheRow, Registre } from '../Registre';
 import { Fiche } from './Convois';
 import { RTYPE } from './Rapports';
 
 const DOC: Record<string, string> = { cni: "Carte nationale d'identité", passeport: 'Passeport', attestation: "Attestation d'identité", permis: 'Permis de conduire', autre: 'Autre pièce' };
 type Tab = 'info' | 'id' | 'transport' | 'retenues' | 'account';
 
-/** Fiche des délégués : liste à gauche (recherche par code ou nom), fiche à onglets à droite. */
+/** Délégués : liste en haut (une ligne par délégué), boutons à droite, fiche à onglets en dessous. */
 export default function Delegues() {
   const { can } = useAuth();
   const { data, loading, error, reload } = useAsync(() => get<any[]>('/collectors'), []);
@@ -18,45 +19,48 @@ export default function Delegues() {
   const [tab, setTab] = useState<Tab>('info');
   const [edit, setEdit] = useState(false);
   const [add, setAdd] = useState(false);
-  const rows = (data ?? []).filter((c) => !q.trim() || `${c.member_code ?? ''} ${c.full_name}`.toLowerCase().includes(q.trim().toLowerCase()));
-  const cur = (data ?? []).find((c) => c.id === sel) ?? null;
-  const tabs: [Tab, string][] = [['info', 'Informations personnelles'], ['id', "Pièce d'identité"]];
-  tabs.push(['transport', 'Transport'], ['retenues', 'Retenues (mise en compte)']);
+  const off = useAction();
+  const rows = (data ?? []).filter((c) => !q.trim() || `${c.member_code ?? ''} ${c.full_name} ${c.origin ?? ''} ${c.phone ?? ''}`.toLowerCase().includes(q.trim().toLowerCase()));
+  const cur = (data ?? []).find((c) => c.id === sel) ?? rows[0] ?? null;
+  const tabs: [Tab, string][] = [['info', 'Infos personnelles'], ['transport', 'Transport'], ['retenues', 'Retenues (mise en compte)'], ['id', "Pièce d'identité"]];
   if (can('convoys:settle')) tabs.push(['account', 'Compte et solde']);
   return (
     <>
-      <PageHeader title="Délégués" subtitle="Fiche de chaque délégué : identité, localité, contact, banque, pièce d'identité et compte." />
       {error && <ErrorBox message={error} onRetry={reload} />}
       {loading ? <Loading /> : (
-        <div className="caisse-layout" style={{ gridTemplateColumns: '18rem 1fr' }}>
-          <Card>
-            {can('collectors:manage') && can('users:create') && <p><button className="btn" onClick={() => setAdd(true)}>+ Nouveau délégué</button></p>}
-            <input type="search" className="search-full" placeholder="Rechercher par code ou nom" aria-label="Rechercher un délégué" value={q} onChange={(e) => setQ(e.target.value)} />
-            <ul className="plain pick-list">
-              {rows.map((c) => <li key={c.id}><button className={sel === c.id ? 'on' : ''} onClick={() => { setSel(c.id); setTab('info'); }}><code>{c.member_code ?? '—'}</code> {c.full_name}{c.status !== 'active' ? ' (désactivé)' : ''}</button></li>)}
-              {!rows.length && <li className="muted">Aucun délégué.</li>}
-            </ul>
-          </Card>
-          <div className="caisse-main">
-            {!cur ? <Card><p className="muted">Choisissez un délégué dans la liste.</p></Card> : (
-              <Card title={`${cur.member_code ?? ''} ${cur.full_name}`.trim()}>
-                <Tabs tabs={tabs} value={tab} onChange={setTab} />
-                {tab === 'info' && (
-                  <dl className="fiche">
-                    <dt>Code</dt><dd>{cur.member_code ?? '—'}</dd><dt>Nom</dt><dd>{cur.full_name}</dd>
-                    <dt>Localité (provenance)</dt><dd>{cur.origin ?? '—'}</dd><dt>Contact</dt><dd>{cur.phone ?? '—'}</dd><dt>E-mail</dt><dd>{cur.email ?? '—'}</dd>
-                    <dt>Banque</dt><dd>{cur.bank_name ?? '—'}</dd><dt>N° de compte</dt><dd>{cur.bank_account ?? '—'}</dd>
-                    <dt>Filières</dt><dd><ChainsOf c={cur} onDone={reload} /></dd>
-                  </dl>
-                )}
-                {tab === 'id' && <dl className="fiche"><dt>Type de pièce</dt><dd>{DOC[cur.id_doc_type] ?? '—'}</dd><dt>N° de la pièce</dt><dd>{cur.id_doc_no ?? '—'}</dd></dl>}
-                {(tab === 'transport' || tab === 'retenues') && <Rates c={cur} kind={tab} onDone={reload} />}
-                {tab === 'account' && <Fiche collectorId={cur.id} />}
-                {['info', 'id'].includes(tab) && can('collectors:manage') && <p><button className="btn" onClick={() => setEdit(true)}>Modifier la fiche</button></p>}
-              </Card>
-            )}
-          </div>
-        </div>
+        <Registre title="Délégués" subtitle="Fiche de chaque délégué : identité, localité, contact, banque, pièce d'identité et compte."
+          rows={rows} selectedId={cur?.id ?? null} onSelect={(c) => { setSel(c.id); }} rowClass={(c) => (c.status !== 'active' ? 'off' : undefined)} empty="Aucun délégué."
+          toolbar={<input type="search" placeholder="Rechercher (code, nom, localité, contact)" aria-label="Rechercher un délégué" value={q} onChange={(e) => setQ(e.target.value)} />}
+          columns={[
+            { header: 'Code', render: (c) => <code>{c.member_code ?? '—'}</code> }, { header: 'Nom', render: (c) => c.full_name },
+            { header: 'Localité', render: (c) => c.origin ?? '' }, { header: 'Contact', render: (c) => c.phone ?? '' },
+            { header: 'Banque', render: (c) => c.bank_name ?? '' }, { header: 'Pièce', render: (c) => DOC[c.id_doc_type] ?? '' }, { header: 'N° pièce', render: (c) => c.id_doc_no ?? '' },
+          ]}
+          actions={<>
+            {can('collectors:manage') && can('users:create') && <button className="btn" onClick={() => setAdd(true)}>Nouveau</button>}
+            {can('collectors:manage') && <button className="btn btn-secondary" disabled={!cur} onClick={() => setEdit(true)}>Modifier</button>}
+            {can('collectors:manage') && <button className="btn btn-secondary" disabled={!cur || cur.status !== 'active' || off.busy} onClick={() => { if (cur && window.confirm(`Désactiver ${cur.full_name} ? Son historique est conservé.`)) off.run(async () => { await post(`/collectors/${cur.id}/disable`); reload(); }); }}>Désactiver</button>}
+            <button className="btn btn-secondary" onClick={() => window.print()}>Imprimer</button>
+            {off.error && <ErrorBox message={off.error} />}
+          </>}>
+          {!cur ? <p className="muted">Choisissez un délégué dans la liste.</p> : (
+            <>
+              <Tabs tabs={tabs} value={tab} onChange={setTab} />
+              {tab === 'info' && (
+                <div className="fiche-form">
+                  <FicheRow label="Code">{cur.member_code ?? '—'}</FicheRow><FicheRow label="Nom">{cur.full_name}</FicheRow>
+                  <FicheRow label="Localité">{cur.origin ?? '—'}</FicheRow><FicheRow label="Contact">{cur.phone ?? '—'}</FicheRow>
+                  <FicheRow label="E-mail">{cur.email ?? '—'}</FicheRow><FicheRow label="Statut">{cur.status === 'active' ? 'Actif' : 'Désactivé'}</FicheRow>
+                  <FicheRow label="Banque">{cur.bank_name ?? '—'}</FicheRow><FicheRow label="N° de compte">{cur.bank_account ?? '—'}</FicheRow>
+                  <FicheRow label="Filières"><ChainsOf c={cur} onDone={reload} /></FicheRow>
+                </div>
+              )}
+              {tab === 'id' && <div className="fiche-form"><FicheRow label="Type de pièce">{DOC[cur.id_doc_type] ?? '—'}</FicheRow><FicheRow label="N° de la pièce">{cur.id_doc_no ?? '—'}</FicheRow></div>}
+              {(tab === 'transport' || tab === 'retenues') && <Rates c={cur} kind={tab} onDone={reload} />}
+              {tab === 'account' && <Fiche collectorId={cur.id} />}
+            </>
+          )}
+        </Registre>
       )}
       {add && <NewDelegate onClose={() => setAdd(false)} onDone={(id) => { setAdd(false); reload(); setSel(id); setTab('info'); }} />}
       {edit && cur && <Edit c={cur} onClose={() => setEdit(false)} onDone={() => { setEdit(false); reload(); }} />}
