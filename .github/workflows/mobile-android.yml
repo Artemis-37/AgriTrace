@@ -54,5 +54,5 @@ jobs:
         run: |
           B="--release --dart-define=API_BASE=$API_BASE_URL --dart-define=APP_VERSION=$APP_VER"
           flutter build apk $B || (rm -rf $ANDROID_HOME/ndk && flutter build apk $B)
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with: { name: agritrace-apk, path: mobile/build/app/outputs/flutter-apk/app-release.apk }
