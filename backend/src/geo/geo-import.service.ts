@@ -7,7 +7,7 @@ import { RawFeature } from './formats';
 import { GeoService } from './geo.service';
 
 export interface ImportOptions {
-  producer_field?: string; parcel_code_field?: string; ignore_parcel_code?: boolean; value_chain_field?: string; value_chain_id?: string;
+  producer_field?: string; producer_name_field?: string; no_name_match?: boolean; parcel_code_field?: string; ignore_parcel_code?: boolean; value_chain_field?: string; value_chain_id?: string;
   declared_area_field?: string; external_id_field?: string; survey_date_field?: string; accuracy_field?: string;
   default_declared_from_measured?: boolean; all_or_nothing?: boolean; assume_wgs84?: boolean; layer?: string;
 }
@@ -21,6 +21,7 @@ export interface Item {
 }
 
 const CANDIDATES: Record<string, string[]> = {
+  producer_name_field: ['nom_du_producteur', 'nom_producteur', 'producer_name', 'nom_complet', 'nom_et_prenoms'],
   producer_field: ['producer_code', 'code_producteur', 'codeproducteur', 'producteur', 'prod_code', 'producer_c', 'producer', 'code_prod', 'id_producteur', 'idproducteur', 'id_producer', 'matricule', 'code_planteur'],
   parcel_code_field: ['parcel_code', 'code_parcelle', 'parcel_cod', 'parcelle', 'codeparcelle'],
   value_chain_field: ['filiere', 'filière', 'value_chain', 'chain', 'culture'],
@@ -64,6 +65,12 @@ export class GeoImportService {
   async analyse(c: PoolClient, features: RawFeature[], opt: ImportOptions, mode: Mode, s: GeoSettings, progress?: (n: number) => Promise<void>): Promise<Item[]> {
     const producers = new Map<string, { id: string; status: string }>();
     for (const p of (await c.query(`SELECT id, internal_code, status FROM producers`)).rows) producers.set(String(p.internal_code).trim().toUpperCase(), { id: p.id, status: p.status });
+    // repli : même nom complet (ordre des mots et accents ignorés), seulement s'il désigne UN SEUL producteur actif
+    const nameKey = (v: string) => v.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z0-9 ]+/g, ' ').split(/\s+/).filter(Boolean).sort().join(' ');
+    const byName = new Map<string, { id: string; status: string }[]>();
+    for (const p of (await c.query(`SELECT id, status, last_name, first_names FROM producers WHERE status = 'active'`)).rows) {
+      const k = nameKey(`${p.last_name} ${p.first_names ?? ''}`); byName.set(k, [...(byName.get(k) ?? []), { id: p.id, status: p.status }]);
+    }
     const chains = (await c.query(`SELECT id, code, name FROM value_chains`)).rows;
     // filière unique du producteur : utilisée quand le fichier n'en indique pas
     const soleChain = new Map<string, string>();
@@ -99,7 +106,9 @@ export class GeoImportService {
       if (!opt.producer_field) reject('producteur_non_renseigné : aucune colonne de code producteur choisie');
       else if (!it.producer_code) reject('producteur_non_renseigné : code producteur vide');
       else {
-        const p = producers.get(it.producer_code.trim().toUpperCase());
+        let p = producers.get(it.producer_code.trim().toUpperCase());
+        const nm = !p && !opt.no_name_match && opt.producer_name_field ? txt(f.props[opt.producer_name_field]) : '';
+        if (nm) { const m = byName.get(nameKey(nm)); if (m?.length === 1) { p = m[0]; it.reasons.push(`info : code « ${it.producer_code} » inconnu, rattaché par le nom « ${nm} »`); } }
         if (!p) reject(`producteur_inconnu : « ${it.producer_code} » n'existe pas dans cette coopérative${typeof f.props[opt.producer_field] === 'number' ? ' (code numérique : zéros initiaux peut-être perdus, utiliser un champ texte)' : ''}`);
         else if (p.status !== 'active') reject(`producteur_inactif : « ${it.producer_code} » (${p.status})`);
         else it.producerId = p.id;
@@ -214,6 +223,7 @@ export class GeoImportService {
       valid: items.filter((i) => !i.hard).length,
       creatable: c('create'), updatable: c('update'), unchanged: c('unchanged'), rejected: c('rejected'), pending_correction: c('quarantined'),
       duplicates_potential: n('duplicate_near'), duplicates_confirmed: n('duplicate_identical', 'duplicate_equivalent') + startsWith('doublon_dans_le_fichier'),
+      linked_by_name: startsWith('info : code'),
       overlaps: n('overlap_partial', 'overlap_inclusion'),
       invalid_geometries: startsWith('géométrie_invalide') + startsWith('géométrie_absente') + startsWith('objet_incompatible'),
       unknown_producers: startsWith('producteur_inconnu'),

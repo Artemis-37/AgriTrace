@@ -142,7 +142,7 @@ function Imports() {
           {columns && <select aria-label="Colonne du code producteur" value={prodCol} onChange={(e) => setProdCol(e.target.value)}>{columns.map((c) => <option key={c} value={c}>Code producteur : {c}</option>)}</select>}
           <button className="btn" disabled={busy} onClick={() => send(mode)}>{busy ? 'Analyse…' : mode === 'simulate' ? 'Analyser' : 'Importer'}</button>
         </div>
-        <p className="muted">Chaque parcelle est rattachée au producteur dont le code figure dans la colonne « code producteur » (majuscules ou minuscules indifférentes). Colonnes reconnues automatiquement : code producteur, filière, superficie déclarée, identifiant externe. Seul le système WGS84 est accepté.</p>
+        <p className="muted">Chaque parcelle est rattachée au producteur dont le code figure dans la colonne « code producteur » (majuscules ou minuscules indifférentes) ; si le code est inconnu, le nom complet du producteur (colonne « Nom du producteur ») sert de repli quand il désigne un seul producteur. Colonnes reconnues automatiquement : code producteur, filière, superficie déclarée, identifiant externe. Seul le système WGS84 est accepté.</p>
         {error && <ErrorBox message={error} />}
         {r && (
           <>
@@ -151,7 +151,7 @@ function Imports() {
             <div className="grid">
               <Stat label="Objets examinés" value={r.examined} /><Stat label="À créer" value={r.creatable} tone="ok" /><Stat label="À mettre à jour" value={r.updatable} tone="info" />
               <Stat label="Inchangés" value={r.unchanged} /><Stat label="Rejetés" value={r.rejected} tone={r.rejected ? 'bad' : 'neutral'} /><Stat label="Chevauchements" value={r.overlaps} tone={r.overlaps ? 'warn' : 'neutral'} />
-              <Stat label="Producteurs inconnus" value={r.unknown_producers} tone={r.unknown_producers ? 'bad' : 'neutral'} /><Stat label="Géométries invalides" value={r.invalid_geometries} tone={r.invalid_geometries ? 'bad' : 'neutral'} />
+              <Stat label="Rattachés par le nom" value={r.linked_by_name ?? 0} tone={r.linked_by_name ? 'info' : 'neutral'} /><Stat label="Producteurs inconnus" value={r.unknown_producers} tone={r.unknown_producers ? 'bad' : 'neutral'} /><Stat label="Géométries invalides" value={r.invalid_geometries} tone={r.invalid_geometries ? 'bad' : 'neutral'} />
             </div>
             <Table rows={((r.anomalies ?? []) as any[]).slice(0, 100).map((x: any, i: number) => ({ ...x, id: String(i) })) as any[]} empty="Aucune anomalie dans le fichier." columns={[
               { header: 'Ligne', render: (x) => x.row }, { header: 'Producteur', render: (x) => x.producer_code ?? '—' },

@@ -101,7 +101,7 @@ export class GeoController {
     catch (e) { if (e instanceof GeoFormatError) throw new UnprocessableEntityException(e.message); throw e; }
     const { opt, columns } = detectFields(parsed.features, options);
     if (!opt.producer_field) throw new BadRequestException({ message: "Colonne du code producteur non identifiée : la préciser dans options.producer_field (le nom affiché du polygone n'est jamais supposé être le code producteur)", columns });
-    for (const k of ['producer_field', 'parcel_code_field', 'value_chain_field', 'declared_area_field', 'external_id_field', 'survey_date_field', 'accuracy_field'] as const)
+    for (const k of ['producer_field', 'producer_name_field', 'parcel_code_field', 'value_chain_field', 'declared_area_field', 'external_id_field', 'survey_date_field', 'accuracy_field'] as const)
       if (opt[k] && !columns.includes(opt[k]!)) throw new BadRequestException({ message: `Colonne « ${opt[k]} » absente du fichier (${k})`, columns });
     const sha = createHash('sha256').update(file.buffer).digest('hex');
     const row = await this.db.tx(req.org.id, async (c) => (await c.query(
