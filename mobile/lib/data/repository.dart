@@ -53,7 +53,8 @@ class Repository {
     if (p.isEmpty) return [];
     final producerChains = (jsonDecode((p.first['value_chain_ids'] as String?) ?? '[]') as List).cast<String>();
     final assigns = await db.raw.query('my_assignments');
-    final allChains = assigns.any((a) => a['value_chain_id'] == null);
+    // Sans affectation de collecteur (coach, cartographe…) : toutes les filières du producteur ; sinon seulement celles affectées.
+    final allChains = assigns.isEmpty || assigns.any((a) => a['value_chain_id'] == null);
     final assigned = assigns.map((a) => a['value_chain_id']).whereType<String>().toSet();
     final chains = await db.raw.query('value_chains', where: "status = 'active'");
     return chains.where((c) {

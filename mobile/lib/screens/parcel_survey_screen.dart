@@ -102,17 +102,26 @@ class _ParcelSurveyScreenState extends State<ParcelSurveyScreen> {
 
   double? get _declaredHa => double.tryParse(_declared.text.trim().replaceAll(',', '.'));
   String? get _traceError => _points.length < 3 ? null : validateTrace(_points);
-  bool get _canSave => _producer != null && _chainId != null && (_declaredHa ?? 0) > 0 && _points.length >= 3 && _traceError == null && !_saving;
+  /// Superficie déclarée facultative : à défaut, la surface mesurée par le relevé est enregistrée comme déclarée.
+  bool get _declaredOk => _declared.text.trim().isEmpty || (_declaredHa ?? 0) > 0;
+  bool get _canSave => _producer != null && _chainId != null && _declaredOk && _points.length >= 3 && _traceError == null && !_saving;
+  String? get _whyNot {
+    if (_saving || _canSave) return null;
+    if (_chainId == null) return _chains.isEmpty ? 'Aucune filière disponible pour ce producteur : synchronisez puis réessayez.' : 'Choisissez la filière.';
+    if (!_declaredOk) return 'La superficie déclarée doit être supérieure à zéro (ou laissez le champ vide).';
+    if (_points.length < 3) return 'Ajoutez au moins 3 points (${_points.length}/3).';
+    return null;
+  }
 
   Future<void> _save() async {
     setState(() => _saving = true);
     final e = widget.existing;
     if (e != null) {
-      await services.repo.queueParcelUpdate(parcelId: e['id'] as String, declaredAreaHa: _declaredHa!.toStringAsFixed(4), geometry: toGeoJson(_points));
+      await services.repo.queueParcelUpdate(parcelId: e['id'] as String, declaredAreaHa: (_declaredHa ?? areaHa(_points)).toStringAsFixed(4), geometry: toGeoJson(_points));
     } else {
       await services.repo.queueParcel(
         producerId: _producer!['id'] as String, valueChainId: _chainId!,
-        declaredAreaHa: _declaredHa!.toStringAsFixed(4), geometry: toGeoJson(_points),
+        declaredAreaHa: (_declaredHa ?? areaHa(_points)).toStringAsFixed(4), geometry: toGeoJson(_points),
       );
     }
     if (!mounted) return;
@@ -145,7 +154,7 @@ class _ParcelSurveyScreenState extends State<ParcelSurveyScreen> {
               value: _chainId, decoration: const InputDecoration(labelText: 'Filière'),
               items: [for (final c in _chains) DropdownMenuItem(value: c['id'] as String, child: Text('${c['name']}'))], onChanged: (v) => setState(() => _chainId = v),
             ),
-          TextField(controller: _declared, decoration: const InputDecoration(labelText: 'Superficie déclarée (ha)'), keyboardType: const TextInputType.numberWithOptions(decimal: true), onChanged: (_) => setState(() {})),
+          TextField(controller: _declared, decoration: const InputDecoration(labelText: 'Superficie déclarée (ha), facultative'), keyboardType: const TextInputType.numberWithOptions(decimal: true), onChanged: (_) => setState(() {})),
           if (widget.existing != null)
             Padding(padding: const EdgeInsets.only(top: 8), child: Text(
                 'Tracé actuel : ${widget.existing!['geometry_area_ha'] ?? '—'} ha. Le nouveau tracé le remplace une fois envoyé ; le serveur le revérifie (chevauchements, écart de superficie) et la parcelle repasse « déclarée ».',
@@ -179,6 +188,7 @@ class _ParcelSurveyScreenState extends State<ParcelSurveyScreen> {
           const SizedBox(height: 8),
           const Text("Placez-vous à chaque angle de la parcelle et ajoutez un point ; le tracé se ferme tout seul. Aucune connexion n'est nécessaire."),
           const SizedBox(height: 16),
+          if (_whyNot != null) Padding(padding: const EdgeInsets.only(bottom: 8), child: Text(_whyNot!, style: TextStyle(color: Colors.orange.shade800))),
           FilledButton(onPressed: _canSave ? _save : null, child: const Text("Enregistrer sur l'appareil")),
         ],
       ]),
