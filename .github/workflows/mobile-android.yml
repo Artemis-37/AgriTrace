@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults: { run: { working-directory: mobile } }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Adresse du serveur Render (réveille le service gratuit, vérifie qu'il répond)
         env:
           INPUT_API: ${{ inputs.api_base }}
