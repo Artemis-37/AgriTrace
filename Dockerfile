@@ -1,12 +1,12 @@
-# Image unique pour Fly.io : API + portail web servi par l'API (WEB_DIR). Contexte de build : la racine du dépôt.
-FROM node:22-slim AS web
+# Image « tout-en-un » pour l'essai sur Fly.io : PostgreSQL 16 + PostGIS, API et portail web dans une même machine (données sur le volume /data).
+FROM node:22-bookworm-slim AS web
 WORKDIR /w
 COPY web/package*.json ./
 RUN npm ci
 COPY web/ ./
 RUN npm run build
 
-FROM node:22-slim AS build
+FROM node:22-bookworm-slim AS build
 WORKDIR /app
 COPY backend/package*.json ./
 RUN npm ci
@@ -14,7 +14,9 @@ COPY backend/tsconfig*.json backend/nest-cli.json* ./
 COPY backend/src ./src
 RUN npm run build && npm prune --omit=dev
 
-FROM node:22-slim
+FROM postgis/postgis:16-3.4
+COPY --from=node:22-bookworm-slim /usr/local/bin/node /usr/local/bin/node
+RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates && rm -rf /var/lib/apt/lists/*
 ENV NODE_ENV=production PORT=3000 WEB_DIR=/app/web DOCUMENTS_DIR=/data/documents
 WORKDIR /app
 COPY --from=build /app/node_modules ./node_modules
@@ -22,9 +24,10 @@ COPY --from=build /app/dist ./dist
 COPY --from=web /w/dist ./web
 COPY backend/package.json ./
 COPY backend/migrations ./migrations
-# seed-demo-complet.js : données FICTIVES, pour l'essai uniquement (à retirer d'une vraie mise en production).
+# seed-demo-complet.js : données FICTIVES, pour l'essai uniquement.
 COPY backend/scripts/migrate.js backend/scripts/create-platform-admin.js backend/scripts/seed-demo-complet.js ./scripts/
-RUN mkdir -p /data/documents && chown -R node:node /data /app
-USER node
+COPY deploy/fly/start.sh /start.sh
+RUN chmod +x /start.sh
 EXPOSE 3000
-CMD ["node","dist/main"]
+ENTRYPOINT []
+CMD ["/start.sh"]
