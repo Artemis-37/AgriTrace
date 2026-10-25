@@ -84,6 +84,14 @@ class SettingsDto {
   @IsOptional() @Dec(3) weight_tolerance_pct?: string;
 }
 class VarianceDto { @IsString() @Length(5, 500) comment: string; }
+/** Motifs reconnus d'un financement remis à un délégué : libellé de l'écriture et classement des mouvements. */
+export const ADVANCE_MOTIVES: Record<string, string> = {
+  finance_cacao: 'Finance cacao (avance de campagne)',
+  avance_achat: 'Avance pour achat de produits',
+  frais_collecte: 'Frais de collecte et de transport',
+  depannage: 'Dépannage / avance au délégué',
+  autre: 'Autre motif',
+};
 export class AdvanceDto {
   @IsString() @Length(8, 100) idempotency_key: string;
   @IsUUID() collector_id: string;
@@ -93,6 +101,14 @@ export class AdvanceDto {
   @IsOptional() @IsString() @Length(1, 60) piece_no?: string;
   @IsOptional() @IsString() @Length(1, 200) label?: string;
   @IsOptional() @IsUUID() cash_session_id?: string;
+  /** Mode de paiement : espèces (sortie de caisse) ou chèque (sortie du compte bancaire). */
+  @IsOptional() @IsIn(['cash', 'cheque']) payment_mode?: string;
+  /** N° du chèque : obligatoire si le paiement est fait par chèque. */
+  @IsOptional() @IsString() @Length(1, 60) cheque_no?: string;
+  @IsOptional() @IsString() @Length(1, 60) slip_no?: string;
+  /** Motif codé (voir ADVANCE_MOTIVES) : le logiciel s'en sert pour classer et libeller le mouvement. */
+  @IsOptional() @IsIn(Object.keys(ADVANCE_MOTIVES)) motive?: string;
+  @IsOptional() @IsUUID() bank_account_id?: string;
   /** Pour reprendre une fiche papier : date réelle de l'opération (jamais dans le futur). */
   @IsOptional() @Matches(/^\d{4}-\d{2}-\d{2}$/) operation_date?: string;
 }
@@ -583,12 +599,21 @@ export class ConvoysController {
   }
 
   /** Financement remis au délégué (« Finance cacao ») ou report du solde de campagne : augmente ce que le délégué doit à la coopérative. */
+  /** Motifs proposés pour un financement (codes compris par le logiciel). */
+  @Get('convoys/advance-motives')
+  @RequirePermissions('convoys:read')
+  advanceMotives() { return Object.entries(ADVANCE_MOTIVES).map(([code, label]) => ({ code, label })); }
+
   @Post('convoys/advances')
   @RequirePermissions('convoys:settle')
   async advance(@Body() b: AdvanceDto, @Req() req: any) {
     if (Number(b.amount) <= 0) throw new BadRequestException('Montant doit être supérieur à zéro');
     if (b.operation_date && b.operation_date > today()) throw new BadRequestException("Date d'opération dans le futur");
-    if (b.kind === 'advance' && !req.org.permissions.has('cash:operate')) throw new ForbiddenException('Un financement en espèces exige le droit « cash:operate »');
+    if (b.kind === 'advance' && !req.org.permissions.has('cash:operate')) throw new ForbiddenException('Un financement exige le droit « cash:operate »');
+    const mode = b.payment_mode ?? 'cash';
+    if (b.kind === 'advance' && mode === 'cheque' && !b.cheque_no?.trim()) throw new BadRequestException('Le n° de chèque est obligatoire pour un paiement par chèque');
+    if (b.kind === 'advance' && b.motive === 'autre' && !b.label?.trim()) throw new BadRequestException('Précisez le motif');
+    const cheque = b.cheque_no?.trim() || b.piece_no?.trim() || null;
     const { row, replay } = await this.db.tx(req.org.id, async (c) => {
       const prev = await c.query(`SELECT * FROM collector_advances WHERE idempotency_key = $1`, [b.idempotency_key]);
       if (prev.rowCount) return { row: prev.rows[0], replay: true };
@@ -598,40 +623,54 @@ export class ConvoysController {
       if (!acc) acc = (await c.query(
         `INSERT INTO financial_accounts(organization_id, owner_type, owner_id, name, created_by) VALUES ($1,'collector',$2,$3,$4) RETURNING id, currency, accounting_code`,
         [req.org.id, k.id, `Compte délégué — ${k.full_name}`, req.user.id])).rows[0];
-      const label = b.label ?? (b.kind === 'advance' ? 'Finance cacao' : 'Solde de la campagne précédente');
+      const motiveText = b.motive ? ADVANCE_MOTIVES[b.motive] : null;
+      const label = b.kind === 'carry_forward' ? (b.label ?? 'Solde de la campagne précédente')
+        : [motiveText, b.label?.trim() && b.motive !== 'autre' ? b.label.trim() : b.motive === 'autre' ? b.label!.trim() : null].filter(Boolean).join(' — ') || 'Finance cacao';
       const when = b.operation_date ? `${b.operation_date}T12:00:00Z` : new Date().toISOString();
       const t1 = (await c.query(
         `INSERT INTO financial_transactions(organization_id, idempotency_key, account_id, direction, amount, currency, reason, reference_type, reference_id, created_by, created_at)
          VALUES ($1,$2,$3,'out',$4,$5,$6,$7,$8,$9,$10) RETURNING id`,
-        [req.org.id, 'adv-c:' + b.idempotency_key, acc.id, b.amount, acc.currency, label + (b.piece_no ? ` — pièce ${b.piece_no}` : ''),
+        [req.org.id, 'adv-c:' + b.idempotency_key, acc.id, b.amount, acc.currency, label + (cheque ? ` — ${mode === 'cheque' ? 'chèque' : 'pièce'} ${cheque}` : '') + (b.slip_no ? ` — bordereau ${b.slip_no}` : ''),
          b.kind === 'advance' ? 'collector_advance' : 'collector_carry', k.id, req.user.id, when])).rows[0];
       if (b.kind === 'advance') {
-        if (!b.cash_session_id) throw new BadRequestException('Un financement exige que le caissier soit connecté à la caisse');
-        const sess = (await c.query(`SELECT s.id, r.account_id FROM cash_sessions s JOIN cash_registers r ON r.id = s.register_id WHERE s.id = $1 AND s.status = 'open'`, [b.cash_session_id])).rows[0];
-        if (!sess) throw new BadRequestException('Caisse inconnue ou caissier déconnecté');
-        const cash = (await c.query(`SELECT * FROM financial_accounts WHERE id = $1 FOR UPDATE`, [sess.account_id])).rows[0];
-        const ok = (await c.query(
-          `SELECT $2::numeric <= coalesce(sum(CASE direction WHEN 'in' THEN amount ELSE -amount END), 0) AS ok, coalesce(sum(CASE direction WHEN 'in' THEN amount ELSE -amount END), 0) AS balance
-             FROM financial_transactions WHERE account_id = $1`, [cash.id, b.amount])).rows[0];
-        if (!ok.ok) throw new UnprocessableEntityException(`Solde de caisse insuffisant (${ok.balance})`);
+        await c.query(`SELECT accounting_seed($1::uuid)`, [req.org.id]);
+        let source: any; let sessionId: string | null = null; let journal = 'CAI';
+        if (mode === 'cheque') {
+          // Chèque : la somme sort du compte bancaire de la coopérative (celui indiqué, sinon le premier compte bancaire actif).
+          source = (await c.query(
+            `SELECT * FROM financial_accounts WHERE owner_type = 'other' AND status = 'active' AND ($1::uuid IS NULL OR id = $1) ORDER BY created_at LIMIT 1 FOR UPDATE`, [b.bank_account_id ?? null])).rows[0];
+          if (!source) throw new UnprocessableEntityException("Aucun compte bancaire de la coopérative : créez-en un dans Trésorerie avant de payer par chèque");
+          journal = 'BQ';
+        } else {
+          // Espèces : la caisse du caissier connecté (celle de l'utilisateur, sinon la seule caisse ouverte).
+          const sess = (await c.query(
+            `SELECT s.id, r.account_id FROM cash_sessions s JOIN cash_registers r ON r.id = s.register_id
+              WHERE s.status = 'open' AND ($2::uuid IS NULL OR s.id = $2) ORDER BY (s.opened_by = $1) DESC, s.opened_at DESC LIMIT 1`, [req.user.id, b.cash_session_id ?? null])).rows[0];
+          if (!sess) throw new BadRequestException('Aucune caisse ouverte : le caissier doit être connecté à la caisse');
+          sessionId = sess.id;
+          source = (await c.query(`SELECT * FROM financial_accounts WHERE id = $1 FOR UPDATE`, [sess.account_id])).rows[0];
+          const ok = (await c.query(
+            `SELECT $2::numeric <= coalesce(sum(CASE direction WHEN 'in' THEN amount ELSE -amount END), 0) AS ok, coalesce(sum(CASE direction WHEN 'in' THEN amount ELSE -amount END), 0) AS balance
+               FROM financial_transactions WHERE account_id = $1`, [source.id, b.amount])).rows[0];
+          if (!ok.ok) throw new UnprocessableEntityException(`Solde de caisse insuffisant (${ok.balance})`);
+        }
         await c.query(
           `INSERT INTO financial_transactions(organization_id, idempotency_key, account_id, cash_session_id, direction, amount, currency, reason, reference_type, reference_id, created_by, created_at)
            VALUES ($1,$2,$3,$4,'out',$5,$6,$7,'collector_advance',$8,$9,$10)`,
-          [req.org.id, 'adv-k:' + b.idempotency_key, cash.id, b.cash_session_id, b.amount, cash.currency, label, k.id, req.user.id, when]);
-        await c.query(`SELECT accounting_seed($1::uuid)`, [req.org.id]);
+          [req.org.id, 'adv-k:' + b.idempotency_key, source.id, sessionId, b.amount, source.currency, label + (mode === 'cheque' ? ` — chèque ${cheque}` : ''), k.id, req.user.id, when]);
         await postEntry(c, {
-          orgId: req.org.id, userId: req.user.id, journal: 'CAI', date: b.operation_date ?? today(), label: `${label} — ${k.full_name}`,
-          lines: [{ code: '409', debit: b.amount }, { code: accountingCodeOf(cash), credit: b.amount }],
+          orgId: req.org.id, userId: req.user.id, journal, date: b.operation_date ?? today(), label: `${label} — ${k.full_name}${mode === 'cheque' ? ` (chèque ${cheque})` : ''}${b.slip_no ? ` (bordereau ${b.slip_no})` : ''}`,
+          lines: [{ code: '409', debit: b.amount }, { code: accountingCodeOf(source), credit: b.amount }],
           idempotencyKey: 'adv-entry:' + b.idempotency_key, referenceType: 'collector_advance', referenceId: t1.id,
         });
       }
       const ins = (await c.query(
-        `INSERT INTO collector_advances(organization_id, idempotency_key, collector_id, kind, piece_no, label, amount, tx_id, created_by, created_at)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
-        [req.org.id, b.idempotency_key, k.id, b.kind, b.piece_no ?? null, label, b.amount, t1.id, req.user.id, when])).rows[0];
+        `INSERT INTO collector_advances(organization_id, idempotency_key, collector_id, kind, piece_no, label, amount, tx_id, created_by, created_at, payment_mode, cheque_no, slip_no, motive)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING *`,
+        [req.org.id, b.idempotency_key, k.id, b.kind, cheque, label, b.amount, t1.id, req.user.id, when, b.kind === 'advance' ? mode : 'cash', mode === 'cheque' ? cheque : (b.cheque_no?.trim() || null), b.slip_no?.trim() || null, b.kind === 'advance' ? (b.motive ?? null) : null])).rows[0];
       if (b.kind === 'advance')
         await this.notif.notifyUsers(c, req.org.id, [(await c.query(`SELECT user_id FROM collectors WHERE id = $1`, [k.id])).rows[0]?.user_id], { kind: 'collector_advance',
-          title: `Financement de ${b.amount} enregistré sur votre fiche`, body: b.piece_no ? `Pièce ${b.piece_no}` : undefined, entityType: 'collector', entityId: k.id, dedupe: `collector_advance:${ins.id}` });
+          title: `Financement de ${b.amount} enregistré sur votre fiche`, body: cheque ? `${mode === 'cheque' ? 'Chèque' : 'Pièce'} ${cheque}` : undefined, entityType: 'collector', entityId: k.id, dedupe: `collector_advance:${ins.id}` });
       return { row: ins, replay: false };
     });
     if (!replay) await this.log(req, 'convoy.advance', row.id, { kind: b.kind, amount: b.amount, collector_id: b.collector_id });

@@ -465,20 +465,28 @@ export function Accounts() {
 
 function Advance({ kind, collectorId, onClose, onDone }: { kind: 'advance' | 'carry_forward'; collectorId: string; onClose: () => void; onDone: () => void }) {
   const act = useAction();
-  const regs = useAsync(async () => (kind === 'advance' ? (await get<any[]>('/cash-registers')).filter((r) => r.open_session_id) : []), [kind]);
-  const [f, setF] = useState({ amount: '', piece: '', session: '', date: '', label: '' });
+  const motives = useAsync(async () => (kind === 'advance' ? await get<{ code: string; label: string }[]>('/convoys/advance-motives') : []), [kind]);
+  const [f, setF] = useState({ amount: '', mode: 'cash', cheque: '', slip: '', motive: 'finance_cacao', detail: '', date: '' });
   const [key] = useState(idem());
-  const ok = /^\d+(\.\d{1,4})?$/.test(f.amount) && Number(f.amount) > 0 && (kind === 'carry_forward' || f.session);
+  const cheque = kind === 'advance' && f.mode === 'cheque';
+  const ok = /^\d+(\.\d{1,4})?$/.test(f.amount) && Number(f.amount) > 0 && (!cheque || f.cheque.trim()) && (f.motive !== 'autre' || f.detail.trim());
   return (
     <Modal title={kind === 'advance' ? 'Remettre un financement (Finance cacao)' : 'Reporter le solde de la campagne précédente'} onClose={onClose}>
       <Field label="Montant (FCFA)"><input inputMode="decimal" value={f.amount} onChange={(e) => setF({ ...f, amount: e.target.value })} /></Field>
-      <Field label="N° de pièce"><input value={f.piece} onChange={(e) => setF({ ...f, piece: e.target.value })} maxLength={60} /></Field>
+      {kind === 'advance' && <Field label="Mode de paiement"><select value={f.mode} onChange={(e) => setF({ ...f, mode: e.target.value })}><option value="cash">Espèces</option><option value="cheque">Chèque</option></select></Field>}
+      <div className="grid-2">
+        <Field label={cheque ? 'N° chèque *' : 'N° chèque'}><input value={f.cheque} onChange={(e) => setF({ ...f, cheque: e.target.value })} maxLength={60} /></Field>
+        {kind === 'advance' && <Field label="N° bordereau"><input value={f.slip} onChange={(e) => setF({ ...f, slip: e.target.value })} maxLength={60} /></Field>}
+      </div>
+      {kind === 'advance' && <>
+        <Field label="Motif"><select value={f.motive} onChange={(e) => setF({ ...f, motive: e.target.value })}>{(motives.data ?? []).map((m) => <option key={m.code} value={m.code}>{m.label}</option>)}</select></Field>
+        <Field label={f.motive === 'autre' ? 'Précisez le motif *' : 'Précision sur le motif'} hint="Reprise dans le libellé de l'écriture comptable."><input value={f.detail} onChange={(e) => setF({ ...f, detail: e.target.value })} maxLength={150} /></Field></>}
       <Field label="Date de l'opération (laisser vide : aujourd'hui)"><input type="date" value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} /></Field>
-      {kind === 'advance' && <Field label="Caisse (caissier connecté)"><select value={f.session} onChange={(e) => setF({ ...f, session: e.target.value })}><option value="">—</option>{(regs.data ?? []).map((r: any) => <option key={r.id} value={r.open_session_id}>{r.name}</option>)}</select></Field>}
       {act.error && <ErrorBox message={act.error} />}
       <div className="modal-actions"><button className="btn btn-secondary" onClick={onClose}>Annuler</button>
         <button className="btn" disabled={act.busy || !ok} onClick={() => act.run(async () => {
-          await post('/convoys/advances', { idempotency_key: key, collector_id: collectorId, kind, amount: f.amount, ...(f.piece && { piece_no: f.piece }), ...(f.date && { operation_date: f.date }), ...(kind === 'advance' && { cash_session_id: f.session }) }); onDone();
+          await post('/convoys/advances', { idempotency_key: key, collector_id: collectorId, kind, amount: f.amount, ...(f.cheque.trim() && { cheque_no: f.cheque.trim() }), ...(f.date && { operation_date: f.date }),
+            ...(kind === 'advance' && { payment_mode: f.mode, motive: f.motive, ...(f.slip.trim() && { slip_no: f.slip.trim() }), ...(f.detail.trim() && { label: f.detail.trim() }) }) }); onDone();
         })}>Enregistrer</button></div>
     </Modal>
   );
