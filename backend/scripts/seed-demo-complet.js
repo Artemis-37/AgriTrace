@@ -274,7 +274,7 @@ const PROFILS = [
     accounts.push({ role: 'exp_admin', label: 'Administrateur (exportateur)', name: 'Yves Kouadio', email: `admin@${EDOM}`, org: ex.id });
     const lk = await call('POST', '/org-links', { ...A, body: { code: 'EXPORT' + run.toUpperCase(), direction: 'supply_to' } });
     await call('POST', `/org-links/${lk.id}/accept`, { ...EA });
-    exporterOrg = { id: ex.id, name: 'Exportateur de Démonstration' };
+    exporterOrg = { id: ex.id, name: 'Exportateur de Démonstration', code: ex.code };
   });
 
   // ── Écriture du fichier d'accès
@@ -290,6 +290,9 @@ const PROFILS = [
   if (!process.env.DEMO_NO_ENRICH) {
     try { require('child_process').execFileSync(process.execPath, [path.join(__dirname, 'seed-demo-enrichi.js')], { stdio: 'inherit', env: { ...process.env, DEMO_JSON: process.env.DEMO_JSON || '/tmp/demo-accounts.json' } }); }
     catch { warnings.push('enrichissement des données d\'exemple : voir les messages ci-dessus'); }
+    // Compléments (délégués, producteurs, financements, convois, livraisons à l'exportateur) : voir seed-demo-supplement.js
+    try { require('child_process').execFileSync(process.execPath, [path.join(__dirname, 'seed-demo-supplement.js')], { stdio: 'inherit', env: { ...process.env, DEMO_JSON: process.env.DEMO_JSON || '/tmp/demo-accounts.json' } }); }
+    catch { warnings.push('compléments de démonstration : voir les messages ci-dessus'); }
   }
   console.log(`\nCoopérative de démonstration prête : ${org.name}\n  ${accounts.length} comptes (mot de passe : ${PASSWORD})`);
   if (warnings.length) console.log(`\n${warnings.length} étape(s) facultative(s) ignorée(s) :\n - ` + warnings.join('\n - '));
