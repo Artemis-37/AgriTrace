@@ -528,3 +528,30 @@ tbody tr:hover { background: color-mix(in srgb, var(--lime) 16%, transparent); }
 :root[data-theme="night"] .home-scene .hs-row { stroke: color-mix(in srgb, var(--forest) 30%, var(--bg)); }
 .titlebar { z-index: 31; }
 :root[data-theme="night"] .home-scene .hs-rays { opacity: .35; }
+
+/* ── Barre du haut unique : menus, Accueil et Paramètres en icônes (plus de seconde barre) ── */
+.titlebar { overflow: visible; flex-wrap: wrap; }
+.titlebar .menubar { background: transparent; border: 0; box-shadow: none; padding: 0; position: static; z-index: auto; flex-wrap: nowrap; margin-left: .25rem; }
+.titlebar .menubar .menu-top { color: var(--on-forest); padding: .55rem .8rem; border-radius: var(--radius-sm); font-weight: 600; }
+.titlebar .menubar .menu-top:hover, .titlebar .menubar .menu.on > .menu-top { background: rgba(255,255,255,.16); }
+.titlebar .menubar .menu-top::after { left: .8rem; right: .8rem; bottom: 2px; }
+.titlebar .menu-drop { z-index: 50; text-align: left; }
+.top-icons { display: flex; align-items: center; gap: .15rem; }
+.top-icons .menu { position: relative; }
+.top-ico { display: inline-flex; align-items: center; justify-content: center; width: 2.25rem; height: 2.25rem; border-radius: 50%; border: 0; background: transparent; color: var(--on-forest); cursor: pointer; text-decoration: none; transition: background-color .12s; }
+.top-ico:hover, .top-ico.active, .top-icons .menu.on > .top-ico { background: rgba(255,255,255,.2); }
+.top-ico:focus-visible { outline: 2px solid var(--sun); outline-offset: 2px; }
+.menu-drop-right { left: auto; right: 0; }
+@media (max-width: 900px) {
+  .titlebar .menubar { display: none; width: 100%; flex-direction: column; margin: 0; }
+  .titlebar .menubar.open { display: flex; }
+  .titlebar .menubar .menu-top { color: var(--on-forest); }
+  .titlebar .menu-drop { position: static; background: transparent; box-shadow: none; }
+  .titlebar .menu-drop a { color: var(--on-forest); }
+}
+@media (min-width: 901px) {
+  .titlebar { flex-wrap: nowrap; }
+  .titlebar .coop { max-width: 15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 0 1 auto; }
+  .titlebar .title-right { margin-left: auto; flex-wrap: nowrap; flex: 0 0 auto; }
+}
+@media (min-width: 901px) and (max-width: 1500px) { .titlebar .today-date { display: none; } }

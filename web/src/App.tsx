@@ -44,7 +44,7 @@ import Audits from './pages/Audits';
 import OrganisationsLiees from './pages/OrganisationsLiees';
 import Stocks from './pages/Stocks';
 import { Loading } from './ui';
-import { MenuBar } from './MenuBar';
+import { MenuBar, TopIcons } from './MenuBar';
 import { PeekProvider } from './peek';
 
 
@@ -146,6 +146,7 @@ export default function App() {
   if (me?.must_change_password) return <ForcedPasswordChange />;
   if (me?.must_setup_2fa) return <ForcedTwoFactor />;
 
+  const navItems = NAV.filter((n) => !(org?.kind === 'exporter' && EXPORTER_HIDDEN.has(n.to)) && (n.any ? n.perm.some((p) => can(p)) : can(...n.perm)) && (!n.only || me?.account_kind === n.only) && (!n.notFor || me?.account_kind !== n.notFor)).map(({ to, label, icon }) => ({ to, label: org?.kind === 'exporter' ? (EXPORTER_LABEL[to] ?? label) : label, icon }));
   return (
     <PeekProvider origin={NAV.find((n) => n.to === loc.pathname)?.label ?? 'Accueil'} resetKey={loc.pathname}>
     <div className="shell desk">
@@ -153,14 +154,14 @@ export default function App() {
         <button className="btn btn-ghost menu-toggle" aria-label="Ouvrir le menu" aria-expanded={open} onClick={() => setOpen(!open)}>☰</button>
         <div className="brand"><strong>Agri<span>Trace</span></strong></div>
         <span className="coop">{org?.name}</span>
+        <MenuBar open={open} onNavigate={() => setOpen(false)} items={navItems} />
         <div className="title-right">
+          <TopIcons items={navItems} onNavigate={() => setOpen(false)} />
           <ConnectionStatus />{can('messages:use') && <MessageButton unread={msgUnread} />}<Bell unread={unread} onChange={refreshUnread} />
           <ProfileMenu name={me?.user.full_name ?? ''} onSignOut={signOut} />
           <span className="today-date">{new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
         </div>
       </header>
-      <MenuBar open={open} onNavigate={() => setOpen(false)}
-        items={NAV.filter((n) => !(org?.kind === 'exporter' && EXPORTER_HIDDEN.has(n.to)) && (n.any ? n.perm.some((p) => can(p)) : can(...n.perm)) && (!n.only || me?.account_kind === n.only) && (!n.notFor || me?.account_kind !== n.notFor)).map(({ to, label, icon }) => ({ to, label: org?.kind === 'exporter' ? (EXPORTER_LABEL[to] ?? label) : label, icon }))} />
       <main className="main">
         <OfflineBar />
         {managed && <p className="notice" role="status">Lecture seule : cette coopérative est gérée par son serveur local (« {managed} »). Les modifications se font là-bas ; elles arrivent ici par synchronisation.</p>}
