@@ -6,7 +6,6 @@ import Dashboard from './pages/Dashboard';
 import Inventaire from './pages/Inventaire';
 import Prefinancement from './pages/Prefinancement';
 import Notifications from './pages/Notifications';
-import Equipe from './pages/Equipe';
 import Rapports from './pages/Rapports';
 import Commerce from './pages/Commerce';
 import Cartographie from './pages/Cartographie';
@@ -58,7 +57,7 @@ const NAV: { to: string; label: string; icon: string; perm: string[]; any?: bool
   { to: '/cartographie', label: 'Cartographie', icon: '⌖', perm: ['geo:anomalies'] },
   { to: '/commerce', label: 'Commerce', icon: '⇄', perm: ['buyers:read', 'logistics:read', 'invoices:read'], any: true },
   { to: '/partenaires', label: 'Partenaires', icon: '🤝', perm: ['partners:read'] },
-  { to: '/parametres', label: 'Paramètres', icon: '⚙️', perm: ['products:read', 'campaigns:read', 'org:branding'], any: true },
+  { to: '/parametres', label: 'Paramètres', icon: '⚙️', perm: ['products:read', 'campaigns:read', 'org:branding', 'users:read'], any: true },
   { to: '/delegues', label: 'Délégués', icon: '☻', perm: ['collectors:read'] },
   { to: '/pesees', label: 'Pesées', icon: '⚖', perm: ['convoys:read', 'convoys:receive'], any: true, notFor: 'collector' },
   { to: '/caisse', label: 'Caisse', icon: '₵', perm: ['convoys:settle', 'finance:read'], any: true },
@@ -68,7 +67,6 @@ const NAV: { to: string; label: string; icon: string; perm: string[]; any?: bool
   { to: '/inventaire', label: 'Inventaire', icon: '☰', perm: ['stock:count'] },
   { to: '/prefinancement', label: 'Préfinancement', icon: '◈', perm: ['prefinancing:read'] },
   { to: '/synchronisation', label: 'Synchronisation', icon: '⇅', perm: ['replication:manage'] },
-  { to: '/equipe', label: 'Équipe', icon: '⚙', perm: ['users:read'] },
   { to: '/declarations', label: 'Déclarations d\'achat', icon: '✎', perm: ['declarations:read'], notFor: 'collector' },
   { to: '/fiches-accompagnement', label: 'Fiches d\'accompagnement', icon: '📋', perm: ['dispatch:manage', 'dispatch:read'], any: true },
   { to: '/livraisons', label: 'Livraisons', icon: '🚚', perm: ['deliveries:read', 'dispatch:manage'], any: true },
@@ -191,7 +189,7 @@ export default function App() {
           <Route path="/prefinancement" element={<Prefinancement />} />
           <Route path="/messages" element={<Messages onChange={refreshUnread} />} />
           <Route path="/synchronisation" element={<Synchronisation />} />
-          <Route path="/equipe" element={<Equipe />} />
+          <Route path="/equipe" element={<Parametres start="users" />} />
           <Route path="/rapports" element={<Rapports />} />
           <Route path="/notifications" element={<Notifications onChange={refreshUnread} />} />
           <Route path="/declarations" element={<Declarations />} />

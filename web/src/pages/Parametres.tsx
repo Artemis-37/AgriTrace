@@ -4,24 +4,49 @@ import { getChains } from '../chains';
 import { useAuth } from '../auth';
 import { date } from '../format';
 import Societe from './Societe';
-import { Badge, Card, ErrorBox, Field, Loading, Modal, PageHeader, Table, Tabs, useAction, useAsync } from '../ui';
+import Equipe from './Equipe';
+import { Badge, Card, ErrorBox, Field, Loading, Modal, PageHeader, Table, useAction, useAsync } from '../ui';
 
 const PRICE = /^\d{1,12}(\.\d{1,2})?$/;
 const FR = (v: any) => (v === null || v === undefined || v === '' ? '' : Number(v).toLocaleString('fr-FR', { maximumFractionDigits: 2 }));
 
-/** Paramètres : produits (prix d'achat et de vente au kilo) et campagnes, comme dans le menu Fichier de l'ancien logiciel. */
-export default function Parametres() {
+/** Paramètres : tout ce qui se règle, regroupé par rubrique dans un menu à gauche (société, produits et prix, utilisateurs et accès). */
+export default function Parametres({ start }: { start?: string } = {}) {
   const { can } = useAuth();
-  const tabs: [string, string][] = [];
-  if (can('org:branding')) tabs.push(['societe', 'Société']);
-  if (can('products:read')) tabs.push(['products', 'Produits']);
-  if (can('campaigns:read')) tabs.push(['campaigns', 'Traites']);
-  const [tab, setTab] = useState(tabs[0]?.[0] ?? 'products');
+  type Item = [string, string];
+  const groups = ([
+    { title: 'Société', items: can('org:branding') ? [['societe', 'Informations et logo'] as Item] : [] },
+    { title: 'Produits et prix', items: [...(can('products:read') ? [['products', 'Produits'] as Item] : []), ...(can('campaigns:read') ? [['campaigns', 'Traites (grande / petite)'] as Item] : [])] },
+    { title: 'Utilisateurs et accès', items: [
+      ...(can('users:create') ? [['u-new', 'Créer un utilisateur'] as Item] : []),
+      ...(can('users:read') ? [['users', 'Liste des utilisateurs'] as Item] : []),
+      ...(can('roles:manage') ? [['roles', 'Rôles et droits'] as Item] : []),
+      ...(can('collectors:manage') ? [['delegues', 'Accès des délégués'] as Item] : []),
+      ...(can('workstations:manage') ? [['postes', 'Postes de travail'] as Item] : []),
+    ] },
+  ] as { title: string; items: Item[] }[]).filter((g) => g.items.length);
+  const first = start ?? groups[0]?.items[0]?.[0] ?? 'products';
+  const [cur, setCur] = useState(first);
+  const [n, setN] = useState(0);
+  const [open, setOpen] = useState(groups.find((g) => g.items.some(([k]) => k === first))?.title ?? groups[0]?.title ?? '');
+  if (!groups.length) return <Card><p className="muted">Votre rôle ne donne accès à aucun paramètre.</p></Card>;
+  const pick = (k: string) => { if (k === 'u-new') { setN((x) => x + 1); setCur('users-new'); } else setCur(k); };
+  const view = cur === 'societe' ? <Societe /> : cur === 'products' ? <Products /> : cur === 'campaigns' ? <Campaigns />
+    : <Equipe embedded section={cur === 'users-new' ? 'users' : cur} openAdd={cur === 'users-new' ? n : 0} key={cur + n} />;
   return (
     <>
-      <PageHeader title="Paramètres" subtitle="Société, produits achetés et prix au kilo par traite (grande traite, petite traite) avec leurs dates." />
-      <Tabs tabs={tabs as any} value={tab as any} onChange={setTab as any} />
-      {tab === 'societe' ? <Societe /> : tab === 'products' ? <Products /> : <Campaigns />}
+      <PageHeader title="Paramètres" subtitle="Société, produits et prix, utilisateurs et accès : choisissez une rubrique à gauche." />
+      <div className="caisse-layout">
+        <nav className="accordion" aria-label="Menu des paramètres">
+          {groups.map((g) => (
+            <div key={g.title} className={open === g.title ? 'open' : ''}>
+              <button className="acc-head" aria-expanded={open === g.title} onClick={() => setOpen(open === g.title ? '' : g.title)}>{g.title}<span aria-hidden="true">{open === g.title ? '▴' : '▾'}</span></button>
+              {open === g.title && <ul>{g.items.map(([k, l]) => <li key={k}><button className={cur === k || (k === 'users' && cur === 'users-new') ? 'on' : ''} onClick={() => pick(k)}>{l}</button></li>)}</ul>}
+            </div>
+          ))}
+        </nav>
+        <div className="caisse-main">{view}</div>
+      </div>
     </>
   );
 }

@@ -8,13 +8,13 @@ import { PhotoPick, uploadPhoto } from '../Photo';
 
 const ACTIONS: Record<string, string> = { suspend: 'Suspension', reactivate: 'Réactivation', revoke_sessions: 'Sessions révoquées', role_change: 'Changement de rôle', role_add: 'Rôle ajouté', role_remove: 'Rôle retiré' };
 
-export default function Equipe() {
+export default function Equipe({ section, embedded = false, openAdd = 0 }: { section?: string; embedded?: boolean; openAdd?: number } = {}) {
   const { can, me } = useAuth();
   const { data, loading, error, reload } = useAsync(async () => ({ users: await get<any[]>('/users'), roles: can('users:change_role') || can('users:create') ? await get<any[]>('/roles') : [], templates: can('roles:manage') ? await get<any[]>('/roles/templates') : [] }), []);
   const [ask, setAsk] = useState<{ u: any; what: 'suspend' | 'reactivate' | 'revoke-sessions' } | null>(null);
   const [role, setRole] = useState<any | null>(null);
   const [hist, setHist] = useState<any | null>(null);
-  const [adding, setAdding] = useState(false);
+  const [adding, setAdding] = useState(openAdd > 0);
   const [codeFor, setCodeFor] = useState<any | null>(null);
   const [temp, setTemp] = useState<{ email: string; temporary_password: string } | null>(null);
   const mk = useAction();
@@ -22,16 +22,17 @@ export default function Equipe() {
   if (can('roles:manage')) tabs.push(['roles', 'Rôles']);
   if (can('collectors:manage')) tabs.push(['delegues', 'Accès des délégués']);
   if (can('workstations:manage')) tabs.push(['postes', 'Postes de travail']);
-  const [tab, setTab] = useState('users');
+  const [tabState, setTab] = useState('users');
+  const tab = section ?? tabState;
   return (
     <>
-      <PageHeader title="Utilisateurs et accès" subtitle="Qui peut se connecter, avec quel rôle. Tout changement prend effet immédiatement." />
+      {!embedded && <PageHeader title="Utilisateurs et accès" subtitle="Qui peut se connecter, avec quel rôle. Tout changement prend effet immédiatement." />}
       {temp && <Modal title="Mot de passe temporaire" onClose={() => setTemp(null)}>
         <p>Communiquez ce mot de passe à <strong>{temp.email}</strong> par un canal sûr. Il ne sera plus affiché ; l'utilisateur devra le remplacer dès sa première connexion.</p>
         <p><code style={{ fontSize: '1.2rem', userSelect: 'all' }}>{temp.temporary_password}</code></p>
         <div className="modal-actions"><button className="btn" onClick={() => setTemp(null)}>J'ai noté le mot de passe</button></div>
       </Modal>}
-      <Tabs tabs={tabs as any} value={tab as any} onChange={setTab as any} />
+      {!embedded && <Tabs tabs={tabs as any} value={tab as any} onChange={setTab as any} />}
       {tab === 'users' && <>
       {can('users:create') && <div className="toolbar"><button className="btn" onClick={() => setAdding(true)}>Ajouter un utilisateur</button></div>}
       <Card>
