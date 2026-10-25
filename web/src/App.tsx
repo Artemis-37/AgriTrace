@@ -123,6 +123,7 @@ function ProfileMenu({ name, onSignOut }: { name: string; onSignOut: () => void 
 export default function App() {
   const { status, org, me, can, signOut } = useAuth();
   const loc = useLocation();
+  const go = useNavigate();
   useEffect(() => { document.documentElement.dataset.theme = 'doux'; }, []); // un seul thème
   const [unread, setUnread] = useState(0);
   const [needPair, setNeedPair] = useState(false);
@@ -161,6 +162,7 @@ export default function App() {
         </div>
       </header>
       <main className="main">
+        {loc.pathname !== '/' && <button type="button" className="back-btn" onClick={() => { if ((window.history.state?.idx ?? 0) > 0) go(-1); else go('/'); }}>← Retour</button>}
         <OfflineBar />
         {managed && <p className="notice" role="status">Lecture seule : cette coopérative est gérée par son serveur local (« {managed} »). Les modifications se font là-bas ; elles arrivent ici par synchronisation.</p>}
         {me?.mobile_first && <p className="notice" role="status">Votre compte ({me.account_kind === 'collector' ? 'délégué' : 'coach'}) est conçu pour l'application mobile, qui fonctionne aussi dans les villages sans réseau. Ce portail affiche uniquement ce qui vous concerne.</p>}

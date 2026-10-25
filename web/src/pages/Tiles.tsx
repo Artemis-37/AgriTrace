@@ -32,7 +32,9 @@ const GROUPS: { id: string; label: string; icon: string; hint: string; paths: st
 export function Tiles() {
   const { can, me } = useAuth();
   const nav = useContext(NavItemsContext);
-  const [open, setOpen] = useState<string | null>(null);
+  // La famille ouverte est mémorisée : « Retour » depuis une rubrique ramène à la famille, pas à l'accueil nu.
+  const [open, setOpenState] = useState<string | null>(() => { try { return sessionStorage.getItem('agritrace.home.group'); } catch { return null; } });
+  const setOpen = (g: string | null) => { setOpenState(g); try { g ? sessionStorage.setItem('agritrace.home.group', g) : sessionStorage.removeItem('agritrace.home.group'); } catch { /* ignoré */ } };
   const known = TILES.filter((t) => t.perm.some((p) => can(p)) && (!t.notFor || me?.account_kind !== t.notFor)).map((t) => ({ to: t.to, label: t.label, icon: t.icon }));
   const all = [...known];
   for (const i of nav) if (i.to !== '/' && !all.some((t) => t.to === i.to) && !SETTINGS_PATHS.has(i.to)) all.push({ to: i.to, label: i.label, icon: i.icon });

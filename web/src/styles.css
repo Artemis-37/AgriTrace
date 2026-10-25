@@ -616,3 +616,8 @@ tbody tr:hover { background: color-mix(in srgb, var(--lime) 16%, transparent); }
 .rate-list { list-style: none; padding: 0; margin: 0 0 1rem; display: grid; gap: .3rem; }
 .price-row { margin: .4rem 0 .8rem; }
 .price-row > strong { display: block; margin-bottom: .2rem; }
+
+/* Retour à la page précédente */
+.back-btn { display: inline-flex; align-items: center; gap: .3rem; margin: 0 0 .6rem; padding: .3rem .8rem; border: 1px solid var(--line, #d9d4c8); border-radius: 999px; background: var(--surface, #fff); color: var(--forest, #2f5d46); font: inherit; font-weight: 600; cursor: pointer; }
+.back-btn:hover, .back-btn:focus-visible { border-color: var(--nature, #2f6b3a); box-shadow: var(--shadow-1, 0 1px 4px rgba(0,0,0,.1)); }
+@media print { .back-btn { display: none; } }
