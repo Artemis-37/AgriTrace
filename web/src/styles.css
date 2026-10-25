@@ -555,3 +555,5 @@ tbody tr:hover { background: color-mix(in srgb, var(--lime) 16%, transparent); }
   .titlebar .title-right { margin-left: auto; flex-wrap: nowrap; flex: 0 0 auto; }
 }
 @media (min-width: 901px) and (max-width: 1500px) { .titlebar .today-date { display: none; } }
+.chip { display: inline-flex; align-items: center; gap: .1rem; background: var(--lime); color: var(--on-lime); border-radius: 999px; padding: .1rem .7rem; margin: 0 .3rem .3rem 0; font-size: .9rem; }
+.chip-x { background: transparent; border: 0; cursor: pointer; font: inherit; color: inherit; padding: 0 .1rem; }

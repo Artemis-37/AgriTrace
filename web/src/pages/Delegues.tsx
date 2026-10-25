@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { get, post, put } from '../api';
+import { del, get, post, put } from '../api';
 import { getChains } from '../chains';
 import { useAuth } from '../auth';
 import { Card, ErrorBox, Field, Loading, Modal, PageHeader, Tabs, useAction, useAsync } from '../ui';
@@ -46,6 +46,7 @@ export default function Delegues() {
                     <dt>Code</dt><dd>{cur.member_code ?? '—'}</dd><dt>Nom</dt><dd>{cur.full_name}</dd>
                     <dt>Localité (provenance)</dt><dd>{cur.origin ?? '—'}</dd><dt>Contact</dt><dd>{cur.phone ?? '—'}</dd><dt>E-mail</dt><dd>{cur.email ?? '—'}</dd>
                     <dt>Banque</dt><dd>{cur.bank_name ?? '—'}</dd><dt>N° de compte</dt><dd>{cur.bank_account ?? '—'}</dd>
+                    <dt>Filières</dt><dd><ChainsOf c={cur} onDone={reload} /></dd>
                   </dl>
                 )}
                 {tab === 'id' && <dl className="fiche"><dt>Type de pièce</dt><dd>{DOC[cur.id_doc_type] ?? '—'}</dd><dt>N° de la pièce</dt><dd>{cur.id_doc_no ?? '—'}</dd></dl>}
@@ -60,6 +61,28 @@ export default function Delegues() {
       {add && <NewDelegate onClose={() => setAdd(false)} onDone={(id) => { setAdd(false); reload(); setSel(id); setTab('info'); }} />}
       {edit && cur && <Edit c={cur} onClose={() => setEdit(false)} onDone={() => { setEdit(false); reload(); }} />}
     </>
+  );
+}
+
+/** Filières achetées par le délégué : ajout et retrait ; chaque filière peut avoir ses propres tarifs (onglets Transport et Retenues). */
+function ChainsOf({ c, onDone }: { c: any; onDone: () => void }) {
+  const { can } = useAuth();
+  const chains = useAsync(() => getChains().catch(() => [] as any[]), []);
+  const act = useAction();
+  const [pick, setPick] = useState('');
+  const list: any[] = c.assignments ?? [];
+  const name = (id: string | null) => (id ? (chains.data ?? []).find((x: any) => x.id === id)?.name ?? '…' : 'Toutes les filières');
+  const free = (chains.data ?? []).filter((x: any) => !list.some((a) => a.value_chain_id === x.id));
+  const may = can('collectors:manage');
+  return (
+    <div>
+      {list.length === 0 && <span className="muted">Aucune (toutes les filières)</span>}
+      {list.map((a) => <span key={a.id} className="chip">{name(a.value_chain_id)}{may && <button type="button" className="chip-x" aria-label={`Retirer ${name(a.value_chain_id)}`} disabled={act.busy} onClick={() => act.run(async () => { await del(`/collectors/${c.id}/assignments/${a.id}`); onDone(); })}> ×</button>}</span>)}
+      {may && free.length > 0 && <span style={{ display: 'inline-flex', gap: '.4rem', marginLeft: '.5rem' }}>
+        <select value={pick} onChange={(e) => setPick(e.target.value)} aria-label="Ajouter une filière"><option value="">+ Ajouter une filière…</option>{free.map((x: any) => <option key={x.id} value={x.id}>{x.name}</option>)}</select>
+        <button type="button" className="btn btn-small" disabled={!pick || act.busy} onClick={() => act.run(async () => { await post(`/collectors/${c.id}/assignments`, { value_chain_id: pick }); setPick(''); onDone(); })}>Ajouter</button></span>}
+      {act.error && <ErrorBox message={act.error} />}
+    </div>
   );
 }
 
@@ -127,30 +150,56 @@ function Edit({ c, onClose, onDone }: { c: any; onClose: () => void; onDone: () 
   );
 }
 
-/** Onglets Transport et Retenues : tarifs au kilo préenregistrés dans le profil du délégué ; seul l'administrateur les saisit, la caisse les reprend. */
+/** Onglets Transport et Retenues : tarifs au kilo préenregistrés dans le profil du délégué (général, puis propres à chaque filière achetée) ; seul l'administrateur les saisit, la caisse les reprend. */
 function Rates({ c, kind, onDone }: { c: any; kind: 'transport' | 'retenues'; onDone: () => void }) {
   const { can } = useAuth();
   const field = kind === 'transport' ? 'transport_per_kg' : 'retention_per_kg';
   const cfg = useAsync(() => get<any>('/convoys/settings').catch(() => null), []);
+  const chains = useAsync(() => getChains().catch(() => [] as any[]), []);
   const [v, setV] = useState<string | null>(null);
+  const [byChain, setByChain] = useState<Record<string, string>>({});
   const [ty, setTy] = useState<string | null>(null);
   const { busy, error, run } = useAction();
   const own = c[field];
   const def = kind === 'transport' ? cfg.data?.transport_unit : cfg.data?.retention_per_kg;
   const shown = v ?? (own != null ? String(Number(own)) : '');
   const may = can('collectors:rates');
-  const ok = shown === '' || /^\d+(\.\d{1,4})?$/.test(shown);
+  const num = (x: string) => x === '' || /^\d+(\.\d{1,4})?$/.test(x);
+  // Filières du délégué : celles qui lui sont affectées (une affectation sans filière = toutes).
+  const assigned: any[] = c.assignments ?? [];
+  const allChains = assigned.length === 0 || assigned.some((a) => !a.value_chain_id);
+  const mine = (chains.data ?? []).filter((x: any) => allChains || assigned.some((a) => a.value_chain_id === x.id));
+  const saved = (id: string) => { const r = (c.rates ?? []).find((x: any) => x.value_chain_id === id); return r?.[field] != null ? String(Number(r[field])) : ''; };
+  const cur = (id: string) => byChain[id] ?? saved(id);
+  const dirtyChains = mine.filter((x: any) => byChain[x.id] !== undefined && byChain[x.id] !== saved(x.id));
+  const ok = num(shown) && dirtyChains.every((x: any) => num(byChain[x.id]));
   const label = kind === 'transport' ? 'Coût de transport au kilo (FCFA)' : 'Retenue au kilo — mise en compte (FCFA)';
   return (
     <div>
       <p className="muted">{kind === 'transport'
         ? 'Le coût de transport de ce délégué est préenregistré ici : la caisse le reprend à chaque règlement, sans pouvoir le modifier.'
         : 'La somme retenue au kilo sur chaque règlement de ce délégué s\'accumule en mise en compte ; elle est reversée à la clôture de son compte, après approbation de l\'administrateur.'}</p>
-      <Field label={label} hint={own == null ? `Non renseigné : tarif par défaut de la coopérative (${Number(def ?? 0).toLocaleString('fr-FR')})` : undefined}>
+      <Field label={mine.length > 1 ? `${label} — tarif général` : label} hint={own == null ? `Non renseigné : tarif par défaut de la coopérative (${Number(def ?? 0).toLocaleString('fr-FR')})` : mine.length > 1 ? 'Appliqué aux filières sans tarif propre ci-dessous.' : undefined}>
         <input inputMode="decimal" value={shown} readOnly={!may} disabled={!may} onChange={(e) => setV(e.target.value)} /></Field>
+      {mine.length > 1 && (
+        <>
+          <h4>Tarif par filière</h4>
+          <p className="muted">Ce délégué achète plusieurs filières : fixez ici un tarif propre à chacune. Une case vide reprend le tarif général.</p>
+          <div className="grid-2">
+            {mine.map((x: any) => (
+              <Field key={x.id} label={x.name} hint={saved(x.id) === '' && byChain[x.id] === undefined ? `Tarif général (${shown === '' ? Number(def ?? 0).toLocaleString('fr-FR') : Number(shown).toLocaleString('fr-FR')})` : undefined}>
+                <input inputMode="decimal" value={cur(x.id)} readOnly={!may} disabled={!may} onChange={(e) => setByChain({ ...byChain, [x.id]: e.target.value })} aria-label={`${label} — ${x.name}`} /></Field>
+            ))}
+          </div>
+        </>
+      )}
       {kind === 'retenues' && <Field label="Type de prélèvement" hint="Nature de la retenue au kilo ; reprise sur chaque règlement et dans le journal d'approvisionnement."><select value={ty ?? c.retention_type ?? 'mise_en_compte'} disabled={!may} onChange={(e) => setTy(e.target.value)}>{Object.entries(RTYPE).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></Field>}
       {error && <ErrorBox message={error} />}
-      {may ? <p><button className="btn" disabled={busy || (v === null && ty === null) || !ok} onClick={() => run(async () => { await put(`/collectors/${c.id}/rates`, { ...(v !== null && { [field]: shown === '' ? null : shown }), ...(ty !== null && { retention_type: ty }) }); setV(null); setTy(null); onDone(); })}>Enregistrer</button></p>
+      {may ? <p><button className="btn" disabled={busy || (v === null && ty === null && dirtyChains.length === 0) || !ok} onClick={() => run(async () => {
+        if (v !== null || ty !== null) await put(`/collectors/${c.id}/rates`, { ...(v !== null && { [field]: shown === '' ? null : shown }), ...(ty !== null && { retention_type: ty }) });
+        for (const x of dirtyChains) await put(`/collectors/${c.id}/rates`, { value_chain_id: x.id, [field]: byChain[x.id] === '' ? null : byChain[x.id] });
+        setV(null); setTy(null); setByChain({}); onDone();
+      })}>Enregistrer</button></p>
         : <p className="muted">Seul l'administrateur de la coopérative saisit ces tarifs.</p>}
     </div>
   );

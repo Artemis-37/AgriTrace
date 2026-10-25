@@ -74,7 +74,8 @@ const PROFILS = [
 
   // ── Filière, campagne, prix
   const vc = await call('POST', '/value-chains', { ...A, body: { code: 'CACAO', name: 'Cacao' } });
-  for (const [code, name] of [['CAFE', 'Café'], ['PALMIER-HUILE', 'Palmier à huile'], ['ANACARDE', 'Anacarde'], ['HEVEA', 'Hévéa']]) await soft('filière ' + name, () => call('POST', '/value-chains', { ...A, body: { code, name } }));
+  const otherChains = {};
+  for (const [code, name] of [['CAFE', 'Café'], ['PALMIER-HUILE', 'Palmier à huile'], ['ANACARDE', 'Anacarde'], ['HEVEA', 'Hévéa']]) otherChains[code] = await soft('filière ' + name, () => call('POST', '/value-chains', { ...A, body: { code, name } }));
   await call('POST', '/unit-conversions', { ...A, body: { value_chain_id: vc.id, from_unit: 'sac', to_unit: 'kg', factor: '65' } });
   const camp = await call('POST', '/campaigns', { ...A, body: { value_chain_id: vc.id, code: 'C2627', name: 'Campagne 2026-2027', starts_on: '2026-10-01', ends_on: '2027-09-30' } });
   const sched = await call('POST', '/price-schedules', { ...A, body: { value_chain_id: vc.id, campaign_id: camp.id, unit: 'kg' } });
@@ -83,7 +84,7 @@ const PROFILS = [
 
   // ── Produits et prix de la traite : fixés par l'administrateur de la coopérative seul
   const cacao = await call('POST', '/products', { ...A, body: { name: 'Cacao (fèves)', buy_price_per_kg: '1000', sell_price_per_kg: '1500', campaign_id: camp.id } });
-  await call('POST', '/products', { ...A, body: { name: 'Café (cerises sèches)', buy_price_per_kg: '600', sell_price_per_kg: '900', campaign_id: camp.id } });
+  await call('POST', '/products', { ...A, body: { name: 'Café (cerises sèches)', buy_price_per_kg: '600', sell_price_per_kg: '900', campaign_id: camp.id, ...(otherChains.CAFE ? { value_chain_id: otherChains.CAFE.id } : {}) } });
 
   // ── Comptes : un par profil
   let exporterOrg = null;
@@ -112,6 +113,11 @@ const PROFILS = [
   await call('POST', `/collectors/${col.id}/assignments`, { ...A, body: { value_chain_id: vc.id } });
   // Transport et retenue au kilo : préenregistrés dans le profil du délégué par l'administrateur (la caisse ne les saisit pas)
   await call('PUT', `/collectors/${col.id}/rates`, { ...A, body: { transport_per_kg: '15', retention_per_kg: '10' } });
+  // Le premier délégué achète aussi du café : tarifs de transport et de retenue propres à cette filière (les autres filières gardent le tarif général).
+  if (otherChains.CAFE) await soft('délégué multi-filières', async () => {
+    await call('POST', `/collectors/${col.id}/assignments`, { ...A, body: { value_chain_id: otherChains.CAFE.id } });
+    await call('PUT', `/collectors/${col.id}/rates`, { ...A, body: { value_chain_id: otherChains.CAFE.id, transport_per_kg: '25', retention_per_kg: '8' } });
+  });
   // Second délégué (sans convoi déclaré) : sert à la pesée d'un convoi non déclaré, saisi par le magasinier.
   const r2 = await call('POST', '/roles/standard', { ...A, body: { code: 'collecteur' } });
   const email2 = `collecteur2@${DOMAIN}`;

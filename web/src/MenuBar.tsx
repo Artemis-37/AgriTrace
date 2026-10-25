@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useRef, useState } from 'react';
+import { ReactNode, createContext, useEffect, useRef, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 
 export interface MenuItem { to: string; label: string; icon: string }
@@ -10,6 +10,10 @@ const GROUP_OF: Record<string, string> = {
   '/cartographie': 'Suivi', '/rapports': 'Suivi', '/modules-formation': 'Suivi', '/modules-exportateurs': 'Suivi',
   '/equipe': 'Paramètres', '/synchronisation': 'Paramètres',
 };
+/** Rubriques accessibles à l'utilisateur (déjà filtrées par ses droits) : l'accueil en fait des tuiles. */
+export const NavItemsContext = createContext<MenuItem[]>([]);
+/** Pages ouvertes par l'icône Paramètres (et non par des tuiles de l'accueil). */
+export const SETTINGS_PATHS = new Set(['/parametres', '/equipe', '/synchronisation']);
 const ORDER = ['Fichier', 'Opérations', 'Comptabilité', 'Stock', 'Suivi', 'Autres']; // « Paramètres » (et l'ancienne « Administration ») : icône en haut à droite
 const LABEL: Record<string, string> = { '/parcelles': 'Plantations (parcelles)' };
 

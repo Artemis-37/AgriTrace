@@ -44,7 +44,7 @@ import Audits from './pages/Audits';
 import OrganisationsLiees from './pages/OrganisationsLiees';
 import Stocks from './pages/Stocks';
 import { Loading } from './ui';
-import { MenuBar, TopIcons } from './MenuBar';
+import { NavItemsContext, TopIcons } from './MenuBar';
 import { PeekProvider } from './peek';
 
 
@@ -123,7 +123,6 @@ function ProfileMenu({ name, onSignOut }: { name: string; onSignOut: () => void 
 export default function App() {
   const { status, org, me, can, signOut } = useAuth();
   const loc = useLocation();
-  const [open, setOpen] = useState(false);
   useEffect(() => { document.documentElement.dataset.theme = 'doux'; }, []); // un seul thème
   const [unread, setUnread] = useState(0);
   const [needPair, setNeedPair] = useState(false);
@@ -149,14 +148,13 @@ export default function App() {
   const navItems = NAV.filter((n) => !(org?.kind === 'exporter' && EXPORTER_HIDDEN.has(n.to)) && (n.any ? n.perm.some((p) => can(p)) : can(...n.perm)) && (!n.only || me?.account_kind === n.only) && (!n.notFor || me?.account_kind !== n.notFor)).map(({ to, label, icon }) => ({ to, label: org?.kind === 'exporter' ? (EXPORTER_LABEL[to] ?? label) : label, icon }));
   return (
     <PeekProvider origin={NAV.find((n) => n.to === loc.pathname)?.label ?? 'Accueil'} resetKey={loc.pathname}>
+    <NavItemsContext.Provider value={navItems}>
     <div className="shell desk">
       <header className="titlebar">
-        <button className="btn btn-ghost menu-toggle" aria-label="Ouvrir le menu" aria-expanded={open} onClick={() => setOpen(!open)}>☰</button>
         <div className="brand"><strong>Agri<span>Trace</span></strong></div>
         <span className="coop">{org?.name}</span>
-        <MenuBar open={open} onNavigate={() => setOpen(false)} items={navItems} />
         <div className="title-right">
-          <TopIcons items={navItems} onNavigate={() => setOpen(false)} />
+          <TopIcons items={navItems} onNavigate={() => undefined} />
           <ConnectionStatus />{can('messages:use') && <MessageButton unread={msgUnread} />}<Bell unread={unread} onChange={refreshUnread} />
           <ProfileMenu name={me?.user.full_name ?? ''} onSignOut={signOut} />
           <span className="today-date">{new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
@@ -208,6 +206,7 @@ export default function App() {
         </Routes>
       </main>
     </div>
+    </NavItemsContext.Provider>
     </PeekProvider>
   );
 }
