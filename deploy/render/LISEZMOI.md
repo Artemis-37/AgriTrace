@@ -26,3 +26,7 @@ Dans l'application, indiquez comme serveur `https://agritrace-xxxx.onrender.com/
 - La sécurité par ligne exige un rôle de base non propriétaire (`agritrace_app`). Le démarrage le crée ; si Render refuse (droits insuffisants), le journal affiche « ATTENTION … sécurité par ligne non garantie » et l'API utilise le compte propriétaire : acceptable pour un essai, jamais pour de vraies données.
 - La double authentification est désactivée (`REQUIRE_2FA=false` dans `render.yaml`) pour les comptes de démonstration.
 - Ce montage **n'a pas pu être essayé sur Render** (démarrage vérifié seulement hors Docker, sur PostgreSQL local) : prévoyez d'ajuster, et envoyez le journal en cas d'erreur.
+
+## Données d'exemple
+
+La démonstration est remplie pour chaque profil : achats, convois, caisse, comptabilité, ventes (commande, expédition, facture, paiement, réclamation), inventaires, préfinancement, paiements, partenaires, documents, cartographie, relevés de terrain, rapports, messagerie, audit et livraisons chez l'exportateur. Le chargement complet prend quelques minutes ; attendez la ligne `[render] démonstration chargée` avant de vous connecter.

@@ -274,6 +274,11 @@ const PROFILS = [
     fs.writeFileSync(out, doc);
   }
   fs.writeFileSync(process.env.DEMO_JSON || '/tmp/demo-accounts.json', JSON.stringify({ org: org.id, exporter: exporterOrg, password: PASSWORD, accounts, convoys: [cv1, cv2, cv3], delegate2 }, null, 2));
+  // Données d'exemple pour chaque profil (logistique, ventes, audit, livraisons…) : voir seed-demo-enrichi.js
+  if (!process.env.DEMO_NO_ENRICH) {
+    try { require('child_process').execFileSync(process.execPath, [path.join(__dirname, 'seed-demo-enrichi.js')], { stdio: 'inherit', env: { ...process.env, DEMO_JSON: process.env.DEMO_JSON || '/tmp/demo-accounts.json' } }); }
+    catch { warnings.push('enrichissement des données d\'exemple : voir les messages ci-dessus'); }
+  }
   console.log(`\nCoopérative de démonstration prête : ${org.name}\n  ${accounts.length} comptes (mot de passe : ${PASSWORD})`);
   if (warnings.length) console.log(`\n${warnings.length} étape(s) facultative(s) ignorée(s) :\n - ` + warnings.join('\n - '));
 })().catch((e) => { console.error(e.message); process.exit(1); });
