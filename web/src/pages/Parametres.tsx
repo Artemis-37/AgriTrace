@@ -138,6 +138,7 @@ function Campaigns() {
       {loading || !data ? <Loading /> : <Table rows={data.list} empty="Aucune traite." columns={[
         { header: 'Traite', render: (c) => <strong>{TRAITE[c.traite] ?? 'Campagne'}</strong> }, { header: 'Nom', render: (c) => <>{c.name} <code>{c.code}</code></> },
         { header: 'Filière', render: (c) => data.chains.find((v) => v.id === c.value_chain_id)?.name ?? '' },
+        { header: 'Produits et prix (achat / vente au kg)', render: (c) => (c.products ?? []).length ? <div>{c.products.map((p: any) => <div key={p.id}><strong>{p.name}</strong> : {FR(p.buy_price_per_kg) || '—'} / {FR(p.sell_price_per_kg) || '—'}</div>)}</div> : <span className="muted">Aucun produit : cliquez sur « Prix »</span> },
         { header: 'Début', render: (c) => date(c.starts_on) }, { header: 'Fin', render: (c) => date(c.ends_on) },
         { header: 'État', render: (c) => <Badge tone={current(c) ? 'ok' : 'neutral'}>{current(c) ? 'En cours' : CSTATUS[c.status] ?? c.status}</Badge> },
         { header: '', render: (c) => <span className="row-actions">
@@ -146,7 +147,7 @@ function Campaigns() {
       ]} />}
       {adding && data && <CampaignForm chains={data.chains} onClose={() => setAdding(false)} onDone={() => { setAdding(false); reload(); }} />}
       {edit && <CampaignEdit c={edit} onClose={() => setEdit(null)} onDone={() => { setEdit(null); reload(); }} />}
-      {prices && <TraitePrices c={prices} onClose={() => setPrices(null)} />}
+      {prices && <TraitePrices c={prices} onClose={() => { setPrices(null); reload(); }} />}
     </Card>
   );
 }
@@ -211,6 +212,23 @@ function CampaignEdit({ c, onClose, onDone }: { c: any; onClose: () => void; onD
   );
 }
 
+/** Produits associés à une traite : ajout et retrait (un produit se retire tant qu'aucune pesée ne s'y rattache). */
+function TraiteProducts({ c, prods, onChanged }: { c: any; prods: any[]; onChanged: () => void }) {
+  const act = useAction();
+  const [linked, setLinked] = useState<string[]>((c.products ?? []).map((p: any) => p.id));
+  const [pick, setPick] = useState('');
+  const free = prods.filter((p) => p.active && !linked.includes(p.id));
+  return (
+    <fieldset className="bloc"><legend>Produits de cette traite</legend>
+      <div className="chips">{prods.filter((p) => linked.includes(p.id)).map((p) => <span key={p.id} className="chip">{p.name} <button className="link-btn" disabled={act.busy} title="Retirer ce produit de la traite" onClick={() => act.run(async () => { await del(`/campaigns/${c.id}/products/${p.id}`); setLinked(linked.filter((x) => x !== p.id)); onChanged(); })}>×</button></span>)}
+        {!linked.length && <span className="muted">Aucun produit : ajoutez-en un, puis fixez son prix.</span>}</div>
+      {free.length > 0 && <div className="toolbar"><select value={pick} onChange={(e) => setPick(e.target.value)}><option value="">Ajouter un produit…</option>{free.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select>
+        <button className="btn btn-small" disabled={!pick || act.busy} onClick={() => act.run(async () => { await post(`/campaigns/${c.id}/products/${pick}`); setLinked([...linked, pick]); setPick(''); onChanged(); })}>Ajouter</button></div>}
+      {act.error && <ErrorBox message={act.error} />}
+    </fieldset>
+  );
+}
+
 /** Prix des produits d'une traite déjà créée : lecture du dernier prix fixé pour cette traite, puis révision. */
 function TraitePrices({ c, onClose }: { c: any; onClose: () => void }) {
   const { can } = useAuth();
@@ -230,7 +248,8 @@ function TraitePrices({ c, onClose }: { c: any; onClose: () => void }) {
   const ok = Object.values(px).every((v) => (v.buy === '' || PRICE.test(v.buy)) && (v.sell === '' || PRICE.test(v.sell)));
   return (
     <Modal title={`Prix — ${c.name}`} onClose={onClose}>
-      <p className="muted">Du {date(c.starts_on)} au {date(c.ends_on)}. Un produit sans prix pour cette traite garde son prix par défaut.</p>
+      <p className="muted">Du {date(c.starts_on)} au {date(c.ends_on)}. Les produits de cette traite et leurs prix s'appliquent aux pesées, à la caisse et aux achats déclarés ; un changement de prix met à jour ce qui n'est pas encore pesé ou réglé.</p>
+      {may && data.data && <TraiteProducts c={c} prods={data.data.prods} onChanged={data.reload} />}
       {data.loading && <Loading />}{data.error && <ErrorBox message={data.error} />}
       {data.data && (may ? <PriceFields prods={data.data.prods} px={px} setPx={setPx} existing={data.data.existing} />
         : data.data.prods.map((p: any) => <p key={p.id}><strong>{p.name}</strong> : {data.data!.existing[p.id] ? `${data.data!.existing[p.id].buy || '—'} / ${data.data!.existing[p.id].sell || '—'} FCFA/kg` : 'prix par défaut'}</p>))}

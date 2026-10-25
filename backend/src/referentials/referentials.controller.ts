@@ -1,4 +1,4 @@
-import { BadRequestException, Body, ConflictException, Controller, Get, NotFoundException, Param, ParseUUIDPipe, Post, Put, Query, Req } from '@nestjs/common';
+import { BadRequestException, Body, ConflictException, Controller, Delete, Get, NotFoundException, Param, ParseUUIDPipe, Post, Put, Query, Req } from '@nestjs/common';
 import { ApiBearerAuth, ApiHeader, ApiTags } from '@nestjs/swagger';
 import { IsDateString, IsIn, IsOptional, IsString, IsUUID, Length, Matches } from 'class-validator';
 import { RequirePermissions } from '../access/decorators';
@@ -110,7 +110,39 @@ export class ReferentialsController {
   @RequirePermissions('campaigns:read')
   listCampaigns(@Req() req: any) {
     return this.db.tx(req.org.id, async (c) =>
-      (await c.query(`SELECT id, value_chain_id, code, name, starts_on, ends_on, status, traite FROM campaigns ORDER BY starts_on DESC`)).rows);
+      (await c.query(`SELECT k.id, k.value_chain_id, k.code, k.name, k.starts_on, k.ends_on, k.status, k.traite,
+        coalesce((SELECT json_agg(json_build_object('id', p.id, 'name', p.name,
+            'buy_price_per_kg', (SELECT x.buy_price_per_kg FROM product_prices x WHERE x.product_id = p.id AND x.campaign_id = k.id AND x.buy_price_per_kg IS NOT NULL ORDER BY x.created_at DESC LIMIT 1),
+            'sell_price_per_kg', (SELECT x.sell_price_per_kg FROM product_prices x WHERE x.product_id = p.id AND x.campaign_id = k.id AND x.sell_price_per_kg IS NOT NULL ORDER BY x.created_at DESC LIMIT 1)) ORDER BY p.name)
+          FROM campaign_products cp JOIN products p ON p.id = cp.product_id WHERE cp.campaign_id = k.id), '[]'::json) AS products
+       FROM campaigns k ORDER BY k.starts_on DESC`)).rows);
+  }
+
+  /** Associe un produit à une traite (le prix s'y fixe ensuite). */
+  @Post('campaigns/:id/products/:productId')
+  @RequirePermissions('campaigns:manage')
+  async addCampaignProduct(@Param('id', ParseUUIDPipe) id: string, @Param('productId', ParseUUIDPipe) productId: string, @Req() req: any) {
+    await this.db.tx(req.org.id, async (c) => {
+      if (!(await c.query(`SELECT 1 FROM campaigns WHERE id = $1`, [id])).rowCount) throw new NotFoundException('Traite introuvable');
+      if (!(await c.query(`SELECT 1 FROM products WHERE id = $1`, [productId])).rowCount) throw new NotFoundException('Produit introuvable');
+      await c.query(`INSERT INTO campaign_products(organization_id, campaign_id, product_id, created_by) VALUES ($1,$2,$3,$4) ON CONFLICT DO NOTHING`, [req.org.id, id, productId, req.user.id]);
+    });
+    await this.audit.log({ organizationId: req.org.id, actorUserId: req.user.id, action: 'campaign.product_add', entityType: 'campaign', entityId: id, details: { product_id: productId } });
+    return { ok: true };
+  }
+
+  /** Retire un produit d'une traite, tant qu'aucune pesée ne s'y rattache. */
+  @Delete('campaigns/:id/products/:productId')
+  @RequirePermissions('campaigns:manage')
+  async removeCampaignProduct(@Param('id', ParseUUIDPipe) id: string, @Param('productId', ParseUUIDPipe) productId: string, @Req() req: any) {
+    await this.db.tx(req.org.id, async (c) => {
+      if ((await c.query(`SELECT 1 FROM convoy_receptions WHERE campaign_id = $1 AND product_id = $2 LIMIT 1`, [id, productId])).rowCount)
+        throw new ConflictException('Des pesées existent déjà pour ce produit dans cette traite : il ne peut plus en être retiré');
+      await c.query(`DELETE FROM product_prices WHERE campaign_id = $1 AND product_id = $2`, [id, productId]);
+      await c.query(`DELETE FROM campaign_products WHERE campaign_id = $1 AND product_id = $2`, [id, productId]);
+    });
+    await this.audit.log({ organizationId: req.org.id, actorUserId: req.user.id, action: 'campaign.product_remove', entityType: 'campaign', entityId: id, details: { product_id: productId } });
+    return { ok: true };
   }
 
   @Post('campaigns')

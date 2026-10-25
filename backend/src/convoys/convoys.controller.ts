@@ -395,7 +395,7 @@ export class ConvoysController {
       let campaignId = b.campaign_id ?? null;
       if (campaignId && !(await c.query(`SELECT 1 FROM campaigns WHERE id = $1`, [campaignId])).rowCount) throw new BadRequestException('Campagne inconnue');
       // Traite en cours : celle de la filière du produit (grande ou petite traite selon la date), sinon n'importe quelle traite ouverte.
-      if (!campaignId) campaignId = (await c.query(`SELECT id FROM campaigns WHERE status = 'open' AND current_date BETWEEN starts_on AND ends_on ORDER BY (value_chain_id IS NOT DISTINCT FROM (SELECT value_chain_id FROM products WHERE id = $1)) DESC, starts_on DESC LIMIT 1`, [b.product_id ?? null])).rows[0]?.id ?? null;
+      if (!campaignId) campaignId = (await c.query(`SELECT id FROM campaigns WHERE status = 'open' AND current_date BETWEEN starts_on AND ends_on ORDER BY EXISTS (SELECT 1 FROM campaign_products cp WHERE cp.campaign_id = campaigns.id AND cp.product_id = $1) DESC, (value_chain_id IS NOT DISTINCT FROM (SELECT value_chain_id FROM products WHERE id = $1)) DESC, starts_on DESC LIMIT 1`, [b.product_id ?? null])).rows[0]?.id ?? null;
       const w = (await c.query(`SELECT status FROM warehouses WHERE id = $1`, [b.warehouse_id])).rows[0];
       if (!w || w.status !== 'active') throw new BadRequestException('Magasin inconnu ou fermé');
       const variance = v.declared_kg == null ? null : (await c.query(`SELECT $1::numeric - $2::numeric AS d`, [b.total_kg, v.declared_kg])).rows[0].d;

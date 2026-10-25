@@ -93,7 +93,17 @@ export class ProductsController {
       const last = b.campaign_id ? (await c.query(`SELECT buy_price_per_kg AS b, sell_price_per_kg AS s FROM product_prices WHERE product_id = $1 AND campaign_id = $2 ORDER BY created_at DESC LIMIT 1`, [id, b.campaign_id])).rows[0] : null;
       const buy = b.buy_price_per_kg ?? (b.campaign_id ? last?.b ?? null : p.b), sell = b.sell_price_per_kg ?? (b.campaign_id ? last?.s ?? null : p.s);
       await c.query(`INSERT INTO product_prices(organization_id, product_id, campaign_id, buy_price_per_kg, sell_price_per_kg, created_by) VALUES ($1,$2,$3,$4,$5,$6)`, [req.org.id, id, b.campaign_id ?? null, buy, sell, req.user.id]);
-      // Le prix d'une traite ne change pas le prix par défaut du produit (hors traite).
+      // Le prix d'une traite ne change pas le prix par défaut du produit (hors traite). Il associe le produit à la traite et se répercute sur les achats pas encore pesés.
+      if (b.campaign_id) {
+        await c.query(`INSERT INTO campaign_products(organization_id, campaign_id, product_id, created_by) VALUES ($1,$2,$3,$4) ON CONFLICT DO NOTHING`, [req.org.id, b.campaign_id, id, req.user.id]);
+        if (buy != null && Number(buy) > 0) {
+          await c.query(
+            `UPDATE purchase_declarations d SET unit_price = $3, amount = round(d.amount * $3::numeric / d.unit_price, 4), updated_at = now(), version = version + 1
+              WHERE d.campaign_id = $1 AND d.unit_price > 0 AND d.price_version_id IS NULL AND d.amount IS NOT NULL AND d.unit_price <> $3::numeric
+                AND d.value_chain_id = (SELECT value_chain_id FROM products WHERE id = $2) AND d.status IN ('received','received_confirmed','in_review','accepted')
+                AND NOT EXISTS (SELECT 1 FROM weighings w WHERE w.declaration_id = d.id)`, [b.campaign_id, id, buy]);
+        }
+      }
       if (b.campaign_id) return { ...(await c.query(`SELECT id, name, active FROM products WHERE id = $1`, [id])).rows[0], campaign_id: b.campaign_id, buy_price_per_kg: buy, sell_price_per_kg: sell };
       return (await c.query(`UPDATE products SET buy_price_per_kg = $2, sell_price_per_kg = $3, updated_at = now(), updated_by = $4 WHERE id = $1 RETURNING id, name, buy_price_per_kg, sell_price_per_kg, active`, [id, buy, sell, req.user.id])).rows[0];
     });
