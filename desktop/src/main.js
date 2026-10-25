@@ -13,6 +13,30 @@ const { checkUpdate, downloadInstaller, installCommand, cleanOld } = require('./
 const { spawn } = require('child_process');
 
 const PORT = 3000;
+
+// Démarrage robuste : jamais d'échec silencieux. Toute erreur est écrite dans agritrace.log (dossier des données) et affichée à l'écran.
+// Le matériel graphique de certains postes (pilotes anciens, machines virtuelles) empêche Chromium d'ouvrir une fenêtre : on utilise le rendu logiciel.
+app.disableHardwareAcceleration();
+function bootLog(m) {
+  const line = `${new Date().toISOString()} ${m}\n`;
+  for (const dir of [() => app.getPath('userData'), () => app.getPath('temp')]) {
+    try { const d = dir(); fs.mkdirSync(d, { recursive: true }); fs.appendFileSync(path.join(d, 'agritrace.log'), line); return; } catch { /* dossier suivant */ }
+  }
+}
+let fatalShown = false;
+function fatal(titre, err) {
+  const msg = (err && (err.stack || err.message)) || String(err);
+  bootLog(`${titre} : ${msg}`);
+  if (fatalShown) return;
+  fatalShown = true;
+  try {
+    dialog.showErrorBox('AgriTrace — ' + titre, `${(err && err.message) || msg}\n\nDétails dans le fichier :\n${path.join(app.getPath('userData'), 'agritrace.log')}`);
+  } catch { /* l'application n'est pas encore prête */ }
+}
+process.on('uncaughtException', (e) => fatal('Erreur inattendue', e));
+process.on('unhandledRejection', (e) => fatal('Erreur inattendue', e));
+app.on('render-process-gone', (_e, _wc, d) => bootLog('processus d\'affichage arrêté : ' + d.reason));
+app.on('child-process-gone', (_e, d) => bootLog(`processus ${d.type} arrêté : ${d.reason}`));
 let stopBeacon = null, cfg = null, server = null, win = null, tray = null, quitting = false;
 const cfgFile = () => path.join(app.getPath('userData'), 'config.json');
 const loadCfg = () => { try { return JSON.parse(fs.readFileSync(cfgFile(), 'utf8')); } catch { return null; } };
@@ -128,8 +152,11 @@ async function refindServer() {
   return finding;
 }
 
-if (!app.requestSingleInstanceLock()) app.quit();
-app.on('second-instance', () => { if (win) { win.show(); win.focus(); } });
+if (!app.requestSingleInstanceLock()) { bootLog('AgriTrace est déjà ouvert (icône près de l\'horloge) : cette seconde ouverture est fermée.'); app.exit(0); }
+app.on('second-instance', () => {
+  if (win) { if (win.isMinimized()) win.restore(); win.show(); win.focus(); }
+  else if (tray) { /* fenêtre fermée mais serveur actif : on la rouvre */ if (server) mainWindow(server.url); }
+});
 
 function page(name) { return path.join(__dirname, name); }
 
@@ -258,7 +285,7 @@ async function startServerRole() {
   } catch (e) {
     log('démarrage impossible : ' + e.stack);
     splash.close();
-    const r = dialog.showMessageBoxSync({ type: 'error', buttons: ['Quitter', 'Voir le journal'], message: 'Le serveur AgriTrace n\'a pas pu démarrer', detail: e.message });
+    const r = dialog.showMessageBoxSync({ type: 'error', buttons: ['Quitter', 'Voir le journal'], message: 'Le serveur AgriTrace n\'a pas pu démarrer', detail: e.message + (process.platform === 'win32' ? '\n\nSi AgriTrace a été lancé « en tant qu\'administrateur », fermez-le et ouvrez-le par un double-clic normal : la base de données refuse de démarrer avec des droits administrateur.' : '') });
     if (r === 1) shell.openPath(logFile());
     app.exit(1); return;
   }
@@ -311,7 +338,11 @@ ipcMain.handle('app:retry', async (_e, url) => { await refindServer(); win?.load
 ipcMain.on('app:station', (e) => { e.returnValue = cfg?.stationName ?? 'Poste'; });
 ipcMain.handle('app:change', () => resetRole());
 
-app.whenReady().then(main);
+bootLog(`démarrage AgriTrace ${app.getVersion()} (Electron ${process.versions.electron}, ${process.platform} ${os.release()}, installé : ${app.isPackaged}, données : ${app.getPath('userData')})`);
+app.whenReady().then(() => {
+  if (!fs.existsSync(path.join(appDir(), 'backend', 'dist', 'main.js'))) bootLog('ATTENTION : contenu embarqué introuvable : ' + appDir());
+  return main();
+}).catch((e) => { fatal('Démarrage impossible', e); app.exit(1); });
 app.on('before-quit', () => { quitting = true; stopBeacon?.(); });
 app.on('will-quit', async (e) => {
   if (server && server.state !== 'stopped') { e.preventDefault(); const s = server; server = null; await s.stop().catch(() => undefined); app.quit(); }

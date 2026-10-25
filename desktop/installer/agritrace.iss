@@ -18,6 +18,10 @@
   #define SourceDir "..\dist\win-unpacked"
 #endif
 
+#if !FileExists(AddBackslash(SourcePath) + SourceDir + "\" + AppExe)
+  #error "AgriTrace.exe est introuvable dans le dossier source. Lancez d'abord : npm run dist:dir (ou build-windows.bat), puis recompilez."
+#endif
+
 [Setup]
 ; Identifiant unique : NE JAMAIS le changer d'une version à l'autre (permet la mise à jour par-dessus l'existant).
 AppId={{773253FB-99AE-4FDA-B582-04915E13C3E9}
@@ -62,7 +66,7 @@ Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall delete rule name=
 Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall delete rule name=""AgriTrace recherche"""; Flags: runhidden
 Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall add rule name=""AgriTrace recherche"" dir=in action=allow protocol=UDP localport=8099 profile=private,domain program=""{app}\{#AppExe}"""; Flags: runhidden
 Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall add rule name=""AgriTrace serveur"" dir=in action=allow protocol=TCP localport=3000 profile=private,domain program=""{app}\{#AppExe}"""; Flags: runhidden
-Filename: "{app}\{#AppExe}"; Description: "{cm:LaunchProgram,{#AppName}}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\{#AppExe}"; Description: "{cm:LaunchProgram,{#AppName}}"; Flags: nowait postinstall skipifsilent runasoriginaluser
 
 [UninstallRun]
 Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall delete rule name=""AgriTrace recherche"""; Flags: runhidden; RunOnceId: "FwRecherche"
