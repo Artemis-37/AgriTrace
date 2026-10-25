@@ -683,3 +683,14 @@ tbody tr:hover { background: color-mix(in srgb, var(--c-lime) 35%, transparent);
 .bell-panel .btn-secondary { color: var(--carbon); }
 .bell-panel small { opacity: 1; color: var(--muted); }
 .bell-panel li.is-read { opacity: .75; }
+
+/* Panneaux taupes : tous les textes en blanc (onglets inactifs, textes secondaires, listes) */
+.registre-detail .tabs, .panel-taupe .tabs { border-bottom-color: rgba(255,255,255,.55); }
+.registre-detail .tabs button, .panel-taupe .tabs button { color: #fff; opacity: .92; }
+.registre-detail .tabs button:hover, .panel-taupe .tabs button:hover { color: #fff; background: rgba(255,255,255,.14); opacity: 1; }
+.registre-detail .tabs button[aria-selected='true'], .panel-taupe .tabs button[aria-selected='true'] { background: var(--c-lime); color: var(--c-on-lime); opacity: 1; border-bottom-color: var(--c-lime); }
+.registre-detail .muted, .panel-taupe .muted, .registre-detail small, .registre-detail p, .registre-detail li { color: #fff; }
+.registre-detail .muted, .panel-taupe .muted { opacity: .85; }
+.registre-detail a { color: #fff; text-decoration: underline; }
+.registre-detail table th, .registre-detail table td { color: #fff; }
+.registre-detail table td code { color: #fff; }
