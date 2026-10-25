@@ -18,7 +18,12 @@ node scripts/render-prepare.js
 export DATABASE_URL=$(cat /tmp/app-db-url)
 echo "[render] migrations"
 DATABASE_URL="$OWNER_DATABASE_URL" node scripts/migrate.js
-if [ -n "${ADMIN_EMAIL:-}" ] && [ -n "${ADMIN_PASSWORD:-}" ]; then
+if [ -z "${ADMIN_EMAIL:-}" ] || [ -z "${ADMIN_PASSWORD:-}" ]; then
+  echo "[render] ATTENTION : ADMIN_EMAIL et/ou ADMIN_PASSWORD absents (onglet Environment) : aucun administrateur ni démonstration"
+elif [ "${#ADMIN_PASSWORD}" -lt 12 ]; then
+  echo "[render] ATTENTION : ADMIN_PASSWORD fait ${#ADMIN_PASSWORD} caractères, il en faut au moins 12 : aucun administrateur créé"
+else
+  echo "[render] administrateur : $ADMIN_EMAIL (mot de passe de ${#ADMIN_PASSWORD} caractères)"
   RESET_PASSWORD=1 DATABASE_URL="$OWNER_DATABASE_URL" node scripts/create-platform-admin.js "$ADMIN_EMAIL" "Administrateur de la plateforme" || true
 fi
 
