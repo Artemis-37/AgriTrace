@@ -664,3 +664,14 @@ tbody tr:hover { background: color-mix(in srgb, var(--c-lime) 35%, transparent);
 .accordion .acc-head { background: var(--c-lime); color: var(--c-on-lime); }
 .accordion .open > .acc-head { background: var(--c-navy); color: #fff; }
 .accordion a, .accordion .link-btn { color: var(--c-link); }
+/* Menu d'actions par ligne et formulaires en deux colonnes */
+.row-menu { position: relative; display: inline-block; }
+.row-menu > summary { list-style: none; cursor: pointer; }
+.row-menu > summary::-webkit-details-marker { display: none; }
+.row-menu > summary::after { content: ' ▾'; }
+.row-menu-list { position: absolute; right: 0; z-index: 20; min-width: 15rem; margin-top: .25rem; display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--c-navy); border-radius: 8px; box-shadow: var(--shadow); padding: .3rem; }
+.row-menu-item { font: inherit; text-align: left; background: none; border: 0; padding: .45rem .7rem; border-radius: 6px; cursor: pointer; color: var(--carbon); }
+.row-menu-item:hover { background: color-mix(in srgb, var(--c-lime) 45%, transparent); }
+.form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .2rem 1.5rem; }
+@media (max-width: 760px) { .form-grid { grid-template-columns: 1fr; } }
+.row-menu > summary { white-space: nowrap; }

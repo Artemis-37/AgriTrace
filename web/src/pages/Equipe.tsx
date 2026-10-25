@@ -1,9 +1,7 @@
 import { useState } from 'react';
-import { useRef } from 'react';
-import { del, get, post, put, putForm } from '../api';
-import OrgLogo, { LOGO_EVENT } from '../OrgLogo';
+import { del, get, post, put } from '../api';
 import { useAuth } from '../auth';
-import { Badge, Card, ErrorBox, Field, Loading, Modal, PageHeader, Table, useAction, useAsync } from '../ui';
+import { Badge, Card, ErrorBox, Field, Loading, Modal, PageHeader, Table, Tabs, useAction, useAsync } from '../ui';
 import { dateTime } from '../format';
 import { Confirm } from './Declarations';
 import { PhotoPick, uploadPhoto } from '../Photo';
@@ -20,17 +18,45 @@ export default function Equipe() {
   const [codeFor, setCodeFor] = useState<any | null>(null);
   const [temp, setTemp] = useState<{ email: string; temporary_password: string } | null>(null);
   const mk = useAction();
+  const tabs: [string, string][] = [['users', 'Utilisateurs']];
+  if (can('roles:manage')) tabs.push(['roles', 'Rôles']);
+  if (can('collectors:manage')) tabs.push(['delegues', 'Accès des délégués']);
+  if (can('workstations:manage')) tabs.push(['postes', 'Postes de travail']);
+  const [tab, setTab] = useState('users');
   return (
     <>
-      <PageHeader title="Équipe" subtitle="Accès des utilisateurs : suspension, rôles et historique. Tout changement prend effet immédiatement." />
-      {can('org:branding') && <ProfileCard />}
-      {can('org:branding') && <LogoCard />}
+      <PageHeader title="Utilisateurs et accès" subtitle="Qui peut se connecter, avec quel rôle. Tout changement prend effet immédiatement." />
       {temp && <Modal title="Mot de passe temporaire" onClose={() => setTemp(null)}>
         <p>Communiquez ce mot de passe à <strong>{temp.email}</strong> par un canal sûr. Il ne sera plus affiché ; l'utilisateur devra le remplacer dès sa première connexion.</p>
         <p><code style={{ fontSize: '1.2rem', userSelect: 'all' }}>{temp.temporary_password}</code></p>
         <div className="modal-actions"><button className="btn" onClick={() => setTemp(null)}>J'ai noté le mot de passe</button></div>
       </Modal>}
+      <Tabs tabs={tabs as any} value={tab as any} onChange={setTab as any} />
+      {tab === 'users' && <>
       {can('users:create') && <div className="toolbar"><button className="btn" onClick={() => setAdding(true)}>Ajouter un utilisateur</button></div>}
+      <Card>
+        {error && <ErrorBox message={error} onRetry={reload} />}
+        {loading ? <Loading /> : (
+          <Table rows={data?.users ?? []} empty="Aucun utilisateur." columns={[
+            { header: 'Code', render: (u) => <code>{u.member_code ?? '—'}</code> }, { header: 'Nom', render: (u) => <strong>{u.full_name}</strong> }, { header: 'E-mail', render: (u) => u.email }, { header: 'Rôles', render: (u) => u.role_name ?? u.role_code },
+            { header: 'Accès', render: (u) => <Badge tone={u.membership_status === 'active' ? 'ok' : 'bad'}>{u.membership_status === 'active' ? 'Actif' : 'Suspendu'}</Badge> },
+            { header: '', render: (u) => (
+              <div className="row-actions"><details className="row-menu" onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) e.currentTarget.open = false; }}><summary className="btn btn-small btn-secondary">Actions</summary><div className="row-menu-list">
+                {can('users:manage') && <button className="row-menu-item" onClick={() => setCodeFor(u)}>Code</button>}
+                {can('users:suspend') && u.id !== me?.user.id && (u.membership_status === 'active'
+                  ? <button className="row-menu-item" onClick={() => setAsk({ u, what: 'suspend' })}>Suspendre</button>
+                  : <button className="row-menu-item" onClick={() => setAsk({ u, what: 'reactivate' })}>Réactiver</button>)}
+                {can('users:suspend') && <button className="row-menu-item" onClick={() => setAsk({ u, what: 'revoke-sessions' })}>Révoquer les sessions</button>}
+                {can('users:manage') && u.id !== me?.user.id && <button className="row-menu-item" onClick={async () => { if (confirm(`Réinitialiser le mot de passe de ${u.full_name} ? Ses sessions seront fermées.`)) await mk.run(async () => setTemp(await post(`/users/${u.id}/reset-password`))); }}>Réinitialiser le mot de passe</button>}
+                {can('users:manage') && u.id !== me?.user.id && <button className="row-menu-item" onClick={async () => { if (confirm(`Retirer la double authentification de ${u.full_name} (téléphone perdu) ? Ses sessions seront fermées ; la personne pourra la reconfigurer.`)) await mk.run(async () => { await post(`/users/${u.id}/reset-2fa`); alert('Double authentification retirée.'); }); }}>Retirer sa double authentification</button>}
+                {can('users:change_role') && u.id !== me?.user.id && <button className="row-menu-item" onClick={() => setRole(u)}>Rôles</button>}
+                <button className="row-menu-item" onClick={() => setHist(u)}>Historique</button>
+              </div></details></div>) },
+          ]} />
+        )}
+      </Card>
+      </>}
+      {tab === 'roles' && <>
       {can('roles:manage') && (data?.templates?.length ?? 0) > 0 && (
         <Card title="Rôles types">
           <p className="muted">Chaque rôle ne donne accès qu'à ce dont le poste a besoin ; le reste du menu reste invisible.</p>
@@ -42,29 +68,9 @@ export default function Equipe() {
           {mk.error && <ErrorBox message={mk.error} />}
         </Card>
       )}
-      {can('collectors:manage') && <Delegues users={data?.users ?? []} />}
-      {can('workstations:manage') && <Postes />}
-      <Card>
-        {error && <ErrorBox message={error} onRetry={reload} />}
-        {loading ? <Loading /> : (
-          <Table rows={data?.users ?? []} empty="Aucun utilisateur." columns={[
-            { header: 'Code', render: (u) => <code>{u.member_code ?? '—'}</code> }, { header: 'Nom', render: (u) => <strong>{u.full_name}</strong> }, { header: 'E-mail', render: (u) => u.email }, { header: 'Rôles', render: (u) => u.role_name ?? u.role_code },
-            { header: 'Accès', render: (u) => <Badge tone={u.membership_status === 'active' ? 'ok' : 'bad'}>{u.membership_status === 'active' ? 'Actif' : 'Suspendu'}</Badge> },
-            { header: '', render: (u) => (
-              <div className="row-actions">
-                {can('users:manage') && <button className="btn btn-small btn-secondary" onClick={() => setCodeFor(u)}>Code</button>}
-                {can('users:suspend') && u.id !== me?.user.id && (u.membership_status === 'active'
-                  ? <button className="btn btn-small btn-secondary" onClick={() => setAsk({ u, what: 'suspend' })}>Suspendre</button>
-                  : <button className="btn btn-small btn-secondary" onClick={() => setAsk({ u, what: 'reactivate' })}>Réactiver</button>)}
-                {can('users:suspend') && <button className="btn btn-small btn-secondary" onClick={() => setAsk({ u, what: 'revoke-sessions' })}>Révoquer les sessions</button>}
-                {can('users:manage') && u.id !== me?.user.id && <button className="btn btn-small btn-secondary" onClick={async () => { if (confirm(`Réinitialiser le mot de passe de ${u.full_name} ? Ses sessions seront fermées.`)) await mk.run(async () => setTemp(await post(`/users/${u.id}/reset-password`))); }}>Réinitialiser le mot de passe</button>}
-                {can('users:manage') && u.id !== me?.user.id && <button className="btn btn-small btn-secondary" onClick={async () => { if (confirm(`Retirer la double authentification de ${u.full_name} (téléphone perdu) ? Ses sessions seront fermées ; la personne pourra la reconfigurer.`)) await mk.run(async () => { await post(`/users/${u.id}/reset-2fa`); alert('Double authentification retirée.'); }); }}>Retirer sa double authentification</button>}
-                {can('users:change_role') && u.id !== me?.user.id && <button className="btn btn-small btn-secondary" onClick={() => setRole(u)}>Rôles</button>}
-                <button className="btn btn-small btn-ghost" onClick={() => setHist(u)}>Historique</button>
-              </div>) },
-          ]} />
-        )}
-      </Card>
+      </>}
+      {tab === 'delegues' && can('collectors:manage') && <Delegues users={data?.users ?? []} />}
+      {tab === 'postes' && can('workstations:manage') && <Postes />}
       {ask && <Confirm title={ask.what === 'suspend' ? `Suspendre ${ask.u.full_name}` : ask.what === 'reactivate' ? `Réactiver ${ask.u.full_name}` : `Révoquer les sessions de ${ask.u.full_name}`} reason label="Motif" onClose={() => setAsk(null)}
         intro={ask.what === 'suspend' ? 'L\'accès cesse immédiatement sur cette coopérative, web et mobile. Les données saisies sont conservées.' : undefined}
         onSubmit={async (reason) => { await post(`/users/${ask.u.id}/${ask.what}`, { reason }); setAsk(null); reload(); }} />}
@@ -250,55 +256,5 @@ function History({ u, onClose }: { u: any; onClose: () => void }) {
       {loading && <Loading />}{error && <ErrorBox message={error} />}
       {data && <Table rows={data} empty="Aucun événement." columns={[{ header: 'Date', render: (e: any) => dateTime(e.created_at) }, { header: 'Action', render: (e: any) => ACTIONS[e.action] ?? e.action }, { header: 'Par', render: (e: any) => e.actor_name ?? '—' }, { header: 'Motif', render: (e: any) => e.reason ?? '—' }]} />}
     </Modal>
-  );
-}
-
-/** Profil de la coopérative : nom commercial et coordonnées repris sur les reçus imprimés. */
-function ProfileCard() {
-  const { data, reload } = useAsync(() => get<any>('/organization/profile'), []);
-  const [f, setF] = useState<any | null>(null);
-  const act = useAction();
-  const v = f ?? data;
-  const set = (k: string) => (e: any) => setF({ ...(f ?? data), [k]: e.target.value });
-  return (
-    <Card title="Profil de la coopérative">
-      <p className="muted">Ces informations figurent en en-tête des reçus et pièces imprimés. Nom enregistré : <strong>{data?.name ?? '…'}</strong></p>
-      {v && <div className="form-grid">
-        <Field label="Nom commercial"><input value={v.commercial_name ?? ''} maxLength={200} onChange={set('commercial_name')} /></Field>
-        <Field label="Adresse"><input value={v.address ?? ''} maxLength={300} onChange={set('address')} /></Field>
-        <Field label="Téléphone"><input value={v.phone ?? ''} maxLength={40} onChange={set('phone')} /></Field>
-        <Field label="E-mail"><input type="email" value={v.email ?? ''} onChange={set('email')} /></Field>
-        <Field label="Code CCC de la coopérative" hint="Préfixe du numéro de connaissement des convois : CODE-année-3 lettres du délégué-n° (ex. SC000000-2026-OUM-1). Sans code, le numéro se saisit à la main."><input value={v.ccc_code ?? ''} maxLength={20} onChange={(e) => setF({ ...(f ?? data), ccc_code: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '') })} /></Field>
-        <Field label="Devise (code ISO)"><input value={v.currency ?? 'XOF'} maxLength={3} onChange={(e) => setF({ ...(f ?? data), currency: e.target.value.toUpperCase() })} /></Field>
-        <Field label="Langue par défaut"><select value={v.default_language ?? 'fr'} onChange={set('default_language')}><option value="fr">Français</option><option value="en">English</option></select></Field>
-      </div>}
-      {act.error && <ErrorBox message={act.error} />}
-      <div className="toolbar"><button className="btn" disabled={act.busy || !f} onClick={async () => { if (await act.run(() => put('/organization/profile', Object.fromEntries(['commercial_name', 'address', 'phone', 'email', 'currency', 'default_language', 'ccc_code'].filter((k) => f[k] !== undefined && f[k] !== null).map((k) => [k, f[k]]))))) { setF(null); reload(); } }}>Enregistrer le profil</button></div>
-    </Card>
-  );
-}
-
-/** Identité de la coopérative : son logo apparaît dans son portail et dans l'application mobile de ses équipes. */
-function LogoCard() {
-  const file = useRef<HTMLInputElement>(null);
-  const act = useAction();
-  const changed = () => window.dispatchEvent(new Event(LOGO_EVENT));
-  const send = async () => {
-    const f = file.current?.files?.[0];
-    if (!f) return;
-    const form = new FormData(); form.append('file', f);
-    if (await act.run(() => putForm('/organization/logo', form))) { if (file.current) file.current.value = ''; changed(); }
-  };
-  return (
-    <Card title="Logo de la coopérative">
-      <p className="muted">Image PNG ou JPEG de 1 Mo maximum (fond clair ou transparent de préférence). Elle s'affiche en tête du portail et sur l'accueil de l'application mobile ; les téléphones la reçoivent à l'ouverture de l'application avec du réseau.</p>
-      <div style={{ minHeight: 60, marginBottom: 8 }}><OrgLogo height={80} /></div>
-      <div className="toolbar">
-        <input ref={file} type="file" accept="image/png,image/jpeg" aria-label="Choisir un logo" />
-        <button className="btn" disabled={act.busy} onClick={send}>Enregistrer le logo</button>
-        <button className="btn btn-ghost" disabled={act.busy} onClick={async () => { if (confirm('Supprimer le logo ?') && (await act.run(() => del('/organization/logo')))) changed(); }}>Supprimer</button>
-      </div>
-      {act.error && <ErrorBox message={act.error} />}
-    </Card>
   );
 }

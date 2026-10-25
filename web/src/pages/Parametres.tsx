@@ -3,6 +3,7 @@ import { del, get, post, put } from '../api';
 import { getChains } from '../chains';
 import { useAuth } from '../auth';
 import { date } from '../format';
+import Societe from './Societe';
 import { Badge, Card, ErrorBox, Field, Loading, Modal, PageHeader, Table, Tabs, useAction, useAsync } from '../ui';
 
 const PRICE = /^\d{1,12}(\.\d{1,2})?$/;
@@ -12,14 +13,15 @@ const FR = (v: any) => (v === null || v === undefined || v === '' ? '' : Number(
 export default function Parametres() {
   const { can } = useAuth();
   const tabs: [string, string][] = [];
+  if (can('org:branding')) tabs.push(['societe', 'Société']);
   if (can('products:read')) tabs.push(['products', 'Produits']);
   if (can('campaigns:read')) tabs.push(['campaigns', 'Traites']);
   const [tab, setTab] = useState(tabs[0]?.[0] ?? 'products');
   return (
     <>
-      <PageHeader title="Produits et traites" subtitle="Produits achetés, et prix au kilo fixés pour chaque traite (grande traite, petite traite) avec ses dates de début et de fin." />
+      <PageHeader title="Paramètres" subtitle="Société, produits achetés et prix au kilo par traite (grande traite, petite traite) avec leurs dates." />
       <Tabs tabs={tabs as any} value={tab as any} onChange={setTab as any} />
-      {tab === 'products' ? <Products /> : <Campaigns />}
+      {tab === 'societe' ? <Societe /> : tab === 'products' ? <Products /> : <Campaigns />}
     </>
   );
 }

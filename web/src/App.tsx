@@ -58,7 +58,7 @@ const NAV: { to: string; label: string; icon: string; perm: string[]; any?: bool
   { to: '/cartographie', label: 'Cartographie', icon: '⌖', perm: ['geo:anomalies'] },
   { to: '/commerce', label: 'Commerce', icon: '⇄', perm: ['buyers:read', 'logistics:read', 'invoices:read'], any: true },
   { to: '/partenaires', label: 'Partenaires', icon: '🤝', perm: ['partners:read'] },
-  { to: '/parametres', label: 'Produits et campagnes', icon: '🌾', perm: ['products:read', 'campaigns:read'], any: true },
+  { to: '/parametres', label: 'Paramètres', icon: '⚙️', perm: ['products:read', 'campaigns:read', 'org:branding'], any: true },
   { to: '/delegues', label: 'Délégués', icon: '☻', perm: ['collectors:read'] },
   { to: '/pesees', label: 'Pesées', icon: '⚖', perm: ['convoys:read', 'convoys:receive'], any: true, notFor: 'collector' },
   { to: '/caisse', label: 'Caisse', icon: '₵', perm: ['convoys:settle', 'finance:read'], any: true },
