@@ -5,6 +5,7 @@ import { useAuth } from '../auth';
 import { ErrorBox, Field, Loading, Modal, Tabs, useAction, useAsync } from '../ui';
 import { FicheRow, Registre } from '../Registre';
 import { Fiche } from './Convois';
+import { PhotoBox, PhotoPick, uploadPhoto } from '../Photo';
 import { RTYPE } from './Rapports';
 
 const DOC: Record<string, string> = { cni: "Carte nationale d'identité", passeport: 'Passeport', attestation: "Attestation d'identité", permis: 'Permis de conduire', autre: 'Autre pièce' };
@@ -47,13 +48,14 @@ export default function Delegues() {
             <>
               <Tabs tabs={tabs} value={tab} onChange={setTab} />
               {tab === 'info' && (
+                <div className="fiche-with-photo"><PhotoBox type="user" id={cur.user_id} name={cur.full_name} canEdit={can('collectors:manage')} />
                 <div className="fiche-form">
                   <FicheRow label="Code">{cur.member_code ?? '—'}</FicheRow><FicheRow label="Nom">{cur.full_name}</FicheRow>
                   <FicheRow label="Localité">{cur.origin ?? '—'}</FicheRow><FicheRow label="Contact">{cur.phone ?? '—'}</FicheRow>
-                  <FicheRow label="E-mail">{cur.email ?? '—'}</FicheRow><FicheRow label="Statut">{cur.status === 'active' ? 'Actif' : 'Désactivé'}</FicheRow>
+                  <FicheRow label="E-mail">{!cur.email || cur.email.endsWith('@agritrace.invalid') ? 'Sans accès à l\'application' : cur.email}</FicheRow><FicheRow label="Statut">{cur.status === 'active' ? 'Actif' : 'Désactivé'}</FicheRow>
                   <FicheRow label="Banque">{cur.bank_name ?? '—'}</FicheRow><FicheRow label="N° de compte">{cur.bank_account ?? '—'}</FicheRow>
                   <FicheRow label="Filières"><ChainsOf c={cur} onDone={reload} /></FicheRow>
-                </div>
+                </div></div>
               )}
               {tab === 'id' && <div className="fiche-form"><FicheRow label="Type de pièce">{DOC[cur.id_doc_type] ?? '—'}</FicheRow><FicheRow label="N° de la pièce">{cur.id_doc_no ?? '—'}</FicheRow></div>}
               {(tab === 'transport' || tab === 'retenues') && <Rates c={cur} kind={tab} onDone={reload} />}
@@ -94,20 +96,30 @@ function ChainsOf({ c, onDone }: { c: any; onDone: () => void }) {
 function NewDelegate({ onClose, onDone }: { onClose: () => void; onDone: (collectorId: string) => void }) {
   const { can } = useAuth();
   const chains = useAsync(() => getChains().catch(() => [] as any[]), []);
-  const [f, setF] = useState({ full_name: '', email: '', phone: '', password: '', member_code: '', origin: '', bank_name: '', bank_account: '', id_doc_type: '', id_doc_no: '', transport: '', retention: '' });
+  const [f, setF] = useState({ last_name: '', first_names: '', member_code: '', email: '', phone: '', password: '', origin: '', bank_name: '', bank_account: '', id_doc_type: '', id_doc_no: '', transport: '', retention: '' });
   const [picked, setPicked] = useState<string[]>([]);
+  const [photo, setPhoto] = useState<File | null>(null);
   const act = useAction();
   const set = (k: keyof typeof f) => (e: any) => setF({ ...f, [k]: e.target.value });
   const num = (v: string) => v === '' || /^\d+(\.\d{1,4})?$/.test(v);
-  const ok = f.full_name.trim().length >= 2 && f.email.includes('@') && f.password.length >= 10 && f.origin.trim() && num(f.transport) && num(f.retention);
+  const codeOk = /^[A-Z0-9][A-Z0-9-]{1,29}$/.test(f.member_code.trim());
+  // Seuls le nom, les prénoms et le code sont obligatoires ; un accès à l'application demande à la fois un e-mail et un mot de passe.
+  const accessOk = (!f.email.trim() && !f.password) || (f.email.includes('@') && f.password.length >= 10);
+  const ok = f.last_name.trim() && f.first_names.trim() && codeOk && accessOk && num(f.transport) && num(f.retention);
+  const full = `${f.last_name.trim()} ${f.first_names.trim()}`;
   return (
     <Modal title="Nouveau délégué" onClose={onClose}>
-      <div className="grid-2"><Field label="Nom et prénoms"><input value={f.full_name} onChange={set('full_name')} maxLength={200} /></Field>
-        <Field label="Code (facultatif)" hint="Attribué automatiquement s'il est vide."><input value={f.member_code} onChange={(e) => setF({ ...f, member_code: e.target.value.toUpperCase() })} maxLength={30} /></Field></div>
+      <div className="new-person"><PhotoPick file={photo} onChange={setPhoto} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="grid-2"><Field label="Nom *"><input value={f.last_name} onChange={set('last_name')} maxLength={100} /></Field>
+            <Field label="Prénoms *"><input value={f.first_names} onChange={set('first_names')} maxLength={100} /></Field></div>
+          <Field label="Code *" hint="2 à 30 caractères : majuscules, chiffres et tirets."><input value={f.member_code} onChange={(e) => setF({ ...f, member_code: e.target.value.toUpperCase() })} maxLength={30} /></Field>
+        </div></div>
+      <p className="muted" style={{ margin: '.2rem 0 .6rem' }}>Les autres informations sont facultatives et pourront être complétées plus tard.</p>
       <div className="grid-2"><Field label="Contact (téléphone)"><input inputMode="tel" value={f.phone} onChange={set('phone')} maxLength={30} /></Field>
         <Field label="Localité (provenance des achats)"><input value={f.origin} onChange={set('origin')} maxLength={80} /></Field></div>
-      <div className="grid-2"><Field label="E-mail (identifiant de connexion)"><input type="email" value={f.email} onChange={set('email')} /></Field>
-        <Field label="Mot de passe provisoire" hint="10 caractères au minimum."><input value={f.password} onChange={set('password')} /></Field></div>
+      <div className="grid-2"><Field label="E-mail (accès à l'application)" hint="Vide : le délégué est enregistré sans accès."><input type="email" value={f.email} onChange={set('email')} /></Field>
+        <Field label="Mot de passe provisoire" hint="10 caractères au minimum, avec l'e-mail."><input value={f.password} onChange={set('password')} /></Field></div>
       <div className="grid-2"><Field label="Banque"><input value={f.bank_name} onChange={set('bank_name')} maxLength={80} /></Field>
         <Field label="N° de compte"><input value={f.bank_account} onChange={set('bank_account')} maxLength={40} /></Field></div>
       <div className="grid-2"><Field label="Type de pièce"><select value={f.id_doc_type} onChange={set('id_doc_type')}><option value="">—</option>{Object.entries(DOC).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></Field>
@@ -115,22 +127,24 @@ function NewDelegate({ onClose, onDone }: { onClose: () => void; onDone: (collec
       {can('collectors:rates') && <div className="grid-2"><Field label="Transport au kilo (FCFA)" hint="Vide : tarif par défaut."><input inputMode="decimal" value={f.transport} onChange={set('transport')} /></Field>
         <Field label="Retenue au kilo (FCFA)" hint="Vide : tarif par défaut."><input inputMode="decimal" value={f.retention} onChange={set('retention')} /></Field></div>}
       <Field label="Filières achetées" hint="Aucune case cochée : toutes les filières de la coopérative.">
-        <div className="role-pick">{(chains.data ?? []).map((v: any) => <label key={v.id} className="check"><input type="checkbox" checked={picked.includes(v.id)} onChange={() => setPicked((p) => (p.includes(v.id) ? p.filter((x) => x !== v.id) : [...p, v.id]))} /> {v.name}</label>)}</div></Field>
+        <div className="role-pick">{(chains.data ?? []).map((v: any) => <label key={v.id} className="check"><input type="checkbox" checked={picked.includes(v.id)} onChange={() => setPicked((p) => (p.includes(v.id) ? p.filter((x) => x !== v.id) : [...p, v.id]))} />{v.name}</label>)}</div></Field>
       {act.error && <ErrorBox message={act.error} />}
       <div className="modal-actions"><button className="btn" disabled={act.busy || !ok} onClick={() => act.run(async () => {
         const roles = await post<any>('/roles/standard', { code: 'collecteur' });
-        const u = await post<any>('/users', { email: f.email.trim(), full_name: f.full_name.trim(), ...(f.phone.trim() && { phone: f.phone.trim() }), password: f.password, role_id: roles.id, ...(f.member_code.trim() && { member_code: f.member_code.trim() }) });
+        const hasAccess = !!f.email.trim() && !!f.password;
+        const u = await post<any>('/users', { full_name: full, ...(hasAccess && { email: f.email.trim(), password: f.password }), ...(f.phone.trim() && { phone: f.phone.trim() }), role_id: roles.id, member_code: f.member_code.trim() });
         let id = '';
         try {
-          const c = await post<any>('/collectors', { user_id: u.id, origin: f.origin.trim() });
+          const c = await post<any>('/collectors', { user_id: u.id, ...(f.origin.trim() && { origin: f.origin.trim() }) });
           id = c.id;
           const prof: Record<string, string> = {};
           for (const k of ['bank_name', 'bank_account', 'id_doc_type', 'id_doc_no'] as const) if (f[k].trim()) prof[k] = f[k].trim();
           if (Object.keys(prof).length) await put(`/collectors/${id}/profile`, prof);
           for (const v of picked.length ? picked : [null]) await post(`/collectors/${id}/assignments`, v ? { value_chain_id: v } : {});
           if (can('collectors:rates') && (f.transport || f.retention)) await put(`/collectors/${id}/rates`, { ...(f.transport && { transport_per_kg: f.transport }), ...(f.retention && { retention_per_kg: f.retention }) });
+          if (photo) await uploadPhoto('user', u.id, photo);
         } catch (e: any) {
-          throw new Error(`Le compte de ${f.full_name.trim()} est créé, mais sa fiche est incomplète (${e?.message ?? e}). Ouvrez-la dans la liste puis cliquez sur « Modifier la fiche ».`);
+          throw new Error(`${full} est enregistré, mais sa fiche est incomplète (${e?.message ?? e}). Ouvrez-la dans la liste puis cliquez sur « Modifier ».`);
         }
         onDone(id);
       })}>Enregistrer le délégué</button><button className="btn btn-ghost" onClick={onClose}>Annuler</button></div>
@@ -149,7 +163,7 @@ function Edit({ c, onClose, onDone }: { c: any; onClose: () => void; onDone: () 
         <Field label="Type de pièce"><select value={f.id_doc_type} onChange={set('id_doc_type')}><option value="">—</option>{Object.entries(DOC).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></Field>
         <Field label="N° de la pièce"><input value={f.id_doc_no} onChange={set('id_doc_no')} maxLength={40} /></Field></div>
       {act.error && <ErrorBox message={act.error} />}
-      <div className="modal-actions"><button className="btn" disabled={act.busy || !f.origin.trim()} onClick={() => act.run(async () => { await put(`/collectors/${c.id}/profile`, f); onDone(); })}>Enregistrer</button><button className="btn btn-ghost" onClick={onClose}>Annuler</button></div>
+      <div className="modal-actions"><button className="btn" disabled={act.busy} onClick={() => act.run(async () => { await put(`/collectors/${c.id}/profile`, f); onDone(); })}>Enregistrer</button><button className="btn btn-ghost" onClick={onClose}>Annuler</button></div>
     </Modal>
   );
 }

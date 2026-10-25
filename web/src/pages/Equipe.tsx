@@ -6,6 +6,7 @@ import { useAuth } from '../auth';
 import { Badge, Card, ErrorBox, Field, Loading, Modal, PageHeader, Table, useAction, useAsync } from '../ui';
 import { dateTime } from '../format';
 import { Confirm } from './Declarations';
+import { PhotoPick, uploadPhoto } from '../Photo';
 
 const ACTIONS: Record<string, string> = { suspend: 'Suspension', reactivate: 'Réactivation', revoke_sessions: 'Sessions révoquées', role_change: 'Changement de rôle', role_add: 'Rôle ajouté', role_remove: 'Rôle retiré' };
 
@@ -180,23 +181,39 @@ function EditCode({ u, onClose, onDone }: { u: any; onClose: () => void; onDone:
 }
 
 function AddUser({ roles, onClose, onDone }: { roles: any[]; onClose: () => void; onDone: () => void }) {
-  const [f, setF] = useState({ full_name: '', email: '', password: '', member_code: '' });
+  const [f, setF] = useState({ last_name: '', first_names: '', phone: '', email: '', password: '', member_code: '' });
   const [picked, setPicked] = useState<string[]>([]);
+  const [photo, setPhoto] = useState<File | null>(null);
   const toggle = (id: string) => setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
   const { busy, error, run } = useAction();
   const set = (k: string) => (e: any) => setF({ ...f, [k]: e.target.value });
+  // Obligatoires : nom, prénoms, code (et un rôle, qui détermine les droits). L'accès à l'application (e-mail + mot de passe) est facultatif.
+  const accessOk = (!f.email.trim() && !f.password) || (f.email.includes('@') && f.password.length >= 10);
+  const codeOk = /^[A-Z0-9][A-Z0-9-]{1,29}$/.test(f.member_code.trim());
+  const full = `${f.last_name.trim()} ${f.first_names.trim()}`;
   return (
-    <Modal title="Ajouter un utilisateur" onClose={onClose}>
-      <Field label="Nom et prénoms"><input value={f.full_name} onChange={set('full_name')} /></Field>
+    <Modal title="Ajouter une personne" onClose={onClose}>
+      <div className="new-person"><PhotoPick file={photo} onChange={setPhoto} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <Field label="Nom *"><input value={f.last_name} onChange={set('last_name')} maxLength={100} /></Field>
+          <Field label="Prénoms *"><input value={f.first_names} onChange={set('first_names')} maxLength={100} /></Field>
+          <Field label="Code *" hint="2 à 30 caractères : majuscules, chiffres et tirets."><input value={f.member_code} onChange={(e) => setF({ ...f, member_code: e.target.value.toUpperCase() })} maxLength={30} /></Field>
+        </div></div>
+      <p className="muted" style={{ margin: '.2rem 0 .6rem' }}>Le reste est facultatif. Sans e-mail ni mot de passe, la personne est enregistrée sans accès à l'application.</p>
+      <Field label="Contact (téléphone)"><input inputMode="tel" value={f.phone} onChange={set('phone')} maxLength={30} /></Field>
       <Field label="E-mail (identifiant de connexion)"><input type="email" value={f.email} onChange={set('email')} /></Field>
-      <Field label="Mot de passe provisoire" hint="10 caractères au minimum. L'utilisateur pourra le changer."><input type="text" value={f.password} onChange={set('password')} /></Field>
-      <Field label="Code (facultatif)" hint="Identifiant de l'intervenant dans la coopérative (ex. code délégué). Laissé vide, le logiciel en attribue un."><input value={f.member_code} onChange={(e) => setF({ ...f, member_code: e.target.value.toUpperCase() })} maxLength={30} /></Field>
-      <Field label="Rôles" hint="Cochez un ou plusieurs rôles : les droits s'additionnent et le menu n'affiche que ce qu'ils permettent.">
+      <Field label="Mot de passe provisoire" hint="10 caractères au minimum, avec l'e-mail. La personne pourra le changer."><input type="text" value={f.password} onChange={set('password')} /></Field>
+      <Field label="Rôles *" hint="Cochez un ou plusieurs rôles : les droits s'additionnent et le menu n'affiche que ce qu'ils permettent.">
         <div className="role-pick">{roles.map((r) => <label key={r.id} className="check"><input type="checkbox" checked={picked.includes(r.id)} onChange={() => toggle(r.id)} /> {r.name}</label>)}</div></Field>
       {roles.length === 0 && <p className="muted">Aucun rôle : créez d'abord un rôle type ci-dessus.</p>}
       {error && <ErrorBox message={error} />}
       <div className="modal-foot"><button className="btn btn-secondary" onClick={onClose}>Annuler</button>
-        <button className="btn" disabled={busy || !f.full_name.trim() || !f.email.includes('@') || f.password.length < 10 || picked.length === 0} onClick={() => run(async () => { await post('/users', { ...f, role_id: picked[0], role_ids: picked.slice(1), member_code: f.member_code.trim() || undefined }); onDone(); })}>Créer le compte</button></div>
+        <button className="btn" disabled={busy || !f.last_name.trim() || !f.first_names.trim() || !codeOk || !accessOk || picked.length === 0} onClick={() => run(async () => {
+          const hasAccess = !!f.email.trim() && !!f.password;
+          const u = await post<any>('/users', { full_name: full, ...(f.phone.trim() && { phone: f.phone.trim() }), ...(hasAccess && { email: f.email.trim(), password: f.password }), role_id: picked[0], role_ids: picked.slice(1), member_code: f.member_code.trim() });
+          if (photo) { try { await uploadPhoto('user', u.id, photo); } catch (e: any) { throw new Error(`${full} est enregistré, mais la photo n'a pas été envoyée (${e?.message ?? e}).`); } }
+          onDone();
+        })}>Enregistrer</button></div>
     </Modal>
   );
 }

@@ -14,6 +14,7 @@ import { StockController } from './stock/stock.controller';
 import { SyncController } from './sync/sync.controller';
 import { OrganizationsController } from './organizations/organizations.controller';
 import { LogoController } from './organizations/logo.controller';
+import { PhotosController } from './organizations/photos.controller';
 import { ProducersController } from './producers/producers.controller';
 import { ReferentialsController } from './referentials/referentials.controller';
 import { AccountingController } from './accounting/accounting.controller';
@@ -70,7 +71,7 @@ import { ReplicationService } from './replication/replication.service';
     AuthModule,
   ],
   controllers: [
-    OrganizationsController, LogoController, UsersController, ReferentialsController, ProducersController,
+    OrganizationsController, LogoController, PhotosController, UsersController, ReferentialsController, ProducersController,
     CollectorsController, DeclarationsController, FinanceController,
     ReceptionController, StockController, LotsController, SyncController,
     AccountingController, LoansController, PaymentsController, QualityController, ComplianceController, ParcelsController, GeoController, ReferenceLayersController, TasksController, LogisticsController, SalesController, NotificationsController, AccessAdminController, ProducerStatusController, PrefinancingController, StockCountController, MeController, OpsController, AppUpdateController, MapPacksController, ReplicationController, MessagesController, ConvoysController, SavingsController, ProductsController, DuesController, OperationsController, BankStatementsController, ReportSchedulesController, PushTokenController, ProfileController, WorkstationsController, ReportsController, FieldRecordsController, TrainingController, TrainingExchangeController, DispatchController, DeliveriesController, AuditsController, ProducerAssignmentsController,

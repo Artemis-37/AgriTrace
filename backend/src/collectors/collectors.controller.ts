@@ -23,7 +23,7 @@ class CreateCollectorDto {
   @IsOptional() @IsString() @Length(1, 80) origin?: string;
 }
 class ProfileDto {
-  @IsOptional() @IsString() @Length(1, 80) origin?: string;
+  @IsOptional() @IsString() @Length(0, 80) origin?: string;
   @IsOptional() @IsString() @Length(0, 80) bank_name?: string;
   @IsOptional() @IsString() @Length(0, 40) bank_account?: string;
   @IsOptional() @IsIn(['cni', 'passeport', 'attestation', 'permis', 'autre', '']) id_doc_type?: string;

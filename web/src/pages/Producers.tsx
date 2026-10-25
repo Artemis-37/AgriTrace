@@ -6,6 +6,7 @@ import { PRODUCER_STATUS } from '../format';
 import { ProducerProfile } from './Affectations';
 import { Empty, ErrorBox, Field, Loading, Modal, StatusBadge, Table, Tabs, useAction, useAsync } from '../ui';
 import { FicheRow, Registre } from '../Registre';
+import { PhotoBox, PhotoPick, uploadPhoto } from '../Photo';
 
 const ID_DOC: Record<string, string> = { cni: "Carte nationale d'identité", passeport: 'Passeport', attestation: "Attestation d'identité", permis: 'Permis de conduire', autre: 'Autre pièce' };
 const SEX: Record<string, string> = { male: 'M', female: 'F' };
@@ -69,6 +70,7 @@ export default function Producers() {
           <>
             <Tabs tabs={tabs} value={tab} onChange={setTab} />
             {tab === 'info' && (
+              <div className="fiche-with-photo"><PhotoBox type="producer" id={cur.id} name={`${cur.last_name} ${cur.first_names}`} canEdit={can('producers:update')} />
               <div className="fiche-form">
                 <FicheRow label="ID"><code>{cur.internal_code}</code></FicheRow><FicheRow label="Statut"><StatusBadge map={PRODUCER_STATUS} value={cur.status} /></FicheRow>
                 <FicheRow label="Nom">{cur.last_name}</FicheRow><FicheRow label="Prénoms">{cur.first_names}</FicheRow>
@@ -76,7 +78,7 @@ export default function Producers() {
                 <FicheRow label="Village">{cur.village ?? '—'}</FicheRow><FicheRow label="Section">{cur.section ?? '—'}</FicheRow>
                 <FicheRow label="Superficie (ha)">{num(cur.area_ha)}</FicheRow><FicheRow label="Estimation (kg)">{num(cur.estimated_kg, 0)}</FicheRow>
                 <FicheRow label="Filières">{(cur.value_chain_ids ?? []).length ? (cur.value_chain_ids as string[]).map((id) => <span key={id} className="chip">{chainName(id)}</span>) : '—'}</FicheRow>
-              </div>
+              </div></div>
             )}
             {tab === 'id' && (
               <div className="fiche-form">
@@ -136,27 +138,35 @@ function EditProducer({ p, detail, onClose, onDone }: { p: any; detail: any; onC
 
 function NewProducer({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
   const chains = useAsync(() => getChains(), []);
-  const [f, setF] = useState({ gender: '', last_name: '', first_names: '', phone: '', village: '', section: '', area: '', est: '', chain: '' });
+  const [f, setF] = useState({ code: '', gender: '', last_name: '', first_names: '', phone: '', village: '', section: '', area: '', est: '', chain: '' });
+  const [photo, setPhoto] = useState<File | null>(null);
   const { busy, error, run } = useAction();
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF({ ...f, [k]: e.target.value });
+  const codeOk = /^[A-Za-z0-9_-]{1,30}$/.test(f.code.trim());
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
     run(async () => {
-      await post('/producers', {
-        last_name: f.last_name.trim(), first_names: f.first_names.trim(), ...(f.gender && { gender: f.gender }),
+      const r = await post<any>('/producers', {
+        internal_code: f.code.trim(), last_name: f.last_name.trim(), first_names: f.first_names.trim(), ...(f.gender && { gender: f.gender }),
         ...(f.phone.trim() && { phone: f.phone.trim() }), ...(f.village.trim() && { village: f.village.trim() }), ...(f.section.trim() && { section: f.section.trim() }), ...(/^\d+(\.\d{1,4})?$/.test(f.area.trim()) && { area_ha: f.area.trim() }), ...(/^\d+(\.\d{1,2})?$/.test(f.est.trim()) && { estimated_kg: f.est.trim() }),
         ...(f.chain && { value_chain_ids: [f.chain] }),
       });
+      if (photo) { try { await uploadPhoto('producer', r.producer.id, photo); } catch (e: any) { throw new Error(`Producteur enregistré, mais la photo n'a pas été envoyée (${e?.message ?? e}). Ajoutez-la depuis sa fiche.`); } }
       onDone();
     });
   };
   return (
     <Modal title="Nouveau producteur" onClose={onClose}>
       <form onSubmit={submit}>
+        <div className="new-person"><PhotoPick file={photo} onChange={setPhoto} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <Field label="Nom *"><input required value={f.last_name} onChange={set('last_name')} /></Field>
+            <Field label="Prénoms *"><input required value={f.first_names} onChange={set('first_names')} /></Field>
+            <Field label="Code *" hint="Lettres, chiffres, tiret ; 30 caractères au maximum."><input required value={f.code} onChange={(e) => setF({ ...f, code: e.target.value.toUpperCase() })} maxLength={30} /></Field>
+          </div></div>
+        <p className="muted" style={{ margin: '.2rem 0 .6rem' }}>Les autres informations sont facultatives.</p>
         <Field label="Sexe"><select value={f.gender} onChange={set('gender')}><option value="">—</option><option value="male">Masculin</option><option value="female">Féminin</option></select></Field>
-        <Field label="Nom"><input required value={f.last_name} onChange={set('last_name')} /></Field>
-        <Field label="Prénoms"><input required value={f.first_names} onChange={set('first_names')} /></Field>
         <Field label="Téléphone" hint="Format international, par exemple +2250701020304"><input inputMode="tel" value={f.phone} onChange={set('phone')} /></Field>
         <Field label="Village"><input value={f.village} onChange={set('village')} /></Field>
         <Field label="Superficie (ha)"><input inputMode="decimal" value={f.area} onChange={set('area')} /></Field>
@@ -167,7 +177,7 @@ function NewProducer({ onClose, onDone }: { onClose: () => void; onDone: () => v
         </Field>
         {chains.data && !chains.data.length && <Empty>Aucune filière définie.</Empty>}
         {error && <ErrorBox message={error} />}
-        <div className="modal-foot"><button type="button" className="btn btn-secondary" onClick={onClose}>Annuler</button><button className="btn" disabled={busy}>{busy ? 'Enregistrement…' : 'Enregistrer'}</button></div>
+        <div className="modal-foot"><button type="button" className="btn btn-secondary" onClick={onClose}>Annuler</button><button className="btn" disabled={busy || !codeOk}>{busy ? 'Enregistrement…' : 'Enregistrer'}</button></div>
       </form>
     </Modal>
   );

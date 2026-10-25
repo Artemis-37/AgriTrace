@@ -10,10 +10,11 @@ import { DbService } from '../db/db.service';
 import { STANDARD_ROLES } from './standard-roles';
 
 class CreateUserDto {
-  @IsEmail() email: string;
+  /** Facultatif : sans e-mail, la personne est enregistrée sans accès à l'application (compte technique non utilisable). */
+  @IsOptional() @IsEmail() email?: string;
   @IsString() @Length(2, 200) full_name: string;
   @IsOptional() @IsString() phone?: string;
-  @IsString() @MinLength(10) password: string;
+  @IsOptional() @IsString() @MinLength(10) password?: string;
   @IsUUID() role_id: string;
   /** Rôles supplémentaires (cumul) : les droits de la personne sont la somme de ceux de ses rôles. */
   @IsOptional() @IsArray() @ArrayMaxSize(10) @IsUUID('all', { each: true }) role_ids?: string[];
@@ -140,9 +141,11 @@ export class UsersController {
   @Post('users')
   @RequirePermissions('users:create')
   async create(@Body() b: CreateUserDto, @Req() req: any) {
-    const email = b.email.toLowerCase();
-    assertStrongPassword(b.password, b.email);
-    const hash = await this.auth.hashPassword(b.password);
+    // Sans e-mail ni mot de passe : personne enregistrée sans accès (identifiant technique, mot de passe aléatoire inconnu de tous).
+    const noAccess = !b.email || !b.password;
+    if (!noAccess) assertStrongPassword(b.password!, b.email!);
+    const email = (b.email && b.password ? b.email : `sans-acces-${randomBytes(6).toString('hex')}@agritrace.invalid`).toLowerCase();
+    const hash = await this.auth.hashPassword(noAccess ? randomBytes(24).toString('base64url') + 'aA1!' : b.password!);
     const user = await this.db.tx(req.org.id, async (c) => {
       // Le rôle doit appartenir à l'organisation courante (pas d'identifiant d'une autre coopérative).
       const role = await c.query(`SELECT id FROM roles WHERE id = $1 AND organization_id = $2`, [b.role_id, req.org.id]);
