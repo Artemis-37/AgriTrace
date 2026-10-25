@@ -60,11 +60,11 @@ function Products() {
   return (
     <Card>
       {can('products:manage') && <div className="toolbar"><button className="btn" onClick={() => setEdit('new')}>Nouveau</button></div>}
-      <p className="muted">Le prix affiché ici est le prix par défaut (hors traite). Le prix de chaque traite se fixe dans l'onglet Traites, bouton « Prix » ; la caisse, les pesées et les ventes reprennent celui de la traite en cours.</p>
+      <p className="muted">Un produit n'a pas de prix propre : son prix d'achat et de vente au kilo se fixe pour chaque traite, dans la rubrique « Traites », bouton « Prix ». La caisse, les pesées et les ventes reprennent le prix de la traite en cours.</p>
       {error && <ErrorBox message={error} onRetry={reload} />}{act.error && <ErrorBox message={act.error} />}
       {loading ? <Loading /> : <Table rows={data ?? []} empty="Aucun produit." columns={[
-        { header: 'Désignation', render: (p) => <strong>{p.name}</strong> }, { header: 'Prix achat /kg', align: 'right', render: (p) => FR(p.buy_price_per_kg) },
-        { header: 'Prix vente /kg', align: 'right', render: (p) => FR(p.sell_price_per_kg) }, { header: 'Actif', render: (p) => <Badge tone={p.active ? 'ok' : 'neutral'}>{p.active ? 'Oui' : 'Non'}</Badge> },
+        { header: 'Désignation', render: (p) => <strong>{p.name}</strong> }, { header: 'Prix par traite (achat / vente au kg)', render: (p) => <TraitePriceCell p={p} /> },
+        { header: 'Actif', render: (p) => <Badge tone={p.active ? 'ok' : 'neutral'}>{p.active ? 'Oui' : 'Non'}</Badge> },
         { header: '', render: (p) => can('products:manage') ? (
           <span className="row-actions"><button className="btn btn-small btn-secondary" onClick={() => setEdit(p)}>Modifier</button>
             <button className="btn btn-small btn-ghost" onClick={() => setHist(p)}>Historique des prix</button>
@@ -88,22 +88,31 @@ function PriceHistory({ p, onClose }: { p: any; onClose: () => void }) {
   );
 }
 
+/** Derniers prix fixés pour chaque traite d'un produit (un produit n'a pas de prix en dehors des traites). */
+function TraitePriceCell({ p }: { p: any }) {
+  const { data, loading } = useAsync(() => get<any[]>(`/products/${p.id}/prices`).catch(() => [] as any[]), [p.id]);
+  if (loading) return <span className="muted">…</span>;
+  const last = new Map<string, any>();
+  for (const r of data ?? []) if (r.campaign_id && !last.has(r.campaign_id)) last.set(r.campaign_id, r);
+  if (!last.size) return <span className="muted">Aucun prix : fixez-le dans « Traites »</span>;
+  return <div>{[...last.values()].map((r) => <div key={r.campaign_id}><strong>{r.campaign_name}</strong> : {FR(r.buy_price_per_kg) || '—'} / {FR(r.sell_price_per_kg) || '—'}</div>)}</div>;
+}
+
 function ProductForm({ p, onClose, onDone }: { p: any | null; onClose: () => void; onDone: () => void }) {
-  const [f, setF] = useState({ name: p?.name ?? '', buy: p?.buy_price_per_kg ? String(Number(p.buy_price_per_kg)) : '', sell: p?.sell_price_per_kg ? String(Number(p.sell_price_per_kg)) : '', active: p?.active ?? true, chain: p?.value_chain_id ?? '' });
+  const [f, setF] = useState({ name: p?.name ?? '', active: p?.active ?? true, chain: p?.value_chain_id ?? '' });
   const chains = useAsync(() => getChains().catch(() => [] as any[]), []);
   const act = useAction();
-  const ok = f.name.trim() && (f.buy === '' || PRICE.test(f.buy)) && (f.sell === '' || PRICE.test(f.sell));
+  const ok = !!f.name.trim();
   return (
     <Modal title={p ? 'Modifier le produit' : 'Nouveau produit'} onClose={onClose}>
       <Field label="Désignation"><input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} maxLength={80} /></Field>
-      <div className="grid-2"><Field label="Prix d'achat au kilo"><input inputMode="decimal" value={f.buy} onChange={(e) => setF({ ...f, buy: e.target.value })} /></Field>
-        <Field label="Prix de vente au kilo"><input inputMode="decimal" value={f.sell} onChange={(e) => setF({ ...f, sell: e.target.value })} /></Field></div>
-      <Field label="Filière (déclarations d'achat)" hint="Si une filière est choisie, les déclarations d'achat de cette filière utilisent le prix d'achat officiel de ce produit au lieu du barème."><select value={f.chain} onChange={(e) => setF({ ...f, chain: e.target.value })}><option value="">— Aucune —</option>{(chains.data ?? []).map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}</select></Field>
+      <p className="hint">Le prix d'achat et de vente de ce produit se fixe pour chaque traite (rubrique « Traites »).</p>
+      <Field label="Filière (déclarations d'achat)" hint="Si une filière est choisie, les déclarations d'achat de cette filière utilisent le prix d'achat de la traite en cours pour ce produit."><select value={f.chain} onChange={(e) => setF({ ...f, chain: e.target.value })}><option value="">— Aucune —</option>{(chains.data ?? []).map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}</select></Field>
       {(chains.data ?? []).length === 0 && <p className="hint">Aucune filière disponible : demandez à l'administrateur de la coopérative de les activer.</p>}
       <label><input type="checkbox" checked={f.active} onChange={(e) => setF({ ...f, active: e.target.checked })} /> Actif</label>
       {act.error && <ErrorBox message={act.error} />}
       <div className="modal-actions"><button className="btn" disabled={act.busy || !ok} onClick={() => act.run(async () => {
-        const body = { name: f.name.trim(), ...(f.buy && { buy_price_per_kg: f.buy }), ...(f.sell && { sell_price_per_kg: f.sell }), active: f.active, value_chain_id: f.chain || null };
+        const body = { name: f.name.trim(), active: f.active, value_chain_id: f.chain || null };
         if (p) await put(`/products/${p.id}`, body); else await post('/products', body);
         onDone();
       })}>Enregistrer</button><button className="btn btn-ghost" onClick={onClose}>Annuler</button></div>
