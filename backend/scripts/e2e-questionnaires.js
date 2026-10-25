@@ -1,0 +1,85 @@
+// Questionnaires (tâches) : création, import, affectation (tous / certains), réponses du coach, résultats.
+const API = process.env.API || 'http://localhost:3000/v1';
+let ok = 0, ko = 0;
+const check = (n, c, d) => { if (c) { ok++; console.log('  ✓ ' + n); } else { ko++; console.log('  ✗ ' + n, d ?? ''); } };
+async function call(method, path, { token, org, body, form } = {}) {
+  const headers = {}; if (token) headers.Authorization = 'Bearer ' + token; if (org) headers['X-Organization-Id'] = org; if (body) headers['content-type'] = 'application/json';
+  const res = await fetch(API + path, { method, headers, body: body ? JSON.stringify(body) : form });
+  const text = await res.text(); let json; try { json = JSON.parse(text); } catch { json = text; }
+  return { status: res.status, body: json };
+}
+const login = async (email, password) => (await call('POST', '/auth/login', { body: { email, password } })).body.access_token;
+(async () => {
+  const run = Math.random().toString(16).slice(2, 8).toUpperCase(); const pw = 'MotDePasseSolide2026!';
+  const adm = await login(process.env.ADMIN_EMAIL, process.env.ADMIN_PASSWORD);
+  const orgR = await call('POST', '/organizations', { token: adm, body: { code: 'QST' + run, name: 'QST' + run } }); const org = orgR.body; if (!org.id) { console.log(orgR); process.exit(1); }
+  await call('POST', `/organizations/${org.id}/admins`, { token: adm, body: { email: `q.${run.toLowerCase()}@t.test`, full_name: 'Chef', password: pw } });
+  const t = await login(`q.${run.toLowerCase()}@t.test`, pw); const A = { token: t, org: org.id };
+  const prods = [];
+  const vc = (await call('POST', '/value-chains', { ...A, body: { code: 'CACAO', name: 'Cacao' } })).body;
+  for (let i = 0; i < 3; i++) prods.push((await call('POST', '/producers', { ...A, body: { last_name: 'PROD' + i, first_names: 'Test', village: 'Hiré', section: 'S1', region: 'Gôh', value_chain_ids: [vc.id] } })).body.producer);
+  check('3 producteurs créés', prods.every((p) => p?.id));
+
+  console.log('Création');
+  const bad = await call('POST', '/questionnaires', { ...A, body: { title: 'Suivi', questions: [{ label: 'Choix ?', type: 'choix', options: 'un' }] } });
+  check('choix avec une seule option : refusé', bad.status === 400, bad.body);
+  const q = await call('POST', '/questionnaires', { ...A, body: { title: 'Suivi des plantations', description: 'Visite', questions: [
+    { label: 'Nombre de parcelles', type: 'nombre', required: true }, { label: 'Engrais utilisé', type: 'oui/non', required: true },
+    { label: 'Difficulté principale', type: 'choix', options: 'Maladies; Prix; Autre' }, { label: 'Équipements', type: 'choix multiple', options: ['Sécateur', 'Bâche'] }, { label: 'Observations', type: 'texte' }] } });
+  check('questionnaire créé (5 questions)', q.status === 201 && q.body.questions.length === 5 && q.body.questions[1].type === 'yesno', q.body);
+
+  console.log('Importation Excel');
+  const tpl = await fetch(API + '/questionnaires/template', { headers: { Authorization: 'Bearer ' + t, 'X-Organization-Id': org.id } });
+  const buf = Buffer.from(await tpl.arrayBuffer());
+  check('modèle téléchargeable (xlsx)', tpl.status === 200 && buf.length > 2000 && buf.slice(0, 2).toString() === 'PK');
+  const f = new FormData(); f.append('file', new Blob([buf]), 'enquete-menage.xlsx');
+  const imp = await call('POST', '/questionnaires/import', { ...A, form: f });
+  check('import du modèle : 6 questions, titre tiré du nom du fichier', imp.status === 201 && imp.body.questions.length === 6 && /enquete menage/i.test(imp.body.title), imp.body);
+  const csv = new FormData(); csv.append('file', new Blob(['Question;Type;Choix;Obligatoire\nÂge du producteur;Nombre;;oui\nSexe;Choix;Homme|Femme;non\n']), 'q.csv'); csv.append('title', 'Import CSV');
+  const impc = await call('POST', '/questionnaires/import', { ...A, form: csv });
+  check('import CSV', impc.status === 201 && impc.body.questions.length === 2 && impc.body.questions[0].required === true, impc.body);
+
+  console.log('Affectation');
+  const sel = await call('POST', '/producer-assignments', { ...A, body: { kind: 'distribution', scope: 'selected', producer_ids: [prods[0].id, prods[1].id], questionnaire_id: q.body.id } });
+  check('affecté à 2 producteurs choisis (nature forcée en tâche)', sel.status === 201 && sel.body.targets === 2 && sel.body.kind === 'tache' && sel.body.questionnaire_id === q.body.id, sel.body);
+  const all = await call('POST', '/producer-assignments', { ...A, body: { kind: 'tache', scope: 'all', questionnaire_id: impc.body.id } });
+  check('affecté à tous les producteurs actifs', all.status === 201 && all.body.targets === 3, all.body);
+  const prof = (await call('GET', `/producer-assignments?producer_id=${prods[0].id}`, A)).body;
+  check('apparaît dans le profil du producteur (liste des tâches)', prof.length === 2 && prof.every((x) => x.kind === 'tache' && x.questionnaire_id), prof);
+  const mine = (await call('GET', '/producer-assignments?mine=1', A)).body;
+  check('copie hors connexion avec les questions', mine.length === 5 && mine.filter((x) => x.questions).length === 5);
+
+  console.log('Réponses du coach');
+  const tg = prof.find((x) => x.questionnaire_id === q.body.id).target_id;
+  const detail = await call('GET', `/questionnaires/targets/${tg}`, A);
+  check('lecture du questionnaire à renseigner', detail.status === 200 && detail.body.questions.length === 5 && detail.body.internal_code === prods[0].internal_code, detail.body);
+  check('réponse obligatoire manquante : refusée', (await call('POST', `/questionnaires/targets/${tg}/answers`, { ...A, body: { answers: { q1: 3 } } })).status === 400);
+  check('choix invalide : refusé', (await call('POST', `/questionnaires/targets/${tg}/answers`, { ...A, body: { answers: { q1: 3, q2: 'oui', q3: 'Inconnu' } } })).status === 400);
+  check('nombre invalide : refusé', (await call('POST', `/questionnaires/targets/${tg}/answers`, { ...A, body: { answers: { q1: 'abc', q2: 'oui' } } })).status === 400);
+  const good = await call('POST', `/questionnaires/targets/${tg}/answers`, { ...A, body: { answers: { q1: '3,5', q2: 'Oui', q3: 'Prix', q4: ['Bâche'], q5: 'RAS' } } });
+  check('réponses enregistrées', good.status === 201 && good.body.status === 'done', good.body);
+  check('seconde saisie refusée', (await call('POST', `/questionnaires/targets/${tg}/answers`, { ...A, body: { answers: { q1: 1, q2: 'non' } } })).status === 400);
+  const after = (await call('GET', `/producer-assignments?producer_id=${prods[0].id}`, A)).body.find((x) => x.target_id === tg);
+  check('la tâche passe à « fait » dans le profil', after.status === 'done' && after.done_at);
+  const manual = (await call('GET', `/producer-assignments?producer_id=${prods[1].id}`, A)).body.find((x) => x.questionnaire_id === q.body.id);
+  check('« marquer fait » à la main refusé pour un questionnaire', (await call('POST', `/producer-assignments/targets/${manual.target_id}/done`, A)).status === 400);
+
+  console.log('Résultats');
+  const res = await call('GET', `/questionnaires/assignments/${sel.body.id}/results`, A);
+  const r0 = res.body.rows?.find((r) => r.internal_code === prods[0].internal_code);
+  check('résultats : réponses du producteur 1, producteur 2 à faire', r0?.answers?.q1 === 3.5 && res.body.rows.find((r) => r.internal_code === prods[1].internal_code)?.status === 'pending', res.body);
+  const csvOut = await fetch(API + `/questionnaires/assignments/${sel.body.id}/results?format=csv`, { headers: { Authorization: 'Bearer ' + t, 'X-Organization-Id': org.id } });
+  const txt = await csvOut.text();
+  check('export CSV', csvOut.status === 200 && txt.includes('Nombre de parcelles') && txt.includes('3.5'), txt.slice(0, 200));
+
+  console.log('Droits et isolation');
+  const org2 = (await call('POST', '/organizations', { token: adm, body: { code: 'QSB' + run, name: 'QSB' + run } })).body;
+  await call('POST', `/organizations/${org2.id}/admins`, { token: adm, body: { email: `qb.${run.toLowerCase()}@t.test`, full_name: 'Autre', password: pw } });
+  const t2 = await login(`qb.${run.toLowerCase()}@t.test`, pw);
+  check('une autre coopérative ne voit pas les questionnaires', (await call('GET', '/questionnaires', { token: t2, org: org2.id })).body.length === 0 && (await call('GET', `/questionnaires/targets/${tg}`, { token: t2, org: org2.id })).status === 404);
+  check('sans connexion : 401', (await call('GET', '/questionnaires')).status === 401);
+  check('archivage', (await call('POST', `/questionnaires/${q.body.id}/archive`, A)).body.archived === true);
+  check('questionnaire archivé non affectable', (await call('POST', '/producer-assignments', { ...A, body: { kind: 'tache', scope: 'all', questionnaire_id: q.body.id } })).status === 404);
+  console.log(`\n${ok} contrôles réussis, ${ko} en échec`);
+  process.exit(ko ? 1 : 0);
+})().catch((e) => { console.error(e); process.exit(1); });
