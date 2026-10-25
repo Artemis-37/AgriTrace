@@ -605,3 +605,10 @@ tbody tr:hover { background: color-mix(in srgb, var(--lime) 16%, transparent); }
 .fiche-with-photo .fiche-form { flex: 1; min-width: 0; }
 .new-person { display: flex; gap: 1rem; align-items: flex-start; }
 @media (max-width: 640px) { .fiche-with-photo, .new-person { flex-direction: column; align-items: stretch; } .photo-box { align-self: center; } }
+
+/* Accueil par familles */
+.home-groups { grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); }
+.home-group { min-height: 9rem; text-align: center; font: inherit; cursor: pointer; }
+.home-group small { display: block; margin-top: .3rem; font-size: .78rem; font-weight: 400; color: var(--muted, #5f6b60); line-height: 1.25; }
+.home-back { background: none; border: 0; color: var(--forest, #2f5d46); font: inherit; font-weight: 600; cursor: pointer; padding: .3rem 0; }
+.home-group-title { margin: .2rem 0 .8rem; font-size: 1.25rem; }
