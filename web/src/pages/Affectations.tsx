@@ -5,16 +5,18 @@ import { Badge, Card, ErrorBox, Field, Loading, Modal, Table, useAction, useAsyn
 
 export const KIND_LABEL: Record<string, string> = { formation: 'Module de formation', distribution: 'Distribution', tache: 'Tâche' };
 const d = (x: string | null) => (x ? new Date(x).toLocaleDateString('fr-FR') : '—');
+import { AnswerForm } from './QuestionnaireAnswer';
+
 type P = { id: string; internal_code: string; last_name: string; first_names: string; section: string | null; village: string | null };
-type Item = { target_id: string; status: 'pending' | 'done'; done_at: string | null; id: string; kind: string; title: string; instructions: string; due_date: string | null; created_at: string };
+type Item = { questionnaire_id?: string | null; target_id: string; status: 'pending' | 'done'; done_at: string | null; id: string; kind: string; title: string; instructions: string; due_date: string | null; created_at: string };
 type Row = { id: string; kind: string; scope: string; title: string; due_date: string | null; created_at: string; targets: number; done: number };
 
 /**
  * Nature (module de formation, distribution ou tâche) et cible (tous les producteurs ou certains) d'un élément que l'ADG envoie aux coachs.
  * Sert à la transmission d'un module d'exportateur (`forwardUrl`) et à l'affectation d'un modèle de la bibliothèque (`moduleId` / titre libre).
  */
-export function AssignDialog({ title, forwardUrl, modules, producer, onClose, onDone }: { title: string; forwardUrl?: string; modules?: { id: string; title: string }[]; producer?: { id: string }; onClose: () => void; onDone: () => void }) {
-  const [kind, setKind] = useState('formation');
+export function AssignDialog({ title, forwardUrl, modules, producer, questionnaire, onClose, onDone }: { title: string; forwardUrl?: string; modules?: { id: string; title: string }[]; producer?: { id: string }; questionnaire?: { id: string; title: string }; onClose: () => void; onDone: () => void }) {
+  const [kind, setKind] = useState(questionnaire ? 'tache' : 'formation');
   const [scope, setScope] = useState<'all' | 'selected'>(producer ? 'selected' : 'all');
   const [sel, setSel] = useState<string[]>(producer ? [producer.id] : []);
   const [q, setQ] = useState(''); const [section, setSection] = useState('');
@@ -25,28 +27,29 @@ export function AssignDialog({ title, forwardUrl, modules, producer, onClose, on
   const prods = useAsync(() => scope === 'selected' ? get<P[]>(`/producers?limit=100${q.trim() ? `&q=${encodeURIComponent(q.trim())}` : ''}${section ? `&section=${encodeURIComponent(section)}` : ''}`) : Promise.resolve([] as P[]), [scope, q, section]);
   const toggle = (id: string) => setSel((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
   const lib = !forwardUrl;
-  const needModule = lib && kind === 'formation';
-  const ready = (scope === 'all' || sel.length > 0) && (!needModule || moduleId) && (!lib || kind === 'formation' || free.trim().length >= 3);
+  const needModule = lib && !questionnaire && kind === 'formation';
+  const ready = (scope === 'all' || sel.length > 0) && (!!questionnaire || ((!needModule || moduleId) && (!lib || kind === 'formation' || free.trim().length >= 3)));
   const submit = () => act.run(async () => {
     const body: Record<string, unknown> = { kind, scope, ...(scope === 'selected' ? { producer_ids: sel } : {}), ...(due ? { due_date: due } : {}), ...(instr.trim() ? { instructions: instr.trim() } : {}) };
-    if (lib) { if (needModule) body.module_id = moduleId; else body.title = free.trim(); }
+    if (questionnaire) body.questionnaire_id = questionnaire.id;
+    else if (lib) { if (needModule) body.module_id = moduleId; else body.title = free.trim(); }
     await post(forwardUrl ?? '/producer-assignments', body); onDone();
   });
   return (
     <Modal title={title} onClose={onClose}>
       <div className="form-grid">
-        <Field label="Nature de l'élément">
+        {questionnaire ? <Field label="Questionnaire (tâche)"><input value={questionnaire.title} readOnly /></Field> : <Field label="Nature de l'élément">
           <select aria-label="Nature" value={kind} onChange={(e) => setKind(e.target.value)}>
             {Object.entries(KIND_LABEL).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
           </select>
-        </Field>
+        </Field>}
         {needModule && (
           <Field label="Modèle de la bibliothèque">
             <select aria-label="Modèle" value={moduleId} onChange={(e) => setModuleId(e.target.value)}><option value="">Choisir un module…</option>{(modules ?? []).map((m) => <option key={m.id} value={m.id}>{m.title}</option>)}</select>
           </Field>
         )}
         {needModule && !(modules ?? []).length && <p className="muted" style={{ gridColumn: '1 / -1', margin: 0 }}>La bibliothèque ne contient aucun module : créez-en un dans « Modules de formation », ou choisissez « Distribution » ou « Tâche ».</p>}
-        {lib && kind !== 'formation' && <Field label="Intitulé"><input value={free} onChange={(e) => setFree(e.target.value)} placeholder={kind === 'distribution' ? 'Ex. Distribution de plants' : 'Ex. Mettre à jour le carnet de récolte'} /></Field>}
+        {lib && !questionnaire && kind !== 'formation' && <Field label="Intitulé"><input value={free} onChange={(e) => setFree(e.target.value)} placeholder={kind === 'distribution' ? 'Ex. Distribution de plants' : 'Ex. Mettre à jour le carnet de récolte'} /></Field>}
         {!producer && <Field label="Producteurs concernés">
           <select aria-label="Cible" value={scope} onChange={(e) => setScope(e.target.value as 'all' | 'selected')}>
             <option value="all">Tous les producteurs</option><option value="selected">Certains producteurs</option>
@@ -69,7 +72,7 @@ export function AssignDialog({ title, forwardUrl, modules, producer, onClose, on
           </div>
         </>
       )}
-      <Field label="Consigne pour les coachs (facultatif)"><textarea rows={2} value={instr} onChange={(e) => setInstr(e.target.value)} /></Field>
+      <Field label={questionnaire ? 'Consigne pour les coachs (facultatif) : par exemple le contexte de la visite' : 'Consigne pour les coachs (facultatif)'}><textarea rows={2} value={instr} onChange={(e) => setInstr(e.target.value)} /></Field>
       {act.error && <ErrorBox message={act.error} />}
       <p className="muted" style={{ marginBottom: 0 }}>{producer ? 'S\'ajoutera au profil de ce producteur ; les coachs le recevront à la prochaine synchronisation.' : scope === 'all' ? 'S\'ajoutera au profil de tous les producteurs actifs.' : `S'ajoutera au profil de ${sel.length} producteur(s).`}{forwardUrl ? ' Le contenu du module reste celui de l\'exportateur, sans modification.' : ''}</p>
       <div className="modal-foot"><button className="btn btn-secondary" onClick={onClose}>Annuler</button><button className="btn" disabled={act.busy || !ready} onClick={submit}>{forwardUrl ? 'Transmettre aux coachs' : 'Affecter'}</button></div>
@@ -85,6 +88,7 @@ export function ProducerProfile({ p, onClose }: { p: P; onClose: () => void }) {
   const canDone = can('training:report') || can('training:assign');
   const mods = useAsync(() => (can('training:assign') ? get<{ id: string; title: string }[]>('/training-modules').catch(() => []) : Promise.resolve([] as { id: string; title: string }[])), []);
   const [adding, setAdding] = useState(false);
+  const [answering, setAnswering] = useState<string | null>(null);
   return (
     <Modal title={`${p.last_name} ${p.first_names} · ${p.internal_code}`} onClose={onClose}>
       <p className="muted">{[p.village, p.section && `section ${p.section}`].filter(Boolean).join(' · ') || '—'}</p>
@@ -95,9 +99,10 @@ export function ProducerProfile({ p, onClose }: { p: P; onClose: () => void }) {
           { header: 'Nature', render: (i: Item) => <Badge tone="neutral">{KIND_LABEL[i.kind]}</Badge> },
           { header: 'Élément', render: (i: Item) => <><strong>{i.title}</strong>{i.instructions && <div className="muted" style={{ fontSize: '.85rem' }}>{i.instructions}</div>}</> },
           { header: 'Échéance', render: (i: Item) => d(i.due_date) },
-          { header: 'État', render: (i: Item) => i.status === 'done' ? <Badge tone="ok">Fait le {d(i.done_at)}</Badge> : canDone ? <button className="btn btn-small" disabled={act.busy} onClick={() => act.run(async () => { await post(`/producer-assignments/targets/${i.target_id}/done`); items.reload(); })}>Marquer fait</button> : <Badge tone="warn">À faire</Badge> },
+          { header: 'État', render: (i: Item) => i.questionnaire_id ? (i.status === 'done' ? <button className="btn btn-small btn-secondary" onClick={() => setAnswering(i.target_id)}>Voir les réponses</button> : canDone ? <button className="btn btn-small" onClick={() => setAnswering(i.target_id)}>Renseigner le questionnaire</button> : <Badge tone="warn">À faire</Badge>) : i.status === 'done' ? <Badge tone="ok">Fait le {d(i.done_at)}</Badge> : canDone ? <button className="btn btn-small" disabled={act.busy} onClick={() => act.run(async () => { await post(`/producer-assignments/targets/${i.target_id}/done`); items.reload(); })}>Marquer fait</button> : <Badge tone="warn">À faire</Badge> },
         ]} />
       )}
+      {answering && <AnswerForm targetId={answering} onClose={() => setAnswering(null)} onDone={() => { setAnswering(null); items.reload(); }} />}
       {adding && <AssignDialog title={`Envoyer aux coachs : ${p.last_name} ${p.first_names}`} modules={mods.data ?? []} producer={p} onClose={() => setAdding(false)} onDone={() => { setAdding(false); items.reload(); }} />}
       <div className="modal-foot">{can('training:assign') && <button className="btn" onClick={() => setAdding(true)}>Envoyer une formation, distribution ou tâche aux coachs</button>}<button className="btn btn-secondary" onClick={onClose}>Fermer</button></div>
     </Modal>

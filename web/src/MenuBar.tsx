@@ -7,7 +7,7 @@ const GROUP_OF: Record<string, string> = {
   '/mes-achats': 'Opérations', '/mon-stock': 'Opérations', '/historique': 'Opérations', '/pesees': 'Opérations', '/convois': 'Opérations', '/caisse': 'Opérations', '/commerce': 'Opérations', '/declarations': 'Opérations', '/fiches-accompagnement': 'Opérations', '/livraisons': 'Opérations', '/organisations-liees': 'Fichier', '/operations': 'Opérations', '/missions': 'Opérations', '/terrain': 'Opérations',
   '/comptabilite': 'Comptabilité', '/mise-en-compte': 'Comptabilité', '/finances': 'Comptabilité', '/prefinancement': 'Comptabilité',
   '/audits': 'Suivi', '/stocks': 'Stock', '/inventaire': 'Stock', '/qualite': 'Stock',
-  '/cartographie': 'Suivi', '/rapports': 'Suivi', '/modules-formation': 'Suivi', '/modules-exportateurs': 'Suivi',
+  '/cartographie': 'Suivi', '/rapports': 'Suivi', '/modules-formation': 'Suivi', '/questionnaires': 'Suivi', '/modules-exportateurs': 'Suivi',
   '/equipe': 'Paramètres', '/synchronisation': 'Paramètres',
 };
 /** Rubriques accessibles à l'utilisateur (déjà filtrées par ses droits) : l'accueil en fait des tuiles. */
