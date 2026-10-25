@@ -28,10 +28,10 @@ jobs:
           npm ci
           node scripts/prepare-payload.js
           npx electron-builder --win nsis --x64 --publish never
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with: { name: AgriTrace-Windows, path: desktop/dist/AgriTrace-Setup-*.exe, retention-days: 30 }
       - name: Dossier win-unpacked (source pour compiler avec Inno Setup)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with: { name: AgriTrace-win-unpacked, path: desktop/dist/win-unpacked, retention-days: 7 }
       - name: Publier l'installateur (étiquette desktop-v*)
         if: startsWith(github.ref, 'refs/tags/desktop-v')
