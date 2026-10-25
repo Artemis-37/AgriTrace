@@ -16,7 +16,6 @@ RUN npm run build && npm prune --omit=dev
 
 FROM postgis/postgis:16-3.4
 COPY --from=node:22-bookworm-slim /usr/local/bin/node /usr/local/bin/node
-RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates && rm -rf /var/lib/apt/lists/*
 ENV NODE_ENV=production PORT=3000 WEB_DIR=/app/web DOCUMENTS_DIR=/data/documents
 WORKDIR /app
 COPY --from=build /app/node_modules ./node_modules

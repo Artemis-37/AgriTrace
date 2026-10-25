@@ -54,7 +54,7 @@ trap 'kill -TERM $API 2>/dev/null || true; wait $API 2>/dev/null || true; gosu p
 
 # Données fictives de démonstration, une seule fois, si SEED_DEMO=1 (et ADMIN_EMAIL / ADMIN_PASSWORD définis).
 if [ "${SEED_DEMO:-0}" = 1 ] && [ -n "${ADMIN_EMAIL:-}" ] && [ ! -f /data/.demo-seeded ]; then
-  ( for i in $(seq 1 60); do curl -sf http://127.0.0.1:3000/v1/health >/dev/null && break; sleep 2; done
+  ( for i in $(seq 1 60); do node -e "fetch('http://127.0.0.1:3000/v1/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))" && break; sleep 2; done
     API=http://127.0.0.1:3000/v1 DEMO_NO_DOC=1 gosu postgres node scripts/seed-demo-complet.js && touch /data/.demo-seeded ) &
 fi
 wait $API || true
