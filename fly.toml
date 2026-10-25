@@ -1,5 +1,5 @@
 # Application : API + portail web. Le nom doit être unique sur Fly (adresse : https://<nom>.fly.dev).
-app = "agritrace"
+app = "agritrace-nr7o4a"
 primary_region = "cdg"
 
 [build]

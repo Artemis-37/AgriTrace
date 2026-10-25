@@ -21,7 +21,7 @@ Dans le tableau de bord (application → **Secrets**), ajoutez :
 | `ADMIN_PASSWORD` | un mot de passe de 12 caractères minimum |
 | `SEED_DEMO` | `1` pour charger la coopérative et les comptes **fictifs** de démonstration (une seule fois) |
 
-Les secrets redémarrent la machine. Ouvrez ensuite `https://<nom>.fly.dev` et connectez-vous avec `ADMIN_EMAIL`. Les comptes de démonstration (un par profil, domaine `demo.agritrace.test`, mot de passe `Demo-AgriTrace-2026!`) sont décrits dans `docs/COMPTES_DEMO.md`. **Ne mettez jamais de vraies données sur cet essai.**
+Les secrets redémarrent la machine. Ouvrez ensuite `https://<nom>.fly.dev` (le nom réel de votre application, par exemple `agritrace-nr7o4a`) et connectez-vous avec `ADMIN_EMAIL`. Les comptes de démonstration (un par profil, domaine `demo.agritrace.test`, mot de passe `Demo-AgriTrace-2026!`) sont décrits dans `docs/COMPTES_DEMO.md`. **Ne mettez jamais de vraies données sur cet essai.**
 
 ## 3. Utile
 - Journaux : `fly logs --app <nom>`. Premier démarrage : comptez 1 à 2 minutes (initialisation + migrations + données de démonstration).
