@@ -19,7 +19,7 @@ export DATABASE_URL=$(cat /tmp/app-db-url)
 echo "[render] migrations"
 DATABASE_URL="$OWNER_DATABASE_URL" node scripts/migrate.js
 if [ -n "${ADMIN_EMAIL:-}" ] && [ -n "${ADMIN_PASSWORD:-}" ]; then
-  DATABASE_URL="$OWNER_DATABASE_URL" node scripts/create-platform-admin.js "$ADMIN_EMAIL" "Administrateur de la plateforme" || true
+  RESET_PASSWORD=1 DATABASE_URL="$OWNER_DATABASE_URL" node scripts/create-platform-admin.js "$ADMIN_EMAIL" "Administrateur de la plateforme" || true
 fi
 
 if [ "$SEED" = 1 ]; then

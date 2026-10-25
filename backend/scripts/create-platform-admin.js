@@ -18,6 +18,11 @@ const argon2 = require('argon2');
      ON CONFLICT (email) DO UPDATE SET is_platform_admin = true`,
     [email.toLowerCase(), name, hash],
   );
+  // RESET_PASSWORD=1 : un compte déjà existant reçoit aussi ce mot de passe (et son verrouillage éventuel est levé). Sert aux essais jetables (Render, Fly).
+  if (process.env.RESET_PASSWORD === '1') {
+    await c.query('UPDATE users SET password_hash = $2, failed_logins = 0, locked_until = NULL WHERE email = $1', [email.toLowerCase(), hash]);
+    console.log('Mot de passe réinitialisé :', email);
+  }
   console.log('Administrateur de plateforme prêt :', email);
   await c.end();
 })();
