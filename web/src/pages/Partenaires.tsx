@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { del, get, post, put } from '../api';
 import { useAuth } from '../auth';
-import { Badge, Card, ErrorBox, Field, Loading, Modal, PageHeader, Table, Tabs, useAction, useAsync } from '../ui';
+import { Badge, Card, ErrorBox, Field, Loading, Modal, PageHeader, Table, useAction, useAsync } from '../ui';
 
 const KINDS: [string, string][] = [['partner', 'Partenaires'], ['supplier', 'Fournisseurs'], ['client', 'Clients'], ['lender', 'Prêteurs']];
 
@@ -15,8 +15,10 @@ export default function Partenaires() {
   return (
     <>
       <PageHeader title="Partenaires et fournisseurs" subtitle="Tiers de la coopérative : partenaires, fournisseurs, clients et prêteurs." />
-      <Tabs tabs={KINDS as any} value={kind as any} onChange={setKind as any} />
       <Card>
+        <div className="seg" role="radiogroup" aria-label="Type de tiers" style={{ marginBottom: '.8rem' }}>
+          {KINDS.map(([k, l]) => <label key={k} className={kind === k ? 'on' : ''}><input type="radio" name="kind" checked={kind === k} onChange={() => setKind(k)} />{l}</label>)}
+        </div>
         {can('partners:manage') && <div className="toolbar"><button className="btn" onClick={() => setEdit('new')}>Nouveau</button></div>}
         {error && <ErrorBox message={error} onRetry={reload} />}{act.error && <ErrorBox message={act.error} />}
         {loading ? <Loading /> : <div className="table-scroll"><Table rows={data ?? []} empty="Aucun élément." columns={[

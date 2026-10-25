@@ -75,10 +75,10 @@ function List({ autoNew }: { autoNew: boolean }) {
             { header: '', render: (r) => <button className="btn btn-ghost btn-small" disabled={act.busy} onClick={() => act.run(async () => setReceipt(await get(`/operation-receipts/convoy_reception/${r.id}`)))}>Bulletin</button> },
           ]} /></div>
           <div className="totals" role="status">
-            <span>Nombre <strong>{rows.length}</strong></span>
-            <span>Poids net total <strong>{num(sum(rows, 'total_kg'))} kg</strong></span>
-            <span>Traité <strong>{num(sum(done, 'total_kg'))} kg</strong></span>
-            <span>Non traité <strong>{num(sum(todo, 'total_kg'))} kg</strong></span>
+            <span>Nombre<strong>{rows.length}</strong></span>
+            <span>Total<strong>{num(sum(rows, 'total_kg'))} kg</strong></span>
+            <span>Traité<strong>{num(sum(done, 'total_kg'))} kg</strong></span>
+            <span>Non traité<strong>{num(sum(todo, 'total_kg'))} kg</strong></span>
           </div>
         </>
       )}

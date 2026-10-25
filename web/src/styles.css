@@ -625,3 +625,42 @@ tbody tr:hover { background: color-mix(in srgb, var(--lime) 16%, transparent); }
 /* Accès support (administrateur de plateforme dans une organisation) */
 .support-bar { background: #7a4b00; color: #fff; padding: .45rem 1rem; font-size: .9rem; display: flex; gap: .8rem; align-items: center; flex-wrap: wrap; }
 .support-bar button { background: #fff; color: #7a4b00; border: 0; border-radius: 999px; padding: .2rem .8rem; font: inherit; font-weight: 600; cursor: pointer; }
+
+/* ===== Agencement « classique » repris de l'ancien logiciel : en-têtes ardoise, sélection vert citron, panneaux taupe, totaux dorés ===== */
+:root { --c-navy: #2F3E50; --c-navy-2: #3B4D63; --c-lime: #C5E04A; --c-on-lime: #26310F; --c-taupe: #6E625A; --c-taupe-2: #82766D; --c-gold: #E8C24A; --c-link: #2D6FB5; --c-neg: #C0392B; }
+:root[data-theme="night"] { --c-navy: #3A4B60; --c-taupe: #5A4F48; --c-taupe-2: #6A5E56; --c-neg: #FF8A80; --c-link: #90CAF9; }
+th, .registre-grid th { background: var(--c-navy); color: #F2F4F7; border-bottom: 0; border-radius: 0; text-transform: none; letter-spacing: 0; font-size: .82rem; }
+th:first-child, th:last-child { border-radius: 0; }
+tbody tr:hover { background: color-mix(in srgb, var(--c-lime) 35%, transparent); }
+.registre-grid tbody tr.on, tbody tr.on, tbody tr[aria-selected='true'] { background: var(--c-lime); color: var(--c-on-lime); }
+.registre-grid tbody tr.on .num, .registre-grid th.num { color: inherit; }
+.registre-grid th.num { color: #F2F4F7; }
+.registre-grid { border-color: var(--c-navy); }
+.tabs button[aria-selected='true'] { background: var(--c-lime); color: var(--c-on-lime); border-bottom-color: var(--c-navy); }
+.seg { border-color: var(--c-navy); }
+.seg label.on, .seg button.on { background: var(--c-navy); color: #fff; }
+.seg label:has(input:checked)::before { content: '● '; color: var(--c-lime); }
+.totals { background: var(--c-navy); color: #F2F4F7; border-radius: 8px; padding: .55rem 1rem; border-top: 0; gap: 2rem; }
+.totals span { color: var(--c-gold); font-weight: 600; text-transform: uppercase; font-size: .78rem; letter-spacing: .03em; }
+.totals strong { color: #fff; margin-left: .4rem; font-size: 1rem; text-transform: none; letter-spacing: 0; }
+.registre-detail, .panel-taupe { background: var(--c-taupe); color: #fff; border: 0; border-radius: 10px; padding: .9rem 1.1rem; }
+.registre-detail .fiche-label, .panel-taupe label { color: #fff; }
+.registre-detail .fiche-value { background: #F4F1EA; color: #26211D; }
+.registre-detail h2, .registre-detail h3 { color: var(--c-gold); }
+.panel-taupe input, .panel-taupe select { background: #F4F1EA; color: #26211D; border: 1px solid rgba(0,0,0,.2); border-radius: 6px; padding: .35rem .6rem; font: inherit; }
+.section-title { background: var(--c-navy-2); color: #fff; padding: .3rem .8rem; border-radius: 6px 6px 0 0; font-weight: 600; margin: 0; }
+.neg, .amount-neg { color: var(--c-neg); font-weight: 600; }
+.gold-label { color: var(--c-gold); font-weight: 700; }
+.side-accordion { display: flex; flex-direction: column; gap: .3rem; }
+.side-accordion > summary, .side-accordion .acc-head { background: var(--c-navy); color: #fff; padding: .45rem .8rem; border-radius: 6px; cursor: pointer; font-weight: 600; list-style: none; }
+.side-accordion a, .side-accordion button.link-btn { color: var(--c-link); }
+.btn { background: var(--c-navy); border-color: var(--c-navy); }
+.btn:hover:not(:disabled) { background: var(--c-navy-2); }
+.btn-ghost, .btn-secondary { background: transparent; color: var(--c-navy); }
+.solde-bar { background: var(--c-navy); color: var(--c-gold); border-radius: 8px; padding: .5rem 1rem; display: flex; flex-wrap: wrap; gap: 2rem; font-weight: 600; }
+.solde-bar b { color: #fff; margin-left: .4rem; }
+.solde-bar.totals span { text-transform: none; font-size: inherit; }
+.solde-bar a, .solde-bar button.link, .solde-bar .link { color: var(--c-gold); }
+.accordion .acc-head { background: var(--c-lime); color: var(--c-on-lime); }
+.accordion .open > .acc-head { background: var(--c-navy); color: #fff; }
+.accordion a, .accordion .link-btn { color: var(--c-link); }
