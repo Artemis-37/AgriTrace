@@ -27,6 +27,7 @@ COPY backend/migrations ./migrations
 COPY backend/scripts/migrate.js backend/scripts/create-platform-admin.js backend/scripts/seed-demo-complet.js ./scripts/
 COPY docs/brand/logo-cooperative-demo.png /docs/brand/logo-cooperative-demo.png
 COPY deploy/render/prepare.js ./scripts/render-prepare.js
+COPY deploy/render/state.js ./scripts/render-state.js
 COPY deploy/render/start.sh /start.sh
 RUN mkdir -p /tmp/documents && chmod +x /start.sh && chown -R node:node /app /tmp/documents
 USER node
