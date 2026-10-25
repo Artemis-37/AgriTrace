@@ -41,6 +41,7 @@ export default function Login() {
       <div className="login-art">
         <h1>Agri<span>Trace</span></h1>
         <p>La traçabilité agricole, de la parcelle au marché. Producteurs, achats, stocks, finances et conformité de votre coopérative, au même endroit.</p>
+        <ul className="login-points"><li>Chaque achat se rattache à un producteur et à une parcelle.</li><li>Pesées, stocks et caisse restent justes, même sans connexion.</li><li>Les chargements suivent le même chemin jusqu'à l'exportateur.</li></ul>
       </div>
       <div className="login-form">
         <img className="login-logo" src={logo} alt="AgriTrace, la traçabilité agricole, de la parcelle au marché" />

@@ -63,6 +63,7 @@ export default function Dashboard() {
             hint={sync.linked ? (sync.last_ok_at ? `Dernier envoi : ${dateTime(sync.last_ok_at)}` : 'Aucun envoi réussi') : undefined} />
         )}
       </div>
+      <div className="home-row">
       <MiniCalendar />
       {exporter && (
         <Card title="Votre espace exportateur">
@@ -90,6 +91,7 @@ export default function Dashboard() {
           )}
         </Card>
       )}
+      </div>
     </>
   );
 }
