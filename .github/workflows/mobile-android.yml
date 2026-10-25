@@ -1,7 +1,7 @@
 name: Application Android
 # Compile l'APK (release) et le publie en artefact, branché sur VOTRE serveur Render de test :
 #  1. Dépôt GitHub → Settings → Secrets and variables → Actions → onglet « Variables » → New repository variable
-#     nom : RENDER_URL   valeur : l'adresse du service Render, ex. https://agritrace-xxxx.onrender.com  (sans /v1)
+#     nom : RENDER_URL   valeur : l'adresse du service Render, sans /v1 (à défaut, https://agritrace-pe24.onrender.com est utilisée)
 #  2. L'APK se compile alors tout seul à chaque mise à jour du dossier mobile/ ; ou à la main : onglet Actions → « Application Android » → Run workflow
 #     (api_base facultatif : il remplace RENDER_URL). Sans clé de signature, l'APK est signé avec la clé de débogage :
 # suffisant pour l'installer sur des téléphones de test, PAS pour le Play Store (voir docs/DEPOT_ET_COMPILATION.md).
@@ -26,7 +26,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Adresse du serveur Render (réveille le service gratuit, vérifie qu'il répond)
-        env: { INPUT_API: '${{ inputs.api_base }}', RENDER_URL: '${{ vars.RENDER_URL }}', INPUT_VER: '${{ inputs.version }}' }
+        env: { INPUT_API: '${{ inputs.api_base }}', RENDER_URL: '${{ vars.RENDER_URL || 'https://agritrace-pe24.onrender.com' }}', INPUT_VER: '${{ inputs.version }}' }
         run: |
           API="$INPUT_API"
           if [ -z "$API" ] && [ -n "$RENDER_URL" ]; then API="${RENDER_URL%/}/v1"; fi

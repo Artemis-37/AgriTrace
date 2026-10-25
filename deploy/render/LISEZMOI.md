@@ -20,7 +20,7 @@ C'est donc **un essai**, pas un déploiement durable. Ne mettez jamais de vraies
 Comptes : `ADMIN_EMAIL` pour la plateforme ; les comptes de démonstration (un par intervenant, `profil@demo.agritrace.test`, mot de passe `Demo-AgriTrace-2026!`) sont dans `docs/COMPTES_DEMO.md`.
 
 ## Mobile : APK de test branché sur ce serveur
-1. Sur GitHub : dépôt → Settings → Secrets and variables → Actions → onglet **Variables** → *New repository variable* : nom `RENDER_URL`, valeur l'adresse du service Render (sans `/v1`).
+1. Facultatif (le workflow utilise par défaut `https://agritrace-pe24.onrender.com`) : sur GitHub, dépôt → Settings → Secrets and variables → Actions → onglet **Variables** → *New repository variable* : nom `RENDER_URL`, valeur l'adresse du service Render (sans `/v1`).
 2. L'onglet **Actions → Application Android** compile alors l'APK tout seul à chaque mise à jour du dossier `mobile/`, ou à la demande (*Run workflow*). L'APK est dans les artefacts de l'exécution (`agritrace-apk`) ; installez-le sur le téléphone de test (sources inconnues autorisées).
 3. Le workflow réveille le service Render avant de compiler et signale s'il ne répond pas.
 
