@@ -8,14 +8,12 @@ const M = (v: any) => Number(v ?? 0).toLocaleString('fr-FR', { maximumFractionDi
 const KIND: Record<string, string> = { cooperative: 'Coopérative', exporter: 'Exportateur' };
 
 function Propose({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
-  const [f, setF] = useState({ code: '', direction: 'supply_to', both: false }); const a = useAction();
+  const [f, setF] = useState({ code: '' }); const a = useAction();
   return <Modal title="Proposer un lien" onClose={onClose}>
     <Field label="Code de l'autre organisation" hint="Demandez-le à son administrateur"><input value={f.code} autoFocus onChange={(e) => setF({ ...f, code: e.target.value.toUpperCase() })} /></Field>
-    <Field label="Sens"><select value={f.direction} onChange={(e) => setF({ ...f, direction: e.target.value })}><option value="supply_to">Nous lui livrons</option><option value="receive_from">Elle nous livre</option></select></Field>
-    <label className="check"><input type="checkbox" checked={f.both} onChange={(e) => setF({ ...f, both: e.target.checked })} /> Dans les deux sens (chacune peut livrer à l'autre)</label>
-    <p className="muted">Le lien devient actif quand l'autre organisation l'accepte.</p>
+    <p className="muted">Dès que l'autre organisation accepte, vous devenez automatiquement partenaires : chacune peut livrer à l'autre et recevoir de l'autre.</p>
     {a.error && <p className="error" role="alert">{a.error}</p>}
-    <div className="modal-foot"><button className="btn btn-ghost" onClick={onClose}>Annuler</button><button className="btn btn-primary" disabled={a.busy || f.code.length < 2} onClick={() => a.run(async () => { await post('/org-links', { code: f.code, direction: f.direction, bidirectional: f.both }); onDone(); })}>Proposer</button></div>
+    <div className="modal-foot"><button className="btn btn-ghost" onClick={onClose}>Annuler</button><button className="btn btn-primary" disabled={a.busy || f.code.length < 2} onClick={() => a.run(async () => { await post('/org-links', { code: f.code }); onDone(); })}>Proposer</button></div>
   </Modal>;
 }
 

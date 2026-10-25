@@ -11,7 +11,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 class LinkDto {
   @Matches(/^[A-Za-z0-9_-]{2,20}$/) code: string;
   /** supply_to : nous livrons à l'autre organisation ; receive_from : nous recevons de l'autre. */
-  @IsIn(['supply_to', 'receive_from']) direction: 'supply_to' | 'receive_from';
+  @IsOptional() @IsIn(['supply_to', 'receive_from']) direction?: 'supply_to' | 'receive_from';
   @IsOptional() @IsBoolean() bidirectional?: boolean;
 }
 class WeighInDto {
@@ -61,6 +61,19 @@ export class DeliveriesController {
   }
   private need(req: any, ...p: string[]) { if (!p.some((x) => this.has(req, x))) throw new ForbiddenException('Permission insuffisante'); }
 
+  /** Deux organisations liées deviennent automatiquement partenaires l'une de l'autre (fiche « Partenaires » créée ou réactivée ; désactivée à la révocation du lien). */
+  private async syncPartners(a: string, b: string, active: boolean) {
+    for (const [mine, other] of [[a, b], [b, a]]) {
+      const [o] = await this.db.query<any>(`SELECT name FROM organizations WHERE id = $1`, [other]);
+      if (!o) continue;
+      await this.db.tx(mine, async (c) => {
+        const ex = (await c.query(`SELECT id FROM partners WHERE organization_id = $1 AND kind = 'partner' AND lower(name) = lower($2)`, [mine, o.name])).rows[0];
+        if (ex) await c.query(`UPDATE partners SET active = $2, updated_at = now() WHERE id = $1`, [ex.id, active]);
+        else if (active) await c.query(`INSERT INTO partners(organization_id, kind, name, notes) VALUES ($1,'partner',$2,'Organisation liée (créée automatiquement)')`, [mine, o.name]);
+      });
+    }
+  }
+
   // ── Liens entre organisations
   @Get('org-links')
   async links(@Req() req: any) {
@@ -79,13 +92,14 @@ export class DeliveriesController {
     const [other] = await this.db.query<any>(`SELECT id, name, status FROM organizations WHERE code = $1`, [b.code.toUpperCase()]);
     if (!other || other.status !== 'active') throw new NotFoundException('Aucune organisation active avec ce code');
     if (other.id === req.org.id) throw new BadRequestException('Une organisation ne peut pas se lier à elle-même');
-    const from = b.direction === 'supply_to' ? req.org.id : other.id, to = b.direction === 'supply_to' ? other.id : req.org.id;
+    const supply = b.direction !== 'receive_from';
+    const from = supply ? req.org.id : other.id, to = supply ? other.id : req.org.id;
     const row = await this.db.tx(req.org.id, async (c) => {
       const ex = (await c.query(`SELECT id, status, from_org_id, to_org_id FROM org_links WHERE (from_org_id = $1 AND to_org_id = $2) OR (from_org_id = $2 AND to_org_id = $1)`, [from, to])).rows;
       if (ex.some((x) => x.status !== 'revoked')) throw new ConflictException('Un lien existe déjà avec cette organisation');
       await c.query(`DELETE FROM org_links WHERE id = ANY($1::uuid[])`, [ex.map((x) => x.id)]);
       return (await c.query(`INSERT INTO org_links(from_org_id, to_org_id, bidirectional, requested_by_org, requested_by) VALUES ($1,$2,$3,$4,$5) RETURNING id, status`,
-        [from, to, !!b.bidirectional, req.org.id, req.user.id])).rows[0];
+        [from, to, b.bidirectional !== false, req.org.id, req.user.id])).rows[0];
     });
     await this.audit.log({ organizationId: req.org.id, actorUserId: req.user.id, action: 'org_link.propose', entityType: 'org_link', entityId: row.id, details: { with: other.name, direction: b.direction } });
     return row;
@@ -98,8 +112,11 @@ export class DeliveriesController {
       if (!l) throw new NotFoundException();
       if (l.status !== 'pending') throw new ConflictException('Ce lien n\'est pas en attente');
       if (l.requested_by_org === req.org.id) throw new ForbiddenException('L\'autre organisation doit accepter le lien');
-      return (await c.query(`UPDATE org_links SET status = 'active', accepted_by = $2, accepted_at = now() WHERE id = $1 RETURNING id, status`, [id, req.user.id])).rows[0];
+      // Une fois accepté, le lien fonctionne dans les deux sens : chacune peut livrer à l'autre.
+      return (await c.query(`UPDATE org_links SET status = 'active', bidirectional = true, accepted_by = $2, accepted_at = now() WHERE id = $1 RETURNING id, status, from_org_id, to_org_id`, [id, req.user.id])).rows[0];
     });
+    await this.syncPartners(r.from_org_id, r.to_org_id, true);
+    delete r.from_org_id; delete r.to_org_id;
     await this.audit.log({ organizationId: req.org.id, actorUserId: req.user.id, action: 'org_link.accept', entityType: 'org_link', entityId: id });
     return r;
   }
@@ -107,10 +124,12 @@ export class DeliveriesController {
   @Post('org-links/:id/revoke') @RequirePermissions('links:manage')
   async revokeLink(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
     const r = await this.db.tx(req.org.id, async (c) => {
-      const x = await c.query(`UPDATE org_links SET status = 'revoked' WHERE id = $1 AND status <> 'revoked' RETURNING id, status`, [id]);
+      const x = await c.query(`UPDATE org_links SET status = 'revoked' WHERE id = $1 AND status <> 'revoked' RETURNING id, status, from_org_id, to_org_id`, [id]);
       if (!x.rowCount) throw new NotFoundException();
       return x.rows[0];
     });
+    await this.syncPartners(r.from_org_id, r.to_org_id, false);
+    delete r.from_org_id; delete r.to_org_id;
     await this.audit.log({ organizationId: req.org.id, actorUserId: req.user.id, action: 'org_link.revoke', entityType: 'org_link', entityId: id });
     return r;
   }
