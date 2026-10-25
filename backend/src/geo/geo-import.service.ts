@@ -61,8 +61,13 @@ export class GeoImportService {
    */
   async analyse(c: PoolClient, features: RawFeature[], opt: ImportOptions, mode: Mode, s: GeoSettings, progress?: (n: number) => Promise<void>): Promise<Item[]> {
     const producers = new Map<string, { id: string; status: string }>();
-    for (const p of (await c.query(`SELECT id, internal_code, status FROM producers`)).rows) producers.set(p.internal_code, { id: p.id, status: p.status });
+    for (const p of (await c.query(`SELECT id, internal_code, status FROM producers`)).rows) producers.set(String(p.internal_code).trim().toUpperCase(), { id: p.id, status: p.status });
     const chains = (await c.query(`SELECT id, code, name FROM value_chains`)).rows;
+    // filière unique du producteur : utilisée quand le fichier n'en indique pas
+    const soleChain = new Map<string, string>();
+    const pvc = new Map<string, string[]>();
+    for (const r of (await c.query(`SELECT producer_id, value_chain_id FROM producer_value_chains`)).rows) pvc.set(r.producer_id, [...(pvc.get(r.producer_id) ?? []), r.value_chain_id]);
+    for (const [k, v] of pvc) if (v.length === 1) soleChain.set(k, v[0]);
     const chainBy = (v: string) => chains.find((x: any) => x.code.toLowerCase() === v.toLowerCase() || x.name.toLowerCase() === v.toLowerCase());
     const defaultChain = opt.value_chain_id ? chains.find((x: any) => x.id === opt.value_chain_id) : chains.length === 1 ? chains[0] : undefined;
 
@@ -92,7 +97,7 @@ export class GeoImportService {
       if (!opt.producer_field) reject('producteur_non_renseigné : aucune colonne de code producteur choisie');
       else if (!it.producer_code) reject('producteur_non_renseigné : code producteur vide');
       else {
-        const p = producers.get(it.producer_code);
+        const p = producers.get(it.producer_code.trim().toUpperCase());
         if (!p) reject(`producteur_inconnu : « ${it.producer_code} » n'existe pas dans cette coopérative${typeof f.props[opt.producer_field] === 'number' ? ' (code numérique : zéros initiaux peut-être perdus, utiliser un champ texte)' : ''}`);
         else if (p.status !== 'active') reject(`producteur_inactif : « ${it.producer_code} » (${p.status})`);
         else it.producerId = p.id;
@@ -100,6 +105,7 @@ export class GeoImportService {
       // filière
       const vcRaw = opt.value_chain_field ? txt(f.props[opt.value_chain_field]) : '';
       if (vcRaw) { const v = chainBy(vcRaw); if (!v) reject(`filière_inconnue : « ${vcRaw} »`); else it.vcId = v.id; }
+      else if (it.producerId && soleChain.has(it.producerId)) it.vcId = soleChain.get(it.producerId);
       else if (defaultChain) it.vcId = defaultChain.id;
       else reject('filière_non_renseignée : colonne filière vide et aucune filière par défaut');
       // surface déclarée (distincte de la surface mesurée, qui est calculée)

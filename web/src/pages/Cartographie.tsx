@@ -109,7 +109,10 @@ function Imports() {
   const [mode, setMode] = useState('simulate');
   const [allOrNothing, setAllOrNothing] = useState(false);
   const [ignoreCode, setIgnoreCode] = useState(false);
+  const [useMeasured, setUseMeasured] = useState(true);
   const [current, setCurrent] = useState<any>(null);
+  const [columns, setColumns] = useState<string[] | null>(null);
+  const [prodCol, setProdCol] = useState('');
   const { busy, error, run } = useAction();
   const history = useAsync(() => get<any[]>('/geo/imports'), []);
   const send = (m: string) => run(async () => {
@@ -117,8 +120,13 @@ function Imports() {
     if (!f) throw new Error('Choisir un fichier (GeoJSON, KML, KMZ, Shapefile .zip ou GeoPackage)');
     const form = new FormData();
     form.append('file', f); form.append('mode', m);
-    form.append('options', JSON.stringify({ all_or_nothing: allOrNothing, ...(ignoreCode && { ignore_parcel_code: true }) }));
-    setCurrent(await postForm('/geo/imports?wait=true', form)); history.reload();
+    form.append('options', JSON.stringify({ all_or_nothing: allOrNothing, ...(ignoreCode && { ignore_parcel_code: true }), ...(useMeasured && { default_declared_from_measured: true }), ...(prodCol && { producer_field: prodCol }) }));
+    try { setCurrent(await postForm('/geo/imports?wait=true', form)); setColumns(null); history.reload(); }
+    catch (e) {
+      const cols = e instanceof ApiError ? (e.body as any)?.columns : null;
+      if (Array.isArray(cols) && cols.length) { setColumns(cols); setProdCol(cols[0]); throw new Error('La colonne du code producteur n\u2019a pas été reconnue : choisissez-la dans la liste puis relancez.'); }
+      throw e;
+    }
   });
   const confirm = () => run(async () => { setCurrent(await post(`/geo/imports/${current.id}/confirm?wait=true`, { mode: mode === 'simulate' ? 'create_update' : mode })); history.reload(); });
   const r = current?.report;
@@ -129,10 +137,12 @@ function Imports() {
           <input ref={file} type="file" aria-label="Fichier" accept=".geojson,.json,.kml,.kmz,.zip,.gpkg" />
           <select aria-label="Mode" value={mode} onChange={(e) => setMode(e.target.value)}>{Object.entries(MODES).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
           <label><input type="checkbox" checked={allOrNothing} onChange={(e) => setAllOrNothing(e.target.checked)} /> Tout ou rien</label>
+          <label title="Si le fichier ne contient pas de superficie déclarée"><input type="checkbox" checked={useMeasured} onChange={(e) => setUseMeasured(e.target.checked)} /> Surface mesurée si non déclarée</label>
           <label title="Pour réimporter un export d'une autre coopérative"><input type="checkbox" checked={ignoreCode} onChange={(e) => setIgnoreCode(e.target.checked)} /> Ignorer les codes de parcelle</label>
+          {columns && <select aria-label="Colonne du code producteur" value={prodCol} onChange={(e) => setProdCol(e.target.value)}>{columns.map((c) => <option key={c} value={c}>Code producteur : {c}</option>)}</select>}
           <button className="btn" disabled={busy} onClick={() => send(mode)}>{busy ? 'Analyse…' : mode === 'simulate' ? 'Analyser' : 'Importer'}</button>
         </div>
-        <p className="muted">Colonnes reconnues automatiquement : code producteur, filière, superficie déclarée, identifiant externe. Seul le système WGS84 est accepté.</p>
+        <p className="muted">Chaque parcelle est rattachée au producteur dont le code figure dans la colonne « code producteur » (majuscules ou minuscules indifférentes). Colonnes reconnues automatiquement : code producteur, filière, superficie déclarée, identifiant externe. Seul le système WGS84 est accepté.</p>
         {error && <ErrorBox message={error} />}
         {r && (
           <>
