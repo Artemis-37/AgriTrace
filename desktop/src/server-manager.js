@@ -75,12 +75,43 @@ class LocalServer {
     const fresh = !fs.existsSync(path.join(dir, 'PG_VERSION'));
     this.pg = new EmbeddedPostgres({
       databaseDir: dir, user: 'agritrace_owner', password: this.secrets().ownerPassword, port: this.pgPort, persistent: true,
+      // UTF8 obligatoire : sous Windows français, initdb choisit sinon WIN1252 et les migrations (flèches, guillemets…) échouent.
+      initdbFlags: ['--encoding=UTF8', '--locale=C'],
       postgresFlags: ['-c', 'listen_addresses=127.0.0.1', '-c', 'max_connections=60', '-c', 'shared_buffers=128MB'],
       onLog: (m) => this.log('[pg] ' + String(m).trim()), onError: (m) => this.log('[pg!] ' + String(m).trim()),
     });
     if (fresh) await this.pg.initialise();
     await this.pg.start();
-    if (fresh) await this.pg.createDatabase(DB);
+    if (fresh) await this.createDb();
+    else await this.ensureUtf8();
+  }
+
+  async createDb() {
+    const c = this.pg.getPgClient();
+    await c.connect();
+    try { await c.query(`CREATE DATABASE ${DB} ENCODING 'UTF8' LC_COLLATE 'C' LC_CTYPE 'C' TEMPLATE template0`); } finally { await c.end(); }
+  }
+
+  // Répare une base créée par une version antérieure dans un autre encodage (WIN1252) tant qu'elle ne contient aucune donnée.
+  async ensureUtf8() {
+    const admin = this.pg.getPgClient();
+    await admin.connect();
+    try {
+      const r = await admin.query(`SELECT pg_encoding_to_char(encoding) AS enc FROM pg_database WHERE datname=$1`, [DB]);
+      if (!r.rowCount) { await admin.end(); return this.createDb(); }
+      if (r.rows[0].enc === 'UTF8') return;
+      const c = new Client({ connectionString: this.ownerUrl() });
+      await c.connect();
+      let rows = 0;
+      try {
+        const t = await c.query(`SELECT to_regclass('public.organizations') AS t`);
+        if (t.rows[0].t) rows = (await c.query('SELECT count(*)::int AS n FROM organizations')).rows[0].n;
+      } finally { await c.end(); }
+      if (rows > 0) throw new Error(`La base est encodée en ${r.rows[0].enc} et contient des données : exportez-les puis recréez-la en UTF8.`);
+      this.log(`[pg] base vide en ${r.rows[0].enc} : recréation en UTF8`);
+      await admin.query(`DROP DATABASE ${DB} WITH (FORCE)`);
+      await admin.query(`CREATE DATABASE ${DB} ENCODING 'UTF8' LC_COLLATE 'C' LC_CTYPE 'C' TEMPLATE template0`);
+    } finally { try { await admin.end(); } catch { /* déjà fermé */ } }
   }
 
   async prepareDatabase() {
