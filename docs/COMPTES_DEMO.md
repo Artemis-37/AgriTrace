@@ -3,7 +3,7 @@
 > Données **entièrement fictives**. Ne jamais utiliser en production.
 
 - Mot de passe commun : `Demo-AgriTrace-2026!`
-- Coopérative : « Coopérative Agricole de Démonstration » (code DEMO28F3)
+- Coopérative : « Coopérative Agricole de Démonstration » (code DEMO62FE)
 
 | Profil | Utilisateur fictif | Identifiant |
 |---|---|---|
