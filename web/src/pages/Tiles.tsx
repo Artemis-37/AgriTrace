@@ -1,4 +1,4 @@
-import { useContext, useState } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../auth';
 import { NavItemsContext, SETTINGS_PATHS } from '../MenuBar';
@@ -34,6 +34,7 @@ export function Tiles() {
   const nav = useContext(NavItemsContext);
   // La famille ouverte est mémorisée : « Retour » depuis une rubrique ramène à la famille, pas à l'accueil nu.
   const [open, setOpenState] = useState<string | null>(() => { try { return sessionStorage.getItem('agritrace.home.group'); } catch { return null; } });
+  useEffect(() => { const h = () => setOpenState(null); window.addEventListener('agritrace:home', h); return () => window.removeEventListener('agritrace:home', h); }, []);
   const setOpen = (g: string | null) => { setOpenState(g); try { g ? sessionStorage.setItem('agritrace.home.group', g) : sessionStorage.removeItem('agritrace.home.group'); } catch { /* ignoré */ } };
   const known = TILES.filter((t) => t.perm.some((p) => can(p)) && (!t.notFor || me?.account_kind !== t.notFor)).map((t) => ({ to: t.to, label: t.label, icon: t.icon }));
   const all = [...known];

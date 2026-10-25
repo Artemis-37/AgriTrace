@@ -36,7 +36,7 @@ export function TopIcons({ items, onNavigate }: { items: MenuItem[]; onNavigate:
   const settings = items.filter((i) => GROUP_OF[i.to] === 'Paramètres');
   return (
     <div className="top-icons" ref={ref}>
-      {home && <NavLink to="/" end className="top-ico" title="Accueil" aria-label="Accueil" onClick={onNavigate}><IconHome /></NavLink>}
+      {home && <NavLink to="/" end className="top-ico" title="Accueil" aria-label="Accueil" onClick={() => { try { sessionStorage.removeItem('agritrace.home.group'); } catch { /* ignoré */ } window.dispatchEvent(new Event('agritrace:home')); onNavigate?.(); }}><IconHome /></NavLink>}
       {settings.length > 0 && (
         <div className={`menu ${open ? 'on' : ''}`}>
           <button className="top-ico" title="Paramètres" aria-label="Paramètres" aria-haspopup="true" aria-expanded={open} onClick={() => setOpen(!open)}><IconGear /></button>
