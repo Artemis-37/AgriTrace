@@ -26,7 +26,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Adresse du serveur Render (réveille le service gratuit, vérifie qu'il répond)
-        env: { INPUT_API: '${{ inputs.api_base }}', RENDER_URL: '${{ vars.RENDER_URL || 'https://agritrace-pe24.onrender.com' }}', INPUT_VER: '${{ inputs.version }}' }
+        env:
+          INPUT_API: ${{ inputs.api_base }}
+          RENDER_URL: ${{ vars.RENDER_URL || 'https://agritrace-pe24.onrender.com' }}
+          INPUT_VER: ${{ inputs.version }}
         run: |
           API="$INPUT_API"
           if [ -z "$API" ] && [ -n "$RENDER_URL" ]; then API="${RENDER_URL%/}/v1"; fi
