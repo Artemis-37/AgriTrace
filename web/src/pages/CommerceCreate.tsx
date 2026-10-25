@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { get, idem, post } from '../api';
+import { getChains } from '../chains';
 import { kg } from '../format';
 import DocumentsPanel from './DocumentsPanel';
 import { Card, ErrorBox, Field, Loading, Modal, Table, useAction, useAsync } from '../ui';
@@ -74,7 +75,7 @@ export function Logistics({ onClose }: { onClose: () => void }) {
 /** Contrat de vente cadre avec un acheteur. */
 export function CreateContract({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
   const buyers = useAsync(() => get<any[]>('/buyers'), []);
-  const chains = useAsync(() => get<any[]>('/value-chains'), []);
+  const chains = useAsync(() => getChains(), []);
   const [f, setF] = useState({ number: '', buyer_id: '', value_chain_id: '', starts_on: new Date().toISOString().slice(0, 10), ends_on: '', quantity_kg: '', unit_price: '', payment_terms_days: '30' });
   const { busy, error, run } = useAction();
   const set = (k: string) => (e: { target: { value: string } }) => setF({ ...f, [k]: e.target.value });

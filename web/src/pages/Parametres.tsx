@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { del, get, post, put } from '../api';
+import { getChains } from '../chains';
 import { useAuth } from '../auth';
 import { date } from '../format';
 import { Badge, Card, ErrorBox, Field, Loading, Modal, PageHeader, Table, Tabs, useAction, useAsync } from '../ui';
@@ -60,13 +61,9 @@ function PriceHistory({ p, onClose }: { p: any; onClose: () => void }) {
   );
 }
 
-const COMMON_CHAINS: [string, string][] = [['CACAO', 'Cacao'], ['CAFE', 'Café'], ['PALMIER-HUILE', 'Palmier à huile'], ['ANACARDE', 'Anacarde'], ['HEVEA', 'Hévéa'], ['COTON', 'Coton'], ['MANGUE', 'Mangue'], ['RIZ', 'Riz']];
-
 function ProductForm({ p, onClose, onDone }: { p: any | null; onClose: () => void; onDone: () => void }) {
   const [f, setF] = useState({ name: p?.name ?? '', buy: p?.buy_price_per_kg ? String(Number(p.buy_price_per_kg)) : '', sell: p?.sell_price_per_kg ? String(Number(p.sell_price_per_kg)) : '', active: p?.active ?? true, chain: p?.value_chain_id ?? '' });
-  const chains = useAsync(() => get<any[]>('/value-chains').catch(() => [] as any[]), []);
-  const [newChain, setNewChain] = useState<string | null>(null);
-  const chainAct = useAction();
+  const chains = useAsync(() => getChains().catch(() => [] as any[]), []);
   const act = useAction();
   const ok = f.name.trim() && (f.buy === '' || PRICE.test(f.buy)) && (f.sell === '' || PRICE.test(f.sell));
   return (
@@ -75,22 +72,7 @@ function ProductForm({ p, onClose, onDone }: { p: any | null; onClose: () => voi
       <div className="grid-2"><Field label="Prix d'achat au kilo"><input inputMode="decimal" value={f.buy} onChange={(e) => setF({ ...f, buy: e.target.value })} /></Field>
         <Field label="Prix de vente au kilo"><input inputMode="decimal" value={f.sell} onChange={(e) => setF({ ...f, sell: e.target.value })} /></Field></div>
       <Field label="Filière (déclarations d'achat)" hint="Si une filière est choisie, les déclarations d'achat de cette filière utilisent le prix d'achat officiel de ce produit au lieu du barème."><select value={f.chain} onChange={(e) => setF({ ...f, chain: e.target.value })}><option value="">— Aucune —</option>{(chains.data ?? []).map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}</select></Field>
-      {(chains.data ?? []).length === 0 && newChain === null && <div><p className="hint">Aucune filière n'existe encore dans cette coopérative.</p>
-        <button type="button" className="btn" disabled={chainAct.busy} onClick={() => chainAct.run(async () => {
-          for (const [code, name] of COMMON_CHAINS) { try { await post('/value-chains', { code, name }); } catch (e: any) { if (!/déjà utilisé|409/.test(String(e?.message ?? e))) throw e; } }
-          await chains.reload();
-        })}>Ajouter les filières courantes (cacao, café, palmier à huile, anacarde, hévéa…)</button></div>}
-      {newChain === null
-        ? <button type="button" className="btn btn-ghost" onClick={() => setNewChain('')}>+ Nouvelle filière</button>
-        : <div className="grid-2"><Field label="Nom de la nouvelle filière"><input value={newChain} onChange={(e) => setNewChain(e.target.value)} maxLength={100} placeholder="Cacao, café, anacarde…" /></Field>
-            <div style={{ alignSelf: 'end' }}><button type="button" className="btn" disabled={chainAct.busy || newChain.trim().length < 2} onClick={() => chainAct.run(async () => {
-              const code = newChain.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 20);
-              const v = await post('/value-chains', { code: code.length >= 2 ? code : 'FILIERE', name: newChain.trim() });
-              await chains.reload();
-              setF((x) => ({ ...x, chain: v.id }));
-              setNewChain(null);
-            })}>Ajouter</button> <button type="button" className="btn btn-ghost" onClick={() => setNewChain(null)}>Annuler</button></div></div>}
-      {chainAct.error && <ErrorBox message={chainAct.error} />}
+      {(chains.data ?? []).length === 0 && <p className="hint">Aucune filière disponible : demandez à l'administrateur de la coopérative de les activer.</p>}
       <label><input type="checkbox" checked={f.active} onChange={(e) => setF({ ...f, active: e.target.checked })} /> Actif</label>
       {act.error && <ErrorBox message={act.error} />}
       <div className="modal-actions"><button className="btn" disabled={act.busy || !ok} onClick={() => act.run(async () => {
@@ -105,7 +87,7 @@ function ProductForm({ p, onClose, onDone }: { p: any | null; onClose: () => voi
 const CSTATUS: Record<string, string> = { planned: 'Prévue', open: 'Ouverte', closed: 'Clôturée' };
 function Campaigns() {
   const { can } = useAuth();
-  const { data, loading, error, reload } = useAsync(async () => ({ list: await get<any[]>('/campaigns'), chains: await get<any[]>('/value-chains').catch(() => [] as any[]) }), []);
+  const { data, loading, error, reload } = useAsync(async () => ({ list: await get<any[]>('/campaigns'), chains: await getChains().catch(() => [] as any[]) }), []);
   const [adding, setAdding] = useState(false);
   return (
     <Card>

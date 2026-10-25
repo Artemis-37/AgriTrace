@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useDeepLink } from '../notifTarget';
 import { get, idem, post } from '../api';
+import { getChains } from '../chains';
 import { useAuth } from '../auth';
 import { INVOICE_STATUS, ORDER_STATUS, SHIPMENT_STATUS, date, kg, money } from '../format';
 import { Badge, Card, ErrorBox, Field, Loading, Modal, PageHeader, Stat, StatusBadge, Table, Tabs, useAction, useAsync } from '../ui';
@@ -64,7 +65,7 @@ function Orders() {
 }
 
 function CreateOrder({ buyers, onClose, onDone }: { buyers: any[]; onClose: () => void; onDone: () => void }) {
-  const chains = useAsync(() => get<any[]>('/value-chains'), []);
+  const chains = useAsync(() => getChains(), []);
   const [key] = useState(idem());
   const { can } = useAuth();
   const prods = useAsync(() => get<any[]>('/products'), []);

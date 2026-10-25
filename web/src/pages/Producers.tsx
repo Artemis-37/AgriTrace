@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { get, post } from '../api';
+import { getChains } from '../chains';
 import { useAuth } from '../auth';
 import { PRODUCER_STATUS } from '../format';
 import { ProducerProfile } from './Affectations';
@@ -57,7 +58,7 @@ export default function Producers() {
 }
 
 function NewProducer({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
-  const chains = useAsync(() => get<any[]>('/value-chains'), []);
+  const chains = useAsync(() => getChains(), []);
   const [f, setF] = useState({ last_name: '', first_names: '', phone: '', village: '', section: '', area: '', est: '', chain: '' });
   const { busy, error, run } = useAction();
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF({ ...f, [k]: e.target.value });
