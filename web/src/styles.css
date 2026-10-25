@@ -612,3 +612,5 @@ tbody tr:hover { background: color-mix(in srgb, var(--lime) 16%, transparent); }
 .home-group small { display: block; margin-top: .3rem; font-size: .78rem; font-weight: 400; color: var(--muted, #5f6b60); line-height: 1.25; }
 .home-back { background: none; border: 0; color: var(--forest, #2f5d46); font: inherit; font-weight: 600; cursor: pointer; padding: .3rem 0; }
 .home-group-title { margin: .2rem 0 .8rem; font-size: 1.25rem; }
+.link-btn { background: none; border: 0; padding: 0; font: inherit; font-weight: 600; color: var(--forest, #2f5d46); text-decoration: underline; cursor: pointer; }
+.rate-list { list-style: none; padding: 0; margin: 0 0 1rem; display: grid; gap: .3rem; }

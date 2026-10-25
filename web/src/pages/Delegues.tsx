@@ -94,18 +94,16 @@ function ChainsOf({ c, onDone }: { c: any; onDone: () => void }) {
 
 /** Enregistre un délégué en une fois : compte de connexion, profil (localité, banque, pièce), filières et tarifs. */
 function NewDelegate({ onClose, onDone }: { onClose: () => void; onDone: (collectorId: string) => void }) {
-  const { can } = useAuth();
   const chains = useAsync(() => getChains().catch(() => [] as any[]), []);
-  const [f, setF] = useState({ last_name: '', first_names: '', member_code: '', email: '', phone: '', password: '', origin: '', bank_name: '', bank_account: '', id_doc_type: '', id_doc_no: '', transport: '', retention: '' });
+  const [f, setF] = useState({ last_name: '', first_names: '', member_code: '', email: '', phone: '', password: '', origin: '', bank_name: '', bank_account: '', id_doc_type: '', id_doc_no: '' });
   const [picked, setPicked] = useState<string[]>([]);
   const [photo, setPhoto] = useState<File | null>(null);
   const act = useAction();
   const set = (k: keyof typeof f) => (e: any) => setF({ ...f, [k]: e.target.value });
-  const num = (v: string) => v === '' || /^\d+(\.\d{1,4})?$/.test(v);
   const codeOk = /^[A-Z0-9][A-Z0-9-]{1,29}$/.test(f.member_code.trim());
   // Seuls le nom, les prénoms et le code sont obligatoires ; un accès à l'application demande à la fois un e-mail et un mot de passe.
   const accessOk = (!f.email.trim() && !f.password) || (f.email.includes('@') && f.password.length >= 10);
-  const ok = f.last_name.trim() && f.first_names.trim() && codeOk && accessOk && num(f.transport) && num(f.retention);
+  const ok = f.last_name.trim() && f.first_names.trim() && codeOk && accessOk;
   const full = `${f.last_name.trim()} ${f.first_names.trim()}`;
   return (
     <Modal title="Nouveau délégué" onClose={onClose}>
@@ -124,8 +122,6 @@ function NewDelegate({ onClose, onDone }: { onClose: () => void; onDone: (collec
         <Field label="N° de compte"><input value={f.bank_account} onChange={set('bank_account')} maxLength={40} /></Field></div>
       <div className="grid-2"><Field label="Type de pièce"><select value={f.id_doc_type} onChange={set('id_doc_type')}><option value="">—</option>{Object.entries(DOC).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></Field>
         <Field label="N° de la pièce"><input value={f.id_doc_no} onChange={set('id_doc_no')} maxLength={40} /></Field></div>
-      {can('collectors:rates') && <div className="grid-2"><Field label="Transport au kilo (FCFA)" hint="Vide : tarif par défaut."><input inputMode="decimal" value={f.transport} onChange={set('transport')} /></Field>
-        <Field label="Retenue au kilo (FCFA)" hint="Vide : tarif par défaut."><input inputMode="decimal" value={f.retention} onChange={set('retention')} /></Field></div>}
       <Field label="Filières achetées" hint="Aucune case cochée : toutes les filières de la coopérative.">
         <div className="role-pick">{(chains.data ?? []).map((v: any) => <label key={v.id} className="check"><input type="checkbox" checked={picked.includes(v.id)} onChange={() => setPicked((p) => (p.includes(v.id) ? p.filter((x) => x !== v.id) : [...p, v.id]))} />{v.name}</label>)}</div></Field>
       {act.error && <ErrorBox message={act.error} />}
@@ -141,7 +137,6 @@ function NewDelegate({ onClose, onDone }: { onClose: () => void; onDone: (collec
           for (const k of ['bank_name', 'bank_account', 'id_doc_type', 'id_doc_no'] as const) if (f[k].trim()) prof[k] = f[k].trim();
           if (Object.keys(prof).length) await put(`/collectors/${id}/profile`, prof);
           for (const v of picked.length ? picked : [null]) await post(`/collectors/${id}/assignments`, v ? { value_chain_id: v } : {});
-          if (can('collectors:rates') && (f.transport || f.retention)) await put(`/collectors/${id}/rates`, { ...(f.transport && { transport_per_kg: f.transport }), ...(f.retention && { retention_per_kg: f.retention }) });
           if (photo) await uploadPhoto('user', u.id, photo);
         } catch (e: any) {
           throw new Error(`${full} est enregistré, mais sa fiche est incomplète (${e?.message ?? e}). Ouvrez-la dans la liste puis cliquez sur « Modifier ».`);
@@ -173,50 +168,44 @@ function Rates({ c, kind, onDone }: { c: any; kind: 'transport' | 'retenues'; on
   const { can } = useAuth();
   const field = kind === 'transport' ? 'transport_per_kg' : 'retention_per_kg';
   const cfg = useAsync(() => get<any>('/convoys/settings').catch(() => null), []);
-  const chains = useAsync(() => getChains().catch(() => [] as any[]), []);
-  const [v, setV] = useState<string | null>(null);
-  const [byChain, setByChain] = useState<Record<string, string>>({});
+  const chains = useAsync(() => getChains().catch(() => [] as any[]), []); // filières définies par la coopérative (Produits)
+  const [chain, setChain] = useState('');
+  const [val, setVal] = useState<string | null>(null);
   const [ty, setTy] = useState<string | null>(null);
   const { busy, error, run } = useAction();
-  const own = c[field];
   const def = kind === 'transport' ? cfg.data?.transport_unit : cfg.data?.retention_per_kg;
-  const shown = v ?? (own != null ? String(Number(own)) : '');
   const may = can('collectors:rates');
   const num = (x: string) => x === '' || /^\d+(\.\d{1,4})?$/.test(x);
-  // Filières du délégué : celles qui lui sont affectées (une affectation sans filière = toutes).
-  const assigned: any[] = c.assignments ?? [];
-  const allChains = assigned.length === 0 || assigned.some((a) => !a.value_chain_id);
-  const mine = (chains.data ?? []).filter((x: any) => allChains || assigned.some((a) => a.value_chain_id === x.id));
+  const list: any[] = chains.data ?? [];
   const saved = (id: string) => { const r = (c.rates ?? []).find((x: any) => x.value_chain_id === id); return r?.[field] != null ? String(Number(r[field])) : ''; };
-  const cur = (id: string) => byChain[id] ?? saved(id);
-  const dirtyChains = mine.filter((x: any) => byChain[x.id] !== undefined && byChain[x.id] !== saved(x.id));
-  const ok = num(shown) && dirtyChains.every((x: any) => num(byChain[x.id]));
+  const shown = val ?? (chain ? saved(chain) : '');
   const label = kind === 'transport' ? 'Coût de transport au kilo (FCFA)' : 'Retenue au kilo — mise en compte (FCFA)';
+  const withRate = list.filter((x) => saved(x.id) !== '');
+  const assigned: any[] = c.assignments ?? [];
+  const covered = (id: string) => assigned.length === 0 || assigned.some((a) => !a.value_chain_id || a.value_chain_id === id);
   return (
     <div>
       <p className="muted">{kind === 'transport'
-        ? 'Le coût de transport de ce délégué est préenregistré ici : la caisse le reprend à chaque règlement, sans pouvoir le modifier.'
-        : 'La somme retenue au kilo sur chaque règlement de ce délégué s\'accumule en mise en compte ; elle est reversée à la clôture de son compte, après approbation de l\'administrateur.'}</p>
-      <Field label={mine.length > 1 ? `${label} — tarif général` : label} hint={own == null ? `Non renseigné : tarif par défaut de la coopérative (${Number(def ?? 0).toLocaleString('fr-FR')})` : mine.length > 1 ? 'Appliqué aux filières sans tarif propre ci-dessous.' : undefined}>
-        <input inputMode="decimal" value={shown} readOnly={!may} disabled={!may} onChange={(e) => setV(e.target.value)} /></Field>
-      {mine.length > 1 && (
-        <>
-          <h4>Tarif par filière</h4>
-          <p className="muted">Ce délégué achète plusieurs filières : fixez ici un tarif propre à chacune. Une case vide reprend le tarif général.</p>
-          <div className="grid-2">
-            {mine.map((x: any) => (
-              <Field key={x.id} label={x.name} hint={saved(x.id) === '' && byChain[x.id] === undefined ? `Tarif général (${shown === '' ? Number(def ?? 0).toLocaleString('fr-FR') : Number(shown).toLocaleString('fr-FR')})` : undefined}>
-                <input inputMode="decimal" value={cur(x.id)} readOnly={!may} disabled={!may} onChange={(e) => setByChain({ ...byChain, [x.id]: e.target.value })} aria-label={`${label} — ${x.name}`} /></Field>
-            ))}
-          </div>
-        </>
-      )}
+        ? 'Choisissez une filière, puis fixez le coût de transport au kilo de ce délégué pour cette filière : la caisse le reprend à chaque règlement, sans pouvoir le modifier.'
+        : 'Choisissez une filière, puis fixez la retenue au kilo de ce délégué pour cette filière : elle s\'accumule en mise en compte et est reversée à la clôture de son compte, après approbation de l\'administrateur.'}</p>
+      <Field label="Filière" hint="Les filières sont celles définies par la coopérative dans Produits.">
+        <select value={chain} onChange={(e) => { setChain(e.target.value); setVal(null); }}><option value="">— Choisir une filière —</option>{list.map((x: any) => <option key={x.id} value={x.id}>{x.name}{saved(x.id) !== '' ? ` (${Number(saved(x.id)).toLocaleString('fr-FR')})` : ''}</option>)}</select></Field>
+      {chain && <Field label={label} hint={saved(chain) === '' ? `Non renseigné : tarif par défaut de la coopérative (${Number(def ?? 0).toLocaleString('fr-FR')})` : undefined}>
+        <input inputMode="decimal" value={shown} readOnly={!may} disabled={!may} onChange={(e) => setVal(e.target.value)} /></Field>}
+      {list.length === 0 && !chains.loading && <p className="muted">Aucune filière : définissez-les d'abord dans Produits.</p>}
+      {withRate.length > 0 && <>
+        <h4>Tarifs enregistrés</h4>
+        <ul className="rate-list">{withRate.map((x: any) => <li key={x.id}><button type="button" className="link-btn" onClick={() => { setChain(x.id); setVal(null); }}>{x.name}</button> {Number(saved(x.id)).toLocaleString('fr-FR')} FCFA/kg</li>)}</ul></>}
       {kind === 'retenues' && <Field label="Type de prélèvement" hint="Nature de la retenue au kilo ; reprise sur chaque règlement et dans le journal d'approvisionnement."><select value={ty ?? c.retention_type ?? 'mise_en_compte'} disabled={!may} onChange={(e) => setTy(e.target.value)}>{Object.entries(RTYPE).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></Field>}
       {error && <ErrorBox message={error} />}
-      {may ? <p><button className="btn" disabled={busy || (v === null && ty === null && dirtyChains.length === 0) || !ok} onClick={() => run(async () => {
-        if (v !== null || ty !== null) await put(`/collectors/${c.id}/rates`, { ...(v !== null && { [field]: shown === '' ? null : shown }), ...(ty !== null && { retention_type: ty }) });
-        for (const x of dirtyChains) await put(`/collectors/${c.id}/rates`, { value_chain_id: x.id, [field]: byChain[x.id] === '' ? null : byChain[x.id] });
-        setV(null); setTy(null); setByChain({}); onDone();
+      {may ? <p><button className="btn" disabled={busy || !num(shown) || (val === null && ty === null) || (val !== null && !chain)} onClick={() => run(async () => {
+        if (val !== null && chain) {
+          // La filière choisie rejoint celles du délégué si elle n'y figure pas encore.
+          if (!covered(chain)) await post(`/collectors/${c.id}/assignments`, { value_chain_id: chain });
+          await put(`/collectors/${c.id}/rates`, { value_chain_id: chain, [field]: val === '' ? null : val });
+        }
+        if (ty !== null) await put(`/collectors/${c.id}/rates`, { retention_type: ty });
+        setVal(null); setTy(null); onDone();
       })}>Enregistrer</button></p>
         : <p className="muted">Seul l'administrateur de la coopérative saisit ces tarifs.</p>}
     </div>
