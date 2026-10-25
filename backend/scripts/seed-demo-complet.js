@@ -74,6 +74,7 @@ const PROFILS = [
 
   // ── Filière, campagne, prix
   const vc = await call('POST', '/value-chains', { ...A, body: { code: 'CACAO', name: 'Cacao' } });
+  for (const [code, name] of [['CAFE', 'Café'], ['PALMIER-HUILE', 'Palmier à huile'], ['ANACARDE', 'Anacarde'], ['HEVEA', 'Hévéa']]) await soft('filière ' + name, () => call('POST', '/value-chains', { ...A, body: { code, name } }));
   await call('POST', '/unit-conversions', { ...A, body: { value_chain_id: vc.id, from_unit: 'sac', to_unit: 'kg', factor: '65' } });
   const camp = await call('POST', '/campaigns', { ...A, body: { value_chain_id: vc.id, code: 'C2627', name: 'Campagne 2026-2027', starts_on: '2026-10-01', ends_on: '2027-09-30' } });
   const sched = await call('POST', '/price-schedules', { ...A, body: { value_chain_id: vc.id, campaign_id: camp.id, unit: 'kg' } });
