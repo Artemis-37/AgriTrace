@@ -118,7 +118,8 @@ export class ProducersController {
     const ws = wb.addWorksheet('Producteurs');
     ws.addRow(TARGET_FIELDS.map((f) => TEMPLATE_HEADERS[f]));
     ws.getRow(1).font = { bold: true };
-    ws.addRow(['', 'KONE', 'Awa', '+2250701020304', 'Haut-Sassandra', 'Daloa', 'Hiré', 'Hiré centre', 'CACAO', '2024-05-12']);
+    const sample: Record<string, string> = { internal_code: '', last_name: 'KONE', first_names: 'Awa', phone: '+2250701020304', region: 'Haut-Sassandra', department: 'Daloa', section: 'Hiré', village: 'Hiré centre', area_ha: '2.5', estimated_kg: '1200', value_chains: 'CACAO', joined_on: '2024-05-12', gender: 'F' };
+    ws.addRow(TARGET_FIELDS.map((f) => sample[f] ?? ''));
     ws.columns.forEach((col) => (col.width = 18));
     return new StreamableFile(Buffer.from(await wb.xlsx.writeBuffer()), {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -241,7 +242,7 @@ export class ProducersController {
     ws.getRow(1).eachCell((cell, n) => (headers[n - 1] = cellText(cell.value).trim()));
     const mapping = resolveMapping(headers.filter(Boolean), explicit);
     if (!mapping.last_name || !mapping.first_names)
-      throw new BadRequestException('Colonnes Nom et Prénoms introuvables : fournissez un "mapping"');
+      throw new BadRequestException({ message: 'Colonnes Nom et Prénoms introuvables : indiquez à quelle colonne correspond chaque information.', headers: headers.filter(Boolean), missing_mapping: true });
 
     const rows: ParsedRow[] = [];
     ws.eachRow((row, n) => {
@@ -255,7 +256,7 @@ export class ProducersController {
 
     const report = await this.db.tx(req.org.id, async (c) => {
       const chains = new Map((await c.query(`SELECT id, upper(code) AS code FROM value_chains`)).rows.map((r) => [r.code, r.id]));
-      const result = { total: rows.length, created: 0, skipped: 0, dry_run: confirm !== 'true',
+      const result = { total: rows.length, created: 0, skipped: 0, dry_run: confirm !== 'true', headers: headers.filter(Boolean), mapping,
                        issues: [] as { line: number; problem: string }[] };
       const used = new Set<string>();
       for (const r of rows) {
@@ -281,10 +282,10 @@ export class ProducersController {
         if (!result.dry_run) {
           const code = r.data.internal_code ?? (await this.nextCode(c, req.org.id));
           const ins = await c.query(
-            `INSERT INTO producers(organization_id, internal_code, last_name, first_names, phone, region, department, section, village, joined_on, created_by, area_ha, estimated_kg)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING id`,
+            `INSERT INTO producers(organization_id, internal_code, last_name, first_names, phone, region, department, section, village, joined_on, created_by, area_ha, estimated_kg, gender)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING id`,
             [req.org.id, code, r.data.last_name, r.data.first_names, r.data.phone ?? null, r.data.region ?? null,
-             r.data.department ?? null, r.data.section ?? null, r.data.village ?? null, r.data.joined_on ?? null, req.user.id, r.data.area_ha ?? null, r.data.estimated_kg ?? null]);
+             r.data.department ?? null, r.data.section ?? null, r.data.village ?? null, r.data.joined_on ?? null, req.user.id, r.data.area_ha ?? null, r.data.estimated_kg ?? null, r.data.gender ?? null]);
           for (const vc of chainIds)
             await c.query(`INSERT INTO producer_value_chains(producer_id, value_chain_id, organization_id) VALUES ($1,$2,$3)`, [ins.rows[0].id, vc, req.org.id]);
         }

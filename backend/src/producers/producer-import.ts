@@ -2,7 +2,7 @@
 
 export const TARGET_FIELDS = [
   'internal_code', 'last_name', 'first_names', 'phone', 'region', 'department',
-  'section', 'village', 'area_ha', 'estimated_kg', 'value_chains', 'joined_on',
+  'section', 'village', 'area_ha', 'estimated_kg', 'value_chains', 'joined_on', 'gender',
 ] as const;
 export type TargetField = (typeof TARGET_FIELDS)[number];
 
@@ -20,6 +20,7 @@ export const TEMPLATE_HEADERS: Record<TargetField, string> = {
   estimated_kg: 'Estimation (kg)',
   value_chains: 'Filières',
   joined_on: "Date d'adhésion",
+  gender: 'Sexe',
 };
 
 export const normalize = (s: string) =>
@@ -68,6 +69,12 @@ export function validateRow(line: number, raw: Record<string, string>, mapping: 
       data[f] = data[f]!.replace(/\s/g, '').replace(',', '.');
       if (!/^\d+(\.\d{1,4})?$/.test(data[f]!)) errors.push(`${label} invalide (nombre positif)`);
     }
+  }
+  if (data.gender) {
+    const g = normalize(data.gender);
+    if (/^(m|h|masculin|homme|male)$/.test(g)) data.gender = 'male';
+    else if (/^(f|feminin|femme|female)$/.test(g)) data.gender = 'female';
+    else errors.push('Sexe invalide (M ou F)');
   }
   if (data.joined_on && !/^\d{4}-\d{2}-\d{2}$/.test(data.joined_on)) errors.push("Date d'adhésion invalide (AAAA-MM-JJ)");
   if (data.internal_code && !/^[A-Za-z0-9_-]{1,30}$/.test(data.internal_code)) errors.push('Code invalide');

@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from 'react';
-import { get, post, put } from '../api';
+import { ApiError, download, get, post, postForm, put } from '../api';
 import { getChains } from '../chains';
 import { useAuth } from '../auth';
 import { PRODUCER_STATUS } from '../format';
@@ -24,6 +24,7 @@ export default function Producers() {
   const sections = useAsync(() => get<{ section: string; producers: number }[]>('/producers/sections').catch(() => []), []);
   const chains = useAsync(() => getChains().catch(() => [] as any[]), []);
   const [creating, setCreating] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [editing, setEditing] = useState(false);
   const [chg, setChg] = useState<any | null>(null);
   const [prof, setProf] = useState<any | null>(null);
@@ -62,6 +63,7 @@ export default function Producers() {
         ]}
         actions={<>
           {can('producers:create') && <button className="btn" onClick={() => setCreating(true)}>Nouveau</button>}
+          {can('producers:import') && can('producers:create') && <button className="btn btn-secondary" onClick={() => setImporting(true)}>Importer (Excel)</button>}
           {can('producers:update') && <button className="btn btn-secondary" disabled={!cur} onClick={() => setEditing(true)}>Modifier</button>}
           {can('producers:status') && <button className="btn btn-secondary" disabled={!cur || cur.status === 'archived'} onClick={() => cur && setChg(cur)}>Statut</button>}
           <button className="btn btn-secondary" onClick={() => window.print()}>Imprimer</button>
@@ -100,6 +102,7 @@ export default function Producers() {
       </Registre>
       {prof && <ProducerProfile p={prof} onClose={() => setProf(null)} />}
       {chg && <ChangeStatus p={chg} onClose={() => setChg(null)} onDone={() => { setChg(null); reload(); }} />}
+      {importing && <ImportProducers onClose={() => setImporting(false)} onDone={() => reload()} />}
       {creating && <NewProducer onClose={() => setCreating(false)} onDone={() => { setCreating(false); reload(); }} />}
       {editing && cur && <EditProducer p={cur} detail={detail.data} onClose={() => setEditing(false)} onDone={() => { setEditing(false); reload(); }} />}
     </>
@@ -197,6 +200,58 @@ function ChangeStatus({ p, onClose, onDone }: { p: any; onClose: () => void; onD
       {(hist.data ?? []).length > 0 && <><h3>Historique</h3><ul>{hist.data!.map((h: any) => <li key={h.id}>{new Date(h.created_at).toLocaleDateString('fr-FR')} : {h.from_status ?? '—'} → {h.to_status} ({h.reason})</li>)}</ul></>}
       <div className="modal-foot"><button className="btn btn-secondary" onClick={onClose}>Annuler</button>
         <button className="btn" disabled={busy || !status || reason.trim().length < 3} onClick={() => run(async () => { await post(`/producers/${p.id}/status`, { status, reason }); onDone(); })}>Changer le statut</button></div>
+    </Modal>
+  );
+}
+
+const IMPORT_FIELDS: [string, string][] = [
+  ['last_name', 'Nom *'], ['first_names', 'Prénoms *'], ['internal_code', 'Code'], ['gender', 'Sexe'], ['phone', 'Téléphone'], ['region', 'Région'], ['department', 'Département'],
+  ['section', 'Section'], ['village', 'Village'], ['area_ha', 'Superficie (ha)'], ['estimated_kg', 'Estimation (kg)'], ['value_chains', 'Filières'], ['joined_on', "Date d'adhésion"],
+];
+
+/** Import d'une liste de producteurs depuis un classeur Excel : simulation (rapport), correspondance des colonnes si besoin, puis confirmation. */
+function ImportProducers({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
+  const [file, setFile] = useState<File | null>(null);
+  const [report, setReport] = useState<any>(null);
+  const [headers, setHeaders] = useState<string[] | null>(null);
+  const [map, setMap] = useState<Record<string, string>>({});
+  const [finished, setFinished] = useState(false);
+  const { busy, error, run } = useAction();
+  const send = (confirm: boolean) => run(async () => {
+    const form = new FormData(); form.append('file', file!);
+    const m = Object.fromEntries(Object.entries(map).filter(([, v]) => v));
+    if (Object.keys(m).length) form.append('mapping', JSON.stringify(m));
+    try {
+      const r = await postForm<any>(`/producers/imports${confirm ? '?confirm=true' : ''}`, form);
+      setHeaders(r.headers); setReport(r);
+      if (!Object.keys(map).length) setMap(r.mapping ?? {});
+      if (confirm) { setFinished(true); onDone(); }
+    } catch (e: any) {
+      const b = e instanceof ApiError ? (e.body as any) : null;
+      if (b?.missing_mapping) { setHeaders(b.headers); setReport(null); }
+      throw e;
+    }
+  });
+  const issues: { line: number; problem: string }[] = report?.issues ?? [];
+  return (
+    <Modal title="Importer des producteurs (Excel)" onClose={onClose}>
+      <p className="muted">Fichier Excel (.xlsx), une ligne par producteur, première ligne = noms des colonnes. Seuls Nom et Prénoms sont obligatoires ; le code est attribué automatiquement s'il manque. 5 000 lignes au maximum.</p>
+      <p><button type="button" className="btn btn-small btn-secondary" onClick={() => download('/producers/imports/template', 'modele-producteurs.xlsx')}>Télécharger le modèle Excel</button></p>
+      <Field label="Fichier"><input type="file" accept=".xlsx" onChange={(e) => { setFile(e.target.files?.[0] ?? null); setReport(null); setHeaders(null); setMap({}); setFinished(false); }} /></Field>
+      {headers && !finished && (
+        <details open={!report}><summary>Correspondance des colonnes</summary>
+          <div className="grid-2">{IMPORT_FIELDS.map(([k, l]) => (
+            <Field key={k} label={l}><select value={map[k] ?? ''} onChange={(e) => setMap({ ...map, [k]: e.target.value })}><option value="">— Aucune —</option>{headers.map((h) => <option key={h} value={h}>{h}</option>)}</select></Field>))}
+          </div></details>)}
+      {error && <ErrorBox message={error} />}
+      {report && (
+        <div className={finished ? 'ok-box' : ''}>
+          <p><strong>{finished ? 'Import terminé' : 'Simulation (rien n\'est encore enregistré)'}</strong> : {report.total} ligne(s) lue(s), {report.created} {finished ? 'créée(s)' : 'à créer'}, {report.skipped} ignorée(s).</p>
+          {issues.length > 0 && <ul className="muted" style={{ maxHeight: '10rem', overflow: 'auto' }}>{issues.slice(0, 200).map((i, n) => <li key={n}>Ligne {i.line} : {i.problem}</li>)}</ul>}
+        </div>)}
+      <div className="modal-foot"><button className="btn btn-secondary" onClick={onClose}>{finished ? 'Fermer' : 'Annuler'}</button>
+        {!finished && <button className="btn btn-secondary" disabled={busy || !file} onClick={() => send(false)}>{report ? 'Relancer la simulation' : 'Vérifier le fichier'}</button>}
+        {!finished && report && report.created > 0 && <button className="btn" disabled={busy} onClick={() => send(true)}>Importer {report.created} producteur(s)</button>}</div>
     </Modal>
   );
 }
