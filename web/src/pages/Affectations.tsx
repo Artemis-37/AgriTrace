@@ -13,10 +13,10 @@ type Row = { id: string; kind: string; scope: string; title: string; due_date: s
  * Nature (module de formation, distribution ou tâche) et cible (tous les producteurs ou certains) d'un élément que l'ADG envoie aux coachs.
  * Sert à la transmission d'un module d'exportateur (`forwardUrl`) et à l'affectation d'un modèle de la bibliothèque (`moduleId` / titre libre).
  */
-export function AssignDialog({ title, forwardUrl, modules, onClose, onDone }: { title: string; forwardUrl?: string; modules?: { id: string; title: string }[]; onClose: () => void; onDone: () => void }) {
+export function AssignDialog({ title, forwardUrl, modules, producer, onClose, onDone }: { title: string; forwardUrl?: string; modules?: { id: string; title: string }[]; producer?: { id: string }; onClose: () => void; onDone: () => void }) {
   const [kind, setKind] = useState('formation');
-  const [scope, setScope] = useState<'all' | 'selected'>('all');
-  const [sel, setSel] = useState<string[]>([]);
+  const [scope, setScope] = useState<'all' | 'selected'>(producer ? 'selected' : 'all');
+  const [sel, setSel] = useState<string[]>(producer ? [producer.id] : []);
   const [q, setQ] = useState(''); const [section, setSection] = useState('');
   const [due, setDue] = useState(''); const [instr, setInstr] = useState('');
   const [moduleId, setModuleId] = useState(''); const [free, setFree] = useState('');
@@ -45,15 +45,16 @@ export function AssignDialog({ title, forwardUrl, modules, onClose, onDone }: { 
             <select aria-label="Modèle" value={moduleId} onChange={(e) => setModuleId(e.target.value)}><option value="">Choisir un module…</option>{(modules ?? []).map((m) => <option key={m.id} value={m.id}>{m.title}</option>)}</select>
           </Field>
         )}
+        {needModule && !(modules ?? []).length && <p className="muted" style={{ gridColumn: '1 / -1', margin: 0 }}>La bibliothèque ne contient aucun module : créez-en un dans « Modules de formation », ou choisissez « Distribution » ou « Tâche ».</p>}
         {lib && kind !== 'formation' && <Field label="Intitulé"><input value={free} onChange={(e) => setFree(e.target.value)} placeholder={kind === 'distribution' ? 'Ex. Distribution de plants' : 'Ex. Mettre à jour le carnet de récolte'} /></Field>}
-        <Field label="Producteurs concernés">
+        {!producer && <Field label="Producteurs concernés">
           <select aria-label="Cible" value={scope} onChange={(e) => setScope(e.target.value as 'all' | 'selected')}>
             <option value="all">Tous les producteurs</option><option value="selected">Certains producteurs</option>
           </select>
-        </Field>
+        </Field>}
         <Field label="Échéance (facultatif)"><input type="date" value={due} onChange={(e) => setDue(e.target.value)} /></Field>
       </div>
-      {scope === 'selected' && (
+      {scope === 'selected' && !producer && (
         <>
           <div className="toolbar">
             <input type="search" aria-label="Rechercher un producteur" placeholder="Rechercher (nom, code)" value={q} onChange={(e) => setQ(e.target.value)} />
@@ -70,7 +71,7 @@ export function AssignDialog({ title, forwardUrl, modules, onClose, onDone }: { 
       )}
       <Field label="Consigne pour les coachs (facultatif)"><textarea rows={2} value={instr} onChange={(e) => setInstr(e.target.value)} /></Field>
       {act.error && <ErrorBox message={act.error} />}
-      <p className="muted" style={{ marginBottom: 0 }}>{scope === 'all' ? 'S\'ajoutera au profil de tous les producteurs actifs.' : `S'ajoutera au profil de ${sel.length} producteur(s).`}{forwardUrl ? ' Le contenu du module reste celui de l\'exportateur, sans modification.' : ''}</p>
+      <p className="muted" style={{ marginBottom: 0 }}>{producer ? 'S\'ajoutera au profil de ce producteur ; les coachs le recevront à la prochaine synchronisation.' : scope === 'all' ? 'S\'ajoutera au profil de tous les producteurs actifs.' : `S'ajoutera au profil de ${sel.length} producteur(s).`}{forwardUrl ? ' Le contenu du module reste celui de l\'exportateur, sans modification.' : ''}</p>
       <div className="modal-foot"><button className="btn btn-secondary" onClick={onClose}>Annuler</button><button className="btn" disabled={act.busy || !ready} onClick={submit}>{forwardUrl ? 'Transmettre aux coachs' : 'Affecter'}</button></div>
     </Modal>
   );
@@ -82,6 +83,8 @@ export function ProducerProfile({ p, onClose }: { p: P; onClose: () => void }) {
   const act = useAction();
   const items = useAsync(() => get<Item[]>(`/producer-assignments?producer_id=${p.id}`), [p.id]);
   const canDone = can('training:report') || can('training:assign');
+  const mods = useAsync(() => (can('training:assign') ? get<{ id: string; title: string }[]>('/training-modules').catch(() => []) : Promise.resolve([] as { id: string; title: string }[])), []);
+  const [adding, setAdding] = useState(false);
   return (
     <Modal title={`${p.last_name} ${p.first_names} · ${p.internal_code}`} onClose={onClose}>
       <p className="muted">{[p.village, p.section && `section ${p.section}`].filter(Boolean).join(' · ') || '—'}</p>
@@ -95,7 +98,8 @@ export function ProducerProfile({ p, onClose }: { p: P; onClose: () => void }) {
           { header: 'État', render: (i: Item) => i.status === 'done' ? <Badge tone="ok">Fait le {d(i.done_at)}</Badge> : canDone ? <button className="btn btn-small" disabled={act.busy} onClick={() => act.run(async () => { await post(`/producer-assignments/targets/${i.target_id}/done`); items.reload(); })}>Marquer fait</button> : <Badge tone="warn">À faire</Badge> },
         ]} />
       )}
-      <div className="modal-foot"><button className="btn btn-secondary" onClick={onClose}>Fermer</button></div>
+      {adding && <AssignDialog title={`Envoyer aux coachs : ${p.last_name} ${p.first_names}`} modules={mods.data ?? []} producer={p} onClose={() => setAdding(false)} onDone={() => { setAdding(false); items.reload(); }} />}
+      <div className="modal-foot">{can('training:assign') && <button className="btn" onClick={() => setAdding(true)}>Envoyer une formation, distribution ou tâche aux coachs</button>}<button className="btn btn-secondary" onClick={onClose}>Fermer</button></div>
     </Modal>
   );
 }

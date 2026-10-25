@@ -694,3 +694,12 @@ tbody tr:hover { background: color-mix(in srgb, var(--c-lime) 35%, transparent);
 .registre-detail a { color: #fff; text-decoration: underline; }
 .registre-detail table th, .registre-detail table td { color: #fff; }
 .registre-detail table td code { color: #fff; }
+
+/* Boutons dans les panneaux taupes : contour et texte blancs ; la photo « Pas de photo » reste lisible */
+.registre-detail .btn-secondary, .registre-detail .btn-ghost, .panel-taupe .btn-secondary, .panel-taupe .btn-ghost { color: #fff; border-color: rgba(255,255,255,.8); background: transparent; }
+.registre-detail .btn-secondary:hover:not(:disabled), .registre-detail .btn-ghost:hover:not(:disabled), .panel-taupe .btn-secondary:hover:not(:disabled) { background: rgba(255,255,255,.18); color: #fff; }
+.registre-detail .photo-frame .muted, .registre-detail .photo-frame span { color: var(--muted); opacity: 1; }
+.registre-detail .badge, .registre-detail .status-badge { color: inherit; }
+.registre-detail .notice, .registre-detail p.notice { color: var(--warn); }
+.registre-detail .notice.s-doit, .registre-detail p.s-doit { color: var(--bad, #8B2E22); }
+.toolbar .btn-secondary { color: var(--c-navy); border-color: var(--c-navy); font-weight: 600; }

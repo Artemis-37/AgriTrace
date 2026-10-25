@@ -99,7 +99,7 @@ export default function Producers() {
                 { header: 'Superficie mesurée (ha)', align: 'right', render: (x: any) => num(x.geometry_area_ha) }, { header: 'Vérification', render: (x: any) => x.verification_status ?? '—' }, { header: 'Enregistrée le', render: (x: any) => (x.registered_on ? new Date(x.registered_on).toLocaleDateString('fr-FR') : '—') },
               ]} />
             ))}
-            {tab === 'suivi' && <p><button className="btn btn-secondary" onClick={() => setProf(cur)}>Voir les formations, distributions et tâches de {cur.first_names}</button></p>}
+            {tab === 'suivi' && <p><button className="btn btn-secondary" onClick={() => setProf(cur)}>Formations, distributions et tâches de {cur.first_names} : voir et envoyer aux coachs</button></p>}
           </>
         )}
       </Registre>
