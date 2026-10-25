@@ -9,6 +9,7 @@ import 'missions_screen.dart';
 import 'parcel_survey_screen.dart';
 import 'photo_capture.dart';
 import 'producer_map_screen.dart';
+import 'questionnaire_screen.dart';
 
 const _green = Color(0xFF2F5D46);
 const _action = Color(0xFF3F9B2E);
@@ -184,7 +185,13 @@ class _ProducerDetailScreenState extends State<ProducerDetailScreen> {
               title: Text('${a['title']}', maxLines: 2, overflow: TextOverflow.ellipsis),
               subtitle: Text('${a['kind'] == 'formation' ? 'Module de formation' : a['kind'] == 'distribution' ? 'Distribution' : 'Tâche'}${a['due_date'] != null ? ' • échéance ${a['due_date'].toString().substring(0, 10)}' : ''}${(a['instructions'] ?? '').toString().isNotEmpty ? '\n${a['instructions']}' : ''}'),
               isThreeLine: (a['instructions'] ?? '').toString().isNotEmpty,
-              trailing: a['status'] == 'done' ? const Icon(Icons.check_circle_outline, size: 28)
+              onTap: a['questionnaire_id'] != null && a['questions'] != null ? () async {
+                final saved = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => QuestionnaireScreen(assignment: Map<String, dynamic>.from(a as Map), producer: widget.producer)));
+                if (saved == true) { await _applyLocalAssignments(); if (mounted) setState(() => _msg = 'Réponses conservées sur l\'appareil, envoyées à la synchronisation.'); }
+              } : null,
+              trailing: a['questionnaire_id'] != null && a['questions'] != null
+                  ? (a['status'] == 'done' ? const Icon(Icons.check_circle_outline, size: 28) : const Icon(Icons.edit_note, size: 30, color: _action))
+                  : a['status'] == 'done' ? const Icon(Icons.check_circle_outline, size: 28)
                   : (_canDone ? TextButton(onPressed: () async {
                       await services.repo.queueOp('producer_assignment.done', {'id': a['target_id']});
                       await services.repo.patchCachedAssignment(a['target_id'] as Object, {'status': 'done'});

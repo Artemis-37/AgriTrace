@@ -143,7 +143,7 @@ class SyncEngine {
     }
     try {
       final a = await api.get('/producer-assignments', query: {'mine': '1'});
-      await _keepLocalChanges('assignments_cache', 'target_id', a as List<dynamic>, {'producer_assignment.done': 'done'}, 'status');
+      await _keepLocalChanges('assignments_cache', 'target_id', a as List<dynamic>, {'producer_assignment.done': 'done', 'questionnaire.answer': 'done'}, 'status');
     } on ApiException catch (e) {
       if (e.status == 401) rethrow;
     }

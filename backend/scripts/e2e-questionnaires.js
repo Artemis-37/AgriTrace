@@ -64,6 +64,13 @@ const login = async (email, password) => (await call('POST', '/auth/login', { bo
   const manual = (await call('GET', `/producer-assignments?producer_id=${prods[1].id}`, A)).body.find((x) => x.questionnaire_id === q.body.id);
   check('« marquer fait » à la main refusé pour un questionnaire', (await call('POST', `/producer-assignments/targets/${manual.target_id}/done`, A)).status === 400);
 
+  console.log('Envoi hors connexion (synchronisation)');
+  const tg2 = (await call('GET', `/producer-assignments?producer_id=${prods[2].id}`, A)).body.find((x) => x.questionnaire_id === impc.body.id).target_id;
+  const batch = await call('POST', '/sync/batch', { ...A, body: { operations: [{ idempotency_key: 'qa-' + run + '-1', type: 'questionnaire.answer', payload: { id: tg2, answers: { q1: 41, q2: 'Femme' } } }] } });
+  check('réponses envoyées par la synchronisation', batch.status === 201 && batch.body.results?.[0]?.status === 'accepted', batch.body);
+  const prof2 = (await call('GET', `/producer-assignments?producer_id=${prods[2].id}`, A)).body.find((x) => x.target_id === tg2);
+  check('le profil montre les réponses (questions + réponses)', prof2.status === 'done' && prof2.answers?.q1 === 41 && prof2.questions.length === 2, prof2);
+
   console.log('Résultats');
   const res = await call('GET', `/questionnaires/assignments/${sel.body.id}/results`, A);
   const r0 = res.body.rows?.find((r) => r.internal_code === prods[0].internal_code);

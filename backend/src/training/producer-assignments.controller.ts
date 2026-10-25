@@ -84,8 +84,9 @@ export class ProducerAssignmentsController {
     }
     return this.db.tx(req.org.id, async (c) => producerId
       ? (await c.query(
-        `SELECT t.id AS target_id, t.status, t.done_at, a.id, a.kind, a.scope, a.title, a.instructions, a.due_date, a.module_id, a.created_at, a.questionnaire_id
-         FROM producer_assignment_targets t JOIN producer_assignments a ON a.id = t.assignment_id WHERE t.producer_id = $1 ORDER BY (t.status = 'done'), a.created_at DESC`, [producerId])).rows
+        `SELECT t.id AS target_id, t.status, t.done_at, a.id, a.kind, a.scope, a.title, a.instructions, a.due_date, a.module_id, a.created_at, a.questionnaire_id, q.questions, an.answers
+         FROM producer_assignment_targets t JOIN producer_assignments a ON a.id = t.assignment_id LEFT JOIN questionnaires q ON q.id = a.questionnaire_id
+         LEFT JOIN questionnaire_answers an ON an.target_id = t.id WHERE t.producer_id = $1 ORDER BY (t.status = 'done'), a.created_at DESC`, [producerId])).rows
       : (await c.query(
         `SELECT a.*, count(t.id)::int AS targets, count(t.id) FILTER (WHERE t.status = 'done')::int AS done FROM producer_assignments a
          LEFT JOIN producer_assignment_targets t ON t.assignment_id = a.id GROUP BY a.id ORDER BY a.created_at DESC LIMIT 200`)).rows);

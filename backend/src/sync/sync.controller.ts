@@ -10,6 +10,7 @@ import { CreateParcelDto, ParcelsController, SyncUpdateParcelDto, UpdateParcelDt
 import { FinanceController, TransactionDto } from '../finance/finance.controller';
 import { TaskEntryDto, TasksController } from '../tasks/tasks.controller';
 import { ProducerAssignmentsController } from '../training/producer-assignments.controller';
+import { QuestionnairesController } from '../training/questionnaires.controller';
 import { SubmitResultDto, TrainingExchangeController } from '../training/training-exchange.controller';
 import { CreateProducerDto, ProducersController } from '../producers/producers.controller';
 import { CreateFieldRecordDto, FieldRecordsController } from '../field-records/field-records.controller';
@@ -68,6 +69,7 @@ export class SyncController {
       'convoy.create': { controller: ConvoysController, permission: 'convoys:create', dto: CreateConvoyDto, run: (ctl, p, req) => ctl.create(p, req) },
       'convoy.receive': { controller: ConvoysController, permission: 'convoys:receive', dto: ReceiveConvoyDto, run: (ctl, p, req) => ctl.receive(p, req) },
       'producer_assignment.done': { controller: ProducerAssignmentsController, permission: 'training:report', run: (ctl, p, req) => ctl.done(this.uuid(p), req) },
+      'questionnaire.answer': { controller: QuestionnairesController, permission: 'training:report', run: (ctl, p, req) => ctl.answer(this.uuid(p), { answers: p.answers ?? {} }, req) },
       'training_result.create': { controller: TrainingExchangeController, permission: 'training:report', dto: SubmitResultDto, run: (ctl, p, req) => ctl.report(p, req) },
       'task.start': { controller: TasksController, permission: 'tasks:execute', run: (ctl, p, req) => ctl.start(this.uuid(p), req) },
       'task.submit': { controller: TasksController, permission: 'tasks:execute', run: (ctl, p, req) => ctl.submit(this.uuid(p), req) },
