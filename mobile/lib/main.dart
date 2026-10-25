@@ -40,9 +40,10 @@ Future<void> main() async {
   final tiles = MapTiles(mapPack);
   unawaited(tiles.init());
   services = Services(store, api, db, Repository(db), SyncEngine(db, api), mapPack, tiles);
+  // Session refusée par le serveur : le menu et les données restent à l'écran, seule la synchronisation est suspendue
+  // jusqu'à une nouvelle connexion (ou jusqu'à ce que l'utilisateur se déconnecte lui-même).
   api.onRevoked = () async {
-    await services.repo.purgeAfterRevocation();
-    await store.signOut();
+    services.sync.block();
   };
   final loggedIn = await store.refreshToken != null && await store.orgId != null;
   runApp(AgriTraceApp(loggedIn: loggedIn));

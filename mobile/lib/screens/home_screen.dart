@@ -299,9 +299,10 @@ class _HomeHeader extends StatelessWidget {
           ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert, color: white), tooltip: 'Menu',
-            onSelected: (v) { if (v == 'sync') onSync(); if (v == 'out') onSignOut(); },
+            onSelected: (v) { if (v == 'sync') onSync(); if (v == 'out') onSignOut(); if (v == 'relogin') Navigator.of(context).push(MaterialPageRoute(builder: (_) => const LoginScreen(notice: 'Session expirée : reconnectez-vous pour reprendre la synchronisation.'))); },
             itemBuilder: (_) => [
               const PopupMenuItem(value: 'sync', child: Text('Synchroniser')),
+              const PopupMenuItem(value: 'relogin', child: Text('Se reconnecter')),
               const PopupMenuItem(value: 'out', child: Text('Se déconnecter')),
             ],
           ),
@@ -363,7 +364,7 @@ class _SyncBanner extends StatelessWidget {
       case SyncPhase.offline:
         text = 'Hors connexion — les saisies sont conservées sur l\'appareil'; color = Colors.orange.shade800; break;
       case SyncPhase.blocked:
-        text = 'Accès refusé : reconnectez-vous ou contactez votre administrateur'; color = Colors.red.shade700; break;
+        text = 'Synchronisation suspendue : session expirée ou accès retiré. Utilisez « Se reconnecter » dans le menu ⋮, ou contactez votre administrateur. Vos saisies restent sur le téléphone.'; color = Colors.red.shade700; break;
       case SyncPhase.error:
         text = 'Erreur de synchronisation : ${status.message ?? ''}'; color = Colors.red.shade700; break;
       case SyncPhase.idle:

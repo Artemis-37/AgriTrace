@@ -32,6 +32,9 @@ class ApiClient {
   /// Appelé quand le serveur refuse définitivement le renouvellement de la session (compte suspendu, session révoquée).
   /// Jamais appelé sur une simple coupure réseau.
   Future<void> Function()? onRevoked;
+  /// Jeton de renouvellement refusé par le serveur : on ne le présente plus (évite de multiplier les appels), jusqu'à une nouvelle connexion.
+  String? deadToken;
+  Future<bool>? _refreshing;
 
   ApiClient(this.store, {http.Client? client}) : _http = client ?? createHttpClient();
 
@@ -232,14 +235,19 @@ class ApiClient {
   }
 
   /// Renouvelle la session ; le serveur fait tourner le jeton de renouvellement.
-  Future<bool> _refresh() async {
+  /// Un seul renouvellement à la fois : plusieurs requêtes qui expirent ensemble partagent le même appel
+  /// (deux renouvellements simultanés avec le même jeton seraient pris pour un vol de session par le serveur).
+  Future<bool> _refresh() => _refreshing ??= _doRefresh().whenComplete(() => _refreshing = null);
+
+  Future<bool> _doRefresh() async {
     final rt = await store.refreshToken;
-    if (rt == null) return false;
+    if (rt == null || rt == deadToken) return false;
     try {
       final res = await _http
           .post(_uri('/auth/refresh'), headers: {'content-type': 'application/json'}, body: jsonEncode({'refresh_token': rt}))
           .timeout(Config.requestTimeout);
       if (res.statusCode == 401 || res.statusCode == 403) {
+        deadToken = rt;
         await onRevoked?.call();
         return false;
       }

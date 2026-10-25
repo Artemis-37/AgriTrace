@@ -34,7 +34,23 @@ class SyncEngine {
 
   SyncEngine(this.db, this.api);
 
+  bool _blocked = false;
+  /// Suspend la synchronisation (session refusée par le serveur) : le reste de l'application reste utilisable, les saisies restent sur l'appareil.
+  void block() {
+    _blocked = true;
+    status.value = SyncStatus(SyncPhase.blocked, lastSuccess: status.value.lastSuccess, message: 'Session expirée ou accès retiré');
+  }
+
   Future<void> run() async {
+    if (_blocked) {
+      // Levée du blocage dès qu'une nouvelle connexion a fourni un autre jeton.
+      final t = await api.store.refreshToken;
+      if (t == null || t == api.deadToken) {
+        status.value = SyncStatus(SyncPhase.blocked, lastSuccess: status.value.lastSuccess, message: 'Session expirée ou accès retiré');
+        return;
+      }
+      _blocked = false;
+    }
     if (_running) return; // une seule synchronisation à la fois
     _running = true;
     final previousSuccess = status.value.lastSuccess;
@@ -49,7 +65,7 @@ class SyncEngine {
       status.value = SyncStatus(SyncPhase.offline, lastSuccess: previousSuccess, message: e.message);
     } on ApiException catch (e) {
       final blocked = e.status == 401 || e.status == 403;
-      if (blocked && await api.store.refreshToken == null) revoked.value = true;
+      if (blocked) _blocked = true; // pas de déconnexion forcée : le menu reste disponible
       status.value = SyncStatus(blocked ? SyncPhase.blocked : SyncPhase.error, lastSuccess: previousSuccess, message: e.message);
     } catch (e) {
       status.value = SyncStatus(SyncPhase.error, lastSuccess: previousSuccess, message: e.toString());

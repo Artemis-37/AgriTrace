@@ -182,12 +182,19 @@ export class AuthService {
     ).catch(() => []);
     if (!s || s.revoked_at || new Date(s.expires_at) < new Date()) throw new UnauthorizedException();
     if (s.refresh_token_hash !== sha256(secret)) {
+      // Tolérance : l'ancien jeton, présenté dans les 30 s qui suivent sa rotation (requêtes simultanées de l'application), est accepté une fois de plus.
+      const [g] = await this.db.query(`SELECT 1 AS ok FROM user_sessions WHERE id = $1 AND prev_refresh_token_hash = $2 AND rotated_at > now() - interval '30 seconds'`, [sid, sha256(secret)]).catch(() => []);
+      if (g) {
+        const again = randomBytes(48).toString('base64url');
+        await this.db.query(`UPDATE user_sessions SET prev_refresh_token_hash = refresh_token_hash, refresh_token_hash = $2, rotated_at = now() WHERE id = $1`, [sid, sha256(again)]);
+        return this.issue(s.user_id, sid, again);
+      }
       await this.db.query(`UPDATE user_sessions SET revoked_at = now() WHERE id = $1`, [sid]);
       await this.audit.log({ actorUserId: s.user_id, action: 'auth.refresh_reuse_detected' });
       throw new UnauthorizedException();
     }
     const next = randomBytes(48).toString('base64url');
-    await this.db.query(`UPDATE user_sessions SET refresh_token_hash = $2 WHERE id = $1`, [sid, sha256(next)]);
+    await this.db.query(`UPDATE user_sessions SET prev_refresh_token_hash = refresh_token_hash, refresh_token_hash = $2, rotated_at = now() WHERE id = $1`, [sid, sha256(next)]);
     return this.issue(s.user_id, sid, next);
   }
 
