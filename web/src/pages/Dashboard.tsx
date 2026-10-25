@@ -1,3 +1,4 @@
+import HomeScene from './HomeScene';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { get } from '../api';
@@ -53,6 +54,7 @@ export default function Dashboard() {
 
   return (
     <>
+      <HomeScene />
       <PageHeader title={`Bonjour ${me?.user.full_name.split(' ')[0] ?? ''}`} subtitle="Vue d'ensemble de votre coopérative" />
       <Tiles />
       <div className="grid">
