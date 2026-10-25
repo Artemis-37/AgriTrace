@@ -47,11 +47,10 @@ class Repository {
   Future<List<Map<String, Object?>>> producerSections() => db.raw.rawQuery(
       "SELECT section, count(*) AS n FROM producers WHERE status = 'active' AND section IS NOT NULL AND trim(section) <> '' GROUP BY section ORDER BY section");
 
-  /// Filières que ce délégué peut déclarer pour ce producteur (affectation du délégué ∩ filières du producteur).
+  /// Produits que ce délégué peut déclarer (affectation du délégué ; tous les produits sont liés à tous les producteurs).
   Future<List<Map<String, Object?>>> chainsFor(String producerId) async {
     final p = await db.raw.query('producers', where: 'id = ?', whereArgs: [producerId]);
     if (p.isEmpty) return [];
-    final producerChains = (jsonDecode((p.first['value_chain_ids'] as String?) ?? '[]') as List).cast<String>();
     final assigns = await db.raw.query('my_assignments');
     // Sans affectation de collecteur (coach, cartographe…) : toutes les filières du producteur ; sinon seulement celles affectées.
     final allChains = assigns.isEmpty || assigns.any((a) => a['value_chain_id'] == null);
@@ -59,7 +58,7 @@ class Repository {
     final chains = await db.raw.query('value_chains', where: "status = 'active'");
     return chains.where((c) {
       final id = c['id'] as String;
-      final okProducer = producerChains.isEmpty || producerChains.contains(id);
+      const okProducer = true; // tout produit de la coopérative est lié à tous les producteurs
       return okProducer && (allChains || assigned.contains(id));
     }).toList();
   }

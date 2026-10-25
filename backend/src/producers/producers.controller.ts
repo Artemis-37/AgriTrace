@@ -206,7 +206,8 @@ export class ProducersController {
         [req.org.id, code, b.last_name, b.first_names, b.phone ?? null, b.region ?? null, b.department ?? null,
          b.section ?? null, b.village ?? null, b.joined_on ?? null, req.user.id, b.id ?? null,
          b.gender ?? null, b.birth_date ?? null, b.id_doc_type ?? null, b.id_doc_number ?? null, b.consent === true, b.area_ha ?? null, b.estimated_kg ?? null]);
-      for (const vc of b.value_chain_ids ?? []) {
+      const wanted = b.value_chain_ids?.length ? b.value_chain_ids : (await c.query(`SELECT id FROM value_chains WHERE status = 'active'`)).rows.map((r: any) => r.id);
+      for (const vc of wanted) {
         const ok = await c.query(`SELECT 1 FROM value_chains WHERE id = $1`, [vc]);
         if (!ok.rowCount) throw new BadRequestException('Filière inconnue');
         await c.query(`INSERT INTO producer_value_chains(producer_id, value_chain_id, organization_id) VALUES ($1,$2,$3)`, [ins.rows[0].id, vc, req.org.id]);
@@ -328,7 +329,7 @@ export class ProducersController {
              VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING id`,
             [req.org.id, code, r.data.last_name, r.data.first_names, r.data.phone ?? null, r.data.region ?? null,
              r.data.department ?? null, r.data.section ?? null, r.data.village ?? null, r.data.joined_on ?? null, req.user.id, r.data.area_ha ?? null, r.data.estimated_kg ?? null, r.data.gender ?? null]);
-          for (const vc of chainIds)
+          for (const vc of (chainIds.length ? chainIds : [...chains.values()]))
             await c.query(`INSERT INTO producer_value_chains(producer_id, value_chain_id, organization_id) VALUES ($1,$2,$3)`, [ins.rows[0].id, vc, req.org.id]);
         }
         result.created++;

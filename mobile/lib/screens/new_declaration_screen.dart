@@ -50,7 +50,7 @@ class _NewDeclarationScreenState extends State<NewDeclarationScreen> {
     final chains = await services.repo.chainsFor(p['id'] as String);
     setState(() { _producer = p; _infoOk = false; _chains = chains; _chain = null; _campaign = null; _campaigns = []; _estimate = null; });
     if (chains.length == 1) await _pickChain(chains.first);
-    if (chains.isEmpty) setState(() => _error = "Aucune filière disponible pour ce producteur et votre affectation.");
+    if (chains.isEmpty) setState(() => _error = "Aucun produit disponible pour votre affectation.");
   }
 
   Future<void> _pickChain(Map<String, Object?> c) async {
@@ -82,7 +82,7 @@ class _NewDeclarationScreenState extends State<NewDeclarationScreen> {
 
   Future<void> _save() async {
     final q = _quantity.text.trim().replaceAll(',', '.');
-    if (_producer == null || _chain == null || _campaign == null) return setState(() => _error = 'Choisissez le producteur, la filière et la campagne.');
+    if (_producer == null || _chain == null || _campaign == null) return setState(() => _error = 'Choisissez le producteur, le produit et la campagne.');
     if (!RegExp(r'^\d{1,14}(\.\d{1,3})?$').hasMatch(q) || double.parse(q) <= 0) return setState(() => _error = 'Poids invalide (nombre positif, 3 décimales maximum).');
     final bags = int.tryParse(_bags.text.trim());
     if (bags == null || bags <= 0) return setState(() => _error = 'Saisissez le nombre de sacs.');
@@ -117,11 +117,11 @@ class _NewDeclarationScreenState extends State<NewDeclarationScreen> {
           ListTile(contentPadding: EdgeInsets.zero, title: Text('${_producer!['last_name']} ${_producer!['first_names']}'), subtitle: Text('${_producer!['internal_code']}'),
               trailing: TextButton(onPressed: () => setState(() { _producer = null; _infoOk = false; _chain = null; _campaign = null; }), child: const Text('Changer'))),
           if (_chains.length > 1) DropdownButtonFormField<Map<String, Object?>>(
-              decoration: const InputDecoration(labelText: 'Filière', border: OutlineInputBorder()), value: _chain,
+              decoration: const InputDecoration(labelText: 'Produit', border: OutlineInputBorder()), value: _chain,
               items: [for (final c in _chains) DropdownMenuItem(value: c, child: Text(c['name'] as String))], onChanged: (c) { if (c != null) _pickChain(c); }),
           if (_chain != null) ...[
             const SizedBox(height: 12),
-            Text('Filière : ${_chain!['name']}'),
+            Text('Produit : ${_chain!['name']}'),
             const SizedBox(height: 12),
             DropdownButtonFormField<Map<String, Object?>>(
                 decoration: const InputDecoration(labelText: 'Campagne', border: OutlineInputBorder()), value: _campaign,

@@ -30,7 +30,8 @@ export default function NewPurchase({ onClose, onDone }: { onClose: () => void; 
   const hits = !producer && q.trim().length >= 1
     ? data.producers.filter((p) => { const hay = norm(`${p.internal_code} ${p.last_name} ${p.first_names} ${p.first_names} ${p.last_name}`); return norm(q).split(/\s+/).every((w) => hay.includes(w)); }).slice(0, 8)
     : [];
-  const chains = data.chains.filter((c) => !producer?.value_chain_ids?.length || producer.value_chain_ids.includes(c.id));
+  // Les producteurs sont liés à tous les produits de la coopérative : après le producteur, le délégué choisit le produit.
+  const chains = data.chains;
   const chainId = f.value_chain_id || (chains.length === 1 ? chains[0].id : '');
   const camps = data.campaigns.filter((c) => !chainId || c.value_chain_id === chainId);
   const campId = f.campaign_id || (camps.length === 1 ? camps[0].id : '');
@@ -52,7 +53,7 @@ export default function NewPurchase({ onClose, onDone }: { onClose: () => void; 
       )}
       {producer && (
         <>
-          {chains.length > 1 && <Field label="Filière"><select value={f.value_chain_id} onChange={(e) => setF({ ...f, value_chain_id: e.target.value, campaign_id: '' })}><option value="">—</option>{chains.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></Field>}
+          {chains.length > 1 && <Field label="Produit"><select value={f.value_chain_id} onChange={(e) => setF({ ...f, value_chain_id: e.target.value, campaign_id: '' })}><option value="">—</option>{chains.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></Field>}
           {camps.length > 1 && <Field label="Campagne"><select value={f.campaign_id} onChange={set('campaign_id')}><option value="">—</option>{camps.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></Field>}
           <Field label="Poids (kg)"><input inputMode="decimal" value={f.kg} onChange={set('kg')} placeholder="ex. 650" autoFocus /></Field>
           <Field label="Nombre de sacs"><input inputMode="numeric" value={f.bags} onChange={set('bags')} placeholder="ex. 10" /></Field>

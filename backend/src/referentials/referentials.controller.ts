@@ -73,6 +73,10 @@ export class ReferentialsController {
            RETURNING id, code, name, default_unit, status`,
           [req.org.id, b.code, b.name, b.default_unit ?? 'kg', req.user.id],
         )).rows[0]);
+      // Tout produit créé par la coopérative est lié à tous ses producteurs.
+      await this.db.tx(req.org.id, (c) => c.query(
+        `INSERT INTO producer_value_chains(producer_id, value_chain_id, organization_id)
+         SELECT p.id, $1, $2 FROM producers p WHERE NOT EXISTS (SELECT 1 FROM producer_value_chains x WHERE x.producer_id = p.id AND x.value_chain_id = $1)`, [row.id, req.org.id]));
       await this.audited(req, 'value_chain.create', 'value_chain', row.id);
       return row;
     } catch (e) {

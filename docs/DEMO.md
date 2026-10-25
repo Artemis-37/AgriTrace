@@ -21,6 +21,16 @@ Coopérative **fictive** avec des données d'exemple et **un compte par profil**
 | Contrôle | 1 demande d'annulation en attente (réception du 2e convoi) |
 | Automatisation | 1 rapport Finances programmé chaque lundi |
 
+## Une démonstration remplie du champ à l'exportateur
+
+Après le chargement de base, le script enchaîne `seed-demo-enrichi.js`, `seed-demo-supplement.js`, `seed-demo-chaine.js` puis `seed-demo-activite.js` :
+
+- **Champ** : une parcelle tracée (polygone) pour chaque producteur, formations, distributions et infrastructures relevées par les agents.
+- **Banques, mobile money, trésorerie, caisse** (coopérative et exportateur) : comptes, entrées et sorties, relevés bancaires importés et rapprochés, écritures comptables, paiements.
+- **Exportateur** : livraisons pesées, analysées et réglées, acheteurs, contrats, commandes.
+- **Chaque compte** a plus de 20 opérations ou tâches à son nom (écritures, missions, inspections, mouvements de stock, prêts approuvés, pesées, analyses, règlements…). Les profils en lecture seule (auditeur, acheteur, exportateur partenaire) n'effectuent pas d'opérations : ils reçoivent 22 messages d'équipe.
+- Tout produit créé par la coopérative est **lié à tous ses producteurs** : à la déclaration d'achat, le délégué choisit d'abord le producteur, puis le produit.
+
 ## Installation
 
 1. Démarrez AgriTrace normalement (API + base). Créez l'administrateur de plateforme :
