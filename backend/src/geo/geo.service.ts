@@ -133,6 +133,7 @@ export class GeoService {
   // ------------------------------------------------------------------------------------------------------------------
 
   /**
+   * Les zones tampons (nom, désignation, catégorie ou couche contenant « tampon », « buffer », « périphérique », « transition ») sont exclues : y être est permis.
    * Recouvrements entre parcelles actives (une seule si [parcelId]) et zones des couches de référence de la coopérative.
    * PostGIS : `&&` puis ST_Intersects sur la zone corrigée (ST_MakeValid) ; surfaces sur l'ellipsoïde. Sinon : emprises (index GiST) puis turf.
    */
@@ -145,13 +146,13 @@ export class GeoService {
                 ST_Area(p.geom::geography) AS parcel_m2,
                 ST_Area(ST_CollectionExtract(ST_Intersection(ST_MakeValid(p.geom), ST_MakeValid(f.geom)), 3)::geography) AS inter_m2
            FROM parcels p JOIN reference_features f ON f.geom && p.geom JOIN reference_layers l ON l.id = f.layer_id
-          WHERE p.status = 'active' AND p.geom IS NOT NULL AND ($1::uuid IS NULL OR p.id = $1) AND ST_Intersects(p.geom, ST_MakeValid(f.geom))`, [parcelId ?? null])).rows;
+          WHERE p.status = 'active' AND p.geom IS NOT NULL AND ($1::uuid IS NULL OR p.id = $1) AND ST_Intersects(p.geom, ST_MakeValid(f.geom)) AND NOT (translate(lower(coalesce(f.name,'') || ' ' || coalesce(f.designation,'') || ' ' || coalesce(f.category,'') || ' ' || coalesce(l.name,'')), 'éèêëàâîïôöûùç', 'eeeeaaiioouuc') ~ '(tampon|buffer|peripheri|transition)')`, [parcelId ?? null])).rows;
       return rows.map((r: any) => ({ parcel_id: r.parcel_id, parcel_code: r.parcel_code, feature_id: r.feature_id, label: label(r.name, r.designation), layer_name: r.layer_name, inter_m2: Number(r.inter_m2), parcel_m2: Number(r.parcel_m2) }));
     }
     const rows = (await c.query(
       `SELECT p.id AS parcel_id, p.code AS parcel_code, p.geometry AS pgeom, f.id AS feature_id, f.name, f.designation, f.geometry AS fgeom, l.name AS layer_name
          FROM parcels p JOIN reference_features f ON f.bbox && p.bbox JOIN reference_layers l ON l.id = f.layer_id
-        WHERE p.status = 'active' AND p.geometry IS NOT NULL AND ($1::uuid IS NULL OR p.id = $1)`, [parcelId ?? null])).rows;
+        WHERE p.status = 'active' AND p.geometry IS NOT NULL AND ($1::uuid IS NULL OR p.id = $1) AND NOT (translate(lower(coalesce(f.name,'') || ' ' || coalesce(f.designation,'') || ' ' || coalesce(f.category,'') || ' ' || coalesce(l.name,'')), 'éèêëàâîïôöûùç', 'eeeeaaiioouuc') ~ '(tampon|buffer|peripheri|transition)')`, [parcelId ?? null])).rows;
     const out = [];
     for (const r of rows) {
       let inter = 0;

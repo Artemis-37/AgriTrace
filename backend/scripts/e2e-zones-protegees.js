@@ -97,6 +97,21 @@ const upload = (X, buf, fields, filename = 'zones.geojson') => {
   const pNewOut = await mk(A, 1, sq(X + 0.03, Y + 0.03));
   check('parcelle hors zone : aucune anomalie', !(pNewOut.anomalies ?? []).some((a) => a.kind === 'protected_overlap'));
 
+  console.log('Zones tampons');
+  const bx = X + 0.08, by2 = Y + 0.08;
+  const fb = await upload(A, layerFile([
+    { props: { name: 'Forêt Tampon Test', desig_eng: 'Zone tampon' }, geometry: sq(bx, by2, 0.01) },
+    { props: { name: 'Réserve Noyau Test', desig_eng: 'Reserve' }, geometry: sq(bx + 0.02, by2, 0.01) },
+  ], false), { name: 'Couche essai B', source: 'Essai', license: 'Essai', attribution: 'Essai' });
+  check('couche avec zone tampon chargée', fb.status === 201 || fb.status === 200, fb.body);
+  const pBuf = await mk(A, 0, sq(bx + 0.003, by2 + 0.003, 0.002));
+  const pCore = await mk(A, 1, sq(bx + 0.023, by2 + 0.003, 0.002));
+  an = (await call('GET', '/geo/anomalies?status=open&limit=500', A.J)).body.filter((a) => a.kind === 'protected_overlap');
+  check('parcelle en zone tampon : acceptée, aucune anomalie', !(pBuf.anomalies ?? []).some((a) => a.kind === 'protected_overlap') && !an.some((a) => a.parcel_a_id === pBuf.id), pBuf.anomalies);
+  const lb = (await call('GET', '/geo/layers', A.J)).body.find((l) => l.name === 'Couche essai B');
+  check('parcelle dans l\'aire protégée voisine : anomalie', (pCore.anomalies ?? []).some((a) => a.kind === 'protected_overlap') || an.some((a) => a.parcel_a_id === pCore.id));
+
+  if (lb) await call('DELETE', `/geo/layers/${lb.id}`, A.J);
   console.log('Isolation entre coopératives');
   check('l\'autre coopérative ne voit pas la couche', (await call('GET', '/geo/layers', B.J)).body.length === 0);
   const bPar = await mk(B, 0, sq(X + 0.002, Y + 0.002));
