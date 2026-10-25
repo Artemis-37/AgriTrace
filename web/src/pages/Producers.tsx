@@ -58,7 +58,8 @@ export default function Producers() {
         columns={[
           { header: 'ID', render: (p) => <code>{p.internal_code}</code> }, { header: 'Nom', render: (p) => p.last_name }, { header: 'Prénoms', render: (p) => p.first_names },
           { header: 'Sexe', render: (p) => SEX[p.gender] ?? '' }, { header: 'Village', render: (p) => p.village ?? '' }, { header: 'Section', render: (p) => p.section ?? '' },
-          { header: 'Superficie (ha)', align: 'right', render: (p) => num(p.area_ha) === '—' ? '' : num(p.area_ha) }, { header: 'Téléphone', render: (p) => p.phone ?? '' },
+          { header: 'Superficie (ha)', align: 'right', render: (p) => num(p.area_ha) === '—' ? '' : num(p.area_ha) }, { header: 'Parcelles', align: 'right', render: (p) => (p.parcels_count ? p.parcels_count : '') }, { header: 'Surface cartographiée (ha)', align: 'right', render: (p) => (p.parcels_count ? num(p.parcels_area_ha) : '') },
+          { header: 'Téléphone', render: (p) => p.phone ?? '' },
           { header: 'Statut', render: (p) => <StatusBadge map={PRODUCER_STATUS} value={p.status} /> },
         ]}
         actions={<>

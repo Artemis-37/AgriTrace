@@ -78,7 +78,7 @@ export class GeoImportService {
     for (const r of (await c.query(`SELECT producer_id, value_chain_id FROM producer_value_chains`)).rows) pvc.set(r.producer_id, [...(pvc.get(r.producer_id) ?? []), r.value_chain_id]);
     for (const [k, v] of pvc) if (v.length === 1) soleChain.set(k, v[0]);
     const chainBy = (v: string) => chains.find((x: any) => x.code.toLowerCase() === v.toLowerCase() || x.name.toLowerCase() === v.toLowerCase());
-    const defaultChain = opt.value_chain_id ? chains.find((x: any) => x.id === opt.value_chain_id) : chains.length === 1 ? chains[0] : undefined;
+    const defaultChain = opt.value_chain_id ? chains.find((x: any) => x.id === opt.value_chain_id) : chains.length === 1 ? chains[0] : chains.find((x: any) => /cacao|cocoa/i.test(`${x.code} ${x.name}`));
 
     const items: Item[] = features.map((f, i) => ({
       row_no: i + 1, producer_code: opt.producer_field ? txt(f.props[opt.producer_field]) || null : null,
@@ -116,7 +116,7 @@ export class GeoImportService {
       // filière
       const vcRaw = opt.value_chain_field ? txt(f.props[opt.value_chain_field]) : '';
       if (vcRaw) { const v = chainBy(vcRaw); if (!v) reject(`filière_inconnue : « ${vcRaw} »`); else it.vcId = v.id; }
-      else if (it.producerId && soleChain.has(it.producerId)) it.vcId = soleChain.get(it.producerId);
+      else if (!opt.value_chain_id && it.producerId && soleChain.has(it.producerId)) it.vcId = soleChain.get(it.producerId);
       else if (defaultChain) it.vcId = defaultChain.id;
       else reject('filière_non_renseignée : colonne filière vide et aucune filière par défaut');
       // surface déclarée (distincte de la surface mesurée, qui est calculée)

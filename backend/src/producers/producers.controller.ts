@@ -90,7 +90,9 @@ export class ProducersController {
     return this.db.tx(req.org.id, async (c) =>
       (await c.query(
         `SELECT p.id, p.internal_code, p.last_name, p.first_names, p.phone, p.region, p.department, p.section, p.village, p.joined_on, p.status, p.area_ha, p.estimated_kg, p.gender,
-                (SELECT coalesce(json_agg(x.value_chain_id), '[]') FROM producer_value_chains x WHERE x.producer_id = p.id) AS value_chain_ids
+                (SELECT coalesce(json_agg(x.value_chain_id), '[]') FROM producer_value_chains x WHERE x.producer_id = p.id) AS value_chain_ids,
+                (SELECT count(*)::int FROM parcels pa WHERE pa.producer_id = p.id AND pa.status = 'active') AS parcels_count,
+                (SELECT coalesce(sum(pa.geometry_area_ha), 0)::float8 FROM parcels pa WHERE pa.producer_id = p.id AND pa.status = 'active' AND pa.geometry IS NOT NULL) AS parcels_area_ha
            FROM producers p
           WHERE ($1::text IS NULL OR lower(p.internal_code) LIKE $1 OR lower(p.last_name) LIKE $1 OR lower(p.first_names) LIKE $1 OR coalesce(p.phone,'') LIKE $1)
             AND ($2::text IS NULL OR p.section = $2) AND ($3::text IS NULL OR p.village = $3)

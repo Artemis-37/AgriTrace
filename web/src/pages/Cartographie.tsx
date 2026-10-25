@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { useDeepLink } from '../notifTarget';
+import { getChains } from '../chains';
 import { ApiError, api, download, get, post, postForm, put } from '../api';
 import { useAuth } from '../auth';
 import { ANOMALY_KIND, ANOMALY_STATUS, dateTime } from '../format';
@@ -113,6 +114,8 @@ function Imports() {
   const [current, setCurrent] = useState<any>(null);
   const [columns, setColumns] = useState<string[] | null>(null);
   const [prodCol, setProdCol] = useState('');
+  const [chainId, setChainId] = useState('');
+  const chains = useAsync(() => getChains().catch(() => [] as any[]), []);
   const { busy, error, run } = useAction();
   const history = useAsync(() => get<any[]>('/geo/imports'), []);
   const send = (m: string) => run(async () => {
@@ -120,7 +123,7 @@ function Imports() {
     if (!f) throw new Error('Choisir un fichier (GeoJSON, KML, KMZ, Shapefile .zip ou GeoPackage)');
     const form = new FormData();
     form.append('file', f); form.append('mode', m);
-    form.append('options', JSON.stringify({ all_or_nothing: allOrNothing, ...(ignoreCode && { ignore_parcel_code: true }), ...(useMeasured && { default_declared_from_measured: true }), ...(prodCol && { producer_field: prodCol }) }));
+    form.append('options', JSON.stringify({ all_or_nothing: allOrNothing, ...(ignoreCode && { ignore_parcel_code: true }), ...(useMeasured && { default_declared_from_measured: true }), ...(prodCol && { producer_field: prodCol }), ...(chainId && { value_chain_id: chainId }) }));
     try { setCurrent(await postForm('/geo/imports?wait=true', form)); setColumns(null); history.reload(); }
     catch (e) {
       const cols = e instanceof ApiError ? (e.body as any)?.columns : null;
@@ -140,6 +143,7 @@ function Imports() {
           <label title="Si le fichier ne contient pas de superficie déclarée"><input type="checkbox" checked={useMeasured} onChange={(e) => setUseMeasured(e.target.checked)} /> Surface mesurée si non déclarée</label>
           <label title="Pour réimporter un export d'une autre coopérative"><input type="checkbox" checked={ignoreCode} onChange={(e) => setIgnoreCode(e.target.checked)} /> Ignorer les codes de parcelle</label>
           {columns && <select aria-label="Colonne du code producteur" value={prodCol} onChange={(e) => setProdCol(e.target.value)}>{columns.map((c) => <option key={c} value={c}>Code producteur : {c}</option>)}</select>}
+          <select aria-label="Filière par défaut" value={chainId} onChange={(e) => setChainId(e.target.value)}><option value="">Filière : celle du producteur (cacao à défaut)</option>{(chains.data ?? []).map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
           <button className="btn" disabled={busy} onClick={() => send(mode)}>{busy ? 'Analyse…' : mode === 'simulate' ? 'Analyser' : 'Importer'}</button>
         </div>
         <p className="muted">Chaque parcelle est rattachée au producteur dont le code figure dans la colonne « code producteur » (majuscules ou minuscules indifférentes) ; si le code est inconnu, le nom complet du producteur (colonne « Nom du producteur ») sert de repli quand il désigne un seul producteur. Colonnes reconnues automatiquement : code producteur, filière, superficie déclarée, identifiant externe. Seul le système WGS84 est accepté.</p>
