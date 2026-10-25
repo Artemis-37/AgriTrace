@@ -102,7 +102,7 @@ async function soft(label, fn) {
     await any(log, 'POST', '/documents', undefined, f);
     await any(['responsable_tracabilite', 'direction', ADM], 'POST', `/shipments/${s1.id}/validate`, { note: 'Conforme' });
     const inv = await any(com, 'POST', '/invoices', { idempotency_key: key('i'), order_id: order.id, lines: [{ shipment_item_id: it.id, quantity_kg: '596' }] });
-    await soft('paiement de facture', () => any(['comptable', 'responsable_financier', ADM], 'POST', `/invoices/${inv.id}/payments`, { amount: '400000', paid_on: days(-1), method: 'bank_transfer', reference: 'VIR-DEMO-001' }));
+    await soft('paiement de facture', () => any(['comptable', 'responsable_financier', ADM], 'POST', `/invoices/${inv.id}/payments`, { idempotency_key: key('ip'), amount: '400000', received_on: days(-1), method: 'bank_transfer', reference: 'VIR-DEMO-001', account_id: bank.id }));
     await soft('réclamation de l\'acheteur', () => any(com, 'POST', '/sales-claims', { buyer_id: order.buyer_id, order_id: order.id, shipment_id: s1.id, invoice_id: inv.id, description: 'Quatre sacs reçus déchirés : demande de geste commercial.', amount_claimed: '6000' }));
     // 2) chargée et en route
     const s2 = await ship('400', al2);
