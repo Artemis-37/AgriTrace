@@ -91,6 +91,8 @@ export class ProductsController {
       if (!p) throw new NotFoundException();
       const buy = b.buy_price_per_kg ?? p.b, sell = b.sell_price_per_kg ?? p.s;
       await c.query(`INSERT INTO product_prices(organization_id, product_id, campaign_id, buy_price_per_kg, sell_price_per_kg, created_by) VALUES ($1,$2,$3,$4,$5,$6)`, [req.org.id, id, b.campaign_id ?? null, buy, sell, req.user.id]);
+      // Le prix d'une traite ne change pas le prix par défaut du produit (hors traite).
+      if (b.campaign_id) return (await c.query(`SELECT id, name, buy_price_per_kg, sell_price_per_kg, active FROM products WHERE id = $1`, [id])).rows[0];
       return (await c.query(`UPDATE products SET buy_price_per_kg = $2, sell_price_per_kg = $3, updated_at = now(), updated_by = $4 WHERE id = $1 RETURNING id, name, buy_price_per_kg, sell_price_per_kg, active`, [id, buy, sell, req.user.id])).rows[0];
     });
     await this.log(req, 'product.price', 'product', id, { campaign_id: b.campaign_id ?? null, buy: b.buy_price_per_kg, sell: b.sell_price_per_kg });

@@ -77,13 +77,15 @@ const PROFILS = [
   const otherChains = {};
   for (const [code, name] of [['CAFE', 'Café'], ['PALMIER-HUILE', 'Palmier à huile'], ['ANACARDE', 'Anacarde'], ['HEVEA', 'Hévéa']]) otherChains[code] = await soft('filière ' + name, () => call('POST', '/value-chains', { ...A, body: { code, name } }));
   await call('POST', '/unit-conversions', { ...A, body: { value_chain_id: vc.id, from_unit: 'sac', to_unit: 'kg', factor: '65' } });
-  const camp = await call('POST', '/campaigns', { ...A, body: { value_chain_id: vc.id, code: 'C2627', name: 'Campagne 2026-2027', starts_on: '2026-10-01', ends_on: '2027-09-30' } });
+  const camp = await call('POST', '/campaigns', { ...A, body: { value_chain_id: vc.id, code: 'GT2627', name: 'Grande traite 2026-2027', traite: 'grande', starts_on: '2026-10-01', ends_on: '2027-03-31' } });
+  const petite = await soft('petite traite', () => call('POST', '/campaigns', { ...A, body: { value_chain_id: vc.id, code: 'PT2027', name: 'Petite traite 2027', traite: 'petite', status: 'planned', starts_on: '2027-04-01', ends_on: '2027-09-30' } }));
   const sched = await call('POST', '/price-schedules', { ...A, body: { value_chain_id: vc.id, campaign_id: camp.id, unit: 'kg' } });
   await call('POST', `/price-schedules/${sched.id}/versions`, { ...A, body: { unit_price: '1000', valid_from: '2026-10-01' } });
   const wh = await call('POST', '/warehouses', { ...A, body: { code: 'MAG1', name: 'Magasin central' } });
 
   // ── Produits et prix de la traite : fixés par l'administrateur de la coopérative seul
   const cacao = await call('POST', '/products', { ...A, body: { name: 'Cacao (fèves)', buy_price_per_kg: '1000', sell_price_per_kg: '1500', campaign_id: camp.id } });
+  if (petite) await soft('prix petite traite', () => call('POST', `/products/${cacao.id}/prices`, { ...A, body: { campaign_id: petite.id, buy_price_per_kg: '900', sell_price_per_kg: '1350' } }));
   await call('POST', '/products', { ...A, body: { name: 'Café (cerises sèches)', buy_price_per_kg: '600', sell_price_per_kg: '900', campaign_id: camp.id, ...(otherChains.CAFE ? { value_chain_id: otherChains.CAFE.id } : {}) } });
 
   // ── Comptes : un par profil

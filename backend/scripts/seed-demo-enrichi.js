@@ -273,7 +273,7 @@ async function soft(label, fn) {
     await soft('configuration de l\'exportateur', async () => {
       const A = asE('exp_admin');
       const v = await call('POST', '/value-chains', { ...A, body: { code: 'CACAO', name: 'Cacao' } });
-      const camp = await call('POST', '/campaigns', { ...A, body: { value_chain_id: v.id, code: 'C2627', name: 'Campagne 2026-2027', starts_on: '2026-10-01', ends_on: '2027-09-30' } });
+      const camp = await call('POST', '/campaigns', { ...A, body: { value_chain_id: v.id, code: 'GT2627', name: 'Grande traite 2026-2027', traite: 'grande', starts_on: '2026-10-01', ends_on: '2027-03-31' } });
       await soft('produit exportateur', () => call('POST', '/products', { ...A, body: { name: 'Cacao (fèves)', buy_price_per_kg: '1500', sell_price_per_kg: '2200', campaign_id: camp.id } }));
       await soft('compte bancaire exportateur', async () => {
         const b = await call('POST', '/financial-accounts', { ...A, body: { owner_type: 'other', name: 'Banque exportateur (fictif)' } });

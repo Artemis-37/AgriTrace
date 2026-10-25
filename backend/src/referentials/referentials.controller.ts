@@ -1,4 +1,4 @@
-import { BadRequestException, Body, ConflictException, Controller, Get, NotFoundException, Param, ParseUUIDPipe, Post, Query, Req } from '@nestjs/common';
+import { BadRequestException, Body, ConflictException, Controller, Get, NotFoundException, Param, ParseUUIDPipe, Post, Put, Query, Req } from '@nestjs/common';
 import { ApiBearerAuth, ApiHeader, ApiTags } from '@nestjs/swagger';
 import { IsDateString, IsIn, IsOptional, IsString, IsUUID, Length, Matches } from 'class-validator';
 import { RequirePermissions } from '../access/decorators';
@@ -23,6 +23,14 @@ class CampaignDto {
   @IsString() @Length(2, 100) name: string;
   @IsDateString() starts_on: string;
   @IsDateString() ends_on: string;
+  @IsOptional() @IsIn(['planned', 'open', 'closed']) status?: string;
+  /** Grande traite (octobre–mars) ou petite traite (avril–septembre) ; dates libres. */
+  @IsOptional() @IsIn(['grande', 'petite']) traite?: string;
+}
+class CampaignUpdateDto {
+  @IsOptional() @IsString() @Length(2, 100) name?: string;
+  @IsOptional() @IsDateString() starts_on?: string;
+  @IsOptional() @IsDateString() ends_on?: string;
   @IsOptional() @IsIn(['planned', 'open', 'closed']) status?: string;
 }
 class ScheduleDto {
@@ -102,7 +110,7 @@ export class ReferentialsController {
   @RequirePermissions('campaigns:read')
   listCampaigns(@Req() req: any) {
     return this.db.tx(req.org.id, async (c) =>
-      (await c.query(`SELECT id, value_chain_id, code, name, starts_on, ends_on, status FROM campaigns ORDER BY starts_on DESC`)).rows);
+      (await c.query(`SELECT id, value_chain_id, code, name, starts_on, ends_on, status, traite FROM campaigns ORDER BY starts_on DESC`)).rows);
   }
 
   @Post('campaigns')
@@ -113,10 +121,15 @@ export class ReferentialsController {
       const row = await this.db.tx(req.org.id, async (c) => {
         const vc = await c.query(`SELECT 1 FROM value_chains WHERE id=$1`, [b.value_chain_id]);
         if (!vc.rowCount) throw new BadRequestException('Filière inconnue');
+        // Deux traites d'une même filière ne se chevauchent pas : à une date donnée, une seule traite fixe le prix.
+        if (b.traite) {
+          const over = await c.query(`SELECT name FROM campaigns WHERE value_chain_id = $1 AND traite IS NOT NULL AND status <> 'closed' AND starts_on <= $3::date AND ends_on >= $2::date LIMIT 1`, [b.value_chain_id, b.starts_on, b.ends_on]);
+          if (over.rowCount) throw new BadRequestException(`Ces dates chevauchent la traite « ${over.rows[0].name} » de la même filière`);
+        }
         return (await c.query(
-          `INSERT INTO campaigns(organization_id, value_chain_id, code, name, starts_on, ends_on, status, created_by)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id, value_chain_id, code, name, starts_on, ends_on, status`,
-          [req.org.id, b.value_chain_id, b.code, b.name, b.starts_on, b.ends_on, b.status ?? 'open', req.user.id])).rows[0];
+          `INSERT INTO campaigns(organization_id, value_chain_id, code, name, starts_on, ends_on, status, created_by, traite)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id, value_chain_id, code, name, starts_on, ends_on, status, traite`,
+          [req.org.id, b.value_chain_id, b.code, b.name, b.starts_on, b.ends_on, b.status ?? 'open', req.user.id, b.traite ?? null])).rows[0];
       });
       await this.audited(req, 'campaign.create', 'campaign', row.id);
       return row;
@@ -124,6 +137,24 @@ export class ReferentialsController {
       if (isUniqueViolation(e)) throw new ConflictException('Code de campagne déjà utilisé');
       throw e;
     }
+  }
+
+  /** Modification d'une traite : nom, dates de début et de fin, état. */
+  @Put('campaigns/:id')
+  @RequirePermissions('campaigns:manage')
+  async updateCampaign(@Param('id', ParseUUIDPipe) id: string, @Body() b: CampaignUpdateDto, @Req() req: any) {
+    const row = await this.db.tx(req.org.id, async (c) => {
+      const row = (await c.query(`UPDATE campaigns SET name = coalesce($2, name), starts_on = coalesce($3::date, starts_on), ends_on = coalesce($4::date, ends_on), status = coalesce($5, status), updated_at = now(), updated_by = $6, version = version + 1 WHERE id = $1 RETURNING id, value_chain_id, code, name, starts_on, ends_on, status, traite`, [id, b.name ?? null, b.starts_on ?? null, b.ends_on ?? null, b.status ?? null, req.user.id])).rows[0];
+      if (!row) throw new NotFoundException('Traite introuvable');
+      if (row.ends_on < row.starts_on) throw new BadRequestException('La fin précède le début');
+      if (row.traite && row.status !== 'closed') {
+        const over = await c.query(`SELECT name FROM campaigns WHERE id <> $1 AND value_chain_id = $2 AND traite IS NOT NULL AND status <> 'closed' AND starts_on <= $4::date AND ends_on >= $3::date LIMIT 1`, [id, row.value_chain_id, row.starts_on, row.ends_on]);
+        if (over.rowCount) throw new BadRequestException(`Ces dates chevauchent la traite « ${over.rows[0].name} » de la même filière`);
+      }
+      return row;
+    });
+    await this.audited(req, 'campaign.update', 'campaign', id);
+    return row;
   }
 
   // ---- Prix : barèmes et versions immuables ----
