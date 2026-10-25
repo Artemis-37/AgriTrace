@@ -24,7 +24,7 @@ jobs:
       ADMIN_PASSWORD: MotDePasseAdmin2026!
     defaults: { run: { working-directory: backend } }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm, cache-dependency-path: backend/package-lock.json }
       - run: npm ci
@@ -79,7 +79,7 @@ jobs:
     # Serveur local de coopérative : PostgreSQL embarqué + API + portail, démarrage à froid, premier démarrage dans le navigateur, sauvegarde, redémarrage.
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
       - run: npm ci && npm run build
@@ -110,7 +110,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults: { run: { working-directory: web } }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm, cache-dependency-path: web/package-lock.json }
       - run: npm ci
@@ -121,7 +121,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults: { run: { working-directory: mobile } }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: subosito/flutter-action@v2
         with: { channel: stable }
       - run: flutter create --platforms=android --org ci.agritrace .
@@ -137,6 +137,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: [backend, web]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: docker build -t agritrace-api ./backend
       - run: docker build -t agritrace-web ./web
