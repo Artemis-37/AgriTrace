@@ -121,7 +121,7 @@ function ProfileMenu({ name, onSignOut }: { name: string; onSignOut: () => void 
 }
 
 export default function App() {
-  const { status, org, me, can, signOut } = useAuth();
+  const { status, org, me, can, signOut, support, exitSupport } = useAuth();
   const loc = useLocation();
   const go = useNavigate();
   useEffect(() => { document.documentElement.dataset.theme = 'doux'; }, []); // un seul thème
@@ -151,6 +151,7 @@ export default function App() {
     <PeekProvider origin={NAV.find((n) => n.to === loc.pathname)?.label ?? 'Accueil'} resetKey={loc.pathname}>
     <NavItemsContext.Provider value={navItems}>
     <div className="shell desk">
+      {support && <div className="support-bar" role="status">Accès support : vous intervenez dans « {org?.name} » avec tous les droits. Chaque modification est consignée au journal d'audit. <button type="button" onClick={exitSupport}>Quitter et revenir au serveur central</button></div>}
       <header className="titlebar">
         <div className="brand"><strong>Agri<span>Trace</span></strong></div>
         <span className="coop">{org?.name}</span>

@@ -48,6 +48,8 @@ export async function pairWorkstation(code: string): Promise<string> {
 export const isOfflineSession = () => offlineSession;
 export const setOrg = (id: string | null) => { orgId = id; try { id ? sessionStorage.setItem(ORG_KEY, id) : sessionStorage.removeItem(ORG_KEY); } catch { /* ignoré */ } };
 export const getOrg = () => orgId;
+let supportOn = false;
+export const setSupport = (on: boolean) => { supportOn = on; };
 export const hasStoredSession = () => !!store.get();
 export const onLogout = (fn: () => void) => { onSessionLost = fn; };
 
@@ -64,6 +66,7 @@ async function raw(path: string, init: RequestInit & { json?: unknown } = {}, re
   if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`);
   headers.set('X-Client', 'web'); // les comptes réservés au mobile sont refusés par le serveur
   if (org) headers.set('X-Organization-Id', org);
+  if (org && supportOn) headers.set('X-Support-Mode', '1'); // accès support de l'administrateur de plateforme (tracé côté serveur)
   const dev = deviceToken(); if (dev) headers.set('X-Device-Token', dev);
   let body = init.body;
   if (init.json !== undefined) { headers.set('Content-Type', 'application/json'); body = JSON.stringify(init.json); }

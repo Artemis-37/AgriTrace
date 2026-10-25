@@ -1,4 +1,4 @@
-import { Body, Controller, Get, NotFoundException, Param, ParseUUIDPipe, Post, Req } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, NotFoundException, Param, ParseUUIDPipe, Post, Req } from '@nestjs/common';
 import { assertStrongPassword } from '../auth/password-policy';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { IsEmail, IsIn, IsOptional, IsString, Length, Matches, MinLength } from 'class-validator';
@@ -44,6 +44,39 @@ export class OrganizationsController {
   }
 
   /** Amorçage : l'administrateur de plateforme crée le premier administrateur d'une coopérative. */
+  /** Toutes les organisations hébergées (coopératives et exportateurs), avec leurs effectifs et leurs administrateurs : vue de l'administrateur de plateforme. */
+  @PlatformAdminOnly()
+  @Get('platform/all')
+  async platformAll() {
+    const orgs = await this.db.query(`SELECT id, code, name, kind, status, country_code, created_at FROM organizations ORDER BY kind, name`);
+    const out: any[] = [];
+    for (const o of orgs) {
+      const r = await this.db.tx(o.id, async (c) => {
+        const n = async (sql: string, p: any[] = []) => Number((await c.query(sql, p)).rows[0]?.n ?? 0);
+        return {
+          members: await n(`SELECT count(*) AS n FROM user_organizations WHERE organization_id = $1 AND status = 'active'`, [o.id]),
+          producers: await n(`SELECT count(*) AS n FROM producers`),
+          delegates: await n(`SELECT count(*) AS n FROM collectors WHERE status = 'active'`),
+          admins: (await c.query(`SELECT u.full_name, u.email FROM user_organizations uo JOIN roles r ON r.id = uo.role_id JOIN users u ON u.id = uo.user_id WHERE uo.organization_id = $1 AND r.code = 'coop_admin' AND uo.status = 'active' ORDER BY u.full_name`, [o.id])).rows,
+          local_server: (await c.query(`SELECT 1 FROM replication_sites WHERE organization_id = $1`, [o.id])).rowCount! > 0,
+        };
+      });
+      out.push({ ...o, ...r });
+    }
+    return out;
+  }
+
+  /** Suspension ou réactivation d'une organisation : ses utilisateurs ne peuvent plus s'y connecter tant qu'elle est suspendue. */
+  @PlatformAdminOnly()
+  @Post(':id/status')
+  async setStatus(@Param('id', ParseUUIDPipe) id: string, @Body() b: { status: string }, @Req() req: any) {
+    if (!['active', 'suspended'].includes(b?.status)) throw new BadRequestException('État attendu : active ou suspended');
+    const rows = await this.db.query(`UPDATE organizations SET status = $2 WHERE id = $1 RETURNING id, code, name, status`, [id, b.status]);
+    if (!rows.length) throw new NotFoundException('Organisation inconnue');
+    await this.audit.log({ organizationId: id, actorUserId: req.user.id, action: b.status === 'active' ? 'organization.reactivated' : 'organization.suspended', entityType: 'organization', entityId: id });
+    return rows[0];
+  }
+
   @PlatformAdminOnly()
   @Post(':id/admins')
   async createFirstAdmin(@Param('id', ParseUUIDPipe) id: string, @Body() b: CreateOrgAdminDto, @Req() req: any) {

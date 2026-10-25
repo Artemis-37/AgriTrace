@@ -7,7 +7,7 @@ import { Badge, Card, ErrorBox, Field, Loading, Modal, PageHeader, Stat, Table, 
 /** Console du serveur central (administrateur de plateforme) : sites reliés et vue consolidée de toutes les coopératives. */
 export default function CentralConsole() {
   const { me, signOut } = useAuth();
-  const [tab, setTab] = useState<'sites' | 'conso' | 'transferts'>('sites');
+  const [tab, setTab] = useState<'orgs' | 'sites' | 'conso' | 'transferts'>('orgs');
   return (
     <div className="shell">
       <aside className="sidebar open">
@@ -17,10 +17,55 @@ export default function CentralConsole() {
       </aside>
       <main className="main">
         <PageHeader title="Serveur central" subtitle="Les coopératives gardent leur serveur local ; leurs données arrivent ici et se consolident." />
-        <Tabs tabs={[['sites', 'Sites reliés'], ['conso', 'Vue consolidée'], ['transferts', 'Transferts']]} value={tab} onChange={setTab} />
-        {tab === 'sites' ? <Sites /> : tab === 'conso' ? <Consolidation /> : <Transferts />}
+        <Tabs tabs={[['orgs', 'Coopératives et exportateurs'], ['sites', 'Sites reliés'], ['conso', 'Vue consolidée'], ['transferts', 'Transferts']]} value={tab} onChange={setTab} />
+        {tab === 'orgs' ? <Organisations /> : tab === 'sites' ? <Sites /> : tab === 'conso' ? <Consolidation /> : <Transferts />}
       </main>
     </div>
+  );
+}
+
+/** Toutes les organisations hébergées : consultation, accès support (intervention avec tous les droits, tracée), suspension, nouvel administrateur. */
+function Organisations() {
+  const { enterSupport } = useAuth();
+  const { data, loading, error, reload } = useAsync(() => get<any[]>('/organizations/platform/all'), []);
+  const act = useAction();
+  const [create, setCreate] = useState(false);
+  const [admin, setAdmin] = useState<any | null>(null);
+  return (
+    <Card title="Organisations">
+      <div className="toolbar"><button className="btn" onClick={() => setCreate(true)}>Créer une organisation</button></div>
+      <p className="muted">« Ouvrir » vous place dans l'organisation avec tous les droits pour la consulter ou intervenir ; chaque modification est consignée à son journal d'audit. Une organisation gérée par un serveur local reste en lecture seule ici.</p>
+      {(error || act.error) && <ErrorBox message={(error ?? act.error)!} onRetry={reload} />}
+      {loading ? <Loading /> : <Table rows={data ?? []} empty="Aucune organisation." columns={[
+        { header: 'Organisation', render: (o) => <><strong>{o.name}</strong><br /><small className="muted">{o.code}</small></> },
+        { header: 'Type', render: (o) => o.kind === 'exporter' ? 'Exportateur' : 'Coopérative' },
+        { header: 'État', render: (o) => <Badge tone={o.status === 'active' ? 'ok' : 'bad'}>{o.status === 'active' ? 'Active' : 'Suspendue'}</Badge> },
+        { header: 'Membres', align: 'right', render: (o) => o.members }, { header: 'Producteurs', align: 'right', render: (o) => o.producers }, { header: 'Délégués', align: 'right', render: (o) => o.delegates },
+        { header: 'Administrateur', render: (o) => (o.admins ?? []).length ? (o.admins as any[]).map((a) => <div key={a.email}>{a.full_name}<br /><small className="muted">{a.email}</small></div>) : <span className="muted">Aucun</span> },
+        { header: '', render: (o) => <span className="actions">
+          <button className="btn btn-small" disabled={o.status !== 'active' || act.busy} onClick={() => act.run(() => enterSupport({ id: o.id, code: o.code, name: o.name, kind: o.kind }))}>Ouvrir</button>
+          <button className="btn btn-small btn-secondary" onClick={() => setAdmin(o)}>Administrateur</button>
+          <button className="btn btn-small btn-ghost" disabled={act.busy} onClick={() => { if (o.status !== 'active' || confirm(`Suspendre « ${o.name} » ? Ses utilisateurs ne pourront plus se connecter.`)) act.run(async () => { await post(`/organizations/${o.id}/status`, { status: o.status === 'active' ? 'suspended' : 'active' }); reload(); }); }}>{o.status === 'active' ? 'Suspendre' : 'Réactiver'}</button></span> },
+      ]} />}
+      {create && <CreateOrg onClose={() => { setCreate(false); reload(); }} />}
+      {admin && <OrgAdmin o={admin} onClose={() => { setAdmin(null); reload(); }} />}
+    </Card>
+  );
+}
+
+function OrgAdmin({ o, onClose }: { o: any; onClose: () => void }) {
+  const [f, setF] = useState({ full_name: '', email: '', password: '' });
+  const [done, setDone] = useState(false);
+  const act = useAction();
+  return (
+    <Modal title={`Administrateur — ${o.name}`} onClose={onClose}>
+      {done ? <><p>Administrateur ajouté : il se connecte avec {f.email}.</p><div className="modal-actions"><button className="btn" onClick={onClose}>Fermer</button></div></> : <>
+        <Field label="Nom"><input value={f.full_name} onChange={(e) => setF({ ...f, full_name: e.target.value })} /></Field>
+        <Field label="Courriel"><input type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></Field>
+        <Field label="Mot de passe provisoire" hint="12 caractères au moins ; un compte déjà existant garde son mot de passe."><input type="password" value={f.password} autoComplete="new-password" onChange={(e) => setF({ ...f, password: e.target.value })} /></Field>
+        {act.error && <ErrorBox message={act.error} />}
+        <div className="modal-actions"><button className="btn" disabled={act.busy || f.full_name.length < 2 || !f.email.includes('@') || f.password.length < 10} onClick={() => act.run(async () => { await post(`/organizations/${o.id}/admins`, f); setDone(true); })}>Ajouter</button><button className="btn btn-ghost" onClick={onClose}>Annuler</button></div></>}
+    </Modal>
   );
 }
 

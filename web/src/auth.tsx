@@ -8,6 +8,10 @@ interface AuthState {
   orgs: Org[]; org: Org | null; me: Me | null;
   signIn: (email: string, password: string, otp?: string) => Promise<void>;
   chooseOrg: (id: string) => Promise<void>;
+  /** Administrateur de plateforme : entre dans une organisation avec tous les droits (accès support, tracé). */
+  enterSupport: (o: Org) => Promise<void>;
+  exitSupport: () => void;
+  support: boolean;
   signOut: () => Promise<void>;
   can: (...perms: string[]) => boolean;
 }
@@ -19,6 +23,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [orgs, setOrgs] = useState<Org[]>([]);
   const [org, setOrgState] = useState<Org | null>(null);
   const [me, setMe] = useState<Me | null>(null);
+  const [support, setSupportState] = useState(false);
 
   const enter = useCallback(async (list: Org[], id: string) => {
     client.setOrg(id);
@@ -72,11 +77,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     },
     chooseOrg: (id) => enter(orgs, id),
+    support,
+    enterSupport: async (o) => {
+      client.setSupport(true); client.setOrg(o.id);
+      try { const m = await client.get<Me>('/me'); setMe(m); setOrgState(o); setSupportState(true); setStatus('ready'); }
+      catch (e) { client.setSupport(false); client.setOrg(null); throw e; }
+    },
+    exitSupport: () => {
+      client.setSupport(false); client.setOrg(null); setSupportState(false); setOrgState(null);
+      setMe({ user: { id: '', email: '', full_name: me?.user.full_name ?? '' }, permissions: [] }); setStatus('platform');
+    },
     signOut: async () => {
       // La déconnexion ferme aussi la caisse de la caissière (côté serveur).
       await client.logout(); setStatus('anonymous'); setMe(null); setOrgState(null); },
     can: (...perms) => perms.every((p) => me?.permissions.includes(p)),
-  }), [status, orgs, org, me, afterLogin, enter]);
+  }), [status, orgs, org, me, support, afterLogin, enter]);
 
   signOutRef.current = async () => { if (me) await value.signOut(); };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

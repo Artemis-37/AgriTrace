@@ -87,7 +87,14 @@ export class AccessGuard implements CanActivate {
       `SELECT 1 FROM user_organizations WHERE user_id=$1 AND organization_id=$2 AND status='active' LIMIT 1`,
       [req.user.id, orgId],
     );
-    if (!member.length) throw new ForbiddenException('Organisation inaccessible');
+    // Accès support : un administrateur de plateforme peut entrer, en le demandant expressément (X-Support-Mode), dans toute organisation active
+    // (coopérative ou exportateur) avec l'ensemble des droits ; chaque modification est consignée au journal d'audit de l'organisation.
+    const support = !member.length && !!req.user.is_platform_admin && req.headers['x-support-mode'] === '1';
+    if (!member.length && !support) throw new ForbiddenException('Organisation inaccessible');
+    if (support) {
+      const all = await this.db.query<{ code: string }>(`SELECT code FROM permissions WHERE code <> 'cash:session'`);
+      for (const r of all) perms.push({ permission_code: r.code });
+    }
 
     // Comptes réservés au mobile (coachs, délégués, agents de terrain) : refusés depuis le portail web, qui s'annonce par « X-Client: web ».
     // C'est une règle d'usage (interface), pas une barrière de sécurité : l'authentification et les droits restent vérifiés comme pour tout compte.
@@ -117,7 +124,15 @@ export class AccessGuard implements CanActivate {
     if (!req.workstation && (await workstationsRequired(this.db, orgId)))
       throw new ForbiddenException({ statusCode: 403, message: 'Ce poste n\'est pas associé à la coopérative. Demandez un code d\'association à votre administrateur.', code: 'workstation_required' });
 
-    req.org = { id: orgId, permissions: granted };
+    req.org = { id: orgId, permissions: granted, support };
+    if (support) {
+      const method = String(req.method);
+      const u = String(req.originalUrl ?? req.url).split('?')[0];
+      const entering = method === 'GET' && /^\/v1\/me\/?$/.test(u);
+      if (entering || !['GET', 'HEAD', 'OPTIONS'].includes(method))
+        await this.db.tx(orgId, (c) => c.query(`INSERT INTO audit_logs(organization_id, actor_user_id, action, entity_type, details) VALUES ($1,$2,$3,'organization',$4)`,
+          [orgId, req.user.id, entering ? 'support.enter' : 'support.intervention', JSON.stringify({ method, path: u, by: req.user.email })]));
+    }
     return true;
   }
 }
