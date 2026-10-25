@@ -19,6 +19,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _otp = TextEditingController();
   bool _needOtp = false; // double authentification demandée par le serveur
   bool _busy = false;
+  bool _show = false; // afficher le mot de passe saisi
   bool _syncing = false;
   String? _error;
 
@@ -124,7 +125,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ] else if (_orgs.isEmpty) ...[
                   TextField(controller: _email, keyboardType: TextInputType.emailAddress, autofillHints: const [AutofillHints.username], decoration: const InputDecoration(labelText: 'E-mail', border: OutlineInputBorder())),
                   const SizedBox(height: 12),
-                  TextField(controller: _password, obscureText: true, autofillHints: const [AutofillHints.password], decoration: const InputDecoration(labelText: 'Mot de passe', border: OutlineInputBorder()), onSubmitted: (_) => _login()),
+                  TextField(controller: _password, obscureText: !_show, autofillHints: const [AutofillHints.password], decoration: InputDecoration(labelText: 'Mot de passe', border: const OutlineInputBorder(), suffixIcon: IconButton(tooltip: _show ? 'Masquer le mot de passe' : 'Afficher le mot de passe', icon: Icon(_show ? Icons.visibility_off : Icons.visibility), onPressed: () => setState(() => _show = !_show))), onSubmitted: (_) => _login()),
                   if (_needOtp) ...[
                     const SizedBox(height: 12),
                     TextField(controller: _otp, keyboardType: TextInputType.number, autofocus: true, autofillHints: const [AutofillHints.oneTimeCode], decoration: const InputDecoration(labelText: "Code de vérification (application d'authentification) ou code de secours", border: OutlineInputBorder()), onSubmitted: (_) => _login()),

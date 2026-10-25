@@ -89,10 +89,12 @@ export class ProductsController {
     const row = await this.db.tx(req.org.id, async (c) => {
       const p = (await c.query(`SELECT id, buy_price_per_kg AS b, sell_price_per_kg AS s FROM products WHERE id = $1 FOR UPDATE`, [id])).rows[0];
       if (!p) throw new NotFoundException();
-      const buy = b.buy_price_per_kg ?? p.b, sell = b.sell_price_per_kg ?? p.s;
+      // Pour une traite : la valeur non précisée reprend le dernier prix de CETTE traite (jamais le prix général du produit).
+      const last = b.campaign_id ? (await c.query(`SELECT buy_price_per_kg AS b, sell_price_per_kg AS s FROM product_prices WHERE product_id = $1 AND campaign_id = $2 ORDER BY created_at DESC LIMIT 1`, [id, b.campaign_id])).rows[0] : null;
+      const buy = b.buy_price_per_kg ?? (b.campaign_id ? last?.b ?? null : p.b), sell = b.sell_price_per_kg ?? (b.campaign_id ? last?.s ?? null : p.s);
       await c.query(`INSERT INTO product_prices(organization_id, product_id, campaign_id, buy_price_per_kg, sell_price_per_kg, created_by) VALUES ($1,$2,$3,$4,$5,$6)`, [req.org.id, id, b.campaign_id ?? null, buy, sell, req.user.id]);
       // Le prix d'une traite ne change pas le prix par défaut du produit (hors traite).
-      if (b.campaign_id) return (await c.query(`SELECT id, name, buy_price_per_kg, sell_price_per_kg, active FROM products WHERE id = $1`, [id])).rows[0];
+      if (b.campaign_id) return { ...(await c.query(`SELECT id, name, active FROM products WHERE id = $1`, [id])).rows[0], campaign_id: b.campaign_id, buy_price_per_kg: buy, sell_price_per_kg: sell };
       return (await c.query(`UPDATE products SET buy_price_per_kg = $2, sell_price_per_kg = $3, updated_at = now(), updated_by = $4 WHERE id = $1 RETURNING id, name, buy_price_per_kg, sell_price_per_kg, active`, [id, buy, sell, req.user.id])).rows[0];
     });
     await this.log(req, 'product.price', 'product', id, { campaign_id: b.campaign_id ?? null, buy: b.buy_price_per_kg, sell: b.sell_price_per_kg });

@@ -14,6 +14,7 @@ class ChangePasswordScreen extends StatefulWidget {
 class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   final _cur = TextEditingController(), _next = TextEditingController(), _again = TextEditingController();
   bool _busy = false;
+  bool _show = false; // afficher les mots de passe saisis
   String? _error;
 
   Future<void> _submit() async {
@@ -40,11 +41,11 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
         child: ListView(padding: const EdgeInsets.all(16), children: [
           const Text('Votre mot de passe a été réinitialisé par un administrateur. Remplacez le mot de passe temporaire par un mot de passe que vous seul connaissez.'),
           const SizedBox(height: 16),
-          TextField(controller: _cur, obscureText: true, decoration: const InputDecoration(labelText: 'Mot de passe temporaire', border: OutlineInputBorder())),
+          TextField(controller: _cur, obscureText: !_show, decoration: InputDecoration(labelText: 'Mot de passe temporaire', border: const OutlineInputBorder(), suffixIcon: IconButton(tooltip: _show ? 'Masquer le mot de passe' : 'Afficher le mot de passe', icon: Icon(_show ? Icons.visibility_off : Icons.visibility), onPressed: () => setState(() => _show = !_show)))),
           const SizedBox(height: 12),
-          TextField(controller: _next, obscureText: true, decoration: const InputDecoration(labelText: 'Nouveau mot de passe (10 caractères minimum)', border: OutlineInputBorder())),
+          TextField(controller: _next, obscureText: !_show, decoration: InputDecoration(labelText: 'Nouveau mot de passe (10 caractères minimum)', border: const OutlineInputBorder(), suffixIcon: IconButton(tooltip: _show ? 'Masquer le mot de passe' : 'Afficher le mot de passe', icon: Icon(_show ? Icons.visibility_off : Icons.visibility), onPressed: () => setState(() => _show = !_show)))),
           const SizedBox(height: 12),
-          TextField(controller: _again, obscureText: true, decoration: const InputDecoration(labelText: 'Confirmer le nouveau mot de passe', border: OutlineInputBorder()), onSubmitted: (_) => _submit()),
+          TextField(controller: _again, obscureText: !_show, decoration: InputDecoration(labelText: 'Confirmer le nouveau mot de passe', border: const OutlineInputBorder(), suffixIcon: IconButton(tooltip: _show ? 'Masquer le mot de passe' : 'Afficher le mot de passe', icon: Icon(_show ? Icons.visibility_off : Icons.visibility), onPressed: () => setState(() => _show = !_show))), onSubmitted: (_) => _submit()),
           if (_error != null) Padding(padding: const EdgeInsets.only(top: 12), child: Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error))),
           const SizedBox(height: 16),
           FilledButton(onPressed: _busy ? null : _submit, child: Text(_busy ? 'Patientez…' : 'Changer le mot de passe')),

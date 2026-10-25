@@ -23,7 +23,7 @@ const pw = 'MotDePasseSolide2026!';
   const t0 = await login(mail, pw); const J = (t) => ({ token: t, org: org.id });
 
   const tpl = await call('GET', '/roles/templates', J(t0));
-  check('rôles types proposés (magasinier, caissier, collecteur)', tpl.status === 200 && ['magasinier', 'caissier', 'collecteur'].every((c) => tpl.body.some((t) => t.code === c && t.created === false)), tpl.body);
+  check('rôles types créés automatiquement (magasinier, caissier, collecteur)', tpl.status === 200 && ['magasinier', 'caissier', 'collecteur'].every((c) => tpl.body.some((t) => t.code === c && t.created === true)), tpl.body);
   const mk = async (code) => (await call('POST', '/roles/standard', { ...J(t0), body: { code } })).body;
   const rMag = await mk('magasinier'); const rCai = await mk('caissier'); const rCol = await mk('collecteur');
   check('rôles créés', !!(rMag.id && rCai.id && rCol.id));
