@@ -13,6 +13,7 @@ files:
   - "!**/*.md"
 extraResources:
   - { from: payload, to: app-payload }
+  - { from: build/icon.ico, to: icon.ico }
 win:
   icon: build/icon.ico
   target: [{ target: nsis, arch: [x64] }]

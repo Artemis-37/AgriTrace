@@ -24,6 +24,7 @@ cd /d "%ROOT%\desktop"
 call npm ci || goto erreur
 node scripts\prepare-payload.js || goto erreur
 call npm run dist:dir || goto erreur
+node scripts\set-exe-icon.js || echo (icone de l'exe non appliquee : le raccourci garde quand meme l'icone AgriTrace)
 if not exist "dist\win-unpacked\AgriTrace.exe" (echo dist\win-unpacked\AgriTrace.exe n'a pas ete cree. & goto erreur)
 
 echo === 4/5 Installateur Inno Setup ===

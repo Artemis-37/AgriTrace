@@ -97,6 +97,15 @@ const PROFILS = [
   }
   const U = (c) => ({ token: users[c].token, org: org.id });
 
+  // Éric Tano (responsable traçabilité) cumule plusieurs rôles : ses droits sont la somme de ceux de ses rôles.
+  const EXTRA = [['responsable_cartographie', 'Responsable cartographie'], ['responsable_qualite', 'Responsable qualité'], ['responsable_logistique', 'Responsable logistique']];
+  for (const [code] of EXTRA) {
+    const rr = await call('POST', '/roles/standard', { ...A, body: { code } });
+    await soft(`rôle supplémentaire ${code}`, () => call('POST', `/users/${users.responsable_tracabilite.id}/roles`, { ...A, body: { role_id: rr.id, reason: 'Démonstration : cumul de rôles' } }));
+  }
+  const tr = accounts.find((x) => x.role === 'responsable_tracabilite');
+  tr.label = 'Responsable traçabilité — **plusieurs rôles** : + ' + EXTRA.map((e) => e[1].toLowerCase()).join(', ');
+
   // ── Collecteurs (le compte « collecteur » + un second pour les rapprochements)
   const col = await call('POST', '/collectors', { ...A, body: { user_id: users.collecteur.id } });
   await call('POST', `/collectors/${col.id}/assignments`, { ...A, body: { value_chain_id: vc.id } });

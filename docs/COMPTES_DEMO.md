@@ -3,7 +3,7 @@
 > Données **entièrement fictives**. Ne jamais utiliser en production.
 
 - Mot de passe commun : `Demo-AgriTrace-2026!`
-- Coopérative : « Coopérative Agricole de Démonstration » (code DEMO62FE)
+- Coopérative : « Coopérative Agricole de Démonstration » (code DEMOC0C5)
 
 | Profil | Utilisateur fictif | Identifiant |
 |---|---|---|
@@ -12,7 +12,7 @@
 | Caissier / caissière | Aya Kouamé | `caissier@demo.agritrace.test` |
 | Comptable | Salif Ouédraogo | `comptable@demo.agritrace.test` |
 | Direction | Nathalie Boni | `direction@demo.agritrace.test` |
-| Responsable traçabilité | Éric Tano | `responsable.tracabilite@demo.agritrace.test` |
+| Responsable traçabilité — **plusieurs rôles** : + responsable cartographie, responsable qualité, responsable logistique | Éric Tano | `responsable.tracabilite@demo.agritrace.test` |
 | Responsable cartographie | Clarisse Ahoua | `responsable.cartographie@demo.agritrace.test` |
 | Cartographe | Jean-Marc Gnahoré | `cartographe@demo.agritrace.test` |
 | Agent de terrain — **application mobile uniquement** | Rosine Yapi | `agent.terrain@demo.agritrace.test` |

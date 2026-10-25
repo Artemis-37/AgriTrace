@@ -30,7 +30,7 @@ DisableProgramGroupPage=yes
 ; Contrat de licence (EULA) : « J'accepte » obligatoire pour continuer
 LicenseFile=..\build\license_fr.txt
 SetupIconFile=..\build\icon.ico
-UninstallDisplayIcon={app}\{#AppExe}
+UninstallDisplayIcon={app}\resources\icon.ico
 OutputDir=..\dist
 OutputBaseFilename=AgriTrace-Setup-{#AppVersion}
 Compression=lzma2/max
@@ -53,8 +53,8 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{autoprograms}\{#AppName}"; Filename: "{app}\{#AppExe}"
-Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExe}"; Tasks: desktopicon
+Name: "{autoprograms}\{#AppName}"; Filename: "{app}\{#AppExe}"; IconFilename: "{app}\resources\icon.ico"
+Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExe}"; IconFilename: "{app}\resources\icon.ico"; Tasks: desktopicon
 
 [Run]
 ; Pare-feu Windows : autorise les autres postes du bureau (réseau privé / domaine, jamais « public ») à joindre le serveur AgriTrace (port 3000)

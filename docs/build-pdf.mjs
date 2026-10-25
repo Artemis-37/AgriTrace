@@ -18,6 +18,7 @@ const DOCS = [
   ['EXPORTATEUR.md', 'AgriTrace - Exportateur et echanges entre organisations', 'Exportateur et échanges entre organisations', false],
   ['EXPLOITATION.md', 'AgriTrace - Exploitation', 'Exploitation', false],
   ['DEMO.md', 'AgriTrace - Version de demonstration', 'Version de démonstration', false],
+  ['COMPTES_DEMO.md', 'AgriTrace - Comptes de demonstration', 'Comptes de la version de démonstration', false],
   ['MATRICE_ROLES.md', 'AgriTrace - Matrice des roles et permissions', 'Matrice des rôles et permissions', true],
   ['DEFAUTS_CONNUS_ET_RECETTE.md', 'AgriTrace - Defauts connus et plan de recette', 'Défauts connus et plan de recette', false],
   ['SECURITE.md', 'AgriTrace - Rapport de securite', 'Rapport de sécurité', false],
