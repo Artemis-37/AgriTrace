@@ -1,0 +1,41 @@
+# Blueprint Render : une application web (Docker) + une base PostgreSQL, toutes deux en offre gratuite.
+# Offre gratuite : mise en veille après 15 min d'inactivité (réveil ≈ 1 min), base supprimée au bout de 30 jours, pas de disque persistant.
+services:
+  - type: web
+    name: agritrace
+    runtime: docker
+    plan: free
+    dockerfilePath: ./deploy/render/Dockerfile
+    dockerContext: .
+    healthCheckPath: /v1/health
+    envVars:
+      - key: OWNER_DATABASE_URL
+        fromDatabase:
+          name: agritrace-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DOCUMENTS_KEY
+        generateValue: true
+      - key: SECRETS_KEY
+        generateValue: true
+      - key: BOOTSTRAP_TOKEN
+        generateValue: true
+      - key: TRUST_PROXY
+        value: "1"
+      - key: LOG_REQUESTS
+        value: "true"
+      - key: REQUIRE_2FA   # essai avec les comptes de démonstration : à remettre à "true" ensuite
+        value: "false"
+      - key: SEED_DEMO
+        value: "1"
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+
+databases:
+  - name: agritrace-db
+    plan: free
+    databaseName: agritrace
+    user: agritrace_owner
