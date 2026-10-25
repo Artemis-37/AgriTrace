@@ -35,7 +35,23 @@ class ApiClient {
 
   ApiClient(this.store, {http.Client? client}) : _http = client ?? createHttpClient();
 
-  Uri _uri(String path, [Map<String, String>? q]) => Uri.parse('${Config.apiBase}$path').replace(queryParameters: q);
+  /// Teste une adresse de serveur (GET /health) sans la mémoriser : renvoie null si le serveur répond, sinon la raison.
+  Future<String?> probe(String base) async {
+    try {
+      final r = await _http.get(Uri.parse('$base/health')).timeout(Config.requestTimeout);
+      return r.statusCode == 200 ? null : 'Le serveur répond « ${r.statusCode} » : ce n\'est pas le bon serveur ou il n\'est pas prêt.';
+    } on TimeoutException {
+      return 'Aucune réponse après ${Config.requestTimeout.inSeconds} s : le serveur est éteint ou injoignable.';
+    } on SocketException catch (e) {
+      return 'Serveur introuvable (${e.message}). Vérifiez l\'adresse et la connexion Internet.';
+    } on http.ClientException catch (e) {
+      return 'Connexion impossible (${e.message}).';
+    } catch (e) {
+      return 'Connexion impossible ($e).';
+    }
+  }
+
+  Uri _uri(String path, [Map<String, String>? q]) => Uri.parse('${Config.apiBaseRuntime}$path').replace(queryParameters: q);
 
   Future<bool> login(String email, String password, {String? deviceLabel, String? otp}) async {
     final res = await _send('POST', '/auth/login',
@@ -66,7 +82,7 @@ class ApiClient {
       if (dev != null) headers['x-device-token'] = dev;
       final o = await store.orgId;
       if (o != null) headers['x-organization-id'] = o;
-      return _http.get(_uri(path), headers: headers).timeout(const Duration(seconds: 30));
+      return _http.get(_uri(path), headers: headers).timeout(Config.requestTimeout);
     }
 
     try {
@@ -100,7 +116,7 @@ class ApiClient {
       }
       final req = http.Request(method, _uri(path, query))..headers.addAll(headers);
       if (body != null) req.body = jsonEncode(body);
-      final streamed = await _http.send(req).timeout(const Duration(seconds: 30));
+      final streamed = await _http.send(req).timeout(Config.requestTimeout);
       return http.Response.fromStream(streamed);
     }
 
@@ -177,7 +193,7 @@ class ApiClient {
       final o = await store.orgId;
       if (o != null) req.headers['x-organization-id'] = o;
       if (start > 0) req.headers['range'] = 'bytes=$start-';
-      return _http.send(req).timeout(const Duration(seconds: 30));
+      return _http.send(req).timeout(Config.requestTimeout);
     }
 
     try {
@@ -197,7 +213,7 @@ class ApiClient {
       final sink = target.openWrite(mode: res.statusCode == 206 ? FileMode.append : FileMode.write);
       var received = res.statusCode == 206 ? await target.length() : 0;
       try {
-        await for (final chunk in res.stream.timeout(const Duration(seconds: 30))) {
+        await for (final chunk in res.stream.timeout(Config.requestTimeout)) {
           sink.add(chunk);
           received += chunk.length;
           onBytes?.call(received);
@@ -222,7 +238,7 @@ class ApiClient {
     try {
       final res = await _http
           .post(_uri('/auth/refresh'), headers: {'content-type': 'application/json'}, body: jsonEncode({'refresh_token': rt}))
-          .timeout(const Duration(seconds: 30));
+          .timeout(Config.requestTimeout);
       if (res.statusCode == 401 || res.statusCode == 403) {
         await onRevoked?.call();
         return false;

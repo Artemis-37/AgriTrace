@@ -32,6 +32,8 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final store = SessionStore();
   final db = await AppDatabase.open(await store.databaseKey());
+  final saved = await store.serverUrl;
+  if (saved != null && saved.isNotEmpty) Config.apiBaseRuntime = saved;
   final api = ApiClient(store);
   final mapPack = MapPackStore(api);
   await mapPack.load();

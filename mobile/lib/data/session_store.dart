@@ -18,6 +18,10 @@ class SessionStore {
     await _s.write(key: 'refresh', value: refresh);
   }
 
+  /// Adresse du serveur choisie sur l'écran de connexion (conservée à la déconnexion).
+  Future<String?> get serverUrl => _s.read(key: 'server');
+  Future<void> setServerUrl(String? u) => (u == null || u.isEmpty) ? _s.delete(key: 'server') : _s.write(key: 'server', value: u);
+
   Future<void> setOrg(String id) => _s.write(key: 'org', value: id);
 
   /// Clé de chiffrement SQLCipher, générée une fois et jamais affichée ni envoyée.

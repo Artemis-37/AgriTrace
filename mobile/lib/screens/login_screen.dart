@@ -1,3 +1,4 @@
+import '../config.dart';
 import 'package:flutter/material.dart';
 
 import '../data/api_client.dart';
@@ -46,6 +47,36 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  /// Adresse du serveur : permet de joindre le serveur de test sans recompiler l'application.
+  Future<void> _chooseServer() async {
+    final c = TextEditingController(text: Config.apiBaseRuntime.replaceAll(RegExp(r'/v1/?$'), ''));
+    String? result;
+    bool testing = false;
+    await showDialog<void>(context: context, builder: (ctx) => StatefulBuilder(builder: (ctx, setD) => AlertDialog(
+      title: const Text('Adresse du serveur'),
+      content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Text('Exemple : https://agritrace-xxxx.onrender.com'),
+        const SizedBox(height: 8),
+        TextField(controller: c, keyboardType: TextInputType.url, autocorrect: false, decoration: const InputDecoration(border: OutlineInputBorder())),
+        if (testing) const Padding(padding: EdgeInsets.only(top: 12), child: Text('Test en cours… (un serveur endormi peut mettre une minute à répondre)')),
+        if (result != null) Padding(padding: const EdgeInsets.only(top: 12), child: Text(result!, style: TextStyle(color: result!.startsWith('✓') ? Colors.green.shade800 : Colors.red.shade800))),
+      ]),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Fermer')),
+        TextButton(onPressed: testing ? null : () async {
+          var u = c.text.trim();
+          if (u.isEmpty) return;
+          if (!u.startsWith('http')) u = 'https://$u';
+          u = u.replaceAll(RegExp(r'/+$'), '').replaceAll(RegExp(r'/v1$'), '');
+          setD(() { testing = true; result = null; });
+          final err = await services.api.probe('$u/v1');
+          setD(() { testing = false; result = err == null ? '✓ Serveur joint. Adresse enregistrée.' : err; });
+          if (err == null) { await services.store.setServerUrl('$u/v1'); Config.apiBaseRuntime = '$u/v1'; if (mounted) setState(() => _error = null); }
+        }, child: const Text('Tester et enregistrer')),
+      ],
+    )));
+  }
+
   Future<void> _login() async {
     setState(() { _busy = true; _error = null; });
     try {
@@ -60,7 +91,7 @@ class _LoginScreenState extends State<LoginScreen> {
         setState(() => _orgs = orgs);
       }
     } on NetworkException {
-      setState(() => _error = 'Pas de connexion : la première connexion nécessite Internet.');
+      setState(() => _error = 'Impossible de joindre le serveur (${Uri.parse(Config.apiBaseRuntime).host}). Vérifiez Internet, puis l\'adresse du serveur ci-dessous.');
     } on ApiException catch (e) {
       if (e.status == 401 && e.message.contains('Code de vérification requis')) { setState(() { _needOtp = true; _error = null; }); return; }
       setState(() { _error = e.status == 401 ? (e.message.contains('Code de vérification invalide') ? 'Code de vérification invalide ou déjà utilisé.' : 'Identifiants invalides.') : e.message; if (e.message.contains('pas associé')) _pairing = true; });
@@ -133,6 +164,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 16),
                   FilledButton(onPressed: _busy ? null : _login, child: Text(_busy ? 'Connexion…' : _needOtp ? 'Valider le code' : 'Se connecter')),
                   TextButton(onPressed: () => setState(() => _pairing = true), child: const Text('Associer ce téléphone à la coopérative (code)')),
+                  TextButton(onPressed: _busy ? null : _chooseServer, child: Text('Serveur : ${Uri.parse(Config.apiBaseRuntime).host}  —  changer', style: const TextStyle(fontSize: 12))),
                 ] else ...[
                   const Text('Choisissez la coopérative', style: TextStyle(fontWeight: FontWeight.bold)),
                   for (final o in _orgs) ListTile(title: Text(o['name'] as String), subtitle: Text(o['code'] as String), onTap: () => _enter(o['id'] as String)),
