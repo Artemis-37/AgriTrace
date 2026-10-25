@@ -136,3 +136,26 @@ export const STANDARD_ROLES: Record<string, { name: string; description: string;
     hidden: ['Caisse et comptabilité', 'Finances', 'Convois', 'Stocks', 'Équipe'],
   },
 };
+
+/** Rôles réservés aux exportateurs (absents chez les coopératives) et rôles propres aux coopératives (absents chez les exportateurs). */
+const EXPORTER_ONLY = ['auditeur_exportateur', 'pont_bascule', 'analyste'];
+const EXPORTER_ALSO = ['caissier', 'comptable', 'direction', 'auditeur', 'responsable_financier', 'responsable_logistique', 'responsable_qualite'];
+const COOP_ONLY_EXCLUDED = EXPORTER_ONLY;
+
+/** Codes des rôles types qui correspondent au type de société (coopérative ou exportateur). */
+export function standardRoleCodesFor(kind: string): string[] {
+  return Object.keys(STANDARD_ROLES).filter((c) => kind === 'exporter' ? (EXPORTER_ONLY.includes(c) || EXPORTER_ALSO.includes(c)) : !COOP_ONLY_EXCLUDED.includes(c));
+}
+
+/** Crée (sans doublon) tous les rôles types de la société, selon son type. `c` : connexion déjà placée dans l'organisation. */
+export async function ensureStandardRoles(c: { query: (sql: string, p?: any[]) => Promise<any> }, orgId: string, kind: string): Promise<number> {
+  let made = 0;
+  for (const code of standardRoleCodesFor(kind)) {
+    const t = STANDARD_ROLES[code];
+    const r = await c.query(`INSERT INTO roles(organization_id, code, name, mobile_only) VALUES ($1,$2,$3,$4) ON CONFLICT DO NOTHING RETURNING id`, [orgId, code, t.name, t.mobileOnly === true]);
+    if (!r.rowCount) continue;
+    await c.query(`INSERT INTO role_permissions(role_id, permission_code) SELECT $1, code FROM permissions WHERE code = ANY($2)`, [r.rows[0].id, t.permissions]);
+    made++;
+  }
+  return made;
+}

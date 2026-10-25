@@ -1,4 +1,5 @@
 import { BadRequestException, Body, Controller, Get, NotFoundException, Param, ParseUUIDPipe, Post, Req } from '@nestjs/common';
+import { ensureStandardRoles } from '../users/standard-roles';
 import { assertStrongPassword } from '../auth/password-policy';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { IsEmail, IsIn, IsOptional, IsString, Length, Matches, MinLength } from 'class-validator';
@@ -117,6 +118,7 @@ export class OrganizationsController {
         `INSERT INTO role_permissions(role_id, permission_code) SELECT $1, code FROM permissions WHERE code <> 'cash:session'`,
         [r.rows[0].id],
       );
+      await ensureStandardRoles(c, org.id, org.kind);
     });
     await this.audit.log({
       organizationId: org.id,

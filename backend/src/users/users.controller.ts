@@ -7,7 +7,7 @@ import { RequirePermissions } from '../access/decorators';
 import { AuditService } from '../audit/audit.service';
 import { AuthService } from '../auth/auth.service';
 import { DbService } from '../db/db.service';
-import { STANDARD_ROLES } from './standard-roles';
+import { STANDARD_ROLES, ensureStandardRoles, standardRoleCodesFor } from './standard-roles';
 
 class CreateUserDto {
   /** Facultatif : sans e-mail, la personne est enregistrée sans accès à l'application (compte technique non utilisable). */
@@ -91,8 +91,11 @@ export class UsersController {
   @Get('roles/templates')
   @RequirePermissions('users:read')
   async templates(@Req() req: any) {
-    const have = await this.db.tx(req.org.id, async (c) => (await c.query(`SELECT code FROM roles WHERE organization_id = $1`, [req.org.id])).rows.map((r) => r.code));
-    return Object.entries(STANDARD_ROLES).map(([code, t]) => ({ code, name: t.name, description: t.description, hidden: t.hidden, created: have.includes(code) }));
+    const [o] = await this.db.query<any>(`SELECT kind FROM organizations WHERE id = $1`, [req.org.id]);
+    const kind = o?.kind ?? 'cooperative';
+    // Les rôles types de la société sont créés automatiquement (idempotent) : plus rien à créer à la main.
+    const have = await this.db.tx(req.org.id, async (c) => { await ensureStandardRoles(c, req.org.id, kind); return (await c.query(`SELECT code FROM roles WHERE organization_id = $1`, [req.org.id])).rows.map((r) => r.code); });
+    return Object.entries(STANDARD_ROLES).filter(([code]) => standardRoleCodesFor(kind).includes(code)).map(([code, t]) => ({ code, name: t.name, description: t.description, hidden: t.hidden, created: have.includes(code) }));
   }
 
   /** Crée un rôle type (idempotent). Seul un administrateur qui détient lui-même ces permissions peut l'accorder. */
