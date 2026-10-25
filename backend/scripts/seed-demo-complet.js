@@ -119,6 +119,9 @@ const PROFILS = [
   const col2 = await call('POST', '/collectors', { ...A, body: { user_id: u2.id } });
   await call('POST', `/collectors/${col2.id}/assignments`, { ...A, body: { value_chain_id: vc.id } });
   await call('PUT', `/collectors/${col2.id}/rates`, { ...A, body: { transport_per_kg: '15', retention_per_kg: '10' } });
+  // Fiche des délégués : localité, banque et pièce d'identité (fictives)
+  await soft('fiche du délégué 1', () => call('PUT', `/collectors/${col.id}/profile`, { ...A, body: { origin: 'Hiré', bank_name: 'Banque Exemple (fictive)', bank_account: 'CI000 01234 56789 01', id_doc_type: 'cni', id_doc_no: 'C0012345678' } }));
+  await soft('fiche du délégué 2', () => call('PUT', `/collectors/${col2.id}/profile`, { ...A, body: { origin: 'Zoukougbeu', bank_name: 'Caisse d\'épargne exemple (fictive)', bank_account: 'CI000 98765 43210 02', id_doc_type: 'attestation', id_doc_no: 'AT-2026-0456' } }));
   const delegate2 = { name: 'Yao Kouassi', email: email2, collector_id: col2.id };
 
   // ── Producteurs et parcelles (coordonnées fictives)

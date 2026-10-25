@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { get, put } from '../api';
+import { get, post, put } from '../api';
+import { getChains } from '../chains';
 import { useAuth } from '../auth';
 import { Card, ErrorBox, Field, Loading, Modal, PageHeader, Tabs, useAction, useAsync } from '../ui';
 import { Fiche } from './Convois';
@@ -16,6 +17,7 @@ export default function Delegues() {
   const [sel, setSel] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>('info');
   const [edit, setEdit] = useState(false);
+  const [add, setAdd] = useState(false);
   const rows = (data ?? []).filter((c) => !q.trim() || `${c.member_code ?? ''} ${c.full_name}`.toLowerCase().includes(q.trim().toLowerCase()));
   const cur = (data ?? []).find((c) => c.id === sel) ?? null;
   const tabs: [Tab, string][] = [['info', 'Informations personnelles'], ['id', "Pièce d'identité"]];
@@ -28,6 +30,7 @@ export default function Delegues() {
       {loading ? <Loading /> : (
         <div className="caisse-layout" style={{ gridTemplateColumns: '18rem 1fr' }}>
           <Card>
+            {can('collectors:manage') && can('users:create') && <p><button className="btn" onClick={() => setAdd(true)}>+ Nouveau délégué</button></p>}
             <input type="search" className="search-full" placeholder="Rechercher par code ou nom" aria-label="Rechercher un délégué" value={q} onChange={(e) => setQ(e.target.value)} />
             <ul className="plain pick-list">
               {rows.map((c) => <li key={c.id}><button className={sel === c.id ? 'on' : ''} onClick={() => { setSel(c.id); setTab('info'); }}><code>{c.member_code ?? '—'}</code> {c.full_name}{c.status !== 'active' ? ' (désactivé)' : ''}</button></li>)}
@@ -54,8 +57,57 @@ export default function Delegues() {
           </div>
         </div>
       )}
+      {add && <NewDelegate onClose={() => setAdd(false)} onDone={(id) => { setAdd(false); reload(); setSel(id); setTab('info'); }} />}
       {edit && cur && <Edit c={cur} onClose={() => setEdit(false)} onDone={() => { setEdit(false); reload(); }} />}
     </>
+  );
+}
+
+/** Enregistre un délégué en une fois : compte de connexion, profil (localité, banque, pièce), filières et tarifs. */
+function NewDelegate({ onClose, onDone }: { onClose: () => void; onDone: (collectorId: string) => void }) {
+  const { can } = useAuth();
+  const chains = useAsync(() => getChains().catch(() => [] as any[]), []);
+  const [f, setF] = useState({ full_name: '', email: '', phone: '', password: '', member_code: '', origin: '', bank_name: '', bank_account: '', id_doc_type: '', id_doc_no: '', transport: '', retention: '' });
+  const [picked, setPicked] = useState<string[]>([]);
+  const act = useAction();
+  const set = (k: keyof typeof f) => (e: any) => setF({ ...f, [k]: e.target.value });
+  const num = (v: string) => v === '' || /^\d+(\.\d{1,4})?$/.test(v);
+  const ok = f.full_name.trim().length >= 2 && f.email.includes('@') && f.password.length >= 10 && f.origin.trim() && num(f.transport) && num(f.retention);
+  return (
+    <Modal title="Nouveau délégué" onClose={onClose}>
+      <div className="grid-2"><Field label="Nom et prénoms"><input value={f.full_name} onChange={set('full_name')} maxLength={200} /></Field>
+        <Field label="Code (facultatif)" hint="Attribué automatiquement s'il est vide."><input value={f.member_code} onChange={(e) => setF({ ...f, member_code: e.target.value.toUpperCase() })} maxLength={30} /></Field></div>
+      <div className="grid-2"><Field label="Contact (téléphone)"><input inputMode="tel" value={f.phone} onChange={set('phone')} maxLength={30} /></Field>
+        <Field label="Localité (provenance des achats)"><input value={f.origin} onChange={set('origin')} maxLength={80} /></Field></div>
+      <div className="grid-2"><Field label="E-mail (identifiant de connexion)"><input type="email" value={f.email} onChange={set('email')} /></Field>
+        <Field label="Mot de passe provisoire" hint="10 caractères au minimum."><input value={f.password} onChange={set('password')} /></Field></div>
+      <div className="grid-2"><Field label="Banque"><input value={f.bank_name} onChange={set('bank_name')} maxLength={80} /></Field>
+        <Field label="N° de compte"><input value={f.bank_account} onChange={set('bank_account')} maxLength={40} /></Field></div>
+      <div className="grid-2"><Field label="Type de pièce"><select value={f.id_doc_type} onChange={set('id_doc_type')}><option value="">—</option>{Object.entries(DOC).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></Field>
+        <Field label="N° de la pièce"><input value={f.id_doc_no} onChange={set('id_doc_no')} maxLength={40} /></Field></div>
+      {can('collectors:rates') && <div className="grid-2"><Field label="Transport au kilo (FCFA)" hint="Vide : tarif par défaut."><input inputMode="decimal" value={f.transport} onChange={set('transport')} /></Field>
+        <Field label="Retenue au kilo (FCFA)" hint="Vide : tarif par défaut."><input inputMode="decimal" value={f.retention} onChange={set('retention')} /></Field></div>}
+      <Field label="Filières achetées" hint="Aucune case cochée : toutes les filières de la coopérative.">
+        <div className="role-pick">{(chains.data ?? []).map((v: any) => <label key={v.id} className="check"><input type="checkbox" checked={picked.includes(v.id)} onChange={() => setPicked((p) => (p.includes(v.id) ? p.filter((x) => x !== v.id) : [...p, v.id]))} /> {v.name}</label>)}</div></Field>
+      {act.error && <ErrorBox message={act.error} />}
+      <div className="modal-actions"><button className="btn" disabled={act.busy || !ok} onClick={() => act.run(async () => {
+        const roles = await post<any>('/roles/standard', { code: 'collecteur' });
+        const u = await post<any>('/users', { email: f.email.trim(), full_name: f.full_name.trim(), ...(f.phone.trim() && { phone: f.phone.trim() }), password: f.password, role_id: roles.id, ...(f.member_code.trim() && { member_code: f.member_code.trim() }) });
+        let id = '';
+        try {
+          const c = await post<any>('/collectors', { user_id: u.id, origin: f.origin.trim() });
+          id = c.id;
+          const prof: Record<string, string> = {};
+          for (const k of ['bank_name', 'bank_account', 'id_doc_type', 'id_doc_no'] as const) if (f[k].trim()) prof[k] = f[k].trim();
+          if (Object.keys(prof).length) await put(`/collectors/${id}/profile`, prof);
+          for (const v of picked.length ? picked : [null]) await post(`/collectors/${id}/assignments`, v ? { value_chain_id: v } : {});
+          if (can('collectors:rates') && (f.transport || f.retention)) await put(`/collectors/${id}/rates`, { ...(f.transport && { transport_per_kg: f.transport }), ...(f.retention && { retention_per_kg: f.retention }) });
+        } catch (e: any) {
+          throw new Error(`Le compte de ${f.full_name.trim()} est créé, mais sa fiche est incomplète (${e?.message ?? e}). Ouvrez-la dans la liste puis cliquez sur « Modifier la fiche ».`);
+        }
+        onDone(id);
+      })}>Enregistrer le délégué</button><button className="btn btn-ghost" onClick={onClose}>Annuler</button></div>
+    </Modal>
   );
 }
 
