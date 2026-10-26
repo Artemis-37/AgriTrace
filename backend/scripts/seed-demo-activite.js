@@ -17,7 +17,7 @@ const N = Number(process.env.DEMO_OPS || 22);
 async function fetchRetry(url, init) {
   for (let i = 0; ; i++) {
     const r = await fetch(url, init);
-    if (r.status !== 429 || i >= 20) return r;
+    if (![429, 502, 503, 504].includes(r.status) || i >= 20) return r;
     await new Promise((s) => setTimeout(s, (Number(r.headers.get('retry-after')) || 8) * 1000));
   }
 }

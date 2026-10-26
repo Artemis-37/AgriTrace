@@ -18,7 +18,7 @@ const OUT = process.env.DEMO_JSON || '/tmp/demo-accounts.json';
 async function fetchRetry(url, init) {
   for (let i = 0; ; i++) {
     const r = await fetch(url, init);
-    if (r.status !== 429 || i >= 30) return r;
+    if (![429, 502, 503, 504].includes(r.status) || i >= 30) return r;
     await new Promise((s) => setTimeout(s, (Number(r.headers.get('retry-after')) || 6) * 1000));
   }
 }
