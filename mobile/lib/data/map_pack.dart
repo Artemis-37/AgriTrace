@@ -61,7 +61,7 @@ class MapPackStore {
     } on NetworkException catch (e) {
       lastError = 'Connexion interrompue : le téléchargement reprendra là où il s\'est arrêté (${e.message}).';
     } catch (e) {
-      lastError = e is ApiException ? e.message : '$e';
+      lastError = e is ApiException ? e.message : e is NetworkException ? e.message : 'Téléchargement interrompu. Réessayez avec une bonne connexion.';
     } finally {
       _busy = false; progress.value = null;
     }

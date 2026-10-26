@@ -10,6 +10,16 @@ import 'pinned_client.dart';
 import 'session_store.dart';
 
 /// Réponse d'erreur du serveur (HTTP >= 400).
+/// Message affichable : jamais de page HTML, de code ou de texte technique du serveur (par exemple une page « 502 » d'un serveur qui redémarre).
+String friendlyServerMessage(int status, String raw) {
+  final t = raw.trim();
+  final technical = t.isEmpty || t.startsWith('<') || t.contains('<html') || t.contains('<!DOCTYPE') || t.length > 300;
+  if (status == 502 || status == 503 || status == 504) return 'Le serveur est momentanément indisponible (il redémarre ou se réveille). Réessayez dans une minute : vos saisies sont conservées.';
+  if (status >= 500) return 'Le serveur a rencontré un problème. Réessayez plus tard : vos saisies sont conservées.';
+  if (technical) return 'Réponse inattendue du serveur. Réessayez plus tard.';
+  return t;
+}
+
 class ApiException implements Exception {
   final int status;
   final String message;
@@ -56,6 +66,9 @@ class ApiClient {
 
   Uri _uri(String path, [Map<String, String>? q]) => Uri.parse('${Config.apiBaseRuntime}$path').replace(queryParameters: q);
 
+  /// Erreur du serveur à signaler : indisponibilité passagère (502/503/504) = comme une coupure réseau, l'opération reste en file.
+  Exception _fail(int status, String raw) => (status == 502 || status == 503 || status == 504) ? NetworkException(friendlyServerMessage(status, raw)) : ApiException(status, friendlyServerMessage(status, raw));
+
   Future<bool> login(String email, String password, {String? deviceLabel, String? otp}) async {
     final res = await _send('POST', '/auth/login',
         body: {'email': email, 'password': password, if (deviceLabel != null) 'device_label': deviceLabel, if (otp != null && otp.isNotEmpty) 'otp': otp}, auth: false, org: false);
@@ -92,7 +105,7 @@ class ApiClient {
       var res = await once();
       if (res.statusCode == 401 && await _refresh()) res = await once();
       if (res.statusCode == 404) return null;
-      if (res.statusCode >= 400) throw ApiException(res.statusCode, 'Lecture impossible');
+      if (res.statusCode >= 400) throw _fail(res.statusCode, 'Lecture impossible');
       return res.bodyBytes;
     } on SocketException catch (e) {
       throw NetworkException(e.message);
@@ -133,7 +146,7 @@ class ApiClient {
           final m = j is Map ? j['message'] : null;
           msg = m is List ? m.join(', ') : (m?.toString() ?? msg);
         } catch (_) {}
-        throw ApiException(res.statusCode, msg);
+        throw _fail(res.statusCode, msg);
       }
       if (res.body.isEmpty) return null;
       return jsonDecode(utf8.decode(res.bodyBytes));
@@ -171,7 +184,7 @@ class ApiClient {
           final m = j is Map ? j['message'] : null;
           msg = m is List ? m.join(', ') : (m?.toString() ?? msg);
         } catch (_) {}
-        throw ApiException(res.statusCode, msg);
+        throw _fail(res.statusCode, msg);
       }
       return res.body.isEmpty ? null : jsonDecode(utf8.decode(res.bodyBytes));
     } on SocketException catch (e) {
@@ -210,7 +223,7 @@ class ApiClient {
         final body = await res.stream.bytesToString();
         var msg = body;
         try { final j = jsonDecode(body); final m = j is Map ? j['message'] : null; msg = m is List ? m.join(', ') : (m?.toString() ?? body); } catch (_) {}
-        throw ApiException(res.statusCode, msg);
+        throw _fail(res.statusCode, msg);
       }
       // 200 : le serveur renvoie tout (pas de reprise possible) ; 206 : suite du fichier.
       final sink = target.openWrite(mode: res.statusCode == 206 ? FileMode.append : FileMode.write);

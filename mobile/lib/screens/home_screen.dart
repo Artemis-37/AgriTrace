@@ -365,7 +365,7 @@ class _SyncBanner extends StatelessWidget {
       case SyncPhase.syncing:
         text = 'Synchronisation en cours…'; color = Colors.blueGrey; break;
       case SyncPhase.offline:
-        text = 'Hors connexion — les saisies sont conservées sur l\'appareil'; color = Colors.orange.shade800; break;
+        text = (status.message ?? '').startsWith('Le serveur') ? status.message! : 'Hors connexion — les saisies sont conservées sur l\'appareil'; color = Colors.orange.shade800; break;
       case SyncPhase.blocked:
         text = 'Synchronisation suspendue : session expirée ou accès retiré. Utilisez « Se reconnecter » dans le menu ⋮, ou contactez votre administrateur. Vos saisies restent sur le téléphone.'; color = Colors.red.shade700; break;
       case SyncPhase.error:

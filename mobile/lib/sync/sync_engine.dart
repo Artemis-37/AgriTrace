@@ -119,7 +119,7 @@ class SyncEngine {
       status.value = SyncStatus(blocked ? SyncPhase.blocked : SyncPhase.error, lastSuccess: previousSuccess, message: e.message);
     } catch (e) {
       _step(current, SyncStepState.failed);
-      status.value = SyncStatus(SyncPhase.error, lastSuccess: previousSuccess, message: e.toString());
+      status.value = SyncStatus(SyncPhase.error, lastSuccess: previousSuccess, message: 'Erreur inattendue pendant la synchronisation. Réessayez ; vos saisies sont conservées.');
     } finally {
       _running = false;
     }
