@@ -167,7 +167,7 @@ class _ProducerDetailScreenState extends State<ProducerDetailScreen> {
         if (_msg != null) Padding(padding: const EdgeInsets.only(bottom: 8), child: Text(_msg!)),
         if (_taskError != null) Padding(padding: const EdgeInsets.all(16), child: Text(_taskError!)),
         if (rows == null && _taskError == null) const Padding(padding: EdgeInsets.all(32), child: Center(child: CircularProgressIndicator())),
-        if (rows != null && rows.isEmpty) const Padding(padding: EdgeInsets.all(24), child: Center(child: Text(_msg != null && _msg!.startsWith('Hors connexion') ? 'Aucune tâche pour ce producteur à la dernière synchronisation.\nSynchronisez avec du réseau pour recevoir les nouvelles.' : 'Aucune tâche pour ce producteur.', textAlign: TextAlign.center))),
+        if (rows != null && rows.isEmpty) Padding(padding: const EdgeInsets.all(24), child: Center(child: Text(_msg != null && _msg!.startsWith('Hors connexion') ? 'Aucune tâche pour ce producteur à la dernière synchronisation.\nSynchronisez avec du réseau pour recevoir les nouvelles.' : 'Aucune tâche pour ce producteur.', textAlign: TextAlign.center))),
         for (final t in rows ?? const [])
           // Mission terminée et validée par l'ADG : grisée et non cliquable ; le serveur la retire de la liste une fois le délai réglé dépassé.
           Opacity(opacity: t['finished'] == true ? 0.45 : 1, child: Card(color: t['finished'] == true ? const Color(0xFFEDEDED) : Colors.white, elevation: 0, shape: RoundedRectangleBorder(side: const BorderSide(color: Color(0xFFDDDDDD)), borderRadius: BorderRadius.circular(2)), child: ListTile(
