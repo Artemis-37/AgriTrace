@@ -36,8 +36,11 @@ class _NewConvoyScreenState extends State<NewConvoyScreen> {
   Future<void> _loadNumber() async {
     try {
       final pending = await services.repo.pendingConvoys();
-      final r = await services.api.get('/convoys/next-number', query: {'pending': '$pending'}) as Map;
-      if (mounted) setState(() { _auto = r['auto'] == true; _autoNo = r['convoy_no'] as String?; });
+      final c = await services.repo.cachedGet('convoy-auto', () => services.api.get('/convoys/next-number', query: {'pending': '$pending'}));
+      if (c == null || !mounted) return;
+      final r = c.data as Map;
+      // Hors connexion : on retient seulement si la numérotation est automatique ; le numéro exact est attribué à l'envoi.
+      setState(() { _auto = r['auto'] == true; _autoNo = c.stale ? null : r['convoy_no'] as String?; });
     } catch (_) { /* hors connexion : numéro attribué à l'envoi si la coopérative a un code CCC */ }
   }
 

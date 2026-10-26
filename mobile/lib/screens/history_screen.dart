@@ -26,13 +26,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   Future<void> _load() async {
-    try {
-      final r = await services.api.get('/purchase-declarations', query: {'limit': '200', if (_filter.isNotEmpty) 'status': _filter});
-      if (!mounted) return;
-      setState(() { _rows = r as List<dynamic>; _error = null; });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _error = 'Indisponible hors connexion. Les achats de cet appareil sont sur l\'écran « Mes achats ».');
+    final r = await services.repo.cachedGet('purchases-$_filter', () => services.api.get('/purchase-declarations', query: {'limit': '200', if (_filter.isNotEmpty) 'status': _filter}));
+    if (!mounted) return;
+    if (r == null) {
+      setState(() => _error = 'Pas encore de copie de l\'historique. Les achats de cet appareil sont sur l\'écran « Mes achats ».');
+    } else {
+      setState(() { _rows = r.data as List<dynamic>; _error = r.stale ? 'Hors connexion : dernière copie de l\'historique.' : null; });
     }
   }
 

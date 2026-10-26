@@ -20,13 +20,12 @@ class _MyStockScreenState extends State<MyStockScreen> {
   }
 
   Future<void> _load() async {
-    try {
-      final r = await services.api.get('/convoys/my-stock');
-      if (!mounted) return;
-      setState(() { _data = Map<String, dynamic>.from(r as Map); _error = null; });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _error = 'Indisponible hors connexion. Réessayez avec du réseau.');
+    final r = await services.repo.cachedGet('my-stock', () => services.api.get('/convoys/my-stock'));
+    if (!mounted) return;
+    if (r == null) {
+      setState(() => _error = 'Pas encore de copie du stock sur cet appareil. Lancez la synchronisation avec du réseau.');
+    } else {
+      setState(() { _data = Map<String, dynamic>.from(r.data as Map); _error = r.stale ? 'Hors connexion : dernière copie du stock. Tirez pour actualiser.' : null; });
     }
   }
 

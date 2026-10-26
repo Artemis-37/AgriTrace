@@ -45,6 +45,16 @@ class ApiClient {
   /// Jeton de renouvellement refusé par le serveur : on ne le présente plus (évite de multiplier les appels), jusqu'à une nouvelle connexion.
   String? deadToken;
   Future<bool>? _refreshing;
+  /// Renseigné au démarrage : vrai quand l'appareil n'a aucune connexion. L'appel échoue alors tout de suite
+  /// (au lieu d'attendre le délai d'expiration), et l'écran affiche aussitôt sa dernière copie locale.
+  Future<bool> Function()? isOffline;
+  Future<void> _failIfOffline() async {
+    final f = isOffline;
+    if (f == null) return;
+    bool off = false;
+    try { off = await f(); } catch (_) {/* détection indisponible : on tente l'appel */}
+    if (off) throw NetworkException('Hors connexion');
+  }
 
   ApiClient(this.store, {http.Client? client}) : _http = client ?? createHttpClient();
 
@@ -102,6 +112,7 @@ class ApiClient {
     }
 
     try {
+      await _failIfOffline();
       var res = await once();
       if (res.statusCode == 401 && await _refresh()) res = await once();
       if (res.statusCode == 404) return null;
@@ -132,11 +143,12 @@ class ApiClient {
       }
       final req = http.Request(method, _uri(path, query))..headers.addAll(headers);
       if (body != null) req.body = jsonEncode(body);
-      final streamed = await _http.send(req).timeout(Config.requestTimeout);
+      final streamed = await _http.send(req).timeout(method == 'GET' ? Config.readTimeout : Config.requestTimeout);
       return http.Response.fromStream(streamed);
     }
 
     try {
+      await _failIfOffline();
       var res = await once();
       if (res.statusCode == 401 && auth && await _refresh()) res = await once();
       if (res.statusCode >= 400) {

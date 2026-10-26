@@ -245,7 +245,8 @@ class _TrainingModuleScreenState extends State<TrainingModuleScreen> {
 
   Future<void> _loadMine() async {
     try {
-      final r = await services.api.get('/training-results') as List;
+      final c = await services.repo.cachedGet('training-results', () => services.api.get('/training-results'));
+      final r = (c?.data as List?) ?? const [];
       final l = r
           .map((e) => Map<String, dynamic>.from(e as Map))
           .where((e) => e['module_id'] == module['id'])

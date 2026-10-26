@@ -35,6 +35,7 @@ Future<void> main() async {
   final saved = await store.serverUrl;
   if (saved != null && saved.isNotEmpty) Config.apiBaseRuntime = saved;
   final api = ApiClient(store);
+  api.isOffline = () async => (await Connectivity().checkConnectivity()).every((x) => x == ConnectivityResult.none);
   final mapPack = MapPackStore(api);
   await mapPack.load();
   final tiles = MapTiles(mapPack);

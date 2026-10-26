@@ -224,6 +224,34 @@ class SyncEngine {
     } on ApiException catch (e) {
       if (e.status == 401) rethrow;
     }
+    await _pullReference();
+  }
+
+  /// Écrans de consultation (convois, fiche, stock, historique, notifications, formations) : copiés pour rester lisibles hors connexion.
+  /// Un droit manquant (403) ou une erreur isolée n'arrête rien ; seule la session refusée (401) remonte.
+  Future<void> _pullReference() async {
+    Future<dynamic> keep(String key, String path, [Map<String, String>? q]) async {
+      try {
+        final r = await api.get(path, query: q);
+        await db.setKv('cache:$key', jsonEncode(r));
+        return r;
+      } on ApiException catch (e) {
+        if (e.status == 401) rethrow;
+      }
+      return null;
+    }
+    final convoys = await keep('convoys', '/convoys');
+    await keep('statement', '/convoys/statement');
+    await keep('my-stock', '/convoys/my-stock');
+    await keep('purchases-', '/purchase-declarations', {'limit': '200'});
+    await keep('notifications', '/notifications', {'limit': '100', 'unread': 'true'});
+    await keep('training-results', '/training-results');
+    await keep('training-records', '/field-records?kind=training');
+    if (convoys is List) {
+      for (final c in convoys.take(10)) {
+        if (c is Map && c['id'] != null) await keep('convoy-decl-${c['id']}', '/convoys/${c['id']}/declarations');
+      }
+    }
   }
 
   /// Copie du serveur, en gardant l'effet des actions faites hors connexion et pas encore envoyées (elles ne disparaissent pas de l'écran).

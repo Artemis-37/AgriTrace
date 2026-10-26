@@ -20,13 +20,12 @@ class _FicheScreenState extends State<FicheScreen> {
   }
 
   Future<void> _load() async {
-    try {
-      final r = await services.api.get('/convoys/statement');
-      if (!mounted) return;
-      setState(() { _d = Map<String, dynamic>.from(r as Map); _error = null; });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _error = 'Indisponible hors connexion. Réessayez avec du réseau.');
+    final r = await services.repo.cachedGet('statement', () => services.api.get('/convoys/statement'));
+    if (!mounted) return;
+    if (r == null) {
+      setState(() => _error = 'Pas encore de copie de la fiche sur cet appareil. Lancez la synchronisation avec du réseau.');
+    } else {
+      setState(() { _d = Map<String, dynamic>.from(r.data as Map); _error = r.stale ? 'Hors connexion : dernière copie de la fiche. Tirez pour actualiser.' : null; });
     }
   }
 

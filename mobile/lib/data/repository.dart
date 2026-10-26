@@ -164,6 +164,20 @@ class Repository {
     return activeProducts(rows ?? const []);
   }
 
+  /// Lecture avec copie locale : renvoie les données du serveur (et les garde), ou à défaut la dernière copie
+  /// avec `stale: true`. Renvoie null si le serveur est injoignable et qu'aucune copie n'existe encore.
+  Future<({dynamic data, bool stale})?> cachedGet(String key, Future<dynamic> Function() fetch) async {
+    try {
+      final d = await fetch();
+      try { await db.setKv('cache:$key', jsonEncode(d)); } catch (_) {/* copie facultative */}
+      return (data: d, stale: false);
+    } catch (_) {
+      final c = await db.getKv('cache:$key');
+      if (c != null) { try { return (data: jsonDecode(c), stale: true); } catch (_) {/* copie illisible */} }
+      return null;
+    }
+  }
+
   /// Convois créés sur l'appareil et pas encore envoyés : sert à prévoir le prochain numéro automatique hors connexion.
   Future<int> pendingConvoys() async => Sqflite.firstIntValue(await db.raw.rawQuery("SELECT count(*) FROM outbox WHERE op_type = 'convoy.create'")) ?? 0;
 
@@ -339,7 +353,7 @@ class Repository {
       for (final t in ['value_chains', 'campaigns', 'unit_conversions', 'price_versions', 'producers', 'my_assignments', 'declarations', 'outbox', 'parcels', 'pending_uploads']) {
         await txn.delete(t);
       }
-      await txn.delete('kv', where: "k IN ('cursor','permissions','my_collector_id','me_name','org_name')");
+      await txn.delete('kv', where: "k IN ('cursor','permissions','my_collector_id','me_name','org_name') OR k LIKE 'cache:%'");
       await txn.insert('kv', {'k': 'org_id', 'v': orgId}, conflictAlgorithm: ConflictAlgorithm.replace);
     });
     return true;
@@ -356,7 +370,7 @@ class Repository {
       await txn.delete('declarations', where: "local_state NOT IN ('local_only','pending','pending_validation','error')");
       await txn.delete('outbox', where: "status NOT IN ('pending','pending_validation')");
       await txn.delete('pending_uploads', where: "status != 'pending'");
-      await txn.delete('kv', where: "k IN ('cursor','permissions','my_collector_id','me_name','org_name')");
+      await txn.delete('kv', where: "k IN ('cursor','permissions','my_collector_id','me_name','org_name') OR k LIKE 'cache:%'");
       await txn.insert('kv', {'k': 'revoked', 'v': '1'}, conflictAlgorithm: ConflictAlgorithm.replace);
     });
   }

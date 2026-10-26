@@ -25,13 +25,12 @@ class _ConvoyHistoryScreenState extends State<ConvoyHistoryScreen> {
   Future<void> _load() async {
     final local = await services.repo.localConvoys();
     if (mounted) setState(() => _local = local);
-    try {
-      final r = await services.api.get('/convoys');
-      if (!mounted) return;
-      setState(() { _remote = r as List<dynamic>; _error = null; });
-    } catch (_) {
-      if (!mounted) return;
+    final r = await services.repo.cachedGet('convoys', () => services.api.get('/convoys'));
+    if (!mounted) return;
+    if (r == null) {
       setState(() => _error = 'Hors connexion : seuls les convois de cet appareil sont affichés. Tirez pour réessayer.');
+    } else {
+      setState(() { _remote = r.data as List<dynamic>; _error = r.stale ? 'Hors connexion : dernière copie des convois. Tirez pour actualiser.' : null; });
     }
   }
 
@@ -120,12 +119,15 @@ class _PurchasesState extends State<_Purchases> {
   @override
   void initState() {
     super.initState();
-    services.api.get('/convoys/${widget.convoyId}/declarations').then((r) { if (mounted) setState(() => _rows = r as List<dynamic>); }).catchError((_) { if (mounted) setState(() => _failed = true); });
+    services.repo.cachedGet('convoy-decl-${widget.convoyId}', () => services.api.get('/convoys/${widget.convoyId}/declarations')).then((r) {
+      if (!mounted) return;
+      if (r == null) { setState(() => _failed = true); } else { setState(() => _rows = r.data as List<dynamic>); }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_failed) return const Padding(padding: EdgeInsets.only(top: 6), child: Text('Achats indisponibles hors connexion.', style: TextStyle(color: Colors.black54)));
+    if (_failed) return const Padding(padding: EdgeInsets.only(top: 6), child: Text('Achats non encore chargés : ouvrez ce convoi une fois avec du réseau (ou lancez la synchronisation).', style: TextStyle(color: Colors.black54)));
     if (_rows == null) return const Padding(padding: EdgeInsets.only(top: 8), child: LinearProgressIndicator());
     if (_rows!.isEmpty) return const Padding(padding: EdgeInsets.only(top: 6), child: Text('Aucun achat rattaché.', style: TextStyle(color: Colors.black54)));
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

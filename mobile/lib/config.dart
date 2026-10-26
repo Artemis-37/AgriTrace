@@ -7,6 +7,8 @@ class Config {
   static String apiBaseRuntime = apiBase;
   /// Délai d'attente des appels : un serveur gratuit endormi (Render) met jusqu'à une minute à se réveiller.
   static const requestTimeout = Duration(seconds: 75);
+  /// Lecture seule : un réseau qui ne répond pas est abandonné plus vite, l'écran montre alors sa copie locale.
+  static const readTimeout = Duration(seconds: 25);
   /// Serveur de coopérative en HTTPS avec certificat auto-signé : empreinte SHA-256 du certificat (hexadécimal, 64 caractères), affichée par le
   /// serveur (Poste et réseau). Vide = certificat classique vérifié par Android. Exemple :
   ///   flutter build apk --dart-define=API_BASE=https://192.168.1.10:3000/v1 --dart-define=API_CERT_SHA256=ab12...

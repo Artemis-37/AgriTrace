@@ -24,13 +24,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Future<void> _load() async {
-    try {
-      final r = await services.api.get('/notifications', query: {'limit': '100', 'unread': 'true'});
-      if (!mounted) return;
-      setState(() { _items = (r as List).map((e) => Map<String, dynamic>.from(e as Map)).toList(); _error = null; });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _error = 'Indisponible hors connexion. Réessayez avec du réseau.');
+    final r = await services.repo.cachedGet('notifications', () => services.api.get('/notifications', query: {'limit': '100', 'unread': 'true'}));
+    if (!mounted) return;
+    if (r == null) {
+      setState(() => _error = 'Pas encore de copie des notifications. Lancez la synchronisation avec du réseau.');
+    } else {
+      setState(() { _items = (r.data as List).map((e) => Map<String, dynamic>.from(e as Map)).toList(); _error = r.stale ? 'Hors connexion : dernières notifications reçues.' : null; });
     }
   }
 

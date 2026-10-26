@@ -24,7 +24,8 @@ class _TrainingListScreenState extends State<TrainingListScreen> {
     final local = await services.repo.localFieldRecords('training');
     List<dynamic>? server;
     var off = false;
-    try { server = await services.api.get('/field-records?kind=training') as List<dynamic>; } catch (_) { off = true; }
+    final c = await services.repo.cachedGet('training-records', () => services.api.get('/field-records?kind=training'));
+    if (c == null) { off = true; } else { server = c.data as List<dynamic>; off = c.stale; }
     if (mounted) setState(() { _local = local; _server = server; _offline = off; });
   }
 
