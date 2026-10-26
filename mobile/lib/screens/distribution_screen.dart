@@ -88,7 +88,7 @@ class _DistributionScreenState extends State<DistributionScreen> {
     final ready = _category != null && _group != null;
     final list = ready ? _list : <Map<String, dynamic>>[];
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: const Color(0xFFF7FAF2),
       appBar: AppBar(title: const Text('Parcourir les articles')),
       body: Column(children: [
         Expanded(child: ListView(padding: const EdgeInsets.fromLTRB(16, 12, 16, 12), children: [
@@ -157,7 +157,7 @@ class _VerifyScreenState extends State<_VerifyScreen> {
   Widget build(BuildContext context) {
     final n = widget.picks.length;
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: const Color(0xFFF7FAF2),
       appBar: AppBar(title: const Text("Vérifier l'article")),
       body: Column(children: [
         Padding(padding: const EdgeInsets.fromLTRB(16, 16, 16, 8), child: Row(children: [
@@ -219,7 +219,7 @@ class _BeneficiariesScreenState extends State<_BeneficiariesScreen> {
     final rows = _rows.where((r) => _section == null || r['section'] == _section).toList();
     final n = _sel.length;
     return Scaffold(
-      backgroundColor: const Color(0xFFF1F1F1),
+      backgroundColor: const Color(0xFFF7FAF2),
       appBar: AppBar(title: const Text('Sélectionner les bénéficiaires')),
       body: Column(children: [
         FieldBand('Sélection des bénéficiaires', children: [
@@ -316,7 +316,7 @@ class _ConfigScreenState extends State<_ConfigScreen> {
   Widget build(BuildContext context) {
     final total = widget.people.length;
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: const Color(0xFFF7FAF2),
       appBar: AppBar(title: const Text('Configuration de la distribution')),
       body: Column(children: [
         Container(color: Colors.white, padding: const EdgeInsets.fromLTRB(16, 12, 16, 10), child: Column(children: [
@@ -346,7 +346,7 @@ class _ConfigScreenState extends State<_ConfigScreen> {
                 onTap: () => _proof(p),
                 child: Container(
                   height: 100, width: double.infinity, alignment: Alignment.center,
-                  decoration: BoxDecoration(color: const Color(0xFFFAFAFA), border: Border.all(color: Colors.grey.shade400), borderRadius: BorderRadius.circular(20)),
+                  decoration: BoxDecoration(color: const Color(0xFFF7FAF2), border: Border.all(color: Colors.grey.shade400), borderRadius: BorderRadius.circular(20)),
                   child: _b.lines[p.id]!.proofPath == null
                       ? const Column(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.upload, color: Colors.black54), SizedBox(height: 6), Text('Télécharger une preuve photographique', style: TextStyle(fontWeight: FontWeight.w700, color: Colors.black54))])
                       : ClipRRect(borderRadius: BorderRadius.circular(18), child: Image.file(File(_b.lines[p.id]!.proofPath!), height: 96, fit: BoxFit.cover)),
@@ -411,7 +411,7 @@ class _ReviewScreenState extends State<_ReviewScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        backgroundColor: const Color(0xFFF5F5F5),
+        backgroundColor: const Color(0xFFF7FAF2),
         appBar: AppBar(title: const Text('Réviser la distribution')),
         body: Column(children: [
           Expanded(child: ListView(padding: const EdgeInsets.all(12), children: [

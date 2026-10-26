@@ -11,7 +11,7 @@ import 'photo_capture.dart';
 import 'producer_map_screen.dart';
 import 'questionnaire_screen.dart';
 
-const _green = Color(0xFF2F5D46);
+const _green = Color(0xFF0B5E3B);
 const _action = Color(0xFF3F9B2E);
 
 /// Profil d'un producteur :

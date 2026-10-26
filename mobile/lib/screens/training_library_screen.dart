@@ -8,7 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import '../data/api_client.dart';
 import '../main.dart';
 
-const _green = Color(0xFF2F5D46);
+const _green = Color(0xFF0B5E3B);
 const _crop = {'cacao': 'Cacao', 'cafe': 'Café'};
 const _level = {
   'base': 'Base',

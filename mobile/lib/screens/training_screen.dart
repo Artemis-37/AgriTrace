@@ -45,7 +45,7 @@ class _TrainingListScreenState extends State<TrainingListScreen> {
       body: Column(children: [
         Container(width: double.infinity, color: fieldGreen, padding: const EdgeInsets.fromLTRB(16, 10, 8, 10), child: Row(children: [
           const Expanded(child: Text('Dossiers de formation', style: TextStyle(color: Colors.white, fontSize: 20))),
-          IconButton.filled(onPressed: _add, tooltip: 'Enregistrer une formation', style: IconButton.styleFrom(backgroundColor: const Color(0xFFF58A1F), foregroundColor: Colors.white), icon: const Icon(Icons.add, size: 30)),
+          IconButton.filled(onPressed: _add, tooltip: 'Enregistrer une formation', style: IconButton.styleFrom(backgroundColor: const Color(0xFFF59E0B), foregroundColor: Colors.white), icon: const Icon(Icons.add, size: 30)),
         ])),
         Expanded(child: RefreshIndicator(onRefresh: _load, child: ListView(padding: const EdgeInsets.all(12), children: [
           if (_offline) const Padding(padding: EdgeInsets.only(bottom: 8), child: Text("Hors connexion : seules les formations en attente d'envoi sont affichées.", style: TextStyle(color: Colors.black54, fontSize: 12))),
@@ -188,7 +188,7 @@ class _TrainingFormScreenState extends State<TrainingFormScreen> {
           if (_msg != null) Padding(padding: const EdgeInsets.fromLTRB(16, 10, 16, 0), child: Text(_msg!, style: TextStyle(color: Colors.red.shade700, fontWeight: FontWeight.w600))),
         ])),
         Material(color: Colors.white, elevation: 8, child: Padding(padding: const EdgeInsets.all(10), child: Row(children: [
-          Expanded(child: FilledButton(onPressed: _scores, style: FilledButton.styleFrom(backgroundColor: const Color(0xFFF58A1F), minimumSize: const Size(0, 50)), child: const Text('AJOUTER LES SCORES'))),
+          Expanded(child: FilledButton(onPressed: _scores, style: FilledButton.styleFrom(backgroundColor: const Color(0xFFF59E0B), minimumSize: const Size(0, 50)), child: const Text('AJOUTER LES SCORES'))),
           const SizedBox(width: 10),
           Expanded(child: FilledButton(onPressed: _busy ? null : _save, style: FilledButton.styleFrom(backgroundColor: fieldGreen, minimumSize: const Size(0, 50)), child: const Text('ENREGISTRER UNE FORMATION'))),
         ]))),
@@ -204,8 +204,8 @@ class _TrainingFormScreenState extends State<TrainingFormScreen> {
             const CircleAvatar(backgroundColor: fieldGreen, child: Icon(Icons.person, color: Colors.white)),
             const SizedBox(width: 12),
             Expanded(child: Text('$title${rows.isEmpty ? '' : ' (${rows.length})'}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16))),
-            IconButton.filled(onPressed: onAdd, style: IconButton.styleFrom(backgroundColor: const Color(0xFFF58A1F), foregroundColor: Colors.white), icon: const Icon(Icons.add)),
-            IconButton(onPressed: () => onToggle(!open), icon: Icon(open ? Icons.expand_less : Icons.expand_more, color: const Color(0xFFF58A1F))),
+            IconButton.filled(onPressed: onAdd, style: IconButton.styleFrom(backgroundColor: const Color(0xFFF59E0B), foregroundColor: Colors.white), icon: const Icon(Icons.add)),
+            IconButton(onPressed: () => onToggle(!open), icon: Icon(open ? Icons.expand_less : Icons.expand_more, color: const Color(0xFFF59E0B))),
           ]),
           if (open) for (final r in rows)
             Material(type: MaterialType.transparency, child: ListTile(dense: true, title: Text(r.name), subtitle: r.score == null ? null : Text('Score : ${r.score}'),

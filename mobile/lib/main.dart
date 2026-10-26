@@ -67,7 +67,7 @@ class AgriTraceApp extends StatelessWidget {
     return MaterialApp(
       title: 'AgriTrace',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(colorScheme: scheme, useMaterial3: true, appBarTheme: AppBarTheme(backgroundColor: scheme.primary, foregroundColor: Colors.white)),
+      theme: ThemeData(colorScheme: scheme, useMaterial3: true, scaffoldBackgroundColor: const Color(0xFFF7FAF2), appBarTheme: AppBarTheme(backgroundColor: scheme.primary, foregroundColor: Colors.white), filledButtonTheme: FilledButtonThemeData(style: FilledButton.styleFrom(backgroundColor: const Color(Brand.forest), foregroundColor: Colors.white)), progressIndicatorTheme: const ProgressIndicatorThemeData(color: Color(Brand.forest))),
       home: loggedIn ? const SyncShell(child: HomeScreen()) : const LoginScreen(),
     );
   }

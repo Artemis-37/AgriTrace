@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../main.dart';
 
-const _green = Color(0xFF2F5D46);
+const _green = Color(0xFF0B5E3B);
 const _action = Color(0xFF3F9B2E);
 
 /// Questionnaire (tâche) à renseigner auprès du producteur : les réponses sont conservées sur l'appareil puis envoyées à la synchronisation.

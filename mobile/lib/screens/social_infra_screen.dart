@@ -97,7 +97,7 @@ class _SocialInfraScreenState extends State<SocialInfraScreen> {
             Expanded(child: InputDecorator(decoration: fieldDeco('').copyWith(filled: true, fillColor: Colors.white),
                 child: Text(_lat == null ? 'Position GPS…' : '${_lat!.toStringAsFixed(7)},${_lon!.toStringAsFixed(7)}', style: const TextStyle(color: fieldGreen)))),
             const SizedBox(width: 10),
-            IconButton.filled(onPressed: _locating ? null : _locate, style: IconButton.styleFrom(backgroundColor: const Color(0xFFF58A1F), foregroundColor: Colors.white),
+            IconButton.filled(onPressed: _locating ? null : _locate, style: IconButton.styleFrom(backgroundColor: const Color(0xFFF59E0B), foregroundColor: Colors.white),
                 icon: _locating ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.my_location)),
           ]),
         ]),

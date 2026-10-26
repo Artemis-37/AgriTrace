@@ -6,7 +6,7 @@ import 'package:geolocator/geolocator.dart';
 
 import '../main.dart';
 
-const fieldGreen = Color(0xFF2F5D46);
+const fieldGreen = Color(0xFF0B5E3B);
 const fieldAction = Color(0xFF3F9B2E);
 
 /// Bandeau de titre d'un formulaire de terrain.

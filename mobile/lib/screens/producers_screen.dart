@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../main.dart';
 import 'producer_detail_screen.dart';
 
-const _green = Color(0xFF2F5D46);
+const _green = Color(0xFF0B5E3B);
 
 /// Recherche d'un producteur (nom, code ou téléphone) parmi ceux de l'appareil, utilisable hors connexion.
 class ProducersScreen extends StatefulWidget {
