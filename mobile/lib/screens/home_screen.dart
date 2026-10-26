@@ -39,7 +39,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _canTraining = false, _canHistory = false, _canFiche = false, _canMissions = false, _canSurvey = false;
   int _unreadNotes = 0;
   bool _canProducer = false, _canField = false;
-  List<({String label, String detail, String state, String? error})> _pendingItems = [];
+  List<({String label, String detail, String state, String? error, String? entity})> _pendingItems = [];
   ({String name, String org, String zone}) _identity = (name: '', org: '', zone: '');
 
   @override
@@ -238,7 +238,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _pendingRow(({String label, String detail, String state, String? error}) it) {
+  Widget _pendingRow(({String label, String detail, String state, String? error, String? entity}) it) {
     final bad = const {'to_correct', 'rejected', 'conflict'}.contains(it.state);
     return Container(
       margin: const EdgeInsets.only(bottom: 8), padding: const EdgeInsets.fromLTRB(14, 10, 4, 10),
@@ -250,7 +250,7 @@ class _HomeScreenState extends State<HomeScreen> {
           if (bad) Text(it.error == null || it.error!.isEmpty ? 'À corriger' : 'À corriger : ${it.error}', style: TextStyle(color: Colors.red.shade700, fontSize: 13)),
         ])),
         Container(width: 1, height: 54, color: const Color(0xFFDDDDDD)),
-        IconButton(onPressed: () => syncWithDialog(context), tooltip: 'Envoyer', iconSize: 34, icon: Icon(bad ? Icons.error_outline : Icons.cloud_upload_outlined, color: bad ? Colors.red : Colors.black87)),
+        IconButton(onPressed: () => syncWithDialog(context, only: it.entity), tooltip: 'Envoyer cet élément', iconSize: 34, icon: Icon(bad ? Icons.error_outline : Icons.cloud_upload_outlined, color: bad ? Colors.red : Colors.black87)),
       ]),
     );
   }
@@ -281,7 +281,7 @@ class _HomeScreenState extends State<HomeScreen> {
         bad
             ? IconButton(icon: const Icon(Icons.delete_outline, color: Colors.red), iconSize: 30, tooltip: 'Abandonner',
                 onPressed: () async { await services.repo.discardFailed(d['id'] as String); await _reload(); })
-            : IconButton(onPressed: synced ? null : () => syncWithDialog(context), tooltip: synced ? 'Envoyé' : 'Envoyer', iconSize: 34,
+            : IconButton(onPressed: synced ? null : () => syncWithDialog(context, only: d['id'] as String), tooltip: synced ? 'Envoyé' : 'Envoyer cet achat', iconSize: 34,
                 icon: Icon(synced ? Icons.cloud_done : Icons.cloud_upload_outlined, color: synced ? _color(ls, st) : Colors.black87)),
       ]),
     );

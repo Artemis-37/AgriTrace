@@ -322,20 +322,20 @@ class Repository {
   }
 
   /// Éléments conservés sur l'appareil et pas encore confirmés par le serveur (opérations puis photos), du plus récent au plus ancien.
-  Future<List<({String label, String detail, String state, String? error})>> pendingItems() async {
+  Future<List<({String label, String detail, String state, String? error, String? entity})>> pendingItems() async {
     final ops = await db.raw.query('outbox', where: "status IN ('pending','pending_validation','to_correct','rejected','conflict')", orderBy: 'seq DESC', limit: 100);
-    final out = <({String label, String detail, String state, String? error})>[];
+    final out = <({String label, String detail, String state, String? error, String? entity})>[];
     final names = await producerNames(ops);
     for (final o in ops) {
       Map<String, dynamic> p = {};
       try { p = jsonDecode(o['payload'] as String) as Map<String, dynamic>; } catch (_) { /* illisible : libellé générique */ }
       final d = opLabel(o['op_type'] as String, p, names);
       final label = d.label, detail = d.detail;
-      out.add((label: label, detail: detail, state: o['status'] as String, error: o['error'] as String?));
+      out.add((label: label, detail: detail, state: o['status'] as String, error: o['error'] as String?, entity: o['entity_id'] as String?));
     }
     final photos = await db.raw.query('pending_uploads', where: "status IN ('pending','error')", orderBy: 'created_at DESC', limit: 50);
     for (final f in photos) {
-      out.add((label: 'Photo', detail: '${f['kind'] ?? ''}', state: f['status'] == 'error' ? 'rejected' : 'pending', error: f['error'] as String?));
+      out.add((label: 'Photo', detail: '${f['kind'] ?? ''}', state: f['status'] == 'error' ? 'rejected' : 'pending', error: f['error'] as String?, entity: f['declaration_id'] as String?));
     }
     return out;
   }

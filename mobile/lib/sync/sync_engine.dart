@@ -72,7 +72,8 @@ class SyncEngine {
 
   /// Une synchronisation ne démarre que sur demande de l'utilisateur (icône, bandeau, tirer pour actualiser, connexion) : `manual: true`.
   /// Les appels implicites (après une saisie, au retour du réseau) sont sans effet : le téléphone ne synchronise pas en continu.
-  Future<void> run({bool manual = false}) async {
+  /// `only` : identifiant d'un élément (achat, convoi, parcelle…) : seul cet élément et ses photos sont envoyés, rien n'est téléchargé.
+  Future<void> run({bool manual = false, String? only}) async {
     if (!manual) return;
     if (_blocked) {
       // Levée du blocage dès qu'une nouvelle connexion a fourni un autre jeton.
@@ -91,13 +92,20 @@ class SyncEngine {
     var current = 0;
     try {
       _step(0, SyncStepState.doing);
-      _pushTotal = Sqflite.firstIntValue(await db.raw.rawQuery("SELECT count(*) FROM outbox WHERE status IN ('pending','pending_validation')")) ?? 0;
+      _only = only;
+      _pushTotal = Sqflite.firstIntValue(await db.raw.rawQuery("SELECT count(*) FROM outbox WHERE status IN ('pending','pending_validation')${only == null ? '' : ' AND entity_id = ?'}", only == null ? null : [only])) ?? 0;
       _pushed = 0;
       await _push();
       _step(0, SyncStepState.done, _pushTotal == 0 ? 'Rien à envoyer' : '$_pushTotal envoyée(s)');
       current = 1; _step(1, SyncStepState.doing);
       await _pushPhotos();
       _step(1, SyncStepState.done);
+      if (only != null) {
+        // Envoi d'un seul élément : le reste n'est ni envoyé ni téléchargé.
+        for (var i = 2; i < 4; i++) _step(i, SyncStepState.skipped, 'Non concerné');
+        status.value = SyncStatus(SyncPhase.idle, lastSuccess: previousSuccess);
+        return;
+      }
       // Règle : on ne télécharge que s'il n'y a plus rien à soumettre.
       final left = await _toSubmit();
       if (left > 0) {
@@ -140,13 +148,14 @@ class SyncEngine {
   // ---------------- Envoi ----------------
 
   int _pushTotal = 0, _pushed = 0, _received = 0;
+  String? _only;
 
   Future<void> _push() async {
     var lastSeq = 0;
     while (true) {
       final rows = await db.raw.query('outbox',
-          where: "status IN ('pending','pending_validation') AND seq > ?",
-          whereArgs: [lastSeq], orderBy: 'seq', limit: Config.batchSize);
+          where: "status IN ('pending','pending_validation') AND seq > ?${_only == null ? '' : ' AND entity_id = ?'}",
+          whereArgs: [lastSeq, if (_only != null) _only], orderBy: 'seq', limit: Config.batchSize);
       if (rows.isEmpty) return;
       lastSeq = rows.last['seq'] as int;
       _pushed += rows.length;
@@ -194,7 +203,7 @@ class SyncEngine {
   /// Réseau coupé : on s'arrête et on reprendra ; refus définitif du serveur : la photo est mise de côté avec son motif.
   Future<void> _pushPhotos() async {
     final rows = await db.raw.rawQuery(
-        "SELECT u.*, d.local_state AS decl_state FROM pending_uploads u LEFT JOIN declarations d ON d.id = u.declaration_id AND u.subject_type = 'declaration' WHERE u.status = 'pending' ORDER BY u.created_at");
+        "SELECT u.*, d.local_state AS decl_state FROM pending_uploads u LEFT JOIN declarations d ON d.id = u.declaration_id AND u.subject_type = 'declaration' WHERE u.status = 'pending'${_only == null ? '' : ' AND u.declaration_id = ?'} ORDER BY u.created_at", _only == null ? null : [_only]);
     for (final r in rows) {
       final type = r['subject_type'] as String;
       if (!canUploadPhotoFor(type, r['decl_state'] as String?)) continue;

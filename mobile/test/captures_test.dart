@@ -97,9 +97,9 @@ class _Repo extends Repository {
   @override
   Future<List<String>> unitsFor(String chainId) async => ['kg', 'sac'];
   @override
-  Future<List<({String label, String detail, String state, String? error})>> pendingItems() async => [
-        (label: 'Nouveau producteur', detail: 'Kouamé Yao', state: 'pending', error: null),
-        (label: 'Formation', detail: 'Agriculture régénératrice', state: 'pending', error: null),
+  Future<List<({String label, String detail, String state, String? error, String? entity})>> pendingItems() async => [
+        (label: 'Nouveau producteur', detail: 'Kouamé Yao', state: 'pending', error: null, entity: null),
+        (label: 'Formation', detail: 'Agriculture régénératrice', state: 'pending', error: null, entity: null),
       ];
   @override
   Future<List<Map<String, dynamic>>> localFieldRecords(String kind) async => kind == 'training'

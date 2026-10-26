@@ -7,8 +7,8 @@ import '../sync/sync_engine.dart';
 
 /// Lance une synchronisation à la demande de l'utilisateur et en affiche la progression : envoi de ce qui est à soumettre,
 /// puis téléchargement des données du serveur (le téléchargement n'a lieu que s'il ne reste rien à envoyer).
-Future<void> syncWithDialog(BuildContext context) async {
-  final done = services.sync.run(manual: true);
+Future<void> syncWithDialog(BuildContext context, {String? only}) async {
+  final done = services.sync.run(manual: true, only: only);
   await showDialog<void>(context: context, barrierDismissible: false, builder: (_) => _SyncDialog(finished: done));
 }
 
