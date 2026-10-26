@@ -72,6 +72,16 @@ class _LoginScreenState extends State<LoginScreen> {
   }
   List<dynamic> _orgs = [];
   List<KnownAccount> _known = [];
+  bool _testing = false;
+  String? _serverResult;
+
+  /// Test de la liaison avec le serveur, sans afficher son adresse (un serveur endormi peut mettre une minute à répondre).
+  Future<void> _testServer() async {
+    setState(() { _testing = true; _serverResult = null; });
+    final err = await services.api.probe(Config.apiBaseRuntime);
+    if (!mounted) return;
+    setState(() { _testing = false; _serverResult = err == null ? '✓ Connexion au serveur établie.' : 'Connexion impossible. Vérifiez Internet et réessayez (un serveur au repos peut mettre une minute à se réveiller).'; });
+  }
   final _code = TextEditingController();
   bool _pairing = false;
 
@@ -133,7 +143,7 @@ class _LoginScreenState extends State<LoginScreen> {
         setState(() => _orgs = orgs);
       }
     } on NetworkException {
-      setState(() => _error = 'Impossible de joindre le serveur (${Uri.parse(Config.apiBaseRuntime).host}). Vérifiez Internet, puis l\'adresse du serveur ci-dessous.');
+      setState(() => _error = 'Impossible de joindre le serveur. Vérifiez Internet, puis utilisez « Tester la connexion au serveur ».');
     } on ApiException catch (e) {
       if (e.status == 401 && e.message.contains('Code de vérification requis')) { setState(() { _needOtp = true; _error = null; }); return; }
       setState(() { _error = e.status == 401 ? (e.message.contains('Code de vérification invalide') ? 'Code de vérification invalide ou déjà utilisé.' : 'Identifiants invalides.') : e.message; if (e.message.contains('pas associé')) _pairing = true; });
@@ -194,7 +204,7 @@ class _LoginScreenState extends State<LoginScreen> {
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 420),
               child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                Image.asset('assets/agritrace-logo.png', width: 280, semanticLabel: 'AgriTrace, la traçabilité agricole, de la parcelle au marché'),
+                GestureDetector(onLongPress: _busy ? null : _chooseServer, child: Image.asset('assets/agritrace-logo.png', width: 280, semanticLabel: 'AgriTrace, la traçabilité agricole, de la parcelle au marché')),
                 const SizedBox(height: 32),
                 if (_pairing) ...[
                   const Text('Associer ce téléphone', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -226,7 +236,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 16),
                   FilledButton(onPressed: _busy ? null : _login, child: Text(_busy ? 'Connexion…' : _needOtp ? 'Valider le code' : 'Se connecter')),
                   TextButton(onPressed: () => setState(() => _pairing = true), child: const Text('Associer ce téléphone à la coopérative (code)')),
-                  TextButton(onPressed: _busy ? null : _chooseServer, child: Text('Serveur : ${Uri.parse(Config.apiBaseRuntime).host}  —  changer', style: const TextStyle(fontSize: 12))),
+                  TextButton.icon(onPressed: _busy || _testing ? null : _testServer, icon: _testing ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.wifi_find, size: 18), label: Text(_testing ? 'Test en cours…' : 'Tester la connexion au serveur')),
+                  if (_serverResult != null) Padding(padding: const EdgeInsets.only(top: 4), child: Text(_serverResult!, textAlign: TextAlign.center, style: TextStyle(fontSize: 13, color: _serverResult!.startsWith('✓') ? Colors.green.shade800 : Colors.red.shade800))),
                 ] else ...[
                   const Text('Choisissez la coopérative', style: TextStyle(fontWeight: FontWeight.bold)),
                   for (final o in _orgs) ListTile(title: Text(o['name'] as String), subtitle: Text(o['code'] as String), onTap: () => _enter(o['id'] as String)),
