@@ -4,7 +4,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 export interface MenuItem { to: string; label: string; icon: string }
 const GROUP_OF: Record<string, string> = {
   '/producteurs': 'Fichier', '/parcelles': 'Fichier', '/delegues': 'Fichier', '/partenaires': 'Fichier', '/parametres': 'Paramètres',
-  '/mes-achats': 'Opérations', '/mon-stock': 'Opérations', '/historique': 'Opérations', '/pesees': 'Opérations', '/convois': 'Opérations', '/caisse': 'Opérations', '/commerce': 'Opérations', '/declarations': 'Opérations', '/fiches-accompagnement': 'Opérations', '/livraisons': 'Opérations', '/organisations-liees': 'Fichier', '/operations': 'Opérations', '/missions': 'Opérations', '/terrain': 'Opérations',
+  '/mes-achats': 'Opérations', '/mon-stock': 'Opérations', '/historique': 'Opérations', '/pesees': 'Opérations', '/convois': 'Opérations', '/caisse': 'Opérations', '/commerce': 'Opérations', '/declarations': 'Opérations', '/fiches-accompagnement': 'Opérations', '/livraisons': 'Opérations', '/organisations-liees': 'Fichier', '/operations': 'Opérations', '/terrain': 'Opérations',
   '/comptabilite': 'Comptabilité', '/mise-en-compte': 'Comptabilité', '/finances': 'Comptabilité', '/prefinancement': 'Comptabilité',
   '/audits': 'Suivi', '/stocks': 'Stock', '/inventaire': 'Stock', '/qualite': 'Stock',
   '/cartographie': 'Suivi', '/rapports': 'Suivi', '/modules-formation': 'Suivi', '/questionnaires': 'Suivi', '/modules-exportateurs': 'Suivi',

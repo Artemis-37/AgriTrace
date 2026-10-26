@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import '../geo/polygon.dart';
 import '../main.dart';
 import '../sync/sync_state.dart';
-import 'missions_screen.dart';
 import 'parcel_survey_screen.dart';
 import 'photo_capture.dart';
 import 'producer_map_screen.dart';
@@ -15,7 +14,7 @@ const _green = Color(0xFF0B5E3B);
 const _action = Color(0xFF3F9B2E);
 
 /// Profil d'un producteur :
-/// onglet « Liste des tâches » (les missions de ce producteur) et onglet « Informations sur le producteur »
+/// onglet « Liste des tâches » (formations, distributions, inspections et services de ce producteur) et onglet « Informations sur le producteur »
 /// (identité, parcelles capturées, relevé d'une parcelle, carte).
 class ProducerDetailScreen extends StatefulWidget {
   final Map<String, Object?> producer;
@@ -29,7 +28,7 @@ class _ProducerDetailScreenState extends State<ProducerDetailScreen> {
   List<dynamic>? _tasks;
   List<dynamic> _assigned = [];
   bool _canDone = false;
-  bool _canSurvey = false, _canEdit = false, _canRequest = false, _canMissions = false;
+  bool _canSurvey = false, _canEdit = false;
   String? _taskError, _msg;
 
   @override
@@ -45,40 +44,21 @@ class _ProducerDetailScreenState extends State<ProducerDetailScreen> {
     final code = widget.producer['internal_code'];
     if (mounted) setState(() {
       _parcels = all.where((r) => r['producer_code'] == code).toList();
-      _canSurvey = canSurveyParcel(perms); _canEdit = canUpdateParcel(perms); _canRequest = canRequestMission(perms); _canMissions = canSeeMissions(perms); _canDone = perms.contains('training:report');
+      _canSurvey = canSurveyParcel(perms); _canEdit = canUpdateParcel(perms); _canDone = perms.contains('training:report');
     });
   }
 
-  /// Les tâches viennent du serveur : réseau nécessaire.
+  /// Éléments du profil (formations, distributions, inspections, services…) : copie locale d'abord, puis mise à jour en ligne.
   Future<void> _loadTasks() async {
-    // D'abord la copie de la dernière synchronisation (affichage immédiat, même sans réseau), puis la mise à jour en ligne.
+    await _applyLocalAssignments();
+    if (mounted && _tasks == null) setState(() { _tasks = const []; _msg = 'Mise à jour en cours…'; });
     try {
-      final id = widget.producer['id'];
-      final cached = (await services.repo.cachedTasks()).where((t) => t['producer_id'] == id && !['closed', 'cancelled'].contains(t['status'])).toList();
-      await _applyLocalAssignments();
-      if (mounted && _tasks == null) setState(() { _tasks = cached; _msg = 'Mise à jour en cours…'; });
-    } catch (_) {}
-    try {
-      final r = await services.api.get('/tasks?producer_id=${widget.producer['id']}') as List<dynamic>;
-      if (!mounted) return;
-      setState(() { _tasks = r.where((t) => !['closed', 'cancelled'].contains(t['status'])).toList(); _taskError = null; _msg = null; });
-      // Formations, distributions et tâches ajoutées au profil par l'Administrateur de groupe (facultatif : ignoré si le droit manque).
-      try {
-        final a = await services.api.get('/producer-assignments?producer_id=${widget.producer['id']}') as List<dynamic>;
-        if (mounted) setState(() => _assigned = a);
-      } catch (_) {}
+      final a = await services.api.get('/producer-assignments?producer_id=${widget.producer['id']}') as List<dynamic>;
+      if (mounted) setState(() { _assigned = a; _taskError = null; _msg = null; });
       await _applyLocalAssignments();
     } catch (_) {
-      // Hors connexion : tâches copiées lors de la dernière synchronisation.
-      try {
-        {
-          final all = (await services.repo.cachedTasks()).where((t) => t['producer_id'] == widget.producer['id'] && !['closed', 'cancelled'].contains(t['status'])).toList();
-          await _applyLocalAssignments();
-          if (mounted) setState(() { _tasks = all; _taskError = null; _msg = 'Hors connexion : tâches de la dernière synchronisation.'; });
-          return;
-        }
-      } catch (_) {}
-      if (mounted) setState(() => _taskError = 'Les tâches demandent le réseau. Réessayez en ligne.');
+      await _applyLocalAssignments();
+      if (mounted) setState(() { _taskError = null; _msg = 'Hors connexion : éléments de la dernière synchronisation.'; });
     }
   }
 
@@ -167,25 +147,8 @@ class _ProducerDetailScreenState extends State<ProducerDetailScreen> {
         if (_msg != null) Padding(padding: const EdgeInsets.only(bottom: 8), child: Text(_msg!)),
         if (_taskError != null) Padding(padding: const EdgeInsets.all(16), child: Text(_taskError!)),
         if (rows == null && _taskError == null) const Padding(padding: EdgeInsets.all(32), child: Center(child: CircularProgressIndicator())),
-        if (rows != null && rows.isEmpty) Padding(padding: const EdgeInsets.all(24), child: Center(child: Text(_msg != null && _msg!.startsWith('Hors connexion') ? 'Aucune tâche pour ce producteur à la dernière synchronisation.\nSynchronisez avec du réseau pour recevoir les nouvelles.' : 'Aucune tâche pour ce producteur.', textAlign: TextAlign.center))),
-        for (final t in rows ?? const [])
-          // Mission terminée et validée par l'ADG : grisée et non cliquable ; le serveur la retire de la liste une fois le délai réglé dépassé.
-          Opacity(opacity: t['finished'] == true ? 0.45 : 1, child: Card(color: t['finished'] == true ? const Color(0xFFEDEDED) : Colors.white, elevation: 0, shape: RoundedRectangleBorder(side: const BorderSide(color: Color(0xFFDDDDDD)), borderRadius: BorderRadius.circular(2)), child: ListTile(
-            enabled: t['finished'] != true,
-            title: Text('${t['title']}', maxLines: 1, overflow: TextOverflow.ellipsis),
-            subtitle: Text('${t['status'] == 'open' ? 'Nouvelle tâche' : missionStatusLabel(t['status'])}${t['due_date'] != null ? ' • échéance ${t['due_date'].toString().substring(0, 10)}' : ''}',
-                style: TextStyle(color: t['overdue'] == true ? Colors.red.shade700 : Colors.black54)),
-            trailing: t['finished'] == true
-                ? const Icon(Icons.check_circle_outline, color: Colors.black54, size: 30)
-                : Icon(t['overdue'] == true ? Icons.warning_amber_rounded : Icons.description_outlined, color: t['overdue'] == true ? Colors.red : Colors.black87, size: 30),
-            onTap: _canMissions && t['finished'] != true ? () async {
-              await Navigator.of(context).push(MaterialPageRoute(builder: (_) => MissionScreen(task: Map<String, dynamic>.from(t as Map))));
-              _loadTasks();
-            } : null,
-          ))),
+        if (rows != null && _assigned.isEmpty) Padding(padding: const EdgeInsets.all(24), child: Center(child: Text(_msg != null && _msg!.startsWith('Hors connexion') ? 'Aucune tâche pour ce producteur à la dernière synchronisation.\nSynchronisez avec du réseau pour recevoir les nouvelles.' : 'Aucune tâche pour ce producteur.', textAlign: TextAlign.center))),
         if (_assigned.isNotEmpty) ...[
-          Container(color: const Color(0xFFEDEDED), margin: const EdgeInsets.only(top: 12, bottom: 8), padding: const EdgeInsets.all(12),
-              child: const Row(children: [Icon(Icons.assignment_turned_in_outlined, size: 18), SizedBox(width: 10), Expanded(child: Text('Formations, distributions et tâches', style: TextStyle(fontSize: 18)))])),
           for (final a in _assigned)
             Opacity(opacity: a['status'] == 'done' ? 0.45 : 1, child: Card(elevation: 0, shape: RoundedRectangleBorder(side: const BorderSide(color: Color(0xFFDDDDDD)), borderRadius: BorderRadius.circular(18)), child: ListTile(
               leading: Icon(a['kind'] == 'formation' ? Icons.menu_book : a['kind'] == 'distribution' ? Icons.inventory_2_outlined : a['kind'] == 'inspection' ? Icons.fact_check_outlined : a['kind'] == 'service' ? Icons.support_agent : Icons.task_alt),
@@ -207,10 +170,6 @@ class _ProducerDetailScreenState extends State<ProducerDetailScreen> {
                     }, child: const Text('Fait')) : null),
             ))),
         ],
-        if (_canRequest)
-          Padding(padding: const EdgeInsets.only(top: 8), child: OutlinedButton.icon(
-            onPressed: () async { final m = await askMission(context, producerId: widget.producer['id'] as String); if (m != null && mounted) { setState(() => _msg = m); _loadTasks(); } },
-            icon: const Icon(Icons.add), label: const Text('Demander une mission'))),
       ]),
     );
   }

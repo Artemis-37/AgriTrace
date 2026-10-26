@@ -46,7 +46,7 @@ class SyncEngine {
 
   SyncEngine(this.db, this.api);
 
-  static const _labels = ['Envoi de vos opérations', 'Envoi des photos', 'Tâches et éléments des profils', 'Producteurs, parcelles et données'];
+  static const _labels = ['Envoi de vos opérations', 'Envoi des photos', 'Éléments des profils (formations, inspections…)', 'Producteurs, parcelles et données'];
   /// Progression de la synchronisation en cours (ou de la dernière) : alimente la boîte de dialogue.
   final ValueNotifier<List<SyncStep>> steps = ValueNotifier([for (final l in _labels) SyncStep(l, SyncStepState.waiting)]);
   void _step(int i, SyncStepState st, [String detail = '']) {
@@ -240,18 +240,9 @@ class SyncEngine {
 
   // ---------------- Réception ----------------
 
-  /// Tâches de l'utilisateur : copiées du serveur à chaque synchronisation pour rester lisibles hors connexion (les changements d'état se font en ligne).
+  /// Éléments des profils : copiés du serveur à chaque synchronisation pour rester lisibles hors connexion.
   Future<void> _pullTasks() async {
-    await Future.wait([_pullTaskList(), _pullAssignments()]);
-  }
-
-  Future<void> _pullTaskList() async {
-    try {
-      final r = await api.get('/tasks');
-      await _keepLocalChanges('tasks_cache', 'id', r as List<dynamic>, {'task.start': 'in_progress', 'task.submit': 'submitted'}, 'status');
-    } on ApiException catch (e) {
-      if (e.status == 401) rethrow; // droit « tâches » absent (403) ou autre : sans effet sur le reste
-    }
+    await _pullAssignments();
   }
 
   Future<void> _pullAssignments() async {

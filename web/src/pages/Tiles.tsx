@@ -24,7 +24,7 @@ const GROUPS: { id: string; label: string; icon: string; hint: string; paths: st
   { id: 'ventes', label: 'Ventes et livraisons', icon: '🚚', hint: 'Ventes, livraisons, fiches d\'accompagnement', paths: ['/commerce', '/livraisons', '/fiches-accompagnement', '/modules-exportateurs'] },
   { id: 'finances', label: 'Caisse et finances', icon: '💰', hint: 'Caisse, trésorerie, comptabilité, mise en compte', paths: ['/caisse', '/finances', '/comptabilite', '/mise-en-compte', '/prefinancement'] },
   { id: 'stock', label: 'Stock et produits', icon: '📦', hint: 'Produits, stock, inventaire, qualité', paths: ['/parametres', '/stocks', '/inventaire', '/qualite'] },
-  { id: 'terrain', label: 'Terrain et suivi', icon: '🧭', hint: 'Cartographie, missions, questionnaires (tâches), audits, formation', paths: ['/cartographie', '/missions', '/questionnaires', '/terrain', '/audits', '/modules-formation'] },
+  { id: 'terrain', label: 'Terrain et suivi', icon: '🧭', hint: 'Cartographie, questionnaires (tâches), audits, formation', paths: ['/cartographie', '/questionnaires', '/terrain', '/audits', '/modules-formation'] },
   { id: 'rapports', label: 'Rapports', icon: '📊', hint: 'Rapports et indicateurs', paths: ['/rapports'] },
 ];
 

@@ -213,7 +213,7 @@ function DeleteProducers({ initial, onClose, onDone }: { initial: string | null;
   );
   return (
     <Modal title="Supprimer des producteurs" onClose={onClose}>
-      <p className="muted">Suppression définitive. Un producteur qui a déjà des opérations (déclarations, paiements, missions…) ou des parcelles ne peut pas être supprimé : archivez-le avec « Statut ».</p>
+      <p className="muted">Suppression définitive. Un producteur qui a déjà des opérations (déclarations, paiements…) ou des parcelles ne peut pas être supprimé : archivez-le avec « Statut ».</p>
       <input type="search" aria-label="Rechercher" placeholder="Rechercher (nom, code)" value={q} onChange={(e) => setQ(e.target.value)} />
       <label style={{ display: 'block', margin: '.5rem 0' }}><input type="checkbox" checked={allShown} onChange={toggleAll} /> Tout sélectionner dans la liste affichée ({rows.length})</label>
       <div style={{ maxHeight: '16rem', overflow: 'auto', border: '1px solid var(--line)', borderRadius: 8, padding: '.25rem .5rem' }}>

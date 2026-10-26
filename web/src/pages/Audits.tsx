@@ -27,7 +27,7 @@ function NewAudit({ onClose, onDone }: { onClose: () => void; onDone: (id: strin
   return <Modal title="Programmer un audit" onClose={onClose}>
     {sups.loading ? <Loading /> : !active.length ? <Empty>Aucune coopérative n'a encore accepté votre supervision. Proposez-la dans l'onglet « Supervision ».</Empty> : <>
       <Field label="Coopérative auditée"><select value={f.supervised_org_id} onChange={(e) => setF({ ...f, supervised_org_id: e.target.value })}><option value="">Choisir…</option>{active.map((s) => <option key={s.other_id} value={s.other_id}>{s.other_name}</option>)}</select></Field>
-      <Field label="Intitulé de la mission"><input value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} placeholder="Audit traçabilité et pesées" /></Field>
+      <Field label="Intitulé de l'audit"><input value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} placeholder="Audit traçabilité et pesées" /></Field>
       <Field label="Périmètre"><span className="row-actions">{AREAS.map(([k, l]) => <label key={k} className="check"><input type="checkbox" checked={f.scope.includes(k)} onChange={() => tog(k)} /> {l}</label>)}</span></Field>
       <div className="form-grid"><Field label="Début"><input type="date" value={f.starts_on} onChange={(e) => setF({ ...f, starts_on: e.target.value })} /></Field><Field label="Fin"><input type="date" value={f.ends_on} onChange={(e) => setF({ ...f, ends_on: e.target.value })} /></Field></div></>}
     {a.error && <p className="error" role="alert">{a.error}</p>}
@@ -47,7 +47,7 @@ function ShareModal({ id, side, onClose, onDone }: { id: string; side: string; o
     <Field label="Titre"><input value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} /></Field>
     {mode === 'snapshot' && <>
       <Field label="Extrait"><select value={f.view} onChange={(e) => setF({ ...f, view: e.target.value })}><option value="">Choisir…</option>{(cat.data ?? []).map((v) => <option key={v.key} value={v.key}>{v.label}</option>)}</select></Field>
-      <div className="form-grid"><Field label="Du (par défaut : début de la mission)"><input type="date" value={f.from} onChange={(e) => setF({ ...f, from: e.target.value })} /></Field><Field label="Au"><input type="date" value={f.to} onChange={(e) => setF({ ...f, to: e.target.value })} /></Field></div>
+      <div className="form-grid"><Field label="Du (par défaut : début de l'audit)"><input type="date" value={f.from} onChange={(e) => setF({ ...f, from: e.target.value })} /></Field><Field label="Au"><input type="date" value={f.to} onChange={(e) => setF({ ...f, to: e.target.value })} /></Field></div>
       <p className="muted">Les producteurs apparaissent par leur code seulement : ni nom ni téléphone. {side === 'supervised' ? '' : ''}</p></>}
     {mode === 'note' && <Field label="Texte"><textarea rows={5} value={f.body} onChange={(e) => setF({ ...f, body: e.target.value })} /></Field>}
     {mode === 'document' && <Field label="Fichier (10 Mo maximum)"><input type="file" onChange={(e) => setFile(e.target.files?.[0] ?? null)} /></Field>}
@@ -197,9 +197,9 @@ export default function Audits() {
   const exporter = org?.kind === 'exporter';
   if (sel) return <AuditDetail id={sel} onBack={() => { setSel(null); list.reload(); }} />;
   return <>
-    <PageHeader title="Audits" subtitle={exporter ? 'Missions d\'audit des coopératives que vous supervisez : données partagées, constats, plans d\'action.' : 'Audits de votre exportateur : désignez vos participants, partagez vos données, répondez aux constats.'}
+    <PageHeader title="Audits" subtitle={exporter ? 'Audits des coopératives que vous supervisez : données partagées, constats, plans d\'action.' : 'Audits de votre exportateur : désignez vos participants, partagez vos données, répondez aux constats.'}
       actions={exporter && can('audits:manage') ? <button className="btn btn-primary" onClick={() => setAdding(true)}>Programmer un audit</button> : undefined} />
-    <Tabs tabs={[['audits', 'Missions d\'audit'], ['supervision', 'Supervision']]} value={tab} onChange={setTab} />
+    <Tabs tabs={[['audits', 'Audits'], ['supervision', 'Supervision']]} value={tab} onChange={setTab} />
     {tab === 'supervision' ? <Supervision /> : <Card>
       {list.error && <ErrorBox message={list.error} onRetry={list.reload} />}
       {list.loading ? <Loading /> : !(list.data ?? []).length ? <Empty>Aucun audit.</Empty> :

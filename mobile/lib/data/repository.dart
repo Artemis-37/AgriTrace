@@ -266,14 +266,12 @@ class Repository {
     if (raw == null) return [];
     try { return jsonDecode(raw) as List<dynamic>; } catch (_) { return []; }
   }
-  Future<List<dynamic>> cachedTasks() => _cache('tasks_cache');
   Future<List<dynamic>> cachedAssignments() => _cache('assignments_cache');
   Future<void> _patch(String k, String idField, Object id, Map<String, Object?> changes) async {
     final rows = await _cache(k);
     for (final r in rows) { if (r is Map && r[idField] == id) r.addAll(changes); }
     await db.setKv(k, jsonEncode(rows));
   }
-  Future<void> patchCachedTask(Object id, Map<String, Object?> changes) => _patch('tasks_cache', 'id', id, changes);
   Future<void> patchCachedAssignment(Object targetId, Map<String, Object?> changes) => _patch('assignments_cache', 'target_id', targetId, changes);
 
   /// Infrastructure sociale, formation ou distribution enregistrée sur le terrain (envoi idempotent). Renvoie l'identifiant du dossier.
@@ -310,9 +308,6 @@ class Repository {
       case 'purchase_declaration.create': label = 'Achat'; detail = [who, '${p['quantity'] ?? ''} ${p['unit'] ?? ''}'.trim()].where((x) => x.isNotEmpty).join(' · '); break;
       case 'purchase_declaration.submit': label = 'Achat à soumettre'; break;
       case 'convoy.create': label = 'Convoi'; detail = '${p['convoy_no'] ?? ''}'; break;
-      case 'task.start': label = 'Mission démarrée'; break;
-      case 'task.submit': label = 'Mission soumise'; break;
-      case 'task.entry': label = 'Saisie de mission'; detail = '${p['content'] ?? p['kind'] ?? ''}'; break;
       case 'producer_assignment.done': label = 'Élément du profil marqué fait'; break;
       case 'questionnaire.answer': label = 'Questionnaire rempli'; detail = who; break;
       case 'training_result.create': label = 'Résultats de formation'; detail = '${p['village'] ?? ''}'; break;

@@ -6,10 +6,10 @@ import { Badge, ErrorBox, Loading, useAction, useAsync } from '../ui';
 
 export const DOC_KINDS: Record<string, string> = {
   proof_of_delivery: 'Preuve de livraison', transport_doc: 'Document de transport', weighing_ticket: 'Ticket de pesée', contract: 'Contrat', invoice_copy: 'Copie de facture',
-  payment_proof: 'Justificatif de paiement', claim_evidence: 'Pièce de réclamation', task_report: 'Compte rendu de mission', photo: 'Photo', other: 'Autre',
+  payment_proof: 'Justificatif de paiement', claim_evidence: 'Pièce de réclamation', task_report: 'Compte rendu', photo: 'Photo', other: 'Autre',
 };
 
-/** Pièces jointes d'un objet (expédition, commande, facture, réclamation, mission) : liste, téléchargement contrôlé et ajout (PDF, JPEG ou PNG, 10 Mo). */
+/** Pièces jointes d'un objet (expédition, commande, facture, réclamation) : liste, téléchargement contrôlé et ajout (PDF, JPEG ou PNG, 10 Mo). */
 export default function DocumentsPanel({ subjectType, subjectId, kinds, defaultKind, locked = false, onChange }: {
   subjectType: string; subjectId: string; kinds: string[]; defaultKind?: string; locked?: boolean; onChange?: () => void;
 }) {

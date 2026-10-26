@@ -5,7 +5,7 @@ export const STANDARD_ROLES: Record<string, { name: string; description: string;
     name: 'Magasinier',
     description: 'Réceptionne et pèse les convois au magasin central, tient les stocks et l\'inventaire.',
     permissions: ['products:read', 'campaigns:read', 'convoys:read', 'convoys:receive', 'warehouses:read', 'lots:read', 'receipts:create', 'stock:move', 'stock:count', 'cancellations:request', 'messages:use', 'sync:use'],
-    hidden: ['Conformité / qualité', 'Cartographie', 'Caisse et comptabilité', 'Finances', 'Équipe', 'Missions', 'Préfinancement'],
+    hidden: ['Conformité / qualité', 'Cartographie', 'Caisse et comptabilité', 'Finances', 'Équipe', 'Préfinancement'],
   },
   auditeur_exportateur: {
     name: 'Auditeur (exportateur)',
@@ -29,13 +29,13 @@ export const STANDARD_ROLES: Record<string, { name: string; description: string;
     name: 'Caissier',
     description: 'Traite les convois reçus, règle les délégués, tient la caisse et les comptes des délégués.',
     permissions: ['deliveries:read', 'deliveries:settle', 'cash:session', 'products:read', 'partners:read', 'dues:read', 'dues:settle', 'campaigns:read', 'convoys:read', 'convoys:settle', 'cash:operate', 'cash:read', 'savings:read', 'savings:request', 'finance:read', 'accounting:read', 'cancellations:request', 'messages:use', 'sync:use'],
-    hidden: ['Cartographie', 'Conformité / qualité', 'Équipe', 'Missions', 'Stocks'],
+    hidden: ['Cartographie', 'Conformité / qualité', 'Équipe', 'Stocks'],
   },
   comptable: {
     name: 'Comptable',
     description: 'Passe et consulte les écritures comptables, suit les comptes financiers ; peut demander l\'annulation de ses écritures.',
     permissions: ['deliveries:read', 'deliveries:settle', 'savings:read', 'savings:request', 'products:read', 'partners:read', 'partners:manage', 'dues:read', 'dues:manage', 'dues:settle', 'loans:read', 'prefinancing:read', 'campaigns:read', 'accounting:read', 'accounting:post', 'finance:read', 'convoys:read', 'cancellations:request', 'messages:use', 'sync:use'],
-    hidden: ['Cartographie', 'Conformité / qualité', 'Équipe', 'Missions', 'Stocks'],
+    hidden: ['Cartographie', 'Conformité / qualité', 'Équipe', 'Stocks'],
   },
   direction: {
     name: 'Direction',
@@ -64,7 +64,7 @@ export const STANDARD_ROLES: Record<string, { name: string; description: string;
   agent_terrain: {
     mobileOnly: true,
     name: 'Agent de terrain',
-    description: 'Enregistre les producteurs et les données de terrain, exécute les missions qui lui sont confiées.',
+    description: 'Enregistre les producteurs et les données de terrain, exécute les tâches qui lui sont confiées.',
     permissions: ['producers:read', 'producers:create', 'producers:update', 'parcels:read', 'parcels:create', 'field_records:create', 'field_records:read', 'tasks:read', 'tasks:execute', 'tasks:request', 'messages:use', 'sync:use'],
     hidden: ['Caisse et comptabilité', 'Finances', 'Stocks', 'Équipe'],
   },
@@ -78,7 +78,7 @@ export const STANDARD_ROLES: Record<string, { name: string; description: string;
     name: 'Responsable financier',
     description: 'Supervise la caisse, les comptes et les prêts ; approuve les paiements, les corrections et les demandes d\'annulation.',
     permissions: ['savings:read', 'savings:request', 'products:read', 'partners:read', 'partners:manage', 'dues:read', 'dues:manage', 'dues:settle', 'campaigns:read', 'finance:read', 'finance:reverse', 'cash:read', 'cash:manage', 'accounting:read', 'accounting:post', 'accounting:close', 'payments:read', 'payments:confirm', 'loans:read', 'loans:approve', 'loans:disburse', 'prefinancing:read', 'prefinancing:manage', 'reconciliation:manage', 'cancellations:decide', 'cancellations:request', 'reports:read', 'messages:use', 'sync:use'],
-    hidden: ['Cartographie', 'Missions'],
+    hidden: ['Cartographie'],
   },
   responsable_qualite: {
     name: 'Responsable qualité',
@@ -119,7 +119,7 @@ export const STANDARD_ROLES: Record<string, { name: string; description: string;
   },
   adg: {
     name: 'Administrateur de groupe (ADG)',
-    description: 'Responsable de la conformité et de la certification : suit les certificats, les inspections et la qualité, contrôle et vérifie les parcelles, met en place les missions des coachs et décide de leurs demandes.',
+    description: 'Responsable de la conformité et de la certification : suit les certificats, les inspections et la qualité, contrôle et vérifie les parcelles, suit le travail des coachs.',
     permissions: [
       'training:read', 'training:manage', 'training:forward', 'training:assign', 'certificates:read', 'certificates:manage', 'inspections:read', 'inspections:perform', 'quality:read', 'quality:manage', 'alerts:read', 'notifications:scan',
       'parcels:read', 'parcels:control', 'parcels:verify', 'geo:anomalies', 'geo:layers', 'geo:export', 'documents:read', 'documents:upload', 'documents:sensitive',
@@ -131,7 +131,7 @@ export const STANDARD_ROLES: Record<string, { name: string; description: string;
   coach: {
     mobileOnly: true,
     name: 'Coach',
-    description: 'Agent de terrain suivi par l\'ADG : exécute ses missions, enregistre des producteurs, relève des parcelles, des infrastructures sociales, des formations et des distributions, joint des photos et demande de nouvelles missions.',
+    description: 'Agent de terrain suivi par l\'ADG : exécute ses tâches, enregistre des producteurs, relève des parcelles, des infrastructures sociales, des formations et des distributions, joint des photos.',
     permissions: ['training:read', 'training:report', 'tasks:read', 'tasks:execute', 'tasks:request', 'parcels:create', 'parcels:read', 'producers:read', 'producers:create', 'field_records:create', 'field_records:read', 'inspections:perform', 'documents:upload', 'messages:use', 'sync:use'],
     hidden: ['Caisse et comptabilité', 'Finances', 'Convois', 'Stocks', 'Équipe'],
   },

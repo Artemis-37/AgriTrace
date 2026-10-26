@@ -28,7 +28,6 @@ import Messages from './pages/Messages';
 import OfflineBar from './OfflineBar';
 import Synchronisation from './pages/Synchronisation';
 import CentralConsole from './pages/CentralConsole';
-import Missions from './pages/Missions';
 import Terrain from './pages/Terrain';
 import ModulesFormation from './pages/ModulesFormation';
 import ModulesExportateurs from './pages/ModulesExportateurs';
@@ -73,7 +72,6 @@ const NAV: { to: string; label: string; icon: string; perm: string[]; any?: bool
   { to: '/livraisons', label: 'Livraisons', icon: '🚚', perm: ['deliveries:read', 'dispatch:manage'], any: true },
   { to: '/audits', label: 'Audits', icon: '🔍', perm: ['audits:read', 'audits:manage'], any: true },
   { to: '/organisations-liees', label: 'Organisations liées', icon: '🔗', perm: ['links:manage', 'deliveries:read'], any: true },
-  { to: '/missions', label: 'Missions', icon: '⚑', perm: ['tasks:read'] },
   { to: '/operations', label: 'Mes opérations', icon: '🧾', perm: ['cancellations:request'] },
   { to: '/terrain', label: 'Données de terrain', icon: '❖', perm: ['field_records:read', 'field_records:manage', 'field_templates:manage'], any: true },
   { to: '/modules-formation', label: 'Modules de formation', icon: '🎓', perm: ['training:read'] },
@@ -87,7 +85,7 @@ const NAV: { to: string; label: string; icon: string; perm: string[]; any?: bool
 
 
 /** Chez un exportateur, il n'y a pas d'agents de terrain : les menus de collecte et de suivi du terrain n'existent pas. */
-const EXPORTER_HIDDEN = new Set(['/questionnaires', '/producteurs', '/parcelles', '/cartographie', '/delegues', '/pesees', '/convois', '/declarations', '/mise-en-compte', '/missions', '/terrain', '/modules-formation', '/modules-exportateurs', '/fiches-accompagnement', '/mes-achats', '/mon-stock', '/historique']);
+const EXPORTER_HIDDEN = new Set(['/questionnaires', '/producteurs', '/parcelles', '/cartographie', '/delegues', '/pesees', '/convois', '/declarations', '/mise-en-compte', '/terrain', '/modules-formation', '/modules-exportateurs', '/fiches-accompagnement', '/mes-achats', '/mon-stock', '/historique']);
 
 const EXPORTER_LABEL: Record<string, string> = { '/livraisons': 'Pont bascule et analyse', '/organisations-liees': 'Coopératives' };
 
@@ -195,7 +193,6 @@ export default function App() {
           <Route path="/rapports" element={<Rapports />} />
           <Route path="/notifications" element={<Notifications onChange={refreshUnread} />} />
           <Route path="/declarations" element={<Declarations />} />
-          <Route path="/missions" element={<Missions />} />
           <Route path="/terrain" element={<Terrain />} />
           <Route path="/operations" element={<Operations />} />
           <Route path="/compte" element={<Compte />} />

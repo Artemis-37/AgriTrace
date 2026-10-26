@@ -36,7 +36,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _problems = 0;
   bool _canCreate = false;
   bool _canConvoy = false;
-  bool _canTraining = false, _canHistory = false, _canFiche = false, _canMissions = false, _canSurvey = false;
+  bool _canTraining = false, _canHistory = false, _canFiche = false, _canSurvey = false;
   int _unreadNotes = 0;
   bool _canProducer = false, _canField = false;
   List<({String label, String detail, String state, String? error, String? entity})> _pendingItems = [];
@@ -77,7 +77,7 @@ class _HomeScreenState extends State<HomeScreen> {
     int unread = _unreadNotes;
     try { final r = await services.api.get('/notifications/unread-count'); unread = (r['unread'] as num?)?.toInt() ?? 0; } catch (_) { /* hors connexion : compteur conservé */ }
     if (!mounted) return;
-    setState(() { _items = items; _pending = pending; _problems = problems; _canCreate = canCreateDeclaration(perms); _canConvoy = canCreateConvoy(perms); _canHistory = canReadHistory(perms); _canFiche = canSeeFiche(perms); _canMissions = canSeeMissions(perms); _canTraining = perms.contains('training:read'); _canSurvey = canSurveyParcel(perms); _unreadNotes = unread; _identity = identity; _canProducer = canCreateProducer(perms); _canField = canFieldRecord(perms); _pendingItems = pendingItems; });
+    setState(() { _items = items; _pending = pending; _problems = problems; _canCreate = canCreateDeclaration(perms); _canConvoy = canCreateConvoy(perms); _canHistory = canReadHistory(perms); _canFiche = canSeeFiche(perms); _canTraining = perms.contains('training:read'); _canSurvey = canSurveyParcel(perms); _unreadNotes = unread; _identity = identity; _canProducer = canCreateProducer(perms); _canField = canFieldRecord(perms); _pendingItems = pendingItems; });
   }
 
   Color _color(String localState, String? status) {
@@ -134,7 +134,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (_canConvoy) _HomeButton(Icons.route_outlined, 'Historique des convois', () => _open(const ConvoyHistoryScreen())),
       if (_canConvoy) _HomeButton(Icons.inventory_2_outlined, 'Mon stock', () => _open(const MyStockScreen())),
       if (_canFiche) _HomeButton(Icons.receipt_long_outlined, 'Ma fiche de compte', () => _open(const FicheScreen())),
-      if (_canSurvey || _canMissions) _HomeButton(Icons.fact_check_outlined, 'Producteurs et enquêtes', () => _open(const ProducersScreen())),
+      if (_canSurvey || _canProducer) _HomeButton(Icons.fact_check_outlined, 'Producteurs et enquêtes', () => _open(const ProducersScreen())),
     ];
     return Scaffold(
       backgroundColor: const Color(0xFFF7FAF2),
@@ -179,8 +179,8 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Profil terrain (coach) : pas d'achats ni de convoi, mais des relevés de parcelles et des missions.
-  bool get _coachMode => !_canCreate && !_canConvoy && (_canSurvey || _canMissions || _canProducer || _canField);
+  /// Profil terrain (coach) : pas d'achats ni de convoi, mais des relevés de parcelles et des tâches du profil.
+  bool get _coachMode => !_canCreate && !_canConvoy && (_canSurvey || _canProducer || _canProducer || _canField);
 
   Widget _tile(IconData icon, String label, VoidCallback onTap, {double height = 120, double fontSize = 13, Widget? iconWidget}) => Material(
         color: const Color(0xFF3F9B2E), elevation: 2, borderRadius: BorderRadius.circular(6),

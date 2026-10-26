@@ -16,13 +16,11 @@ const BY_KIND: Record<string, { to: string; tab?: string; open?: boolean }> = {
   loan_due: { to: '/finances', tab: 'loans' }, loans_to_approve: { to: '/finances', tab: 'loans' },
   parcels_pending: { to: '/parcelles' }, weighing_variance: { to: '/stocks' }, stock_negative: { to: '/stocks' },
   role_changed: { to: '/equipe' }, user_suspended: { to: '/equipe' },
-  task_assigned: { to: '/missions', tab: 'tasks' }, task_overdue: { to: '/missions', tab: 'tasks' }, task_submitted: { to: '/missions', tab: 'tasks' }, task_to_correct: { to: '/missions', tab: 'tasks' },
   cancellation_request: { to: '/operations', tab: 'requests' }, cancellation_decided: { to: '/operations', tab: 'requests' },
   report_ready: { to: '/rapports', tab: 'runs' },
-  task_request: { to: '/missions', tab: 'requests' }, task_request_decided: { to: '/missions', tab: 'requests' },
 };
 const BY_ENTITY: Record<string, string> = {
-  convoy: '/convois', collector: '/convois', task: '/missions', invoice: '/commerce', shipment: '/commerce', lot: '/stocks', weighing: '/stocks',
+  convoy: '/convois', collector: '/convois', invoice: '/commerce', shipment: '/commerce', lot: '/stocks', weighing: '/stocks',
   loan: '/finances', parcel: '/parcelles', producer: '/producteurs', message: '/messages',
 };
 

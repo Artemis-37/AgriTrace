@@ -67,15 +67,12 @@ bool canCreateDeclaration(List<String> permissions) => permissions.contains('dec
 bool canSurveyParcel(List<String> permissions) => permissions.contains('parcels:create');
 /// Reprendre le tracé d'une parcelle existante demande le droit de la modifier (le serveur le vérifie aussi).
 bool canUpdateParcel(List<String> permissions) => permissions.contains('parcels:update');
-/// Une photo de parcelle ou de mission vise un objet déjà connu du serveur ; une photo de reçu attend que sa déclaration y soit.
+/// Une photo de parcelle vise un objet déjà connu du serveur ; une photo de reçu attend que sa déclaration y soit.
 bool canUploadPhotoFor(String subjectType, String? declarationLocalState) =>
     subjectType == 'declaration' ? declarationLocalState != null && canUploadPhoto(declarationLocalState) : true;
 bool canCreateConvoy(List<String> permissions) => permissions.contains('convoys:create');
 bool canReadHistory(List<String> permissions) => permissions.contains('declarations:read') && permissions.contains('declarations:create');
 bool canSeeFiche(List<String> permissions) => permissions.contains('collector:stock');
-bool canSeeMissions(List<String> permissions) => permissions.contains('tasks:read');
-/// Un coach demande une mission : elle ne devient officielle qu'après décision d'un responsable.
-bool canRequestMission(List<String> permissions) => permissions.contains('tasks:request');
 
 /// Enregistrer un producteur, une infrastructure sociale, une formation ou une distribution sur le terrain.
 bool canCreateProducer(List<String> permissions) => permissions.contains('producers:create');
