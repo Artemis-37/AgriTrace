@@ -109,7 +109,7 @@ function CreateConvoy({ onClose, onDone }: { onClose: () => void; onDone: () => 
   );
 }
 
-export function Receive() {
+export function Receive({ initial }: { initial?: { collector: string; convoyNo: string; code?: string } } = {}) {
   const { org } = useAuth();
   const act = useAction();
   const { data, loading, error, reload } = useAsync(async () => ({
@@ -117,14 +117,14 @@ export function Receive() {
     products: (await get<any[]>('/products').catch(() => [] as any[])).filter((p) => p.active), campaigns: (await get<any[]>('/campaigns').catch(() => [] as any[])).filter((c) => c.status === 'open'),
   }), []);
   useEffect(() => onFlushed(reload), [reload]);
-  const [collector, setCollector] = useState('');
-  const [convoyNo, setConvoyNo] = useState('');
+  const [collector, setCollector] = useState(initial?.collector ?? '');
+  const [convoyNo, setConvoyNo] = useState(initial?.convoyNo ?? '');
   const [wh, setWh] = useState('');
   const [kg, setKg] = useState('');
   const [bags, setBags] = useState('');
   const [notes, setNotes] = useState('');
   const [done, setDone] = useState('');
-  const [codeQ, setCodeQ] = useState('');
+  const [codeQ, setCodeQ] = useState(initial?.code ?? '');
   const [d, setD] = useState({ grade: '', trailer: '', unl: '', refused: '' });
   const [prod, setProd] = useState('');
   // Produit annoncé par le délégué sur ce convoi : proposé d'office, toujours modifiable par le magasinier.

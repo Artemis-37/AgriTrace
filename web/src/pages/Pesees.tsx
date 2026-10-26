@@ -37,12 +37,13 @@ function List({ autoNew }: { autoNew: boolean }) {
   const refs = useAsync(async () => ({ campaigns: await get<any[]>('/campaigns').catch(() => [] as any[]), products: await get<any[]>('/products').catch(() => [] as any[]) }), []);
   const [adding, setAdding] = useState(autoNew && can('convoys:receive'));
   const [receipt, setReceipt] = useState<any | null>(null);
+  const [picked, setPicked] = useState<any | null>(null);
   const act = useAction();
   const { data, loading, error, reload } = useAsync(() => get<any[]>(`/convoys/receptions?${new URLSearchParams({ state, ...(q.trim() && { q: q.trim() }), ...(from && { from }), ...(to && { to }), ...(camp && { campaign_id: camp }), ...(prod && { product_id: prod }) })}`), [state, q, from, to, camp, prod]);
   const rows = data ?? [];
   const done = rows.filter((r) => r.status === 'settled'), todo = rows.filter((r) => r.status !== 'settled');
   const STATE: [State, string][] = [['pending', 'Non traitées'], ['settled', 'Traitées'], ['all', 'Toutes']];
-  if (adding) return <><p><button className="btn btn-ghost" onClick={() => { setAdding(false); reload(); }}>← Retour à la liste des pesées</button></p><Receive /></>;
+  if (adding) return <><p><button className="btn btn-ghost" onClick={() => { setAdding(false); reload(); }}>← Retour à la liste des pesées</button></p><ConvoyPicker onPick={setPicked} picked={picked} /><Receive key={picked ? picked.id : 'libre'} initial={picked ? { collector: picked.collector_id, convoyNo: picked.convoy_no, code: picked.collector_code ?? '' } : undefined} /></>;
   return (
     <Card>
       <div className="toolbar pesees-filters">
@@ -84,6 +85,53 @@ function List({ autoNew }: { autoNew: boolean }) {
         </>
       )}
             {receipt && <Receipt r={receipt} onClose={() => setReceipt(null)} />}
+    </Card>
+  );
+}
+
+/** Choix du convoi à peser : « Non traités » = en route, à peser ; « Traités » = déjà pesés (bulletin consultable). */
+function ConvoyPicker({ picked, onPick }: { picked: any | null; onPick: (v: any | null) => void }) {
+  const [tab, setTab] = useState<'todo' | 'done'>('todo');
+  const [q, setQ] = useState('');
+  const [receipt, setReceipt] = useState<any | null>(null);
+  const act = useAction();
+  const todo = useAsync(() => get<any[]>('/convoys/expected'), []);
+  const done = useAsync(() => get<any[]>('/convoys/receptions?state=all'), []);
+  const needle = q.trim().toLowerCase();
+  const match = (...v: any[]) => !needle || v.some((x) => String(x ?? '').toLowerCase().includes(needle));
+  const rowsTodo = (todo.data ?? []).filter((v) => match(v.convoy_no, v.collector_name, v.collector_code, v.truck_no, v.driver_name));
+  const rowsDone = (done.data ?? []).filter((r) => match(r.convoy_no, r.bulletin_no, r.collector_name, r.collector_code));
+  return (
+    <Card title="Choisir le convoi">
+      <div className="toolbar">
+        <div className="seg" role="radiogroup" aria-label="Convois">
+          <label className={tab === 'todo' ? 'on' : ''}><input type="radio" name="pick-tab" checked={tab === 'todo'} onChange={() => setTab('todo')} />Non traités ({todo.data?.length ?? '…'})</label>
+          <label className={tab === 'done' ? 'on' : ''}><input type="radio" name="pick-tab" checked={tab === 'done'} onChange={() => setTab('done')} />Traités ({done.data?.length ?? '…'})</label>
+        </div>
+        <input type="search" placeholder="Connaissement, délégué, camion" aria-label="Rechercher un convoi" value={q} onChange={(e) => setQ(e.target.value)} />
+        {picked && <button className="btn btn-ghost" onClick={() => onPick(null)}>Saisie libre</button>}
+      </div>
+      {act.error && <ErrorBox message={act.error} />}
+      {tab === 'todo' ? (todo.loading ? <Loading /> : (
+        <Table rows={rowsTodo} empty="Aucun convoi en attente de pesée." columns={[
+          { header: 'Connaissement', render: (v) => <strong>{v.convoy_no}</strong> },
+          { header: 'Délégué', render: (v) => <>{v.collector_code ? <code>{v.collector_code}</code> : null} {v.collector_name}</> },
+          { header: 'Camion', render: (v) => v.truck_no }, { header: 'Chauffeur', render: (v) => v.driver_name },
+          { header: 'Sacs', align: 'right', render: (v) => v.declared_bags ?? '—' },
+          { header: 'Poids déclaré', align: 'right', render: (v) => (v.declared_kg ? num(v.declared_kg) : '—') },
+          { header: '', render: (v) => picked?.id === v.id ? <Badge tone="ok">Sélectionné</Badge> : <button className="btn btn-small" onClick={() => { onPick(v); window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }); }}>Peser ce convoi</button> },
+        ]} />
+      )) : (done.loading ? <Loading /> : (
+        <Table rows={rowsDone} empty="Aucun convoi pesé." columns={[
+          { header: 'Bulletin', render: (r) => r.bulletin_no }, { header: 'Date', render: (r) => date(r.received_at) },
+          { header: 'Connaissement', render: (r) => r.convoy_no },
+          { header: 'Délégué', render: (r) => <>{r.collector_code ? <code>{r.collector_code}</code> : null} {r.collector_name}</> },
+          { header: 'Poids net', align: 'right', render: (r) => <strong>{num(r.total_kg)}</strong> },
+          { header: 'État', render: (r) => (r.status === 'settled' ? <Badge tone="ok">Traitée</Badge> : r.status === 'pending_variance' ? <Badge tone="warn">Écart à valider</Badge> : <Badge tone="neutral">Pesée, attend la caisse</Badge>) },
+          { header: '', render: (r) => <button className="btn btn-ghost btn-small" disabled={act.busy} onClick={() => act.run(async () => setReceipt(await get(`/operation-receipts/convoy_reception/${r.id}`)))}>Bulletin</button> },
+        ]} />
+      ))}
+      {receipt && <Receipt r={receipt} onClose={() => setReceipt(null)} />}
     </Card>
   );
 }
