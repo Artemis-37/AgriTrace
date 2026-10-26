@@ -24,7 +24,7 @@ export default function Questionnaires() {
   return (
     <>
       <PageHeader title="Questionnaires (tâches)" subtitle="Un questionnaire est une tâche que le coach renseigne auprès du producteur. Créez-le ou importez-le, puis envoyez-le à tous les producteurs ou à certains."
-        actions={<>{can('training:assign') && <button className="btn" onClick={() => setCoaching(true)}>Lancer le coaching agricole (3 étapes)</button>}{manage && <><button className="btn btn-secondary" onClick={() => setCreating(true)}>Créer un questionnaire</button><button className="btn btn-secondary" onClick={() => setImporting(true)}>Importer (Excel / CSV)</button><button className="btn btn-ghost" disabled={act.busy} onClick={() => act.run(async () => { await post('/questionnaires/defaults'); list.reload(); })}>Recharger les modèles types</button></>}</>} />
+        actions={<>{can('training:assign') && <button className="btn" onClick={() => setCoaching(true)}>Lancer le coaching agricole (6 étapes)</button>}{manage && <><button className="btn btn-secondary" onClick={() => setCreating(true)}>Créer un questionnaire</button><button className="btn btn-secondary" onClick={() => setImporting(true)}>Importer (Excel / CSV)</button><button className="btn btn-ghost" disabled={act.busy} onClick={() => act.run(async () => { await post('/questionnaires/defaults'); list.reload(); })}>Recharger les modèles types</button></>}</>} />
       <Card>
         {act.error && <ErrorBox message={act.error} />}
         {list.loading ? <Loading /> : list.error ? <ErrorBox message={list.error} onRetry={list.reload} /> : (
@@ -47,7 +47,7 @@ export default function Questionnaires() {
       {editing && <QuestionnaireEditor edit={editing} onClose={() => setEditing(null)} onDone={() => { setEditing(null); list.reload(); }} />}
       {creating && <QuestionnaireEditor onClose={() => setCreating(false)} onDone={() => { setCreating(false); list.reload(); }} />}
       {importing && <ImportQuestionnaire onClose={() => setImporting(false)} onDone={() => { setImporting(false); list.reload(); }} />}
-      {coaching && <AssignDialog program title="Lancer le coaching agricole (3 étapes)" questionnaire={{ id: 'coaching', title: 'Diagnostic → Accompagnement → Évaluation' }} onClose={() => setCoaching(false)} onDone={() => { setCoaching(false); list.reload(); }} />}
+      {coaching && <AssignDialog program title="Lancer le coaching agricole (6 étapes)" questionnaire={{ id: 'coaching', title: 'Diagnostic → PDE → BPA → Champ école → Suivi → Évaluation' }} onClose={() => setCoaching(false)} onDone={() => { setCoaching(false); list.reload(); }} />}
       {assign && <AssignDialog title={`Envoyer « ${assign.title} »`} questionnaire={assign} onClose={() => setAssign(null)} onDone={() => { setAssign(null); list.reload(); }} />}
       {results && <Results q={results} onClose={() => setResults(null)} />}
     </>

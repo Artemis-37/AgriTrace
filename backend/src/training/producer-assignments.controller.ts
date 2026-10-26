@@ -76,11 +76,11 @@ export class ProducerAssignmentsController {
     return out;
   }
 
-  /** Programme de coaching agricole en trois étapes (diagnostic, accompagnement, évaluation) : trois tâches espacées, créées d'un coup pour les mêmes producteurs. */
+  /** Programme de coaching agricole en six étapes (diagnostic, PDE, formation BPA, champ école, suivi, évaluation) : six tâches espacées, créées d'un coup pour les mêmes producteurs. */
   @Post('coaching-program')
   @RequirePermissions('training:assign')
   async coachingProgram(@Body() b: CoachingProgramDto, @Req() req: any) {
-    const codes = ['coaching-1-diagnostic', 'coaching-2-accompagnement', 'coaching-3-evaluation'];
+    const codes = ['coaching-1-diagnostic', 'coaching-2-pde', 'coaching-3-bpa', 'coaching-4-cep', 'coaching-5-suivi', 'coaching-6-evaluation'];
     const gap = b.interval_days ?? 30;
     const start = b.start_date ? new Date(b.start_date) : new Date(Date.now() + 7 * 86400000);
     const out = await this.db.tx(req.org.id, async (c) => {
@@ -93,12 +93,12 @@ export class ProducerAssignmentsController {
         const due = new Date(start.getTime() + i * gap * 86400000).toISOString().slice(0, 10);
         made.push(await createAssignment(c, req.org.id, req.user.id, this.notif, {
           kind: 'tache', scope: b.scope, producer_ids: b.producer_ids, due_date: due, title: q.title, module_id: null, questionnaire_id: q.id,
-          instructions: `${b.instructions ? b.instructions.trim() + ' — ' : ''}Étape ${i + 1} sur 3 du coaching agricole.`,
+          instructions: `${b.instructions ? b.instructions.trim() + ' — ' : ''}Étape ${i + 1} sur 6 du coaching agricole.`,
         } as any));
       }
       return made;
     });
-    await this.audit.log({ organizationId: req.org.id, actorUserId: req.user.id, action: 'producer_assignment.coaching_program', entityType: 'producer_assignment', entityId: out[0].id, details: { scope: b.scope, steps: 3, interval_days: gap } });
+    await this.audit.log({ organizationId: req.org.id, actorUserId: req.user.id, action: 'producer_assignment.coaching_program', entityType: 'producer_assignment', entityId: out[0].id, details: { scope: b.scope, steps: codes.length, interval_days: gap } });
     return { assignments: out.map((o: any) => ({ id: o.id, title: o.title, due_date: o.due_date })) };
   }
 
