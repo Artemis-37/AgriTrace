@@ -44,6 +44,7 @@ Future<void> main() async {
   // jusqu'à une nouvelle connexion (ou jusqu'à ce que l'utilisateur se déconnecte lui-même).
   api.onRevoked = () async {
     services.sync.block();
+    await services.store.invalidateCurrentAccount();
   };
   final loggedIn = await store.refreshToken != null && await store.orgId != null;
   runApp(AgriTraceApp(loggedIn: loggedIn));

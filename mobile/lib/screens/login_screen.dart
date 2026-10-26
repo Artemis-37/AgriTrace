@@ -2,6 +2,7 @@ import '../config.dart';
 import 'package:flutter/material.dart';
 
 import '../data/api_client.dart';
+import '../data/session_store.dart';
 import 'change_password_screen.dart';
 import '../main.dart';
 import 'home_screen.dart';
@@ -28,8 +29,48 @@ class _LoginScreenState extends State<LoginScreen> {
   void initState() {
     super.initState();
     _error = widget.notice;
+    _loadKnown();
+  }
+
+  Future<void> _loadKnown() async {
+    final k = await services.store.knownAccounts();
+    if (mounted) setState(() => _known = k);
+  }
+
+  /// Compte déjà connecté sur ce téléphone : reprise de la session sans mot de passe ; hors connexion, accès aux données de l'appareil.
+  Future<void> _useKnown(KnownAccount a) async {
+    setState(() { _busy = true; _error = null; });
+    try {
+      final used = await services.store.useAccount(a.email);
+      if (used == null) { _askPassword(a); return; }
+      try {
+        await services.api.get('/me');
+      } on NetworkException {
+        if (!mounted) return;
+        Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const SyncShell(child: HomeScreen())));
+        return;
+      } on ApiException {
+        await services.store.invalidateCurrentAccount();
+        await services.store.signOut();
+        await _loadKnown();
+        _askPassword(a);
+        return;
+      }
+      final orgs = await services.api.myOrganizations();
+      if (a.org.isNotEmpty && orgs.any((o) => o['id'] == a.org)) { await _enter(a.org, remember: false); }
+      else if (orgs.length == 1) { await _enter(orgs.first['id'] as String, remember: false); }
+      else { setState(() => _orgs = orgs); }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  void _askPassword(KnownAccount a) {
+    if (!mounted) return;
+    setState(() { _email.text = a.email; _password.clear(); _error = 'Session expirée pour ${a.name.isEmpty ? a.email : a.name} : saisissez votre mot de passe.'; });
   }
   List<dynamic> _orgs = [];
+  List<KnownAccount> _known = [];
   final _code = TextEditingController();
   bool _pairing = false;
 
@@ -100,7 +141,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  Future<void> _enter(String orgId) async {
+  Future<void> _enter(String orgId, {bool remember = true}) async {
     final ok = await services.repo.switchOrganization(orgId);
     if (!ok) {
       setState(() => _error = "Des opérations d'une autre coopérative ne sont pas encore envoyées. Reconnectez-vous à celle-ci et synchronisez d'abord.");
@@ -109,7 +150,12 @@ class _LoginScreenState extends State<LoginScreen> {
     await services.store.setOrg(orgId);
     if (!mounted) return;
     var forced = false;
-    try { forced = ((await services.api.get('/me')) as Map)['must_change_password'] == true; } catch (_) { /* hors ligne : pas de contrôle */ }
+    try {
+      final me = (await services.api.get('/me')) as Map;
+      forced = me['must_change_password'] == true;
+      final u = Map<String, dynamic>.from((me['user'] ?? {}) as Map);
+      await services.store.rememberAccount(email: '${u['email'] ?? _email.text}', name: '${u['full_name'] ?? ''}', org: orgId);
+    } catch (_) { /* hors ligne : pas de contrôle */ }
     if (!mounted) return;
     // À la connexion : synchronisation immédiate (profil, producteurs, tâches, opérations en attente), avec l'icône de synchronisation.
     if (mounted) setState(() => _syncing = true);
@@ -154,6 +200,17 @@ class _LoginScreenState extends State<LoginScreen> {
                   FilledButton(onPressed: _busy ? null : _pair, child: Text(_busy ? 'Association…' : 'Associer ce téléphone')),
                   TextButton(onPressed: () => setState(() => _pairing = false), child: const Text('Retour')),
                 ] else if (_orgs.isEmpty) ...[
+                  if (_known.isNotEmpty) ...[
+                    const Text('Comptes sur ce téléphone', style: TextStyle(fontWeight: FontWeight.bold)),
+                    for (final a in _known) Card(elevation: 0, shape: RoundedRectangleBorder(side: const BorderSide(color: Color(0xFFDDDDDD)), borderRadius: BorderRadius.circular(14)), child: ListTile(
+                      leading: CircleAvatar(child: Text(a.initials)),
+                      title: Text(a.name.isEmpty ? a.email : a.name), subtitle: Text(a.refresh.isEmpty ? '${a.email}\nMot de passe requis' : a.email), isThreeLine: a.refresh.isEmpty,
+                      trailing: IconButton(tooltip: 'Oublier ce compte', icon: const Icon(Icons.close), onPressed: _busy ? null : () async { await services.store.forgetAccount(a.email); await _loadKnown(); }),
+                      onTap: _busy ? null : () => a.refresh.isEmpty ? _askPassword(a) : _useKnown(a))),
+                    const SizedBox(height: 8),
+                    const Text('Ou connectez-vous avec un autre compte', style: TextStyle(color: Colors.black54)),
+                    const SizedBox(height: 8),
+                  ],
                   TextField(controller: _email, keyboardType: TextInputType.emailAddress, autofillHints: const [AutofillHints.username], decoration: const InputDecoration(labelText: 'E-mail', border: OutlineInputBorder())),
                   const SizedBox(height: 12),
                   TextField(controller: _password, obscureText: !_show, autofillHints: const [AutofillHints.password], decoration: InputDecoration(labelText: 'Mot de passe', border: const OutlineInputBorder(), suffixIcon: IconButton(tooltip: _show ? 'Masquer le mot de passe' : 'Afficher le mot de passe', icon: Icon(_show ? Icons.visibility_off : Icons.visibility), onPressed: () => setState(() => _show = !_show))), onSubmitted: (_) => _login()),
