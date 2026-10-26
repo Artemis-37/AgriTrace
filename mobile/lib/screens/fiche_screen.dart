@@ -29,6 +29,10 @@ class _FicheScreenState extends State<FicheScreen> {
     }
   }
 
+  // Rouge : le délégué doit à la coopérative (solde positif) ; bleu : la coopérative lui doit (solde négatif) ; vert forêt : soldé.
+  static const _debt = Color(0xFFC62828), _credit = Color(0xFF1565C0), _even = Color(0xFF0B5E3B);
+  static Color _soldeColor(Object? v) { final n = double.tryParse('$v') ?? 0; return n > 0.5 ? _debt : n < -0.5 ? _credit : _even; }
+
   String _f(Object? v) => (double.tryParse('$v') ?? 0).round().toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => ' ');
 
   @override
@@ -45,21 +49,34 @@ class _FicheScreenState extends State<FicheScreen> {
           if (_error != null) Padding(padding: const EdgeInsets.all(16), child: Text(_error!)),
           if (d == null && _error == null) const Padding(padding: EdgeInsets.all(32), child: Center(child: CircularProgressIndicator())),
           if (d != null) ...[
-            ListTile(title: const Text('Report'), trailing: Text('${_f(d['opening'])} FCFA')),
+            Container(
+              margin: const EdgeInsets.fromLTRB(12, 10, 12, 6), padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(color: Colors.white, border: Border.all(color: const Color(0xFFDDDDDD))),
+              child: Row(children: [
+                const Text('Report', style: TextStyle(fontSize: 16)), const Spacer(),
+                Text('${_f(d['opening'])} FCFA', style: TextStyle(fontWeight: FontWeight.bold, color: _soldeColor(d['opening']))),
+              ]),
+            ),
             for (final r in rows)
-              ListTile(
+              Container(
+                margin: const EdgeInsets.fromLTRB(12, 0, 12, 6),
+                decoration: BoxDecoration(color: Colors.white, border: Border.all(color: const Color(0xFFDDDDDD))),
+                child: ListTile(
                 title: Text('${r['label'] ?? ''}'),
                 subtitle: Text('${r['date'].toString().substring(0, 10)}${r['piece'] != null ? ' • pièce ${r['piece']}' : ''}${r['weight'] != null ? ' • ${_f(r['weight'])} kg' : ''}'),
                 trailing: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.end, children: [
                   Text('${r['direction'] == 'in' ? '+' : '−'}${_f(r['amount'])}', style: TextStyle(color: r['direction'] == 'in' ? Colors.green.shade700 : Colors.red.shade700, fontWeight: FontWeight.bold)),
-                  Text('solde ${_f(r['solde'])}', style: const TextStyle(fontSize: 12)),
+                  Text('solde ${_f(r['solde'])}', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: _soldeColor(r['solde']))),
                 ]),
-              ),
+              )),
             if (rows.isEmpty) const Padding(padding: EdgeInsets.all(24), child: Center(child: Text('Aucune ligne sur la période.'))),
-            const Divider(),
-            ListTile(
-              title: Text(solde > 0 ? 'Je dois à la coopérative' : 'La coopérative me doit', style: const TextStyle(fontWeight: FontWeight.bold)),
-              trailing: Text('${_f(solde.abs())} FCFA', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            Container(
+              margin: const EdgeInsets.fromLTRB(12, 10, 12, 24), padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+              decoration: BoxDecoration(color: _soldeColor(solde).withOpacity(0.10), border: Border.all(color: _soldeColor(solde), width: 1.5)),
+              child: Row(children: [
+                Expanded(child: Text(solde > 0.5 ? 'Je dois à la coopérative' : solde < -0.5 ? 'La coopérative me doit' : 'Compte soldé', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: _soldeColor(solde)))),
+                Text('${_f(solde.abs())} FCFA', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: _soldeColor(solde))),
+              ]),
             ),
           ],
         ]),
