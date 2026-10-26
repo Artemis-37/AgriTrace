@@ -301,7 +301,8 @@ class Repository {
           detail = '${p['title'] ?? ''}'; break;
         case 'parcel.create': label = 'Parcelle relevée'; detail = '${p['declared_area_ha'] ?? ''} ha déclarés'; break;
         case 'parcel.update': label = 'Nouveau tracé de parcelle'; break;
-        case 'purchase_declaration.create': label = 'Achat'; break;
+        case 'purchase_declaration.create': label = 'Achat'; detail = '${p['quantity'] ?? ''} ${p['unit'] ?? ''}'.trim(); break;
+        case 'purchase_declaration.submit': label = 'Achat à soumettre'; break;
         case 'convoy.create': label = 'Convoi'; detail = '${p['convoy_no'] ?? ''}'; break;
         case 'task.start': label = 'Mission démarrée'; break;
         case 'task.submit': label = 'Mission soumise'; break;
@@ -341,6 +342,85 @@ class Repository {
       if (d.isEmpty) return;
       await txn.delete('outbox', where: "entity_id = ? AND status IN ('to_correct','rejected','conflict','pending')", whereArgs: [id]);
       await txn.delete('declarations', where: 'id = ?', whereArgs: [id]);
+    });
+  }
+
+  /// Propriétaire des saisies en attente : l'e-mail du compte connecté. Quand un autre compte se connecte sur le même téléphone,
+  /// les saisies non envoyées du précédent sont mises de côté (et rendues à leur auteur quand il se reconnecte) : elles ne partent
+  /// jamais sous le nom d'un autre. Les données venues du serveur sont effacées, la synchronisation suivante recharge celles du nouveau compte.
+  Future<void> switchUser(String email) async {
+    final me = email.trim().toLowerCase();
+    if (me.isEmpty) return;
+    final prev = await db.getKv('device_user');
+    if (prev == me) return;
+    // Première utilisation de cette version : propriétaire inconnu, on garde tout tel quel (rien n'est perdu) et on mémorise le compte.
+    if (prev == null) { await db.setKv('device_user', me); return; }
+    await db.raw.transaction((txn) async {
+      {
+        await txn.execute("INSERT OR REPLACE INTO outbox_parked (owner, idempotency_key, op_type, payload, entity_id, status, error, attempts, created_at, updated_at) SELECT ?, idempotency_key, op_type, payload, entity_id, status, error, attempts, created_at, updated_at FROM outbox", [prev]);
+        for (final r in await txn.query('declarations', where: "local_state IN ('local_only','pending','pending_validation','error')")) {
+          await txn.insert('declarations_parked', {'owner': prev, 'id': r['id'], 'data': jsonEncode(r)}, conflictAlgorithm: ConflictAlgorithm.replace);
+        }
+        for (final r in await txn.query('pending_uploads')) {
+          await txn.insert('uploads_parked', {'owner': prev, 'client_key': r['client_key'], 'data': jsonEncode(r)}, conflictAlgorithm: ConflictAlgorithm.replace);
+        }
+      }
+      for (final t in ['value_chains', 'campaigns', 'unit_conversions', 'price_versions', 'producers', 'my_assignments', 'parcels', 'declarations', 'outbox', 'pending_uploads']) {
+        await txn.delete(t);
+      }
+      await txn.delete('kv', where: "k IN ('cursor','permissions','my_collector_id','me_name','tasks_cache','assignments_cache') OR k LIKE 'cache:%'");
+      // Rend à ce compte ses propres saisies non envoyées.
+      for (final r in await txn.query('outbox_parked', where: 'owner = ?', whereArgs: [me])) {
+        await txn.insert('outbox', {for (final k in ['idempotency_key', 'op_type', 'payload', 'entity_id', 'status', 'error', 'attempts', 'created_at', 'updated_at']) k: r[k]}, conflictAlgorithm: ConflictAlgorithm.replace);
+      }
+      for (final r in await txn.query('declarations_parked', where: 'owner = ?', whereArgs: [me])) {
+        await txn.insert('declarations', Map<String, Object?>.from(jsonDecode(r['data'] as String) as Map), conflictAlgorithm: ConflictAlgorithm.replace);
+      }
+      for (final r in await txn.query('uploads_parked', where: 'owner = ?', whereArgs: [me])) {
+        await txn.insert('pending_uploads', Map<String, Object?>.from(jsonDecode(r['data'] as String) as Map), conflictAlgorithm: ConflictAlgorithm.replace);
+      }
+      for (final t in ['outbox_parked', 'declarations_parked', 'uploads_parked']) { await txn.delete(t, where: 'owner = ?', whereArgs: [me]); }
+      await txn.insert('kv', {'k': 'device_user', 'v': me}, conflictAlgorithm: ConflictAlgorithm.replace);
+    });
+  }
+
+  /// Anciennes versions : des achats d'un autre compte, refusés ici faute de droit, restaient dans « Éléments à soumettre ».
+  /// On les met de côté (propriétaire inconnu) ; ils sont repris par le premier compte qui a le droit de les envoyer.
+  Future<void> parkPermissionFailures() async {
+    final bad = await db.raw.query('outbox', where: "status IN ('to_correct','rejected') AND error LIKE 'Permission manquante%' AND op_type LIKE 'purchase_declaration.%'");
+    if (bad.isEmpty) return;
+    await db.raw.transaction((txn) async {
+      for (final r in bad) {
+        await txn.insert('outbox_parked', {for (final k in ['idempotency_key', 'op_type', 'payload', 'entity_id', 'status', 'error', 'attempts', 'created_at', 'updated_at']) k: r[k], 'owner': '?'}, conflictAlgorithm: ConflictAlgorithm.replace);
+        await txn.delete('outbox', where: 'idempotency_key = ?', whereArgs: [r['idempotency_key']]);
+        final id = r['entity_id'];
+        if (id != null) {
+          final d = await txn.query('declarations', where: 'id = ?', whereArgs: [id]);
+          if (d.isNotEmpty) {
+            await txn.insert('declarations_parked', {'owner': '?', 'id': id, 'data': jsonEncode(d.first)}, conflictAlgorithm: ConflictAlgorithm.replace);
+            await txn.delete('declarations', where: 'id = ?', whereArgs: [id]);
+          }
+        }
+      }
+    });
+  }
+
+  /// Reprend les achats mis de côté (propriétaire inconnu) quand le compte connecté a le droit de les envoyer.
+  Future<void> claimOrphans(List<String> perms) async {
+    if (!perms.contains('declarations:create')) return;
+    final rows = await db.raw.query('outbox_parked', where: "owner = '?'");
+    if (rows.isEmpty) return;
+    await db.raw.transaction((txn) async {
+      for (final r in rows) {
+        final m = {for (final k in ['idempotency_key', 'op_type', 'payload', 'entity_id', 'created_at']) k: r[k], 'status': 'pending', 'error': null, 'attempts': 0};
+        await txn.insert('outbox', m, conflictAlgorithm: ConflictAlgorithm.replace);
+      }
+      for (final r in await txn.query('declarations_parked', where: "owner = '?'")) {
+        final d = Map<String, Object?>.from(jsonDecode(r['data'] as String) as Map)..['local_state'] = 'pending'..['local_error'] = null;
+        await txn.insert('declarations', d, conflictAlgorithm: ConflictAlgorithm.replace);
+      }
+      await txn.delete('outbox_parked', where: "owner = '?'");
+      await txn.delete('declarations_parked', where: "owner = '?'");
     });
   }
 

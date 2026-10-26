@@ -52,6 +52,7 @@ Future<void> main() async {
     services.sync.block();
     await services.store.invalidateCurrentAccount();
   };
+  try { await services.repo.parkPermissionFailures(); } catch (_) {/* sans effet sur le démarrage */}
   final loggedIn = await store.refreshToken != null && await store.orgId != null;
   runApp(AgriTraceApp(loggedIn: loggedIn));
 }

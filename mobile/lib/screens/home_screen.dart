@@ -155,7 +155,20 @@ class _HomeScreenState extends State<HomeScreen> {
             child: ListView(padding: const EdgeInsets.fromLTRB(16, 12, 16, 24), children: [
               for (final b in buttons) Padding(padding: const EdgeInsets.only(bottom: 12), child: b),
               if (_items.isNotEmpty) ...[
-                const Padding(padding: EdgeInsets.only(top: 8, bottom: 4), child: Text('Achats récents', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0B5E3B)))),
+                Material(
+                  color: const Color(0xFFE9EEE3),
+                  child: InkWell(
+                    onTap: () => syncWithDialog(context),
+                    child: Padding(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14), child: Row(children: [
+                      const Text('Achats récents', style: TextStyle(fontSize: 18)),
+                      const SizedBox(width: 10),
+                      CircleAvatar(radius: 16, backgroundColor: _pending + _problems > 0 ? const Color(0xFF6B73C1) : const Color(0xFF3F9B2E), child: Text('${_pending + _problems}', style: const TextStyle(color: Colors.white))),
+                      const Spacer(),
+                      Icon(_pending + _problems > 0 ? Icons.cloud_upload_outlined : Icons.cloud_done_outlined, size: 28),
+                    ])),
+                  ),
+                ),
+                const SizedBox(height: 10),
                 for (final d in _items.take(20)) _purchaseTile(d),
               ] else
                 const Padding(padding: EdgeInsets.all(16), child: Center(child: Text('Aucun achat.\nTirez pour synchroniser.', textAlign: TextAlign.center))),
@@ -247,22 +260,30 @@ class _HomeScreenState extends State<HomeScreen> {
     final st = d['status'] as String?;
     final label = declarationLabel(localState: ls, status: st);
     final amount = d['amount'] as String?;
-    return Card(
-      margin: const EdgeInsets.only(bottom: 6), elevation: 0, color: Colors.white,
-      child: ListTile(
-        title: Text('${d['producer_name'] ?? 'Producteur'}  •  ${d['quantity']} ${d['unit']}'),
-        subtitle: Text([
-          d['operation_date'], label,
-          if (d['purchase_receipt_no'] != null) 'Reçu ${d['purchase_receipt_no']}${d['receipt_conflict'] == 1 ? ' (numéro déjà utilisé — à résoudre)' : ''}',
-          if (amount != null) 'Montant ${double.parse(amount).toStringAsFixed(0)} ${d['currency'] ?? ''}',
-          if (d['local_error'] != null) '${d['local_error']}',
-        ].join('  •  ')),
-        leading: Icon(ls == 'synced' ? Icons.cloud_done : Icons.cloud_off, color: _color(ls, st)),
-        trailing: ls == 'error'
-            ? IconButton(icon: const Icon(Icons.delete_outline), tooltip: 'Abandonner',
+    final bad = ls == 'error';
+    final synced = ls == 'synced';
+    final info = [
+      d['operation_date'], label,
+      if (d['purchase_receipt_no'] != null) 'Reçu ${d['purchase_receipt_no']}${d['receipt_conflict'] == 1 ? ' (numéro déjà utilisé — à résoudre)' : ''}',
+      if (amount != null) 'Montant ${double.parse(amount).toStringAsFixed(0)} ${d['currency'] ?? ''}',
+    ].join('  •  ');
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8), padding: const EdgeInsets.fromLTRB(14, 10, 4, 10),
+      decoration: BoxDecoration(color: Colors.white, border: Border.all(color: const Color(0xFFDDDDDD))),
+      child: Row(children: [
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('${d['producer_name'] ?? 'Producteur'}', style: const TextStyle(fontSize: 17)),
+          Text('${d['quantity']} ${d['unit']}'.toUpperCase(), style: const TextStyle(color: Colors.black54, fontSize: 15)),
+          Text(info, style: const TextStyle(color: Colors.black54, fontSize: 13)),
+          if (bad) Text(d['local_error'] == null || '${d['local_error']}'.isEmpty ? 'À corriger' : 'À corriger : ${d['local_error']}', style: TextStyle(color: Colors.red.shade700, fontSize: 13)),
+        ])),
+        Container(width: 1, height: 54, color: const Color(0xFFDDDDDD)),
+        bad
+            ? IconButton(icon: const Icon(Icons.delete_outline, color: Colors.red), iconSize: 30, tooltip: 'Abandonner',
                 onPressed: () async { await services.repo.discardFailed(d['id'] as String); await _reload(); })
-            : null,
-      ),
+            : IconButton(onPressed: synced ? null : () => syncWithDialog(context), tooltip: synced ? 'Envoyé' : 'Envoyer', iconSize: 34,
+                icon: Icon(synced ? Icons.cloud_done : Icons.cloud_upload_outlined, color: synced ? _color(ls, st) : Colors.black87)),
+      ]),
     );
   }
 }

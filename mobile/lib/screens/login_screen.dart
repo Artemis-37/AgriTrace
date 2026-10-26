@@ -25,6 +25,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _show = false; // afficher le mot de passe saisi
   bool _syncing = false;
   String? _error;
+  String _who = ''; // e-mail du compte qui se connecte : propriétaire des saisies en attente
 
   @override
   void initState() {
@@ -42,11 +43,14 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _useKnown(KnownAccount a) async {
     setState(() { _busy = true; _error = null; });
     try {
+      _who = a.email;
       final used = await services.store.useAccount(a.email);
       if (used == null) { _askPassword(a); return; }
       try {
         await services.api.get('/me');
       } on NetworkException {
+        if (!mounted) return;
+        await services.repo.switchUser(a.email);
         if (!mounted) return;
         Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const SyncShell(child: HomeScreen())));
         return;
@@ -132,6 +136,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _login() async {
     setState(() { _busy = true; _error = null; });
     try {
+      _who = _email.text.trim().toLowerCase();
       await services.api.login(_email.text.trim().toLowerCase(), _password.text, deviceLabel: 'Android', otp: _needOtp ? _otp.text.trim() : null);
       final orgs = await services.api.myOrganizations();
       if (orgs.isEmpty) {
@@ -153,6 +158,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _enter(String orgId, {bool remember = true}) async {
+    await services.repo.switchUser(_who.isEmpty ? _email.text : _who);
     final ok = await services.repo.switchOrganization(orgId);
     if (!ok) {
       setState(() => _error = "Des opérations d'une autre coopérative ne sont pas encore envoyées. Reconnectez-vous à celle-ci et synchronisez d'abord.");

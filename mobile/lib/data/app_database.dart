@@ -4,7 +4,7 @@ import 'package:sqflite_sqlcipher/sqflite.dart';
 /// Base locale chiffrée (SQLCipher). Le schéma est versionné : chaque version a sa migration,
 /// pour mettre à jour l'application sans perdre les opérations en attente.
 class AppDatabase {
-  static const schemaVersion = 4;
+  static const schemaVersion = 5;
   final Database raw;
   AppDatabase._(this.raw);
 
@@ -69,6 +69,15 @@ class AppDatabase {
         id TEXT PRIMARY KEY, code TEXT, producer_id TEXT, value_chain_id TEXT, declared_area_ha TEXT, geometry_area_ha TEXT,
         geometry TEXT, verification_status TEXT, status TEXT)''');
       await d.execute("ALTER TABLE pending_uploads ADD COLUMN subject_type TEXT NOT NULL DEFAULT 'declaration'");
+    },
+    // Version 5 : saisies non envoyées d'un autre utilisateur du même téléphone, mises de côté (elles ne partent jamais sous un autre compte).
+    5: (d) async {
+      await d.execute('''CREATE TABLE outbox_parked (
+        owner TEXT NOT NULL, idempotency_key TEXT NOT NULL, op_type TEXT NOT NULL, payload TEXT NOT NULL, entity_id TEXT,
+        status TEXT NOT NULL, error TEXT, attempts INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL, updated_at TEXT,
+        PRIMARY KEY (owner, idempotency_key))''');
+      await d.execute('CREATE TABLE declarations_parked (owner TEXT NOT NULL, data TEXT NOT NULL, id TEXT NOT NULL, PRIMARY KEY (owner, id))');
+      await d.execute('CREATE TABLE uploads_parked (owner TEXT NOT NULL, data TEXT NOT NULL, client_key TEXT NOT NULL, PRIMARY KEY (owner, client_key))');
     },
   };
 

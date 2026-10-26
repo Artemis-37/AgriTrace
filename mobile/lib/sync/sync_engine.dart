@@ -7,6 +7,7 @@ import 'package:sqflite_sqlcipher/sqflite.dart';
 import '../config.dart';
 import '../data/api_client.dart';
 import '../data/app_database.dart';
+import '../data/repository.dart';
 import 'sync_state.dart';
 
 enum SyncPhase { idle, syncing, offline, error, blocked }
@@ -276,6 +277,7 @@ class SyncEngine {
       final perms = (j['permissions'] as List).cast<String>();
       if (!canSync(perms)) throw ApiException(403, 'Synchronisation non autorisée pour ce compte');
       await db.raw.transaction((txn) => _apply(txn, j, perms));
+      await Repository(db).claimOrphans(perms);
       _received += ((j['changes'] ?? {}) as Map).values.fold<int>(0, (n, v) => n + (v is List ? v.length : 0));
       _step(3, SyncStepState.doing, '$_received élément(s) reçus');
       cursor = j['next_cursor'] as String;
