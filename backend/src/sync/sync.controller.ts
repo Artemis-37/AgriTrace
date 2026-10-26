@@ -176,10 +176,24 @@ export class SyncController {
   @Get('changes')
   @RequirePermissions('sync:use')
   async changes(@Req() req: any, @Query('cursor') cursor?: string, @Query('limit') limitQ?: string) {
+    // Curseur : un point de reprise par type de donnée (producteurs, parcelles…), « horodatage|identifiant », pour qu'un type volumineux
+    // n'entraîne pas le renvoi des autres. Un horodatage ISO seul (anciennes versions de l'application) vaut pour tous les types.
     let since = new Date(0);
+    let perKey: Record<string, { ts: string; kid: string }> = {};
     if (cursor) {
-      since = new Date(cursor);
-      if (Number.isNaN(since.getTime())) throw new BadRequestException('cursor invalide (date ISO 8601 attendue)');
+      if (cursor.startsWith('{')) {
+        try {
+          const o = JSON.parse(cursor);
+          for (const [k, v] of Object.entries(o)) {
+            const [ts, ...rest] = String(v).split('|');
+            if (Number.isNaN(new Date(ts).getTime())) throw new Error('ts');
+            perKey[k] = { ts, kid: rest.join('|') };
+          }
+        } catch { throw new BadRequestException('cursor invalide'); }
+      } else {
+        since = new Date(cursor);
+        if (Number.isNaN(since.getTime())) throw new BadRequestException('cursor invalide (date ISO 8601 attendue)');
+      }
     }
     const limit = Math.min(Math.max(Number(limitQ) || 500, 1), 1000);
     const canSeeAll = req.org.permissions.has('declarations:validate');
@@ -227,26 +241,33 @@ export class SyncController {
       ];
 
       const changes: Record<string, any[]> = {};
+      const next: Record<string, string> = {};
       let hasMore = false;
-      let cursorCap: Date | null = null; // si une entité atteint la limite, on ne dépasse pas son dernier horodatage
+      const margin = new Date(started.getTime() - 5000);
       for (const s of specs) {
-        if (s.on === false) { changes[s.key] = []; continue; }
-        const params = [since, limit, ...(s.params ?? [])];
-        // On enveloppe pour filtrer et ordonner sur l'alias ts
-        const sql = `SELECT * FROM (${s.sql}) q WHERE q.ts > $1 ORDER BY q.ts LIMIT $2`;
+        const prev = perKey[s.key] ?? { ts: since.toISOString(), kid: '' };
+        if (s.on === false) { changes[s.key] = []; next[s.key] = prev.ts; continue; }
+        const kidExpr = s.key === 'operation_results' ? 'idempotency_key' : 'id::text';
+        const own = s.params ?? [];
+        const params = [prev.ts, limit, ...own, prev.kid];
+        const kidParam = `$${params.length}`;
+        // Tri et reprise sur (horodatage, identifiant) : des lignes de même horodatage (import en bloc) ne sont jamais sautées.
+        const sql = `SELECT *, to_char(q.ts AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS _c, ${kidExpr.replace(/^id/, 'q.id')} AS _k
+                       FROM (${s.sql}) q WHERE q.ts > $1::timestamptz OR (q.ts = $1::timestamptz AND ${kidExpr.replace(/^id/, 'q.id')} > ${kidParam}) ORDER BY q.ts, _k LIMIT $2`;
         const rows = (await c.query(sql, params)).rows;
-        changes[s.key] = rows;
         if (rows.length === limit) {
           hasMore = true;
-          const last = new Date(rows[rows.length - 1].ts);
-          if (!cursorCap || last < cursorCap) cursorCap = last;
+          const last = rows[rows.length - 1];
+          next[s.key] = `${last._c}|${last._k}`;
+        } else {
+          const m = margin.toISOString();
+          next[s.key] = new Date(m) > new Date(prev.ts) ? m : prev.ts + (prev.kid ? '|' + prev.kid : '');
         }
+        changes[s.key] = rows.map(({ _c, _k, ...r }) => r);
       }
-      const margin = new Date(started.getTime() - 5000);
-      const next = hasMore && cursorCap ? cursorCap : margin > since ? margin : since;
       return {
         server_time: started.toISOString(),
-        next_cursor: next.toISOString(),
+        next_cursor: JSON.stringify(next),
         has_more: hasMore,
         organization_id: req.org.id,
         my_collector_id: mine,

@@ -63,6 +63,28 @@ const sq = (lon, lat, s = 0.0009) => ({ type: 'Polygon', coordinates: [[[lon, la
   check('les droits courants sont toujours envoyés', Array.isArray(d.permissions) && d.permissions.includes('declarations:create') && !c.permissions.includes('declarations:create'));
   check('l\'administrateur reçoit tout ce qui le concerne', admin.changes.producers.length === 2 && admin.changes.value_chains.length === 2);
 
+  console.log('Reprise par type de donnée');
+  const pageAll = async (tok, lim) => {
+    let cur, seen = new Set(), dup = 0, pages = 0, last;
+    for (;;) {
+      const r = (await call('GET', `/sync/changes?limit=${lim}${cur ? '&cursor=' + encodeURIComponent(cur) : ''}`, J(tok))).body;
+      pages++;
+      for (const [k, rows] of Object.entries(r.changes)) for (const x of rows) { const id = k + ':' + (x.id ?? x.idempotency_key); if (seen.has(id)) dup++; seen.add(id); }
+      cur = r.next_cursor; last = r;
+      if (!r.has_more) break;
+    }
+    return { n: seen.size, dup, pages, cur };
+  };
+  await new Promise((r) => setTimeout(r, 6000)); // marge de sécurité de 5 s du serveur (données toutes fraîches)
+  const full = await pageAll(coach.t, 1000), small = await pageAll(coach.t, 2);
+  check('pages de 2 : mêmes éléments que d\'un bloc, sans aucun doublon', small.n === full.n && small.dup === 0 && small.pages > 1, [full.n, small]);
+  const full2 = await pageAll(coach.t, 1000);
+  const again = (await call('GET', `/sync/changes?limit=1000&cursor=${encodeURIComponent(full2.cur)}`, J(coach.t))).body;
+  check('synchronisation suivante sans changement : rien n\'est renvoyé', Object.entries(again.changes).every(([k, v]) => v.length === 0 || k === 'notifications'), Object.fromEntries(Object.entries(again.changes).map(([k, v]) => [k, v.length])));
+  await call('POST', '/producers', { ...J(), body: { last_name: 'NOUVEAU', first_names: 'C', village: 'Hiré', value_chain_ids: [cacao.id] } });
+  const delta = (await call('GET', `/sync/changes?limit=1000&cursor=${encodeURIComponent(full2.cur)}`, J(coach.t))).body;
+  check('un nouveau producteur : seul celui-ci est renvoyé', delta.changes.producers.length === 1 && delta.changes.parcels.length === 0, delta.changes.producers.length);
+
   console.log(`\n${ok} contrôles réussis, ${ko} en échec`);
   process.exit(ko ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(1); });

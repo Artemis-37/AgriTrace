@@ -1,3 +1,4 @@
+import 'dart:async';
 import '../config.dart';
 import 'package:flutter/material.dart';
 
@@ -25,6 +26,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _show = false; // afficher le mot de passe saisi
   bool _syncing = false;
   String? _error;
+  Completer<void>? _skip; // « Continuer sans attendre » : la synchronisation complète se poursuit en arrière-plan
   String _who = ''; // e-mail du compte qui se connecte : propriétaire des saisies en attente
 
   @override
@@ -176,7 +178,8 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
     // À la connexion : synchronisation immédiate (profil, producteurs, tâches, opérations en attente), avec l'icône de synchronisation.
     if (mounted) setState(() => _syncing = true);
-    try { await services.sync.run(manual: true).timeout(const Duration(seconds: 25)); } catch (_) { /* hors connexion : l'accueil réessaiera */ }
+    _skip = Completer<void>();
+    try { await Future.any([services.sync.run(manual: true, full: true), _skip!.future]); } catch (_) { /* hors connexion : l'accueil réessaiera */ }
     if (!mounted) return;
     void go() => Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const SyncShell(child: HomeScreen())));
     if (forced) {
@@ -199,7 +202,8 @@ class _LoginScreenState extends State<LoginScreen> {
           final cur = st.where((x) => x.state == SyncStepState.doing).firstOrNull;
           return Padding(padding: const EdgeInsets.only(top: 6), child: Text(cur == null ? '' : '${cur.label}${cur.detail.isEmpty ? '' : ' · ${cur.detail}'}', style: const TextStyle(color: Colors.black54)));
         }),
-        const Padding(padding: EdgeInsets.fromLTRB(32, 8, 32, 0), child: Text('Mise à jour de votre profil, de vos producteurs, tâches et opérations avec le serveur.', textAlign: TextAlign.center, style: TextStyle(color: Colors.black54))),
+        const Padding(padding: EdgeInsets.fromLTRB(32, 8, 32, 0), child: Text('Synchronisation complète à la connexion : profil, producteurs et données de votre fonction.', textAlign: TextAlign.center, style: TextStyle(color: Colors.black54))),
+        TextButton(onPressed: () => _skip?.complete(), child: const Text('Continuer sans attendre')),
       ]))));
     }
     return Scaffold(

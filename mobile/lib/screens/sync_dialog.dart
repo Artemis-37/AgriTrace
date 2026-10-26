@@ -7,8 +7,8 @@ import '../sync/sync_engine.dart';
 
 /// Lance une synchronisation à la demande de l'utilisateur et en affiche la progression : envoi de ce qui est à soumettre,
 /// puis téléchargement des données du serveur (le téléchargement n'a lieu que s'il ne reste rien à envoyer).
-Future<void> syncWithDialog(BuildContext context, {String? only}) async {
-  final done = services.sync.run(manual: true, only: only);
+Future<void> syncWithDialog(BuildContext context, {String? only, bool submit = false}) async {
+  final done = services.sync.run(manual: true, only: only, submit: submit);
   await showDialog<void>(context: context, barrierDismissible: false, builder: (_) => _SyncDialog(finished: done));
 }
 
@@ -70,7 +70,7 @@ class _SyncDialogState extends State<_SyncDialog> {
             Text(
               _over
                   ? (st.phase == SyncPhase.idle ? 'Synchronisation terminée.' : (st.message ?? 'Synchronisation interrompue.'))
-                  : "Vos opérations partent d'abord vers le serveur ; les données du serveur ne sont reçues que lorsqu'il ne reste rien à envoyer.",
+                  : "Seul ce qui est nouveau ou modifié depuis la dernière synchronisation est reçu. S'il reste des éléments à soumettre, la synchronisation est refusée : soumettez-les d'abord vous-même.",
               style: TextStyle(fontSize: 12.5, color: _over && st.phase != SyncPhase.idle ? Colors.red.shade800 : Colors.black54)),
           ]);
         },

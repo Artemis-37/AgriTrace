@@ -158,7 +158,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 Material(
                   color: const Color(0xFFE9EEE3),
                   child: InkWell(
-                    onTap: () => syncWithDialog(context),
+                    onTap: () => _pending + _problems > 0 ? syncWithDialog(context, submit: true) : syncWithDialog(context),
                     child: Padding(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14), child: Row(children: [
                       const Text('Achats récents', style: TextStyle(fontSize: 18)),
                       const SizedBox(width: 10),
@@ -221,7 +221,7 @@ class _HomeScreenState extends State<HomeScreen> {
         Material(
           color: const Color(0xFFE9EEE3),
           child: InkWell(
-            onTap: () => syncWithDialog(context),
+            onTap: () => syncWithDialog(context, submit: true),
             child: Padding(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14), child: Row(children: [
               const Text('Éléments à soumettre', style: TextStyle(fontSize: 18)),
               const SizedBox(width: 10),
@@ -395,7 +395,7 @@ class _SyncBanner extends StatelessWidget {
         text = status.lastSuccess == null ? 'Pas encore synchronisé' : 'Synchronisé à ${TimeOfDay.fromDateTime(status.lastSuccess!).format(context)}';
         color = Colors.green.shade800; break;
     }
-    final extra = [if (pending > 0) '$pending en attente (touchez l\'icône de synchronisation)', if (problems > 0) '$problems à corriger'].join('  •  ');
+    final extra = [if (pending > 0) '$pending à soumettre (touchez « Éléments à soumettre » ou l\'envoi de chaque élément)', if (problems > 0) '$problems à corriger'].join('  •  ');
     return Container(
       width: double.infinity,
       color: color.withOpacity(0.12),

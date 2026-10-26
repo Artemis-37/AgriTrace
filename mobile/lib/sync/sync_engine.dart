@@ -73,7 +73,11 @@ class SyncEngine {
   /// Une synchronisation ne démarre que sur demande de l'utilisateur (icône, bandeau, tirer pour actualiser, connexion) : `manual: true`.
   /// Les appels implicites (après une saisie, au retour du réseau) sont sans effet : le téléphone ne synchronise pas en continu.
   /// `only` : identifiant d'un élément (achat, convoi, parcelle…) : seul cet élément et ses photos sont envoyés, rien n'est téléchargé.
-  Future<void> run({bool manual = false, String? only}) async {
+  ///
+  /// Trois usages : synchroniser (par défaut) = recevoir seulement ce qui est nouveau ou modifié depuis la dernière fois, et refusée tant qu'il
+  /// reste des éléments à soumettre ; `submit: true` = envoyer tous les éléments en attente (action de l'utilisateur), sans rien recevoir ;
+  /// `only` = envoyer un seul élément. `full: true` (connexion) repart du début : synchronisation complète.
+  Future<void> run({bool manual = false, String? only, bool submit = false, bool full = false}) async {
     if (!manual) return;
     if (_blocked) {
       // Levée du blocage dès qu'une nouvelle connexion a fourni un autre jeton.
@@ -91,8 +95,21 @@ class SyncEngine {
     steps.value = [for (final l in _labels) SyncStep(l, SyncStepState.waiting)];
     var current = 0;
     try {
-      _step(0, SyncStepState.doing);
       _only = only;
+      final sending = submit || only != null;
+      if (!sending) {
+        // Synchroniser : refusé tant qu'il reste des éléments à soumettre, l'utilisateur doit les envoyer lui-même.
+        final waiting = await _toSubmit();
+        if (waiting > 0) {
+          _step(0, SyncStepState.skipped, '$waiting à soumettre');
+          _step(1, SyncStepState.skipped, 'Non concerné');
+          for (var i = 2; i < 4; i++) _step(i, SyncStepState.skipped, 'Suspendu');
+          status.value = SyncStatus(SyncPhase.error, lastSuccess: previousSuccess, message: '$waiting élément(s) à soumettre : envoyez-les vous-même (bouton d\'envoi de chaque élément, ou « Éléments à soumettre »), puis relancez la synchronisation.');
+          return;
+        }
+        _step(0, SyncStepState.done, 'Rien à envoyer'); _step(1, SyncStepState.done, 'Rien à envoyer');
+      } else {
+      _step(0, SyncStepState.doing);
       _pushTotal = Sqflite.firstIntValue(await db.raw.rawQuery("SELECT count(*) FROM outbox WHERE status IN ('pending','pending_validation')${only == null ? '' : ' AND entity_id = ?'}", only == null ? null : [only])) ?? 0;
       _pushed = 0;
       await _push();
@@ -100,30 +117,26 @@ class SyncEngine {
       current = 1; _step(1, SyncStepState.doing);
       await _pushPhotos();
       _step(1, SyncStepState.done);
-      if (only != null) {
-        // Envoi d'un seul élément : le reste n'est ni envoyé ni téléchargé.
-        for (var i = 2; i < 4; i++) _step(i, SyncStepState.skipped, 'Non concerné');
-        status.value = SyncStatus(SyncPhase.idle, lastSuccess: previousSuccess);
-        return;
-      }
-      // Règle : on ne télécharge que s'il n'y a plus rien à soumettre.
+      // Envoi seul (tout ou un élément) : rien n'est reçu du serveur.
+      for (var i = 2; i < 4; i++) _step(i, SyncStepState.skipped, 'Non concerné');
       final left = await _toSubmit();
-      if (left > 0) {
-        for (var i = 2; i < 4; i++) _step(i, SyncStepState.skipped, 'Suspendu');
-        status.value = SyncStatus(SyncPhase.error, lastSuccess: previousSuccess, message: '$left opération(s) restent à envoyer : le téléchargement des données du serveur est suspendu tant que tout n\'est pas envoyé.');
-        return;
+      status.value = left > 0 && only == null
+          ? SyncStatus(SyncPhase.error, lastSuccess: previousSuccess, message: '$left élément(s) n\'ont pas pu être envoyés (voir « À corriger » ou le réseau).')
+          : SyncStatus(SyncPhase.idle, lastSuccess: previousSuccess);
+      return;
       }
+      if (full) await db.raw.delete('kv', where: "k = 'cursor'");
       // Tâches d'abord : légères, elles sont disponibles hors connexion même si le téléchargement des producteurs et parcelles (long) est interrompu.
       // Les deux téléchargements sont indépendants : ils se font en même temps (deux fois plus vite sur un réseau lent).
       Object? failure;
       current = 3; _step(2, SyncStepState.doing); _step(3, SyncStepState.doing);
-      final tasksJob = _pullTasks().then((_) { _step(2, SyncStepState.done); }, onError: (Object e) { failure = e; _step(2, SyncStepState.failed); });
+      final tasksJob = _pullTasks().then((_) { _step(2, SyncStepState.done, 'À jour'); }, onError: (Object e) { failure = e; _step(2, SyncStepState.failed); });
       try {
         await _pull();
       } finally {
         await tasksJob;
       }
-      _step(3, SyncStepState.done, '$_received élément(s) reçus');
+      _step(3, SyncStepState.done, _received == 0 ? 'Rien de nouveau' : '$_received élément(s) reçus');
       final f = failure;
       if (f is ApiException && (f.status == 401 || f.status == 403)) throw f;
       status.value = SyncStatus(SyncPhase.idle, lastSuccess: DateTime.now());
