@@ -6,8 +6,8 @@ export APP_PW=$(printf '%s' "$JWT_SECRET" | sha256sum | cut -c1-32)
 SEED=0
 if [ "${SEED_DEMO:-0}" = 1 ] && [ -n "${ADMIN_EMAIL:-}" ]; then
   ST=$(node scripts/render-state.js)
-  if [ "$ST" = partial ]; then
-    echo "[render] chargement de la démonstration interrompu précédemment : base remise à zéro"
+  if [ "$ST" = partial ] || [ "$ST" = outdated ]; then
+    echo "[render] démonstration interrompue ou d'une ancienne version : base remise à zéro puis rechargée"
     node scripts/render-state.js reset
     ST=empty
   fi
