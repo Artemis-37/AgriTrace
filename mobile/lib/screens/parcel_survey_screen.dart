@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 
 import '../geo/polygon.dart';
+import '../geo/track.dart';
 import '../main.dart';
 import 'basemap_view.dart';
 import 'map_pack_screen.dart';
@@ -33,6 +36,61 @@ class _ParcelSurveyScreenState extends State<ParcelSurveyScreen> {
   bool _locating = false, _saving = false;
   String? _message;
 
+  // Tour de la parcelle en continu (« marcher la limite »)
+  final TrackRecorder _rec = TrackRecorder();
+  StreamSubscription<Position>? _sub;
+  bool _walking = false, _paused = false, _atStart = false;
+  double? _walkAccuracy;
+
+  /// Démarre l'enregistrement continu : le technicien longe la limite de la parcelle, un point est retenu tous les quelques mètres.
+  Future<void> _startWalk() async {
+    setState(() { _message = null; });
+    if (_points.isNotEmpty) {
+      final ok = await showDialog<bool>(context: context, builder: (c) => AlertDialog(
+        title: const Text('Remplacer le tracé ?'),
+        content: const Text('Le tour de la parcelle remplace les points déjà relevés.'),
+        actions: [TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Annuler')), FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('Remplacer'))]));
+      if (ok != true || !mounted) return;
+    }
+    final first = await _position();
+    if (first == null || !mounted) return;
+    _rec.reset();
+    _points.clear();
+    _atStart = false;
+    setState(() { _walking = true; _paused = false; _walkAccuracy = first.accuracy; });
+    _feed(first);
+    _sub = Geolocator.getPositionStream(locationSettings: const LocationSettings(accuracy: LocationAccuracy.best, distanceFilter: 1)).listen(_feed, onError: (_) => _say('Signal GPS perdu : continuez à marcher à découvert.'));
+  }
+
+  void _feed(Position p) {
+    if (!mounted || _paused) return;
+    final g = GeoPoint(p.latitude, p.longitude, accuracyM: p.accuracy);
+    final kept = _rec.add(g);
+    setState(() {
+      _walkAccuracy = p.accuracy; _me = g;
+      if (kept) { _points..clear()..addAll(_rec.points); }
+      _atStart = _rec.nearStart();
+    });
+  }
+
+  /// Fin du tour : le tracé est simplifié (points inutiles retirés) et fermé tout seul ; on peut l'enregistrer ou le reprendre.
+  Future<void> _finishWalk() async {
+    await _sub?.cancel(); _sub = null;
+    final simple = simplifyTrack(_rec.points);
+    setState(() {
+      _walking = false; _paused = false;
+      _points..clear()..addAll(simple);
+      if (simple.length < 3) _message = 'Tour trop court : au moins 3 points sont nécessaires. Reprenez le tour de la parcelle.';
+    });
+  }
+
+  Future<void> _cancelWalk() async {
+    await _sub?.cancel(); _sub = null;
+    _rec.reset();
+    setState(() { _walking = false; _paused = false; _points.clear(); });
+  }
+
+
   @override
   void initState() {
     super.initState();
@@ -48,6 +106,7 @@ class _ParcelSurveyScreenState extends State<ParcelSurveyScreen> {
 
   @override
   void dispose() {
+    _sub?.cancel();
     _search.dispose();
     _declared.dispose();
     super.dispose();
@@ -128,6 +187,31 @@ class _ParcelSurveyScreenState extends State<ParcelSurveyScreen> {
     Navigator.of(context).pop(true);
   }
 
+  Widget _walkPanel() {
+    final acc = _walkAccuracy;
+    final good = acc != null && acc <= 15;
+    return Card(color: const Color(0xFFE9F3EA), elevation: 0, child: Padding(padding: const EdgeInsets.all(12), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(children: [
+        Icon(_paused ? Icons.pause_circle : Icons.fiber_manual_record, color: _paused ? Colors.orange : Colors.red, size: 18), const SizedBox(width: 8),
+        Text(_paused ? 'Enregistrement en pause' : 'Enregistrement du tour en cours', style: const TextStyle(fontWeight: FontWeight.w600)),
+      ]),
+      const SizedBox(height: 8),
+      Text('${_rec.points.length} point(s) · ${_rec.walkedM.toStringAsFixed(0)} m parcourus${_rec.points.length >= 3 ? ' · ${_rec.areaHaNow.toStringAsFixed(2)} ha estimés' : ''}'),
+      Text(acc == null ? 'Recherche du signal GPS…' : 'Précision du GPS : ${acc.toStringAsFixed(0)} m${good ? '' : ' — attendez un meilleur signal, les points trop imprécis sont ignorés'}', style: TextStyle(color: good ? Colors.black54 : Colors.orange.shade800)),
+      if (_atStart) const Padding(padding: EdgeInsets.only(top: 6), child: Text('Vous êtes revenu au point de départ : appuyez sur « Terminer le tour ».', style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF0B5E3B)))),
+      const SizedBox(height: 4),
+      const Text('Longez la limite de la parcelle à pied, lentement, en gardant l\'écran allumé. Revenez au point de départ.', style: TextStyle(fontSize: 12.5, color: Colors.black54)),
+      const SizedBox(height: 8),
+      Row(children: [
+        Expanded(child: FilledButton.icon(onPressed: _rec.points.length >= 3 ? _finishWalk : null, icon: const Icon(Icons.flag), label: const Text('Terminer le tour'))),
+        const SizedBox(width: 8),
+        IconButton.outlined(tooltip: _paused ? 'Reprendre' : 'Pause', onPressed: () => setState(() => _paused = !_paused), icon: Icon(_paused ? Icons.play_arrow : Icons.pause)),
+        const SizedBox(width: 4),
+        IconButton.outlined(tooltip: 'Annuler le tour', onPressed: _cancelWalk, icon: const Icon(Icons.close)),
+      ]),
+    ])));
+  }
+
   @override
   Widget build(BuildContext context) {
     final measured = areaHa(_points);
@@ -176,7 +260,9 @@ class _ParcelSurveyScreenState extends State<ParcelSurveyScreen> {
           if (_traceError != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text(_traceError!, style: TextStyle(color: Colors.red.shade700, fontWeight: FontWeight.w600))),
           if (_message != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text(_message!, style: TextStyle(color: Colors.red.shade700))),
           const SizedBox(height: 12),
-          Row(children: [
+          if (_walking) _walkPanel() else Padding(padding: const EdgeInsets.only(bottom: 8), child: SizedBox(width: double.infinity, child: FilledButton.tonalIcon(
+            onPressed: _locating ? null : _startWalk, icon: const Icon(Icons.directions_walk), label: const Text('Marcher le tour de la parcelle (GPS continu)')))),
+          if (!_walking) Row(children: [
             Expanded(child: FilledButton.icon(
               onPressed: _locating ? null : _addPoint,
               icon: _locating ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.add_location_alt_outlined),
@@ -186,10 +272,10 @@ class _ParcelSurveyScreenState extends State<ParcelSurveyScreen> {
             IconButton.outlined(tooltip: 'Annuler le dernier point', onPressed: _points.isEmpty ? null : () => setState(() => _points.removeLast()), icon: const Icon(Icons.undo)),
           ]),
           const SizedBox(height: 8),
-          const Text("Placez-vous à chaque angle de la parcelle et ajoutez un point ; le tracé se ferme tout seul. Aucune connexion n'est nécessaire."),
+          if (!_walking) const Text("Deux façons de relever : marchez le tour de la parcelle avec le GPS continu (un point tous les quelques mètres), ou placez-vous à chaque angle et ajoutez un point. Le tracé se ferme tout seul. Aucune connexion n'est nécessaire."),
           const SizedBox(height: 16),
           if (_whyNot != null) Padding(padding: const EdgeInsets.only(bottom: 8), child: Text(_whyNot!, style: TextStyle(color: Colors.orange.shade800))),
-          FilledButton(onPressed: _canSave ? _save : null, child: const Text("Enregistrer sur l'appareil")),
+          FilledButton(onPressed: _canSave && !_walking ? _save : null, child: const Text("Enregistrer sur l'appareil")),
         ],
       ]),
     );
