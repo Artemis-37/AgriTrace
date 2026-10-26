@@ -26,7 +26,7 @@ export function cleanQuestions(raw: any[]): Question[] {
   if (raw.length > 200) throw new BadRequestException('200 questions au maximum');
   return raw.map((q, i) => {
     const label = String(q?.label ?? '').trim();
-    if (label.length < 2 || label.length > 300) throw new BadRequestException(`Question ${i + 1} : intitulé de 2 à 300 caractères`);
+    if (label.length < 2 || label.length > 1200) throw new BadRequestException(`Question ${i + 1} : intitulé de 2 à 1200 caractères`);
     const type = (TYPE_ALIASES[flat(String(q?.type ?? 'text'))] ?? null) as QType | null;
     if (!type) throw new BadRequestException(`Question ${i + 1} : type inconnu « ${q?.type} » (texte, nombre, oui/non, choix, choix multiple, date)`);
     let options: string[] | undefined;
