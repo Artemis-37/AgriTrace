@@ -18,6 +18,12 @@ win:
   icon: build/icon.ico
   target: [{ target: nsis, arch: [x64] }]
   artifactName: AgriTrace-Setup-${version}.${ext}
+mac:
+  # Application non signée (la signature et la notarisation exigent un Mac et un compte développeur Apple).
+  icon: build/icon.png
+  category: public.app-category.business
+  identity: null
+  target: [{ target: dir, arch: [arm64, x64] }]
 nsis:
   oneClick: false
   perMachine: true

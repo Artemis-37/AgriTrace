@@ -1,6 +1,6 @@
 {
   "name": "agritrace-desktop",
-  "version": "0.1.0",
+  "version": "0.1.12",
   "description": "AgriTrace — application de bureau Windows (serveur local de coopérative ou poste client)",
   "main": "src/main.js",
   "author": "AgriTrace",
