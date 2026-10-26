@@ -15,13 +15,14 @@ type Row = { id: string; kind: string; scope: string; title: string; due_date: s
  * Nature (module de formation, distribution ou tâche) et cible (tous les producteurs ou certains) d'un élément que l'ADG envoie aux coachs.
  * Sert à la transmission d'un module d'exportateur (`forwardUrl`) et à l'affectation d'un modèle de la bibliothèque (`moduleId` / titre libre).
  */
-export function AssignDialog({ title, forwardUrl, modules, producer, questionnaire, onClose, onDone }: { title: string; forwardUrl?: string; modules?: { id: string; title: string }[]; producer?: { id: string }; questionnaire?: { id: string; title: string }; onClose: () => void; onDone: () => void }) {
+export function AssignDialog({ title, forwardUrl, modules, producer, questionnaire, program, onClose, onDone }: { title: string; program?: boolean; forwardUrl?: string; modules?: { id: string; title: string }[]; producer?: { id: string }; questionnaire?: { id: string; title: string }; onClose: () => void; onDone: () => void }) {
   const [kind, setKind] = useState(questionnaire ? 'tache' : 'formation');
   const [scope, setScope] = useState<'all' | 'selected'>(producer ? 'selected' : 'all');
   const [sel, setSel] = useState<string[]>(producer ? [producer.id] : []);
   const [q, setQ] = useState(''); const [section, setSection] = useState('');
   const [due, setDue] = useState(''); const [instr, setInstr] = useState('');
   const [moduleId, setModuleId] = useState(''); const [free, setFree] = useState('');
+  const [gap, setGap] = useState('30');
   const act = useAction();
   const sections = useAsync(() => get<{ section: string; producers: number }[]>('/producers/sections').catch(() => []), []);
   const prods = useAsync(() => scope === 'selected' ? get<P[]>(`/producers?limit=100${q.trim() ? `&q=${encodeURIComponent(q.trim())}` : ''}${section ? `&section=${encodeURIComponent(section)}` : ''}`) : Promise.resolve([] as P[]), [scope, q, section]);
@@ -30,6 +31,10 @@ export function AssignDialog({ title, forwardUrl, modules, producer, questionnai
   const needModule = lib && !questionnaire && kind === 'formation';
   const ready = (scope === 'all' || sel.length > 0) && (!!questionnaire || ((!needModule || moduleId) && (!lib || kind === 'formation' || free.trim().length >= 3)));
   const submit = () => act.run(async () => {
+    if (program) {
+      await post('/producer-assignments/coaching-program', { scope, ...(scope === 'selected' ? { producer_ids: sel } : {}), ...(due ? { start_date: due } : {}), interval_days: Number(gap) || 30, ...(instr.trim() ? { instructions: instr.trim() } : {}) });
+      return onDone();
+    }
     const body: Record<string, unknown> = { kind, scope, ...(scope === 'selected' ? { producer_ids: sel } : {}), ...(due ? { due_date: due } : {}), ...(instr.trim() ? { instructions: instr.trim() } : {}) };
     if (questionnaire) body.questionnaire_id = questionnaire.id;
     else if (lib) { if (needModule) body.module_id = moduleId; else body.title = free.trim(); }
@@ -55,7 +60,8 @@ export function AssignDialog({ title, forwardUrl, modules, producer, questionnai
             <option value="all">Tous les producteurs</option><option value="selected">Certains producteurs</option>
           </select>
         </Field>}
-        <Field label="Échéance (facultatif)"><input type="date" value={due} onChange={(e) => setDue(e.target.value)} /></Field>
+        <Field label={program ? 'Date de l\'étape 1 (facultatif)' : 'Échéance (facultatif)'}><input type="date" value={due} onChange={(e) => setDue(e.target.value)} /></Field>
+        {program && <Field label="Jours entre deux étapes"><input type="number" min={7} max={180} value={gap} onChange={(e) => setGap(e.target.value)} /></Field>}
       </div>
       {scope === 'selected' && !producer && (
         <>

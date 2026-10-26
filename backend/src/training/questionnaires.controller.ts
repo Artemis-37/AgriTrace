@@ -84,13 +84,14 @@ export class QuestionnairesController {
          FROM questionnaires q ORDER BY q.archived, q.created_at DESC LIMIT 300`)).rows);
   }
 
-  /** Charge les questionnaires types (une seule fois par coopérative : s'ils ont déjà été chargés, même archivés, rien n'est refait). */
+  /** Charge les questionnaires types qui manquent (un modèle déjà chargé, même modifié ou archivé, n'est jamais refait ni écrasé). */
   private async ensureTemplates(req: any, force = false): Promise<number> {
     if (!force && !req.org.permissions.has('questionnaires:manage')) return 0;
     return this.db.tx(req.org.id, async (c) => {
-      if (!force && (await c.query(`SELECT 1 FROM questionnaires WHERE template_code IS NOT NULL LIMIT 1`)).rowCount) return 0;
+      const have = new Set((await c.query(`SELECT template_code FROM questionnaires WHERE template_code IS NOT NULL`)).rows.map((r: any) => r.template_code));
       let n = 0;
       for (const t of QUESTIONNAIRE_TEMPLATES) {
+        if (have.has(t.code)) continue;
         const r = await c.query(
           `INSERT INTO questionnaires(organization_id, title, description, questions, created_by, template_code) VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT DO NOTHING`,
           [req.org.id, t.title, t.description, JSON.stringify(t.questions), req.user.id, t.code]);

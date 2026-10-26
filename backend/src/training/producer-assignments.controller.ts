@@ -1,6 +1,6 @@
 import { BadRequestException, Body, Controller, ForbiddenException, Get, NotFoundException, Param, ParseUUIDPipe, Post, Query, Req } from '@nestjs/common';
 import { ApiBearerAuth, ApiHeader, ApiTags } from '@nestjs/swagger';
-import { IsArray, IsIn, IsISO8601, IsOptional, IsString, IsUUID, Length } from 'class-validator';
+import { IsArray, IsIn, IsInt, IsISO8601, IsOptional, IsString, IsUUID, Length, Max, Min } from 'class-validator';
 import { RequirePermissions } from '../access/decorators';
 import { AuditService } from '../audit/audit.service';
 import { DbService } from '../db/db.service';
@@ -12,6 +12,13 @@ export class AssignTargetDto {
   @IsIn(['all', 'selected']) scope: string;
   @IsOptional() @IsArray() @IsUUID('all', { each: true }) producer_ids?: string[];
   @IsOptional() @IsISO8601({ strict: true }) due_date?: string;
+  @IsOptional() @IsString() @Length(0, 1000) instructions?: string;
+}
+export class CoachingProgramDto {
+  @IsIn(['all', 'selected']) scope: string;
+  @IsOptional() @IsArray() @IsUUID('all', { each: true }) producer_ids?: string[];
+  @IsOptional() @IsISO8601({ strict: true }) start_date?: string;
+  @IsOptional() @IsInt() @Min(7) @Max(180) interval_days?: number;
   @IsOptional() @IsString() @Length(0, 1000) instructions?: string;
 }
 export class AssignDto extends AssignTargetDto {
@@ -67,6 +74,32 @@ export class ProducerAssignmentsController {
     });
     await this.audit.log({ organizationId: req.org.id, actorUserId: req.user.id, action: 'producer_assignment.create', entityType: 'producer_assignment', entityId: out.id, details: { kind: out.kind, scope: out.scope, targets: out.targets } });
     return out;
+  }
+
+  /** Programme de coaching agricole en trois étapes (diagnostic, accompagnement, évaluation) : trois tâches espacées, créées d'un coup pour les mêmes producteurs. */
+  @Post('coaching-program')
+  @RequirePermissions('training:assign')
+  async coachingProgram(@Body() b: CoachingProgramDto, @Req() req: any) {
+    const codes = ['coaching-1-diagnostic', 'coaching-2-accompagnement', 'coaching-3-evaluation'];
+    const gap = b.interval_days ?? 30;
+    const start = b.start_date ? new Date(b.start_date) : new Date(Date.now() + 7 * 86400000);
+    const out = await this.db.tx(req.org.id, async (c) => {
+      const qs = (await c.query(`SELECT id, title, template_code, archived FROM questionnaires WHERE template_code = ANY($1::text[])`, [codes])).rows;
+      const steps = codes.map((code) => qs.find((q: any) => q.template_code === code));
+      if (steps.some((q: any) => !q)) throw new NotFoundException('Les questionnaires du coaching ne sont pas chargés : ouvrez la page « Questionnaires » puis réessayez.');
+      if (steps.some((q: any) => q.archived)) throw new BadRequestException('Une étape du coaching est archivée : réactivez-la dans « Questionnaires ».');
+      const made: any[] = [];
+      for (const [i, q] of steps.entries()) {
+        const due = new Date(start.getTime() + i * gap * 86400000).toISOString().slice(0, 10);
+        made.push(await createAssignment(c, req.org.id, req.user.id, this.notif, {
+          kind: 'tache', scope: b.scope, producer_ids: b.producer_ids, due_date: due, title: q.title, module_id: null, questionnaire_id: q.id,
+          instructions: `${b.instructions ? b.instructions.trim() + ' — ' : ''}Étape ${i + 1} sur 3 du coaching agricole.`,
+        } as any));
+      }
+      return made;
+    });
+    await this.audit.log({ organizationId: req.org.id, actorUserId: req.user.id, action: 'producer_assignment.coaching_program', entityType: 'producer_assignment', entityId: out[0].id, details: { scope: b.scope, steps: 3, interval_days: gap } });
+    return { assignments: out.map((o: any) => ({ id: o.id, title: o.title, due_date: o.due_date })) };
   }
 
   /** Éléments ajoutés au profil d'un producteur (ou liste des affectations avec leur avancement). */

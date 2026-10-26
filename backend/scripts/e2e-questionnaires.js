@@ -83,13 +83,17 @@ const login = async (email, password) => (await call('POST', '/auth/login', { bo
   // ── Questionnaires types pré-chargés (coaching, CLMRS, enquête de base, travail des enfants…)
   const lst = (await call('GET', '/questionnaires', { token: t, org: org.id })).body;
   const types = lst.filter((x) => x.template_code);
-  check('8 questionnaires types pré-chargés', types.length === 8 && ['coaching', 'clmrs', 'enquete-base', 'travail-enfants'].every((c) => types.some((x) => x.template_code === c)), types.map((x) => x.template_code));
+  check('10 questionnaires types pré-chargés (dont les 3 étapes du coaching)', types.length === 10 && ['coaching-1-diagnostic', 'coaching-2-accompagnement', 'coaching-3-evaluation', 'clmrs', 'enquete-base', 'travail-enfants'].every((c) => types.some((x) => x.template_code === c)), types.map((x) => x.template_code));
   const clm = types.find((x) => x.template_code === 'clmrs');
   const ed = await call('POST', `/questionnaires/${clm.id}/update`, { token: t, org: org.id, body: { title: 'CLMRS — version coopérative', description: 'Adapté', questions: [{ label: 'Nombre d\'enfants scolarisés', type: 'nombre', required: true }, { label: 'Observations', type: 'texte' }] } });
   check('l\'ADG modifie un questionnaire type non envoyé', ed.status === 201 && ed.body.title.includes('version coopérative'), ed.body);
-  const dup = await call('POST', `/questionnaires/${types.find((x) => x.template_code === 'coaching').id}/duplicate`, { token: t, org: org.id });
+  const dup = await call('POST', `/questionnaires/${types.find((x) => x.template_code === 'coaching-1-diagnostic').id}/duplicate`, { token: t, org: org.id });
   check('duplication', dup.status === 201 && /copie/.test(dup.body.title) && dup.body.template_code == null, dup.body);
-  check('les modèles ne sont pas rechargés en double', (await call('GET', '/questionnaires', { token: t, org: org.id })).body.filter((x) => x.template_code).length === 8);
+  check('les modèles ne sont pas rechargés en double', (await call('GET', '/questionnaires', { token: t, org: org.id })).body.filter((x) => x.template_code).length === 10);
+  const prog = await call('POST', '/producer-assignments/coaching-program', { ...A, body: { scope: 'selected', producer_ids: [prods[0].id], start_date: '2026-11-02', interval_days: 30 } });
+  check('programme de coaching : 3 tâches espacées de 30 jours (1er nov. + 60 j)', prog.status === 201 && prog.body.assignments.length === 3 && String(prog.body.assignments[2].due_date).startsWith('2027-01-01'), prog.body);
+  const etapesCoach = (await call('GET', `/producer-assignments?producer_id=${prods[0].id}`, A)).body;
+  check('les 3 étapes figurent au profil du producteur', ['Étape 1', 'Étape 2', 'Étape 3'].every((e) => etapesCoach.some((x) => x.title.includes(e))), etapesCoach.map((x) => x.title));
   const back = await call('POST', '/questionnaires/defaults', { token: t, org: org.id });
   check('recharger les modèles types : rien à ajouter', back.status === 201 && back.body.added === 0, back.body);
   console.log('Droits et isolation');
