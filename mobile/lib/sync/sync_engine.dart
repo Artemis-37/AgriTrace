@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -102,14 +103,21 @@ class SyncEngine {
         return;
       }
       // Tâches d'abord : légères, elles sont disponibles hors connexion même si le téléchargement des producteurs et parcelles (long) est interrompu.
+      // Les deux téléchargements sont indépendants : ils se font en même temps (deux fois plus vite sur un réseau lent).
       Object? failure;
-      current = 2; _step(2, SyncStepState.doing);
-      try { await _pullTasks(); _step(2, SyncStepState.done); } catch (e) { failure = e; _step(2, SyncStepState.failed); }
-      current = 3; _step(3, SyncStepState.doing);
-      await _pull();
+      current = 3; _step(2, SyncStepState.doing); _step(3, SyncStepState.doing);
+      final tasksJob = _pullTasks().then((_) { _step(2, SyncStepState.done); }, onError: (Object e) { failure = e; _step(2, SyncStepState.failed); });
+      try {
+        await _pull();
+      } finally {
+        await tasksJob;
+      }
       _step(3, SyncStepState.done, '$_received élément(s) reçus');
-      if (failure != null && failure is ApiException && (failure.status == 401 || failure.status == 403)) throw failure;
+      final f = failure;
+      if (f is ApiException && (f.status == 401 || f.status == 403)) throw f;
       status.value = SyncStatus(SyncPhase.idle, lastSuccess: DateTime.now());
+      // Copies des écrans de consultation : en arrière-plan, après la synchronisation (elle n'attend plus ces appels) et au plus toutes les 5 minutes.
+      unawaited(_pullReferenceSoon());
     } on NetworkException catch (e) {
       _step(current, SyncStepState.failed, 'Pas de réseau');
       status.value = SyncStatus(SyncPhase.offline, lastSuccess: previousSuccess, message: e.message);
@@ -207,12 +215,19 @@ class SyncEngine {
 
   /// Tâches de l'utilisateur : copiées du serveur à chaque synchronisation pour rester lisibles hors connexion (les changements d'état se font en ligne).
   Future<void> _pullTasks() async {
+    await Future.wait([_pullTaskList(), _pullAssignments()]);
+  }
+
+  Future<void> _pullTaskList() async {
     try {
       final r = await api.get('/tasks');
       await _keepLocalChanges('tasks_cache', 'id', r as List<dynamic>, {'task.start': 'in_progress', 'task.submit': 'submitted'}, 'status');
     } on ApiException catch (e) {
       if (e.status == 401) rethrow; // droit « tâches » absent (403) ou autre : sans effet sur le reste
     }
+  }
+
+  Future<void> _pullAssignments() async {
     try {
       final res = await api.get('/producer-assignments', query: {'mine': '1', 'compact': '1'});
       List<dynamic> a;
@@ -225,7 +240,14 @@ class SyncEngine {
     } on ApiException catch (e) {
       if (e.status == 401) rethrow;
     }
-    await _pullReference();
+  }
+
+  DateTime? _referenceAt;
+  Future<void> _pullReferenceSoon() async {
+    final last = _referenceAt;
+    if (last != null && DateTime.now().difference(last) < const Duration(minutes: 5)) return;
+    _referenceAt = DateTime.now();
+    try { await _pullReference(); } catch (_) {/* facultatif : réessayé à la prochaine synchronisation */}
   }
 
   /// Écrans de consultation (convois, fiche, stock, historique, notifications, formations) : copiés pour rester lisibles hors connexion.
@@ -241,17 +263,19 @@ class SyncEngine {
       }
       return null;
     }
-    final convoys = await keep('convoys', '/convoys');
-    await keep('statement', '/convoys/statement');
-    await keep('my-stock', '/convoys/my-stock');
-    await keep('purchases-', '/purchase-declarations', {'limit': '200'});
-    await keep('notifications', '/notifications', {'limit': '100', 'unread': 'true'});
-    await keep('training-results', '/training-results');
-    await keep('training-records', '/field-records?kind=training');
+    final convoysJob = keep('convoys', '/convoys');
+    await Future.wait([
+      convoysJob,
+      keep('statement', '/convoys/statement'),
+      keep('my-stock', '/convoys/my-stock'),
+      keep('purchases-', '/purchase-declarations', {'limit': '200'}),
+      keep('notifications', '/notifications', {'limit': '100', 'unread': 'true'}),
+      keep('training-results', '/training-results'),
+      keep('training-records', '/field-records?kind=training'),
+    ]);
+    final convoys = await convoysJob;
     if (convoys is List) {
-      for (final c in convoys.take(10)) {
-        if (c is Map && c['id'] != null) await keep('convoy-decl-${c['id']}', '/convoys/${c['id']}/declarations');
-      }
+      await Future.wait([for (final c in convoys.take(10)) if (c is Map && c['id'] != null) keep('convoy-decl-${c['id']}', '/convoys/${c['id']}/declarations')]);
     }
   }
 
@@ -273,7 +297,7 @@ class SyncEngine {
     _received = 0;
     var cursor = await db.getKv('cursor');
     while (true) {
-      final j = await api.get('/sync/changes', query: {if (cursor != null) 'cursor': cursor, 'limit': '500'}) as Map<String, dynamic>;
+      final j = await api.get('/sync/changes', query: {if (cursor != null) 'cursor': cursor, 'limit': '1000'}) as Map<String, dynamic>;
       final perms = (j['permissions'] as List).cast<String>();
       if (!canSync(perms)) throw ApiException(403, 'Synchronisation non autorisée pour ce compte');
       await db.raw.transaction((txn) => _apply(txn, j, perms));
