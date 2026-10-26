@@ -19,6 +19,7 @@ import 'download_screen.dart';
 import 'social_infra_screen.dart';
 import 'training_library_screen.dart';
 import 'training_screen.dart';
+import 'convoy_history_screen.dart';
 import 'new_convoy_screen.dart';
 import 'new_declaration_screen.dart';
 
@@ -129,6 +130,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (_canCreate) _HomeButton(Icons.add_shopping_cart, 'Acheter du produit', () => _open(const NewDeclarationScreen(), sync: true)),
       if (_canHistory) _HomeButton(Icons.history, 'Historique des achats', () => _open(const HistoryScreen())),
       if (_canConvoy) _HomeButton(Icons.local_shipping_outlined, 'Déclarer un convoi', () => _open(const NewConvoyScreen(), sync: true)),
+      if (_canConvoy) _HomeButton(Icons.route_outlined, 'Historique des convois', () => _open(const ConvoyHistoryScreen())),
       if (_canConvoy) _HomeButton(Icons.inventory_2_outlined, 'Mon stock', () => _open(const MyStockScreen())),
       if (_canFiche) _HomeButton(Icons.receipt_long_outlined, 'Ma fiche de compte', () => _open(const FicheScreen())),
       if (_canSurvey || _canMissions) _HomeButton(Icons.fact_check_outlined, 'Producteurs et enquêtes', () => _open(const ProducersScreen())),

@@ -167,6 +167,16 @@ class Repository {
   /// Convois créés sur l'appareil et pas encore envoyés : sert à prévoir le prochain numéro automatique hors connexion.
   Future<int> pendingConvoys() async => Sqflite.firstIntValue(await db.raw.rawQuery("SELECT count(*) FROM outbox WHERE op_type = 'convoy.create'")) ?? 0;
 
+  /// Convois créés sur l'appareil, pas encore envoyés ou refusés : affichés en tête de l'historique des convois.
+  Future<List<Map<String, Object?>>> localConvoys() async {
+    final out = <Map<String, Object?>>[];
+    for (final o in await db.raw.query('outbox', where: "op_type = 'convoy.create'", orderBy: 'created_at DESC')) {
+      final p = Map<String, Object?>.from(jsonDecode(o['payload'] as String) as Map);
+      out.add({...p, 'local_status': o['status'] ?? 'pending', 'created_at': o['created_at']});
+    }
+    return out;
+  }
+
   /// Achats que le délégué peut charger dans un convoi : envoyés (ou en attente d'envoi) et pas déjà chargés dans un convoi de cet appareil.
   /// [serverAvailableIds] : achats que le serveur déclare libres (null hors connexion) ; un achat déjà parti sur le serveur absent de la liste est écarté.
   Future<List<Map<String, Object?>>> linkableDeclarations({Set<String>? serverAvailableIds}) async {
