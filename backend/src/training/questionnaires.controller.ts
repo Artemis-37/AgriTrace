@@ -7,6 +7,7 @@ import { Readable } from 'stream';
 import { RequirePermissions } from '../access/decorators';
 import { AuditService } from '../audit/audit.service';
 import { DbService } from '../db/db.service';
+import { QUESTIONNAIRE_TEMPLATES } from './questionnaire-templates';
 
 export type QType = 'text' | 'number' | 'yesno' | 'choice' | 'multi' | 'date';
 export interface Question { id: string; label: string; type: QType; options?: string[]; required: boolean }
@@ -76,10 +77,36 @@ export class QuestionnairesController {
   @Get()
   async list(@Req() req: any) {
     this.readAccess(req);
+    await this.ensureTemplates(req);
     return this.db.tx(req.org.id, async (c) => (await c.query(
-      `SELECT q.id, q.title, q.description, jsonb_array_length(q.questions)::int AS question_count, q.archived, q.created_at,
+      `SELECT q.id, q.title, q.description, jsonb_array_length(q.questions)::int AS question_count, q.archived, q.created_at, q.template_code, q.updated_at,
               (SELECT count(*)::int FROM producer_assignments a WHERE a.questionnaire_id = q.id) AS assignments
          FROM questionnaires q ORDER BY q.archived, q.created_at DESC LIMIT 300`)).rows);
+  }
+
+  /** Charge les questionnaires types (une seule fois par coopérative : s'ils ont déjà été chargés, même archivés, rien n'est refait). */
+  private async ensureTemplates(req: any, force = false): Promise<number> {
+    if (!force && !req.org.permissions.has('questionnaires:manage')) return 0;
+    return this.db.tx(req.org.id, async (c) => {
+      if (!force && (await c.query(`SELECT 1 FROM questionnaires WHERE template_code IS NOT NULL LIMIT 1`)).rowCount) return 0;
+      let n = 0;
+      for (const t of QUESTIONNAIRE_TEMPLATES) {
+        const r = await c.query(
+          `INSERT INTO questionnaires(organization_id, title, description, questions, created_by, template_code) VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT DO NOTHING`,
+          [req.org.id, t.title, t.description, JSON.stringify(t.questions), req.user.id, t.code]);
+        n += r.rowCount ?? 0;
+      }
+      return n;
+    });
+  }
+
+  /** Recharge les modèles types manquants (ceux déjà présents, modifiés ou archivés, ne sont pas touchés). */
+  @Post('defaults')
+  @RequirePermissions('questionnaires:manage')
+  async defaults(@Req() req: any) {
+    const added = await this.ensureTemplates(req, true);
+    if (added) await this.audit.log({ organizationId: req.org.id, actorUserId: req.user.id, action: 'questionnaire.defaults', entityType: 'questionnaire', entityId: req.org.id, details: { added } });
+    return { added };
   }
 
   /** Modèle Excel pour l'importation : une ligne par question. */
@@ -142,6 +169,40 @@ export class QuestionnairesController {
       [req.org.id, title, description, JSON.stringify(questions), req.user.id])).rows[0]);
     await this.audit.log({ organizationId: req.org.id, actorUserId: req.user.id, action: `questionnaire.${how}`, entityType: 'questionnaire', entityId: row.id, details: { questions: questions.length } });
     return row;
+  }
+
+  @Get(':id')
+  async one(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
+    this.readAccess(req);
+    const r = await this.db.tx(req.org.id, async (c) => (await c.query(
+      `SELECT id, title, description, questions, archived, template_code, created_at, updated_at,
+              (SELECT count(*)::int FROM producer_assignments a WHERE a.questionnaire_id = questionnaires.id) AS assignments FROM questionnaires WHERE id = $1`, [id])).rows[0]);
+    if (!r) throw new NotFoundException();
+    return r;
+  }
+
+  /** Modification : le titre et la description sont libres ; les questions ne changent plus une fois le questionnaire envoyé (les réponses reçues resteraient incohérentes) — il faut alors le dupliquer. */
+  @Post(':id/update')
+  @RequirePermissions('questionnaires:manage')
+  async update(@Param('id', ParseUUIDPipe) id: string, @Body() b: CreateQuestionnaireDto, @Req() req: any) {
+    const questions = cleanQuestions(b.questions);
+    const r = await this.db.tx(req.org.id, async (c) => {
+      const cur = (await c.query(`SELECT questions, (SELECT count(*)::int FROM producer_assignments a WHERE a.questionnaire_id = questionnaires.id) AS sent FROM questionnaires WHERE id = $1 FOR UPDATE`, [id])).rows[0];
+      if (!cur) throw new NotFoundException();
+      if (cur.sent > 0 && JSON.stringify(cur.questions) !== JSON.stringify(questions))
+        throw new BadRequestException('Ce questionnaire a déjà été envoyé : ses questions ne peuvent plus changer. Dupliquez-le pour en créer une nouvelle version.');
+      return (await c.query(`UPDATE questionnaires SET title = $2, description = $3, questions = $4, updated_at = now() WHERE id = $1 RETURNING *`, [id, b.title.trim(), (b.description ?? '').trim(), JSON.stringify(questions)])).rows[0];
+    });
+    await this.audit.log({ organizationId: req.org.id, actorUserId: req.user.id, action: 'questionnaire.update', entityType: 'questionnaire', entityId: id, details: { questions: questions.length } });
+    return r;
+  }
+
+  @Post(':id/duplicate')
+  @RequirePermissions('questionnaires:manage')
+  async duplicate(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
+    const src = await this.db.tx(req.org.id, async (c) => (await c.query(`SELECT title, description, questions FROM questionnaires WHERE id = $1`, [id])).rows[0]);
+    if (!src) throw new NotFoundException();
+    return this.insert(req, `${src.title} (copie)`.slice(0, 200), src.description, src.questions, 'duplicate');
   }
 
   @Post(':id/archive')

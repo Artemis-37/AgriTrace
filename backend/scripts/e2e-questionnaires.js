@@ -79,11 +79,24 @@ const login = async (email, password) => (await call('POST', '/auth/login', { bo
   const txt = await csvOut.text();
   check('export CSV', csvOut.status === 200 && txt.includes('Nombre de parcelles') && txt.includes('3.5'), txt.slice(0, 200));
 
+  console.log('Modèles types');
+  // ── Questionnaires types pré-chargés (coaching, CLMRS, enquête de base, travail des enfants…)
+  const lst = (await call('GET', '/questionnaires', { token: t, org: org.id })).body;
+  const types = lst.filter((x) => x.template_code);
+  check('8 questionnaires types pré-chargés', types.length === 8 && ['coaching', 'clmrs', 'enquete-base', 'travail-enfants'].every((c) => types.some((x) => x.template_code === c)), types.map((x) => x.template_code));
+  const clm = types.find((x) => x.template_code === 'clmrs');
+  const ed = await call('POST', `/questionnaires/${clm.id}/update`, { token: t, org: org.id, body: { title: 'CLMRS — version coopérative', description: 'Adapté', questions: [{ label: 'Nombre d\'enfants scolarisés', type: 'nombre', required: true }, { label: 'Observations', type: 'texte' }] } });
+  check('l\'ADG modifie un questionnaire type non envoyé', ed.status === 201 && ed.body.title.includes('version coopérative'), ed.body);
+  const dup = await call('POST', `/questionnaires/${types.find((x) => x.template_code === 'coaching').id}/duplicate`, { token: t, org: org.id });
+  check('duplication', dup.status === 201 && /copie/.test(dup.body.title) && dup.body.template_code == null, dup.body);
+  check('les modèles ne sont pas rechargés en double', (await call('GET', '/questionnaires', { token: t, org: org.id })).body.filter((x) => x.template_code).length === 8);
+  const back = await call('POST', '/questionnaires/defaults', { token: t, org: org.id });
+  check('recharger les modèles types : rien à ajouter', back.status === 201 && back.body.added === 0, back.body);
   console.log('Droits et isolation');
   const org2 = (await call('POST', '/organizations', { token: adm, body: { code: 'QSB' + run, name: 'QSB' + run } })).body;
   await call('POST', `/organizations/${org2.id}/admins`, { token: adm, body: { email: `qb.${run.toLowerCase()}@t.test`, full_name: 'Autre', password: pw } });
   const t2 = await login(`qb.${run.toLowerCase()}@t.test`, pw);
-  check('une autre coopérative ne voit pas les questionnaires', (await call('GET', '/questionnaires', { token: t2, org: org2.id })).body.length === 0 && (await call('GET', `/questionnaires/targets/${tg}`, { token: t2, org: org2.id })).status === 404);
+  check('une autre coopérative ne voit pas les questionnaires', !(await call('GET', '/questionnaires', { token: t2, org: org2.id })).body.some((x) => x.template_code == null) && (await call('GET', `/questionnaires/targets/${tg}`, { token: t2, org: org2.id })).status === 404);
   check('sans connexion : 401', (await call('GET', '/questionnaires')).status === 401);
   check('archivage', (await call('POST', `/questionnaires/${q.body.id}/archive`, A)).body.archived === true);
   check('questionnaire archivé non affectable', (await call('POST', '/producer-assignments', { ...A, body: { kind: 'tache', scope: 'all', questionnaire_id: q.body.id } })).status === 404);

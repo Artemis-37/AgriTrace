@@ -5,7 +5,7 @@ import { Badge, Card, ErrorBox, Field, Loading, Modal, PageHeader, Table, useAct
 import { AssignDialog } from './Affectations';
 import { QTYPE_FR, QType, Question, showAnswer } from './QuestionnaireAnswer';
 
-type Q = { id: string; title: string; description: string; question_count: number; archived: boolean; created_at: string; assignments: number };
+type Q = { id: string; title: string; description: string; question_count: number; archived: boolean; created_at: string; assignments: number; template_code?: string | null; updated_at?: string | null };
 type Asg = { id: string; title: string; scope: string; created_at: string; questionnaire_id: string | null; targets: number; done: number };
 const d = (x: string | null) => (x ? new Date(x).toLocaleDateString('fr-FR') : '—');
 
@@ -15,6 +15,7 @@ export default function Questionnaires() {
   const manage = can('questionnaires:manage');
   const list = useAsync(() => get<Q[]>('/questionnaires'), []);
   const [creating, setCreating] = useState(false);
+  const [editing, setEditing] = useState<Q | null>(null);
   const [importing, setImporting] = useState(false);
   const [assign, setAssign] = useState<Q | null>(null);
   const [results, setResults] = useState<Q | null>(null);
@@ -22,12 +23,12 @@ export default function Questionnaires() {
   return (
     <>
       <PageHeader title="Questionnaires (tâches)" subtitle="Un questionnaire est une tâche que le coach renseigne auprès du producteur. Créez-le ou importez-le, puis envoyez-le à tous les producteurs ou à certains."
-        actions={manage && <><button className="btn" onClick={() => setCreating(true)}>Créer un questionnaire</button><button className="btn btn-secondary" onClick={() => setImporting(true)}>Importer (Excel / CSV)</button></>} />
+        actions={manage && <><button className="btn" onClick={() => setCreating(true)}>Créer un questionnaire</button><button className="btn btn-secondary" onClick={() => setImporting(true)}>Importer (Excel / CSV)</button><button className="btn btn-ghost" disabled={act.busy} onClick={() => act.run(async () => { await post('/questionnaires/defaults'); list.reload(); })}>Recharger les modèles types</button></>} />
       <Card>
         {act.error && <ErrorBox message={act.error} />}
         {list.loading ? <Loading /> : list.error ? <ErrorBox message={list.error} onRetry={list.reload} /> : (
           <Table rows={list.data ?? []} empty={manage ? 'Aucun questionnaire. Créez-en un ou importez un fichier Excel.' : 'Aucun questionnaire.'} columns={[
-            { header: 'Questionnaire', render: (q: Q) => <><strong>{q.title}</strong>{q.archived && <> <Badge tone="neutral">Archivé</Badge></>}{q.description && <div className="muted" style={{ fontSize: '.85rem' }}>{q.description}</div>}</> },
+            { header: 'Questionnaire', render: (q: Q) => <><strong>{q.title}</strong>{q.template_code && <> <Badge tone="info">Modèle type</Badge></>}{q.archived && <> <Badge tone="neutral">Archivé</Badge></>}{q.description && <div className="muted" style={{ fontSize: '.85rem' }}>{q.description}</div>}</> },
             { header: 'Questions', align: 'right', render: (q: Q) => q.question_count },
             { header: 'Envois', align: 'right', render: (q: Q) => q.assignments },
             { header: 'Créé le', render: (q: Q) => d(q.created_at) },
@@ -35,11 +36,14 @@ export default function Questionnaires() {
               <span style={{ display: 'inline-flex', gap: '.4rem', flexWrap: 'wrap' }}>
                 {can('training:assign') && !q.archived && <button className="btn btn-small" onClick={() => setAssign(q)}>Envoyer aux producteurs</button>}
                 {q.assignments > 0 && <button className="btn btn-small btn-secondary" onClick={() => setResults(q)}>Résultats</button>}
+                {manage && <button className="btn btn-small btn-secondary" onClick={() => setEditing(q)}>Modifier</button>}
+                {manage && <button className="btn btn-small btn-ghost" disabled={act.busy} onClick={() => act.run(async () => { await post(`/questionnaires/${q.id}/duplicate`); list.reload(); })}>Dupliquer</button>}
                 {manage && <button className="btn btn-small btn-ghost" disabled={act.busy} onClick={() => act.run(async () => { await post(`/questionnaires/${q.id}/archive`); list.reload(); })}>{q.archived ? 'Réactiver' : 'Archiver'}</button>}
               </span>) },
           ]} />
         )}
       </Card>
+      {editing && <QuestionnaireEditor edit={editing} onClose={() => setEditing(null)} onDone={() => { setEditing(null); list.reload(); }} />}
       {creating && <QuestionnaireEditor onClose={() => setCreating(false)} onDone={() => { setCreating(false); list.reload(); }} />}
       {importing && <ImportQuestionnaire onClose={() => setImporting(false)} onDone={() => { setImporting(false); list.reload(); }} />}
       {assign && <AssignDialog title={`Envoyer « ${assign.title} »`} questionnaire={assign} onClose={() => setAssign(null)} onDone={() => { setAssign(null); list.reload(); }} />}
@@ -48,16 +52,25 @@ export default function Questionnaires() {
   );
 }
 
-function QuestionnaireEditor({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
+function QuestionnaireEditor({ onClose, onDone, edit }: { onClose: () => void; onDone: () => void; edit?: Q }) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [qs, setQs] = useState<{ label: string; type: QType; options: string; required: boolean }[]>([{ label: '', type: 'text', options: '', required: false }]);
   const { busy, error, run } = useAction();
+  const full = useAsync(async () => (edit ? get<{ title: string; description: string; questions: Question[]; assignments: number }>(`/questionnaires/${edit.id}`) : null), [edit?.id]);
+  const loaded = useRef('');
+  if (full.data && loaded.current !== edit?.id) {
+    loaded.current = edit!.id;
+    setTitle(full.data.title); setDescription(full.data.description);
+    setQs(full.data.questions.map((q) => ({ label: q.label, type: q.type, options: (q.options ?? []).join('; '), required: q.required })));
+  }
   const upd = (i: number, patch: Partial<(typeof qs)[number]>) => setQs((l) => l.map((q, j) => (j === i ? { ...q, ...patch } : q)));
   const move = (i: number, dir: -1 | 1) => setQs((l) => { const n = [...l]; const j = i + dir; if (j < 0 || j >= n.length) return l; [n[i], n[j]] = [n[j], n[i]]; return n; });
   const ok = title.trim().length >= 3 && qs.length > 0 && qs.every((q) => q.label.trim().length >= 2 && (!['choice', 'multi'].includes(q.type) || q.options.split(/[;\n]/).filter((o) => o.trim()).length >= 2));
   return (
-    <Modal title="Créer un questionnaire" onClose={onClose}>
+    <Modal title={edit ? 'Modifier le questionnaire' : 'Créer un questionnaire'} onClose={onClose}>
+      {edit && full.loading && <Loading />}
+      {edit && (full.data?.assignments ?? 0) > 0 && <p className="notice">Ce questionnaire a déjà été envoyé : seuls le titre et la description peuvent changer. Pour modifier les questions, dupliquez-le.</p>}
       <Field label="Titre"><input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex. Suivi des plantations" /></Field>
       <Field label="Description (facultatif)"><input value={description} onChange={(e) => setDescription(e.target.value)} /></Field>
       <h3>Questions</h3>
@@ -78,7 +91,7 @@ function QuestionnaireEditor({ onClose, onDone }: { onClose: () => void; onDone:
       <button type="button" className="btn btn-secondary" onClick={() => setQs((l) => [...l, { label: '', type: 'text', options: '', required: false }])}>Ajouter une question</button>
       {error && <ErrorBox message={error} />}
       <div className="modal-foot"><button className="btn btn-secondary" onClick={onClose}>Annuler</button>
-        <button className="btn" disabled={busy || !ok} onClick={() => run(async () => { await post('/questionnaires', { title: title.trim(), description: description.trim(), questions: qs.map((q) => ({ label: q.label.trim(), type: q.type, options: q.options, required: q.required })) }); onDone(); })}>Enregistrer le questionnaire</button></div>
+        <button className="btn" disabled={busy || !ok} onClick={() => run(async () => { await post(edit ? `/questionnaires/${edit.id}/update` : '/questionnaires', { title: title.trim(), description: description.trim(), questions: qs.map((q) => ({ label: q.label.trim(), type: q.type, options: q.options, required: q.required })) }); onDone(); })}>Enregistrer le questionnaire</button></div>
     </Modal>
   );
 }
