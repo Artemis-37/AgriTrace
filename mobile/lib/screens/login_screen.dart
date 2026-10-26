@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../data/api_client.dart';
 import '../data/session_store.dart';
+import '../sync/sync_engine.dart';
 import 'change_password_screen.dart';
 import '../main.dart';
 import 'home_screen.dart';
@@ -178,6 +179,10 @@ class _LoginScreenState extends State<LoginScreen> {
         SyncIcon(color: Theme.of(context).colorScheme.primary, size: 56, tappable: false),
         const SizedBox(height: 16),
         const Text('Synchronisation en cours…', style: TextStyle(fontSize: 18)),
+        ValueListenableBuilder<List<SyncStep>>(valueListenable: services.sync.steps, builder: (_, st, __) {
+          final cur = st.where((x) => x.state == SyncStepState.doing).firstOrNull;
+          return Padding(padding: const EdgeInsets.only(top: 6), child: Text(cur == null ? '' : '${cur.label}${cur.detail.isEmpty ? '' : ' · ${cur.detail}'}', style: const TextStyle(color: Colors.black54)));
+        }),
         const Padding(padding: EdgeInsets.fromLTRB(32, 8, 32, 0), child: Text('Mise à jour de votre profil, de vos producteurs, tâches et opérations avec le serveur.', textAlign: TextAlign.center, style: TextStyle(color: Colors.black54))),
       ]))));
     }

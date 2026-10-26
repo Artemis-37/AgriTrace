@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../main.dart';
 import '../sync/sync_engine.dart';
+import 'sync_dialog.dart';
 
 /// Icône de synchronisation : tourne pendant une synchronisation, devient « sans réseau » hors connexion ; un appui relance la synchronisation.
 class SyncIcon extends StatefulWidget {
@@ -44,7 +45,7 @@ class _SyncIconState extends State<SyncIcon> with SingleTickerProviderStateMixin
         final icon = s.phase == SyncPhase.offline ? Icons.sync_disabled : (s.phase == SyncPhase.error || s.phase == SyncPhase.blocked) ? Icons.sync_problem : Icons.sync;
         final w = RotationTransition(turns: Tween(begin: 1.0, end: 0.0).animate(_c), child: Icon(icon, color: widget.color, size: widget.size));
         if (!widget.tappable) return w;
-        return IconButton(tooltip: 'Synchroniser', onPressed: s.phase == SyncPhase.syncing ? null : () => services.sync.run(), icon: w);
+        return IconButton(tooltip: 'Synchroniser', onPressed: s.phase == SyncPhase.syncing ? null : () => syncWithDialog(context), icon: w);
       },
     );
   }

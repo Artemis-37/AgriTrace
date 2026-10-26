@@ -18,6 +18,16 @@ class SyncStatus {
   const SyncStatus(this.phase, {this.lastSuccess, this.message});
 }
 
+enum SyncStepState { waiting, doing, done, skipped, failed }
+
+/// Une étape de la synchronisation, telle qu'affichée dans la boîte de dialogue de progression.
+class SyncStep {
+  final String label;
+  final SyncStepState state;
+  final String detail;
+  const SyncStep(this.label, this.state, [this.detail = '']);
+}
+
 /// Moteur de synchronisation bidirectionnelle.
 ///  1. ENVOI : les opérations de la file d'attente partent par lots avec leur clé d'idempotence ; le serveur renvoie un
 ///     résultat explicite par opération (accepted, rejected, to_correct, conflict, pending_validation). Une coupure
@@ -33,6 +43,23 @@ class SyncEngine {
   final ValueNotifier<SyncStatus> status = ValueNotifier(const SyncStatus(SyncPhase.idle));
 
   SyncEngine(this.db, this.api);
+
+  static const _labels = ['Envoi de vos opérations', 'Envoi des photos', 'Tâches et éléments des profils', 'Producteurs, parcelles et données'];
+  /// Progression de la synchronisation en cours (ou de la dernière) : alimente la boîte de dialogue.
+  final ValueNotifier<List<SyncStep>> steps = ValueNotifier([for (final l in _labels) SyncStep(l, SyncStepState.waiting)]);
+  void _step(int i, SyncStepState st, [String detail = '']) {
+    final l = [...steps.value];
+    l[i] = SyncStep(_labels[i], st, detail);
+    steps.value = l;
+  }
+
+  /// Opérations (et photos) qui attendent encore d'être envoyées : tant qu'il en reste, rien n'est téléchargé, pour ne pas mélanger
+  /// ce qui est sur le téléphone avec ce qui est sur le serveur.
+  Future<int> _toSubmit() async {
+    final ops = Sqflite.firstIntValue(await db.raw.rawQuery("SELECT count(*) FROM outbox WHERE status IN ('pending','pending_validation')")) ?? 0;
+    final photos = Sqflite.firstIntValue(await db.raw.rawQuery("SELECT count(*) FROM pending_uploads WHERE status = 'pending'")) ?? 0;
+    return ops + photos;
+  }
 
   bool _blocked = false;
   /// Suspend la synchronisation (session refusée par le serveur) : le reste de l'application reste utilisable, les saisies restent sur l'appareil.
@@ -55,22 +82,43 @@ class SyncEngine {
     _running = true;
     final previousSuccess = status.value.lastSuccess;
     status.value = SyncStatus(SyncPhase.syncing, lastSuccess: previousSuccess);
+    steps.value = [for (final l in _labels) SyncStep(l, SyncStepState.waiting)];
+    var current = 0;
     try {
+      _step(0, SyncStepState.doing);
+      _pushTotal = Sqflite.firstIntValue(await db.raw.rawQuery("SELECT count(*) FROM outbox WHERE status IN ('pending','pending_validation')")) ?? 0;
+      _pushed = 0;
       await _push();
+      _step(0, SyncStepState.done, _pushTotal == 0 ? 'Rien à envoyer' : '$_pushTotal envoyée(s)');
+      current = 1; _step(1, SyncStepState.doing);
       await _pushPhotos();
+      _step(1, SyncStepState.done);
+      // Règle : on ne télécharge que s'il n'y a plus rien à soumettre.
+      final left = await _toSubmit();
+      if (left > 0) {
+        for (var i = 2; i < 4; i++) _step(i, SyncStepState.skipped, 'Suspendu');
+        status.value = SyncStatus(SyncPhase.error, lastSuccess: previousSuccess, message: '$left opération(s) restent à envoyer : le téléchargement des données du serveur est suspendu tant que tout n\'est pas envoyé.');
+        return;
+      }
       // Tâches d'abord : légères, elles sont disponibles hors connexion même si le téléchargement des producteurs et parcelles (long) est interrompu.
       Object? failure;
-      try { await _pullTasks(); } catch (e) { failure = e; }
+      current = 2; _step(2, SyncStepState.doing);
+      try { await _pullTasks(); _step(2, SyncStepState.done); } catch (e) { failure = e; _step(2, SyncStepState.failed); }
+      current = 3; _step(3, SyncStepState.doing);
       await _pull();
+      _step(3, SyncStepState.done, '$_received élément(s) reçus');
       if (failure != null && failure is ApiException && (failure.status == 401 || failure.status == 403)) throw failure;
       status.value = SyncStatus(SyncPhase.idle, lastSuccess: DateTime.now());
     } on NetworkException catch (e) {
+      _step(current, SyncStepState.failed, 'Pas de réseau');
       status.value = SyncStatus(SyncPhase.offline, lastSuccess: previousSuccess, message: e.message);
     } on ApiException catch (e) {
+      _step(current, SyncStepState.failed, e.message);
       final blocked = e.status == 401 || e.status == 403;
       if (blocked) _blocked = true; // pas de déconnexion forcée : le menu reste disponible
       status.value = SyncStatus(blocked ? SyncPhase.blocked : SyncPhase.error, lastSuccess: previousSuccess, message: e.message);
     } catch (e) {
+      _step(current, SyncStepState.failed);
       status.value = SyncStatus(SyncPhase.error, lastSuccess: previousSuccess, message: e.toString());
     } finally {
       _running = false;
@@ -78,6 +126,8 @@ class SyncEngine {
   }
 
   // ---------------- Envoi ----------------
+
+  int _pushTotal = 0, _pushed = 0, _received = 0;
 
   Future<void> _push() async {
     var lastSeq = 0;
@@ -87,6 +137,8 @@ class SyncEngine {
           whereArgs: [lastSeq], orderBy: 'seq', limit: Config.batchSize);
       if (rows.isEmpty) return;
       lastSeq = rows.last['seq'] as int;
+      _pushed += rows.length;
+      _step(0, SyncStepState.doing, '$_pushed / $_pushTotal');
 
       final res = await api.post('/sync/batch', {
         'operations': [
@@ -189,12 +241,15 @@ class SyncEngine {
   }
 
   Future<void> _pull() async {
+    _received = 0;
     var cursor = await db.getKv('cursor');
     while (true) {
       final j = await api.get('/sync/changes', query: {if (cursor != null) 'cursor': cursor, 'limit': '500'}) as Map<String, dynamic>;
       final perms = (j['permissions'] as List).cast<String>();
       if (!canSync(perms)) throw ApiException(403, 'Synchronisation non autorisée pour ce compte');
       await db.raw.transaction((txn) => _apply(txn, j, perms));
+      _received += ((j['changes'] ?? {}) as Map).values.fold<int>(0, (n, v) => n + (v is List ? v.length : 0));
+      _step(3, SyncStepState.doing, '$_received élément(s) reçus');
       cursor = j['next_cursor'] as String;
       await db.setKv('cursor', cursor); // le curseur n'avance qu'après l'application des changements
       if (j['has_more'] != true) break;

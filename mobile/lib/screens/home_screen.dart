@@ -20,6 +20,7 @@ import 'social_infra_screen.dart';
 import 'training_library_screen.dart';
 import 'training_screen.dart';
 import 'convoy_history_screen.dart';
+import 'sync_dialog.dart';
 import 'new_convoy_screen.dart';
 import 'new_declaration_screen.dart';
 
@@ -141,7 +142,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _HomeHeader(
           now: _now, name: _identity.name, org: _identity.org, zone: _identity.zone,
           count: _coachMode ? null : t.count, unread: _unreadNotes, onNotes: () => _open(const NotificationsScreen()),
-          onSync: () => services.sync.run(),
+          onSync: () => syncWithDialog(context),
           onSignOut: _signOut,
         ),
         ValueListenableBuilder<SyncStatus>(
@@ -207,7 +208,7 @@ class _HomeScreenState extends State<HomeScreen> {
         Material(
           color: const Color(0xFFE9EEE3),
           child: InkWell(
-            onTap: () => services.sync.run(),
+            onTap: () => syncWithDialog(context),
             child: Padding(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14), child: Row(children: [
               const Text('Éléments à soumettre', style: TextStyle(fontSize: 18)),
               const SizedBox(width: 10),
@@ -236,7 +237,7 @@ class _HomeScreenState extends State<HomeScreen> {
           if (bad) Text(it.error == null || it.error!.isEmpty ? 'À corriger' : 'À corriger : ${it.error}', style: TextStyle(color: Colors.red.shade700, fontSize: 13)),
         ])),
         Container(width: 1, height: 54, color: const Color(0xFFDDDDDD)),
-        IconButton(onPressed: () => services.sync.run(), tooltip: 'Envoyer', iconSize: 34, icon: Icon(bad ? Icons.error_outline : Icons.cloud_upload_outlined, color: bad ? Colors.red : Colors.black87)),
+        IconButton(onPressed: () => syncWithDialog(context), tooltip: 'Envoyer', iconSize: 34, icon: Icon(bad ? Icons.error_outline : Icons.cloud_upload_outlined, color: bad ? Colors.red : Colors.black87)),
       ]),
     );
   }
