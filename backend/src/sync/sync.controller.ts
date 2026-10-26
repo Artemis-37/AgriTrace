@@ -191,24 +191,34 @@ export class SyncController {
       const meName = (await c.query(`SELECT full_name FROM users WHERE id = $1`, [req.user.id])).rows[0]?.full_name ?? null;
       const orgName = (await c.query(`SELECT name FROM organizations WHERE id = $1`, [req.org.id])).rows[0]?.name ?? null;
 
-      const specs: { key: string; sql: string; params?: any[] }[] = [
-        { key: 'value_chains', sql: `SELECT id, code, name, default_unit, status, updated_at AS ts FROM value_chains` },
-        { key: 'campaigns', sql: `SELECT id, value_chain_id, code, name, starts_on, ends_on, status, updated_at AS ts FROM campaigns` },
-        { key: 'unit_conversions', sql: `SELECT id, value_chain_id, from_unit, to_unit, factor, updated_at AS ts FROM unit_conversions` },
-        { key: 'price_versions', sql: `SELECT v.id, v.schedule_id, s.value_chain_id, s.campaign_id, s.unit, s.currency, v.version_no, v.unit_price, v.valid_from, v.valid_to, v.created_at AS ts
+      // Chaque profil ne reçoit que ce qu'il utilise : un délégué acheteur (prix, producteurs de ses filières, ses achats), un agent de terrain
+      // (producteurs, parcelles), le reste du personnel selon ses droits. Le téléphone n'enregistre jamais ce qu'il ne consulte pas.
+      const has = (perm: string) => req.org.permissions.has(perm);
+      const buys = has('declarations:create') || has('convoys:create') || has('collector:stock');
+      const field = has('producers:create') || has('producers:update') || has('parcels:create') || has('parcels:update') || has('field_records:create');
+      const wantsProducers = buys || field || has('producers:read');
+      const wantsParcels = field || has('parcels:read');
+      const wantsDeclarations = buys || has('declarations:read') || canSeeAll;
+      const isCollector = !!mine && !canSeeAll;
+      const specs: { key: string; sql: string; params?: any[]; on?: boolean }[] = [
+        { key: 'value_chains', on: wantsProducers || wantsDeclarations, sql: `SELECT id, code, name, default_unit, status, updated_at AS ts FROM value_chains` },
+        { key: 'campaigns', on: buys || wantsDeclarations, sql: `SELECT id, value_chain_id, code, name, starts_on, ends_on, status, updated_at AS ts FROM campaigns` },
+        { key: 'unit_conversions', on: buys || wantsDeclarations, sql: `SELECT id, value_chain_id, from_unit, to_unit, factor, updated_at AS ts FROM unit_conversions` },
+        { key: 'price_versions', on: buys || wantsDeclarations, sql: `SELECT v.id, v.schedule_id, s.value_chain_id, s.campaign_id, s.unit, s.currency, v.version_no, v.unit_price, v.valid_from, v.valid_to, v.created_at AS ts
                                        FROM price_versions v JOIN price_schedules s ON s.id = v.schedule_id` },
-        { key: 'producers', sql: `SELECT p.id, p.internal_code, p.last_name, p.first_names, p.phone, p.region, p.department, p.section, p.village, p.status,
+        { key: 'producers', on: wantsProducers, sql: `SELECT p.id, p.internal_code, p.last_name, p.first_names, p.phone, p.region, p.department, p.section, p.village, p.status,
                                           coalesce((SELECT array_agg(value_chain_id) FROM producer_value_chains x WHERE x.producer_id = p.id), '{}') AS value_chain_ids,
-                                          p.updated_at AS ts FROM producers p` },
-        { key: 'parcels', sql: `SELECT id, code, producer_id, value_chain_id, declared_area_ha, geometry_area_ha, geometry, verification_status, status,
+                                          p.updated_at AS ts FROM producers p
+                                  WHERE (NOT $3::boolean OR EXISTS (SELECT 1 FROM collector_assignments a JOIN producer_value_chains x ON x.value_chain_id = a.value_chain_id
+                                                                     WHERE a.collector_id = $4 AND x.producer_id = p.id))`, params: [isCollector, mine] },
+        { key: 'parcels', on: wantsParcels, sql: `SELECT id, code, producer_id, value_chain_id, declared_area_ha, geometry_area_ha, geometry, verification_status, status,
                                          -- les parcelles importées (créées par un autre utilisateur) sont désormais envoyées : on les représente une fois (horodatage étalé)
                                          GREATEST(updated_at, TIMESTAMPTZ '2026-10-25 22:15:00+00' + (abs(hashtext(id::text)) % 100000000) * interval '1 microsecond') AS ts FROM parcels
                                   WHERE status = 'active' AND ($3::boolean OR created_by = $4)`, params: [req.org.permissions.has('parcels:update') || req.org.permissions.has('parcels:read'), req.user.id] },
-        { key: 'warehouses', sql: `SELECT id, code, name, status, updated_at AS ts FROM warehouses` },
-        { key: 'my_assignments', sql: `SELECT id, collector_id, value_chain_id, zone, created_at AS ts FROM collector_assignments WHERE collector_id = $3`, params: [mine] },
-        { key: 'declarations', sql: `SELECT id, collector_id, producer_id, value_chain_id, campaign_id, operation_date, bags, quantity, unit, unit_price, currency, amount,
+        { key: 'my_assignments', on: buys, sql: `SELECT id, collector_id, value_chain_id, zone, created_at AS ts FROM collector_assignments WHERE collector_id = $3`, params: [mine] },
+        { key: 'declarations', on: wantsDeclarations, sql: `SELECT id, collector_id, producer_id, value_chain_id, campaign_id, operation_date, bags, quantity, unit, unit_price, currency, amount,
                                              purchase_receipt_series, purchase_receipt_no, receipt_conflict_with, receipt_override_by, status, status_reason, updated_at AS ts FROM purchase_declarations WHERE ($3::boolean OR collector_id = $4)`, params: [canSeeAll, mine] },
-        { key: 'tasks', sql: `SELECT id, code, title, description, category, priority, due_date, section, producer_id, parcel_id, campaign_id, assignee_id, team_ids, expected_result,
+        { key: 'tasks', on: has('tasks:read'), sql: `SELECT id, code, title, description, category, priority, due_date, section, producer_id, parcel_id, campaign_id, assignee_id, team_ids, expected_result,
                                        validation_criteria, instructions, status, review_note, updated_at AS ts FROM tasks
                                       WHERE status <> 'draft' AND ($3::boolean OR assignee_id = $4 OR $4 = ANY(team_ids))`, params: [req.org.permissions.has('tasks:read_all'), req.user.id] },
         { key: 'notifications', sql: `SELECT id, kind, severity, title, body, entity_type, entity_id, read_at, created_at AS ts FROM notifications WHERE user_id = $3`, params: [req.user.id] },
@@ -220,6 +230,7 @@ export class SyncController {
       let hasMore = false;
       let cursorCap: Date | null = null; // si une entité atteint la limite, on ne dépasse pas son dernier horodatage
       for (const s of specs) {
+        if (s.on === false) { changes[s.key] = []; continue; }
         const params = [since, limit, ...(s.params ?? [])];
         // On enveloppe pour filtrer et ordonner sur l'alias ts
         const sql = `SELECT * FROM (${s.sql}) q WHERE q.ts > $1 ORDER BY q.ts LIMIT $2`;

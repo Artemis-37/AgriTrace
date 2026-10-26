@@ -318,10 +318,16 @@ class SyncEngine {
     Future<Map<String, dynamic>> fetch(String? c) async => await api.get('/sync/changes', query: {if (c != null) 'cursor': c, 'limit': '1000'}, timeout: const Duration(seconds: 90)) as Map<String, dynamic>;
     var next = fetch(cursor);
     List<String>? lastPerms;
+    var restarted = false;
     while (true) {
       final j = await next;
       final perms = (j['permissions'] as List).cast<String>();
       if (!canSync(perms)) throw ApiException(403, 'Synchronisation non autorisée pour ce compte');
+      // Les droits ont changé (autre fonction) : ce que le téléphone reçoit dépend des droits, on repart du début pour ne rien manquer.
+      if (!restarted && cursor != null) {
+        final before = await db.getKv('permissions');
+        if (before != null && before != jsonEncode(perms)) { restarted = true; cursor = null; next = fetch(null); continue; }
+      }
       lastPerms = perms;
       final more = j['has_more'] == true;
       final nextCursor = j['next_cursor'] as String;
