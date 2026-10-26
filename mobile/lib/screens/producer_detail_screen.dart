@@ -188,9 +188,9 @@ class _ProducerDetailScreenState extends State<ProducerDetailScreen> {
               child: const Row(children: [Icon(Icons.assignment_turned_in_outlined, size: 18), SizedBox(width: 10), Expanded(child: Text('Formations, distributions et tâches', style: TextStyle(fontSize: 18)))])),
           for (final a in _assigned)
             Opacity(opacity: a['status'] == 'done' ? 0.45 : 1, child: Card(elevation: 0, shape: RoundedRectangleBorder(side: const BorderSide(color: Color(0xFFDDDDDD)), borderRadius: BorderRadius.circular(18)), child: ListTile(
-              leading: Icon(a['kind'] == 'formation' ? Icons.menu_book : a['kind'] == 'distribution' ? Icons.inventory_2_outlined : a['kind'] == 'inspection' ? Icons.fact_check_outlined : Icons.task_alt),
+              leading: Icon(a['kind'] == 'formation' ? Icons.menu_book : a['kind'] == 'distribution' ? Icons.inventory_2_outlined : a['kind'] == 'inspection' ? Icons.fact_check_outlined : a['kind'] == 'service' ? Icons.support_agent : Icons.task_alt),
               title: Text('${a['title']}', maxLines: 2, overflow: TextOverflow.ellipsis),
-              subtitle: Text('${a['kind'] == 'formation' ? 'Module de formation' : a['kind'] == 'distribution' ? 'Distribution' : a['kind'] == 'inspection' ? 'Inspection interne' : 'Tâche'}${a['due_date'] != null ? ' • échéance ${a['due_date'].toString().substring(0, 10)}' : ''}${(a['instructions'] ?? '').toString().isNotEmpty ? '\n${a['instructions']}' : ''}'),
+              subtitle: Text('${a['kind'] == 'formation' ? 'Module de formation' : a['kind'] == 'distribution' ? 'Distribution' : a['kind'] == 'inspection' ? 'Inspection interne' : a['kind'] == 'service' ? 'Service' : 'Tâche'}${a['due_date'] != null ? ' • échéance ${a['due_date'].toString().substring(0, 10)}' : ''}${(a['instructions'] ?? '').toString().isNotEmpty ? '\n${a['instructions']}' : ''}'),
               isThreeLine: (a['instructions'] ?? '').toString().isNotEmpty,
               onTap: a['questionnaire_id'] != null && a['questions'] != null ? () async {
                 final saved = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => QuestionnaireScreen(assignment: Map<String, dynamic>.from(a as Map), producer: widget.producer)));

@@ -5,8 +5,9 @@ import { RequirePermissions } from '../access/decorators';
 import { AuditService } from '../audit/audit.service';
 import { DbService } from '../db/db.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { ASSIGNMENT_TEMPLATES } from './assignment-templates';
 
-export const KINDS = ['formation', 'distribution', 'tache', 'inspection'];
+export const KINDS = ['formation', 'distribution', 'tache', 'inspection', 'service'];
 export class AssignTargetDto {
   @IsIn(KINDS) kind: string;
   @IsIn(['all', 'selected']) scope: string;
@@ -42,7 +43,7 @@ export async function createAssignment(c: any, orgId: string, userId: string, no
     `INSERT INTO producer_assignments(organization_id, kind, scope, title, instructions, due_date, module_id, submission_id, created_by, questionnaire_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
     [orgId, a.kind, a.scope, a.title, (a.instructions ?? '').trim(), a.due_date ?? null, a.module_id ?? null, a.submission_id ?? null, userId, a.questionnaire_id ?? null])).rows[0];
   await c.query(`INSERT INTO producer_assignment_targets(organization_id, assignment_id, producer_id) SELECT $1, $2, unnest($3::uuid[])`, [orgId, row.id, ids]);
-  const label = a.kind === 'formation' ? 'Module de formation' : a.kind === 'distribution' ? 'Distribution' : a.kind === 'inspection' ? 'Inspection interne' : 'Tâche';
+  const label = a.kind === 'formation' ? 'Module de formation' : a.kind === 'distribution' ? 'Distribution' : a.kind === 'inspection' ? 'Inspection interne' : a.kind === 'service' ? 'Service' : 'Tâche';
   await notif.notifyPermission(c, orgId, 'training:report', { kind: 'producer_assignment', title: `${label} ajouté(e) au profil de ${ids.length} producteur(s)`, body: a.title, entityType: 'producer_assignment', entityId: row.id }, userId);
   return { ...row, targets: ids.length };
 }
@@ -53,6 +54,13 @@ export async function createAssignment(c: any, orgId: string, userId: string, no
 @Controller('producer-assignments')
 export class ProducerAssignmentsController {
   constructor(private readonly db: DbService, private readonly audit: AuditService, private readonly notif: NotificationsService) {}
+
+  /** Modèles préchargés de distributions et de services (à adapter à l'envoi). */
+  @Get('templates')
+  @RequirePermissions('training:assign')
+  templates(@Query('kind') kind?: string) {
+    return ASSIGNMENT_TEMPLATES.filter((t) => !kind || t.kind === kind);
+  }
 
   /** « Implémenter un modèle » : l'ADG affecte un module de la bibliothèque (ou une distribution / tâche libre) à tous les producteurs ou à certains. */
   @Post()

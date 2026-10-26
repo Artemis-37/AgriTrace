@@ -218,7 +218,7 @@ const arr = (r) => (Array.isArray(r) ? r : r?.items ?? []);
 
   // ── Fichier d'accès, puis les compléments (mêmes scripts que la démonstration complète ; l'exportateur est ignoré faute d'administrateur de plateforme)
   fs.writeFileSync(OUT, JSON.stringify({ org: org.id, exporter: null, password: PASSWORD, accounts, convoys, delegate2 }, null, 2));
-  for (const f of ['seed-demo-enrichi.js', 'seed-demo-supplement.js', 'seed-demo-chaine.js', 'seed-demo-activite.js']) {
+  for (const f of ['seed-demo-enrichi.js', 'seed-demo-supplement.js', 'seed-demo-chaine.js', 'seed-demo-activite.js', 'seed-demo-modules.js']) {
     step(f);
     try { require('child_process').execFileSync(process.execPath, [path.join(__dirname, f)], { stdio: 'inherit', env: { ...process.env, DEMO_JSON: OUT } }); }
     catch { warnings.push(f + ' : voir les messages ci-dessus'); }

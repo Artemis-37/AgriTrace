@@ -3,7 +3,7 @@ import { get, post } from '../api';
 import { useAuth } from '../auth';
 import { Badge, Card, ErrorBox, Field, Loading, Modal, Table, useAction, useAsync } from '../ui';
 
-export const KIND_LABEL: Record<string, string> = { formation: 'Module de formation', distribution: 'Distribution', tache: 'Tâche', inspection: 'Inspection interne' };
+export const KIND_LABEL: Record<string, string> = { formation: 'Module de formation', distribution: 'Distribution', tache: 'Tâche', inspection: 'Inspection interne', service: 'Service' };
 const d = (x: string | null) => (x ? new Date(x).toLocaleDateString('fr-FR') : '—');
 import { AnswerForm } from './QuestionnaireAnswer';
 
@@ -24,6 +24,8 @@ export function AssignDialog({ title, forwardUrl, modules, producer, questionnai
   const [moduleId, setModuleId] = useState(''); const [free, setFree] = useState('');
   const [gap, setGap] = useState('30');
   const act = useAction();
+  const tpls = useAsync(() => (!forwardUrl && !questionnaire && !program ? get<{ code: string; kind: string; title: string; description: string; instructions: string }[]>('/producer-assignments/templates').catch(() => []) : Promise.resolve([])), []);
+  const kindTpls = (tpls.data ?? []).filter((x) => x.kind === kind);
   const sections = useAsync(() => get<{ section: string; producers: number }[]>('/producers/sections').catch(() => []), []);
   const prods = useAsync(() => scope === 'selected' ? get<P[]>(`/producers?limit=100${q.trim() ? `&q=${encodeURIComponent(q.trim())}` : ''}${section ? `&section=${encodeURIComponent(section)}` : ''}`) : Promise.resolve([] as P[]), [scope, q, section]);
   const toggle = (id: string) => setSel((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
@@ -54,7 +56,14 @@ export function AssignDialog({ title, forwardUrl, modules, producer, questionnai
           </Field>
         )}
         {needModule && !(modules ?? []).length && <p className="muted" style={{ gridColumn: '1 / -1', margin: 0 }}>La bibliothèque ne contient aucun module : créez-en un dans « Modules de formation », ou choisissez « Distribution » ou « Tâche ».</p>}
-        {lib && !questionnaire && kind !== 'formation' && <Field label="Intitulé"><input value={free} onChange={(e) => setFree(e.target.value)} placeholder={kind === 'distribution' ? 'Ex. Distribution de plants' : 'Ex. Mettre à jour le carnet de récolte'} /></Field>}
+        {lib && !questionnaire && (kind === 'distribution' || kind === 'service') && kindTpls.length > 0 && (
+          <Field label={kind === 'service' ? 'Modèle de service' : 'Modèle de distribution'}>
+            <select aria-label="Modèle préchargé" value={kindTpls.find((x) => x.title === free)?.code ?? ''} onChange={(e) => { const m = kindTpls.find((x) => x.code === e.target.value); if (m) { setFree(m.title); setInstr(m.instructions); } }}>
+              <option value="">Choisir un modèle ou saisir l'intitulé…</option>{kindTpls.map((x) => <option key={x.code} value={x.code}>{x.title}</option>)}
+            </select>
+          </Field>
+        )}
+        {lib && !questionnaire && kind !== 'formation' && <Field label="Intitulé"><input value={free} onChange={(e) => setFree(e.target.value)} placeholder={kind === 'distribution' ? 'Ex. Distribution de plants' : kind === 'service' ? 'Ex. Visite conseil' : 'Ex. Mettre à jour le carnet de récolte'} /></Field>}
         {!producer && <Field label="Producteurs concernés">
           <select aria-label="Cible" value={scope} onChange={(e) => setScope(e.target.value as 'all' | 'selected')}>
             <option value="all">Tous les producteurs</option><option value="selected">Certains producteurs</option>

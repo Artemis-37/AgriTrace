@@ -105,6 +105,12 @@ const login = async (email, password) => (await call('POST', '/auth/login', { bo
   check('visible dans les tâches du producteur (téléphone)', !!mineI && Array.isArray(mineI.questions) && mineI.questions.length === 82, mineI?.questions?.length);
   const cp = (await call('GET', '/producer-assignments?mine=1&compact=1', A)).body;
   check('copie hors connexion légère : questions envoyées une fois par questionnaire', Array.isArray(cp.assignments) && cp.assignments.every((r) => !('questions' in r)) && cp.questionnaires[ii.id]?.length === 82, Object.keys(cp));
+  const tp = await call('GET', '/producer-assignments/templates', A);
+  check('modèles préchargés : 8 distributions et 8 services', tp.status === 200 && tp.body.filter((x) => x.kind === 'distribution').length === 8 && tp.body.filter((x) => x.kind === 'service').length === 8, tp.body.length);
+  const sv0 = tp.body.find((x) => x.kind === 'service');
+  const aS = await call('POST', '/producer-assignments', { ...A, body: { kind: 'service', scope: 'selected', producer_ids: [prods[1].id], title: sv0.title, instructions: sv0.instructions } });
+  check('service envoyé au profil du producteur', aS.status === 201 && aS.body.kind === 'service', aS.body);
+  check('visible dans les éléments du producteur', (await call('GET', `/producer-assignments?producer_id=${prods[1].id}`, A)).body.some((x) => x.kind === 'service' && x.title === sv0.title));
   const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
   const lf = new FormData(); lf.append('file', new Blob([png], { type: 'image/png' }), 'ra.png');
   check('logo de la certification enregistré', (await call('PUT', '/certification-logos/rainforest_alliance', { ...A, form: lf })).status === 200);

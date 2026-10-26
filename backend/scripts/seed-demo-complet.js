@@ -294,7 +294,7 @@ const PROFILS = [
     try { require('child_process').execFileSync(process.execPath, [path.join(__dirname, 'seed-demo-supplement.js')], { stdio: 'inherit', env: { ...process.env, DEMO_JSON: process.env.DEMO_JSON || '/tmp/demo-accounts.json' } }); }
     catch { warnings.push('compléments de démonstration : voir les messages ci-dessus'); }
     // Chaîne complète (champ → exportateur, banques, caisse, trésorerie) puis activité de chaque profil (plus de 20 opérations chacun)
-    for (const [f, label] of [['seed-demo-chaine.js', 'chaîne complète'], ['seed-demo-activite.js', 'activité des profils']]) {
+    for (const [f, label] of [['seed-demo-chaine.js', 'chaîne complète'], ['seed-demo-activite.js', 'activité des profils'], ['seed-demo-modules.js', 'modules de distribution et de services']]) {
       try { require('child_process').execFileSync(process.execPath, [path.join(__dirname, f)], { stdio: 'inherit', env: { ...process.env, DEMO_JSON: process.env.DEMO_JSON || '/tmp/demo-accounts.json' } }); }
       catch { warnings.push(label + ' de démonstration : voir les messages ci-dessus'); }
     }
