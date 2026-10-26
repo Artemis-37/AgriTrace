@@ -116,7 +116,10 @@ export class AdvanceDto {
 export class PayoutDto {
   @IsString() @Length(8, 100) idempotency_key: string;
   @IsUUID() collector_id: string;
-  @IsUUID() cash_session_id: string;
+  @IsOptional() @IsIn(['cash', 'cheque']) payment_mode?: string;
+  @IsOptional() @IsUUID() cash_session_id?: string;
+  @IsOptional() @IsUUID() bank_account_id?: string;
+  @IsOptional() @IsString() @Length(1, 60) cheque_no?: string;
   @Dec(4) amount: string;
 }
 
@@ -726,28 +729,39 @@ export class ConvoysController {
     });
   }
 
-  /** Paiement en espèces au délégué : débite son compte et sort la somme de la caisse (session ouverte), avec l'écriture comptable. */
+  /** Paiement au délégué (espèces ou chèque) : débite son compte et sort la somme de la caisse (session ouverte) ou du compte bancaire choisi, avec l'écriture comptable. */
   @Post('convoys/payout')
   @RequirePermissions('convoys:settle', 'cash:operate')
   async payout(@Body() b: PayoutDto, @Req() req: any) {
     if (Number(b.amount) <= 0) throw new BadRequestException('Montant doit être supérieur à zéro');
+    const mode = b.payment_mode ?? 'cash';
     const { row, replay } = await this.db.tx(req.org.id, async (c) => {
       const prev = await c.query(`SELECT id, amount FROM financial_transactions WHERE idempotency_key = $1`, ['payout-c:' + b.idempotency_key]);
       if (prev.rowCount) return { row: prev.rows[0], replay: true };
       const acc = (await c.query(`SELECT * FROM financial_accounts WHERE owner_type = 'collector' AND owner_id = $1 AND status = 'active' FOR UPDATE`, [b.collector_id])).rows[0];
       if (!acc) throw new NotFoundException('Ce délégué n\'a pas encore de compte crédité');
-      const sess = (await c.query(
-        `SELECT s.id, r.account_id FROM cash_sessions s JOIN cash_registers r ON r.id = s.register_id WHERE s.id = $1 AND s.status = 'open'`, [b.cash_session_id])).rows[0];
-      if (!sess) throw new BadRequestException('Caisse inconnue ou caissier déconnecté');
-      const cash = (await c.query(`SELECT * FROM financial_accounts WHERE id = $1 FOR UPDATE`, [sess.account_id])).rows[0];
+      let sess: any = null;
+      let cash: any;
+      if (mode === 'cheque') {
+        if (!b.bank_account_id) throw new BadRequestException('Chèque : choisissez le compte bancaire débité');
+        if (!b.cheque_no?.trim()) throw new BadRequestException('Le n° de chèque est obligatoire pour un paiement par chèque');
+        cash = (await c.query(`SELECT * FROM financial_accounts WHERE id = $1 AND owner_type = 'other' AND status = 'active' FOR UPDATE`, [b.bank_account_id])).rows[0];
+        if (!cash) throw new NotFoundException('Compte bancaire inconnu ou inactif');
+      } else {
+        if (!b.cash_session_id) throw new BadRequestException('Espèces : choisissez la caisse (caissier connecté)');
+        sess = (await c.query(
+          `SELECT s.id, r.account_id FROM cash_sessions s JOIN cash_registers r ON r.id = s.register_id WHERE s.id = $1 AND s.status = 'open'`, [b.cash_session_id])).rows[0];
+        if (!sess) throw new BadRequestException('Caisse inconnue ou caissier déconnecté');
+        cash = (await c.query(`SELECT * FROM financial_accounts WHERE id = $1 FOR UPDATE`, [sess.account_id])).rows[0];
+      }
       const bal = (account: string) => c.query(
         `SELECT $2::numeric <= coalesce(sum(CASE direction WHEN 'in' THEN amount ELSE -amount END), 0) AS ok, coalesce(sum(CASE direction WHEN 'in' THEN amount ELSE -amount END), 0) AS balance
            FROM financial_transactions WHERE account_id = $1`, [account, b.amount]).then((r) => r.rows[0]);
       const bc = await bal(acc.id);
       if (!bc.ok) throw new UnprocessableEntityException(`Solde du compte du délégué insuffisant (${bc.balance})`);
       const bk = await bal(cash.id);
-      if (!bk.ok) throw new UnprocessableEntityException(`Solde de caisse insuffisant (${bk.balance})`);
-      const reason = 'Paiement en espèces au délégué';
+      if (!bk.ok) throw new UnprocessableEntityException(mode === 'cheque' ? `Solde du compte bancaire insuffisant (${bk.balance})` : `Solde de caisse insuffisant (${bk.balance})`);
+      const reason = mode === 'cheque' ? `Paiement par chèque au délégué — chèque ${b.cheque_no!.trim()} (${cash.name})` : 'Paiement en espèces au délégué';
       const t1 = (await c.query(
         `INSERT INTO financial_transactions(organization_id, idempotency_key, account_id, direction, amount, currency, reason, reference_type, reference_id, created_by)
          VALUES ($1,$2,$3,'out',$4,$5,$6,'collector_payout',$7,$8) RETURNING id, amount`,
@@ -755,9 +769,9 @@ export class ConvoysController {
       await c.query(
         `INSERT INTO financial_transactions(organization_id, idempotency_key, account_id, cash_session_id, direction, amount, currency, reason, reference_type, reference_id, created_by)
          VALUES ($1,$2,$3,$4,'out',$5,$6,$7,'collector_payout',$8,$9)`,
-        [req.org.id, 'payout-k:' + b.idempotency_key, cash.id, b.cash_session_id, b.amount, cash.currency, reason, b.collector_id, req.user.id]);
+        [req.org.id, 'payout-k:' + b.idempotency_key, cash.id, sess?.id ?? null, b.amount, cash.currency, reason, b.collector_id, req.user.id]);
       await postEntry(c, {
-        orgId: req.org.id, userId: req.user.id, journal: 'CAI', date: today(), label: reason,
+        orgId: req.org.id, userId: req.user.id, journal: mode === 'cheque' ? 'BQ' : 'CAI', date: today(), label: reason,
         lines: [{ code: acc.accounting_code ?? '401', debit: b.amount }, { code: accountingCodeOf(cash), credit: b.amount }],
         idempotencyKey: 'payout-entry:' + b.idempotency_key, referenceType: 'collector_payout', referenceId: t1.id,
       });

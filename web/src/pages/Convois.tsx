@@ -311,7 +311,7 @@ export function Cash() {
   const { can } = useAuth();
   return (
     <Card title="Réceptions à traiter">
-      {can('cash:operate') && <div className="toolbar"><button className="btn btn-secondary" onClick={() => setPaying(true)}>Payer un délégué en espèces</button></div>}
+      {can('cash:operate') && <div className="toolbar"><button className="btn btn-secondary" onClick={() => setPaying(true)}>Payer un délégué</button></div>}
       {paying && <Payout onClose={() => setPaying(false)} />}
       {error && <ErrorBox message={error} onRetry={reload} />}
       {loading ? <Loading /> : (
@@ -382,26 +382,35 @@ function Payout({ onClose }: { onClose: () => void }) {
   const { data, loading, error } = useAsync(async () => ({
     accounts: (await get<any[]>('/financial-accounts')).filter((a) => a.owner_type === 'collector'),
     registers: (await get<any[]>('/cash-registers')).filter((r) => r.open_session_id),
+    banks: (await get<any[]>('/financial-accounts')).filter((a) => a.owner_type === 'other' && a.status === 'active'),
   }), []);
   const [col, setCol] = useState('');
+  const [mode, setMode] = useState<'cash' | 'cheque'>('cash');
+  const [bank, setBank] = useState('');
+  const [cheque, setCheque] = useState('');
   const [session, setSession] = useState('');
   const [amount, setAmount] = useState('');
   const [key] = useState(idem());
   const [done, setDone] = useState('');
   const acc = data?.accounts.find((a) => a.owner_id === col);
-  const ok = col && session && /^\d+(\.\d{1,4})?$/.test(amount) && Number(amount) > 0 && acc && Number(amount) <= Number(acc.balance);
+  const ok = col && (mode === 'cheque' ? bank && cheque.trim() : session) && /^\d+(\.\d{1,4})?$/.test(amount) && Number(amount) > 0 && acc && Number(amount) <= Number(acc.balance);
   return (
-    <Modal title="Payer un délégué en espèces" onClose={onClose}>
+    <Modal title="Payer un délégué" onClose={onClose}>
       {loading && <Loading />}{error && <ErrorBox message={error} />}
       {data && (
         <>
           <Field label="Délégué"><select value={col} onChange={(e) => setCol(e.target.value)}><option value="">—</option>{data.accounts.map((a) => <option key={a.id} value={a.owner_id}>{a.name} — solde {Number(a.balance).toLocaleString('fr-FR')}</option>)}</select></Field>
-          <Field label="Caisse (caissier connecté)"><select value={session} onChange={(e) => setSession(e.target.value)}><option value="">—</option>{data.registers.map((r) => <option key={r.id} value={r.open_session_id}>{r.name}</option>)}</select></Field>
+          <Field label="Mode de paiement"><select value={mode} onChange={(e) => setMode(e.target.value as 'cash' | 'cheque')}><option value="cash">Espèces</option><option value="cheque">Chèque</option></select></Field>
+          {mode === 'cash'
+            ? <Field label="Caisse (caissier connecté)"><select value={session} onChange={(e) => setSession(e.target.value)}><option value="">—</option>{data.registers.map((r) => <option key={r.id} value={r.open_session_id}>{r.name}</option>)}</select></Field>
+            : <>
+              <Field label="Banque / compte bancaire débité" hint={data.banks.length ? undefined : 'Aucun compte bancaire : créez-en un dans Trésorerie'}><select value={bank} onChange={(e) => setBank(e.target.value)}><option value="">—</option>{data.banks.map((a) => <option key={a.id} value={a.id}>{a.name}{a.bank_name ? ` — ${a.bank_name}` : ''}</option>)}</select></Field>
+              <Field label="N° du chèque"><input value={cheque} onChange={(e) => setCheque(e.target.value)} maxLength={60} /></Field></>}
           <Field label="Montant (FCFA)" hint={acc ? `Maximum : ${Number(acc.balance).toLocaleString('fr-FR')}` : undefined}><input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} /></Field>
           {act.error && <ErrorBox message={act.error} />}
           {done && <p className="notice" role="status">{done}</p>}
           <div className="modal-actions"><button className="btn btn-secondary" onClick={onClose}>Fermer</button>
-            <button className="btn" disabled={act.busy || !ok || !!done} onClick={() => act.run(async () => { await post('/convoys/payout', { idempotency_key: key, collector_id: col, cash_session_id: session, amount }); setDone('Paiement enregistré : compte du délégué et caisse mis à jour.'); })}>Payer</button></div>
+            <button className="btn" disabled={act.busy || !ok || !!done} onClick={() => act.run(async () => { await post('/convoys/payout', { idempotency_key: key, collector_id: col, amount, ...(mode === 'cheque' ? { payment_mode: 'cheque', bank_account_id: bank, cheque_no: cheque.trim() } : { cash_session_id: session }) }); setDone(mode === 'cheque' ? 'Paiement enregistré : compte du délégué et compte bancaire mis à jour.' : 'Paiement enregistré : compte du délégué et caisse mis à jour.'); })}>Payer</button></div>
         </>
       )}
     </Modal>
