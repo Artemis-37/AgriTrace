@@ -33,7 +33,12 @@ Future<void> main() async {
   final store = SessionStore();
   final db = await AppDatabase.open(await store.databaseKey());
   final saved = await store.serverUrl;
-  if (saved != null && saved.isNotEmpty) Config.apiBaseRuntime = saved;
+  if (saved != null && saved.isNotEmpty) {
+    Config.apiBaseRuntime = Config.normalizeBase(saved);
+    if (Config.apiBaseRuntime != saved) await store.setServerUrl(Config.apiBaseRuntime);
+  } else {
+    Config.apiBaseRuntime = Config.normalizeBase(Config.apiBase);
+  }
   final api = ApiClient(store);
   api.isOffline = () async => (await Connectivity().checkConnectivity()).every((x) => x == ConnectivityResult.none);
   final mapPack = MapPackStore(api);

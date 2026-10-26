@@ -5,6 +5,13 @@ class Config {
   static const apiBase = String.fromEnvironment('API_BASE', defaultValue: 'http://10.0.2.2:3000/v1');
   /// Adresse effectivement utilisée : celle choisie sur l'écran de connexion (« Serveur »), sinon celle de la compilation.
   static String apiBaseRuntime = apiBase;
+  /// Adresse propre : sans « / » final et toujours terminée par « /v1 » (une adresse enregistrée sans « /v1 » donnait « Cannot POST //auth/login »).
+  static String normalizeBase(String u) {
+    var s = u.trim().replaceAll(RegExp(r'/+$'), '');
+    if (s.isEmpty) return s;
+    if (!RegExp(r'/v\d+$').hasMatch(s)) s = '$s/v1';
+    return s;
+  }
   /// Délai d'attente des appels : un serveur gratuit endormi (Render) met jusqu'à une minute à se réveiller.
   static const requestTimeout = Duration(seconds: 75);
   /// Lecture seule : un réseau qui ne répond pas est abandonné plus vite, l'écran montre alors sa copie locale.

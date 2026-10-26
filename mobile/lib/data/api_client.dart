@@ -15,6 +15,7 @@ String friendlyServerMessage(int status, String raw) {
   final t = raw.trim();
   final technical = t.isEmpty || t.startsWith('<') || t.contains('<html') || t.contains('<!DOCTYPE') || t.length > 300;
   if (status == 502 || status == 503 || status == 504) return 'Le serveur est momentanément indisponible (il redémarre ou se réveille). Réessayez dans une minute : vos saisies sont conservées.';
+  if (status == 404 && RegExp(r'^Cannot (GET|POST|PUT|PATCH|DELETE) ').hasMatch(t)) return 'Adresse du serveur incorrecte. Appuyez longuement sur le logo pour la corriger.';
   if (status >= 500) return 'Le serveur a rencontré un problème. Réessayez plus tard : vos saisies sont conservées.';
   if (technical) return 'Réponse inattendue du serveur. Réessayez plus tard.';
   return t;
@@ -61,7 +62,7 @@ class ApiClient {
   /// Teste une adresse de serveur (GET /health) sans la mémoriser : renvoie null si le serveur répond, sinon la raison.
   Future<String?> probe(String base) async {
     try {
-      final r = await _http.get(Uri.parse('$base/health')).timeout(Config.requestTimeout);
+      final r = await _http.get(Uri.parse('${Config.normalizeBase(base)}/health')).timeout(Config.requestTimeout);
       return r.statusCode == 200 ? null : 'Le serveur répond « ${r.statusCode} » : ce n\'est pas le bon serveur ou il n\'est pas prêt.';
     } on TimeoutException {
       return 'Aucune réponse après ${Config.requestTimeout.inSeconds} s : le serveur est éteint ou injoignable.';
@@ -74,7 +75,7 @@ class ApiClient {
     }
   }
 
-  Uri _uri(String path, [Map<String, String>? q]) => Uri.parse('${Config.apiBaseRuntime}$path').replace(queryParameters: q);
+  Uri _uri(String path, [Map<String, String>? q]) => Uri.parse('${Config.normalizeBase(Config.apiBaseRuntime)}$path').replace(queryParameters: q);
 
   /// Erreur du serveur à signaler : indisponibilité passagère (502/503/504) = comme une coupure réseau, l'opération reste en file.
   Exception _fail(int status, String raw) => (status == 502 || status == 503 || status == 504) ? NetworkException(friendlyServerMessage(status, raw)) : ApiException(status, friendlyServerMessage(status, raw));

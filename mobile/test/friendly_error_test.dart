@@ -1,4 +1,5 @@
 // Les pages HTML ou messages techniques du serveur ne doivent jamais atteindre l'écran.
+import 'package:agritrace_mobile/config.dart';
 import 'package:agritrace_mobile/data/api_client.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -14,5 +15,11 @@ void main() {
   });
   test('message métier du serveur conservé', () {
     expect(friendlyServerMessage(409, 'Ce numéro existe déjà'), 'Ce numéro existe déjà');
+  });
+  test('adresse du serveur : toujours propre et terminée par /v1', () {
+    expect(Config.normalizeBase('https://x.onrender.com/'), 'https://x.onrender.com/v1');
+    expect(Config.normalizeBase('https://x.onrender.com'), 'https://x.onrender.com/v1');
+    expect(Config.normalizeBase('https://x.onrender.com/v1/'), 'https://x.onrender.com/v1');
+    expect(friendlyServerMessage(404, 'Cannot POST //auth/login'), contains('Adresse du serveur'));
   });
 }
