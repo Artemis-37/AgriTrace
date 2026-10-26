@@ -58,8 +58,11 @@ class SyncEngine {
     try {
       await _push();
       await _pushPhotos();
+      // Tâches d'abord : légères, elles sont disponibles hors connexion même si le téléchargement des producteurs et parcelles (long) est interrompu.
+      Object? failure;
+      try { await _pullTasks(); } catch (e) { failure = e; }
       await _pull();
-      await _pullTasks();
+      if (failure != null && failure is ApiException && (failure.status == 401 || failure.status == 403)) throw failure;
       status.value = SyncStatus(SyncPhase.idle, lastSuccess: DateTime.now());
     } on NetworkException catch (e) {
       status.value = SyncStatus(SyncPhase.offline, lastSuccess: previousSuccess, message: e.message);
@@ -158,8 +161,14 @@ class SyncEngine {
       if (e.status == 401) rethrow; // droit « tâches » absent (403) ou autre : sans effet sur le reste
     }
     try {
-      final a = await api.get('/producer-assignments', query: {'mine': '1'});
-      await _keepLocalChanges('assignments_cache', 'target_id', a as List<dynamic>, {'producer_assignment.done': 'done', 'questionnaire.answer': 'done'}, 'status');
+      final res = await api.get('/producer-assignments', query: {'mine': '1', 'compact': '1'});
+      List<dynamic> a;
+      if (res is Map) {
+        // Format léger : les questions sont rattachées ici à chaque élément (une seule copie par questionnaire côté serveur).
+        final qs = Map<String, dynamic>.from((res['questionnaires'] ?? {}) as Map);
+        a = (res['assignments'] as List).map((r) { final m = Map<String, dynamic>.from(r as Map); if (m['questionnaire_id'] != null) m['questions'] = qs[m['questionnaire_id']]; return m; }).toList();
+      } else { a = res as List<dynamic>; }
+      await _keepLocalChanges('assignments_cache', 'target_id', a, {'producer_assignment.done': 'done', 'questionnaire.answer': 'done'}, 'status');
     } on ApiException catch (e) {
       if (e.status == 401) rethrow;
     }

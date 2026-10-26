@@ -103,6 +103,8 @@ const login = async (email, password) => (await call('POST', '/auth/login', { bo
   check('la fiche RA devient une tâche « inspection » du producteur', aI.status === 201 && aI.body.kind === 'inspection', aI.body);
   const mineI = (await call('GET', `/producer-assignments?producer_id=${prods[0].id}`, A)).body.find((x) => x.kind === 'inspection');
   check('visible dans les tâches du producteur (téléphone)', !!mineI && Array.isArray(mineI.questions) && mineI.questions.length === 82, mineI?.questions?.length);
+  const cp = (await call('GET', '/producer-assignments?mine=1&compact=1', A)).body;
+  check('copie hors connexion légère : questions envoyées une fois par questionnaire', Array.isArray(cp.assignments) && cp.assignments.every((r) => !('questions' in r)) && cp.questionnaires[ii.id]?.length === 82, Object.keys(cp));
   const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
   const lf = new FormData(); lf.append('file', new Blob([png], { type: 'image/png' }), 'ra.png');
   check('logo de la certification enregistré', (await call('PUT', '/certification-logos/rainforest_alliance', { ...A, form: lf })).status === 200);

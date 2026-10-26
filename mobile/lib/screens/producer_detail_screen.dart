@@ -51,10 +51,17 @@ class _ProducerDetailScreenState extends State<ProducerDetailScreen> {
 
   /// Les tâches viennent du serveur : réseau nécessaire.
   Future<void> _loadTasks() async {
+    // D'abord la copie de la dernière synchronisation (affichage immédiat, même sans réseau), puis la mise à jour en ligne.
+    try {
+      final id = widget.producer['id'];
+      final cached = (await services.repo.cachedTasks()).where((t) => t['producer_id'] == id && !['closed', 'cancelled'].contains(t['status'])).toList();
+      await _applyLocalAssignments();
+      if (mounted && _tasks == null) setState(() { _tasks = cached; _msg = 'Mise à jour en cours…'; });
+    } catch (_) {}
     try {
       final r = await services.api.get('/tasks?producer_id=${widget.producer['id']}') as List<dynamic>;
       if (!mounted) return;
-      setState(() { _tasks = r.where((t) => !['closed', 'cancelled'].contains(t['status'])).toList(); _taskError = null; });
+      setState(() { _tasks = r.where((t) => !['closed', 'cancelled'].contains(t['status'])).toList(); _taskError = null; _msg = null; });
       // Formations, distributions et tâches ajoutées au profil par l'Administrateur de groupe (facultatif : ignoré si le droit manque).
       try {
         final a = await services.api.get('/producer-assignments?producer_id=${widget.producer['id']}') as List<dynamic>;

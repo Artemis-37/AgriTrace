@@ -104,12 +104,27 @@ export class ProducerAssignmentsController {
 
   /** Éléments ajoutés au profil d'un producteur (ou liste des affectations avec leur avancement). */
   @Get()
-  async list(@Req() req: any, @Query('producer_id') producerId?: string, @Query('mine') mine?: string) {
+  async list(@Req() req: any, @Query('producer_id') producerId?: string, @Query('mine') mine?: string, @Query('compact') compact?: string) {
     const p = req.org.permissions;
     if (!['training:assign', 'training:report', 'training:read', 'producers:read'].some((x) => p.has(x))) throw new ForbiddenException('Droit insuffisant');
     if (producerId && !/^[0-9a-f-]{36}$/i.test(producerId)) throw new BadRequestException('producer_id invalide');
     if (mine === '1') {
-      // Copie pour le travail hors connexion : tous les éléments ajoutés aux profils (à plat, avec le producteur).
+      // Copie pour le travail hors connexion : tous les éléments à faire des profils (et les faits récents), à plat, avec le producteur.
+      if (compact === '1') {
+        // Format léger : les questions de chaque questionnaire ne sont envoyées qu'une fois (et non répétées pour chaque producteur ciblé).
+        return this.db.tx(req.org.id, async (c) => {
+          const assignments = (await c.query(
+            `SELECT t.id AS target_id, t.producer_id, t.status, t.done_at, a.id, a.kind, a.title, a.instructions, a.due_date, a.created_at, a.questionnaire_id, an.answers
+             FROM producer_assignment_targets t JOIN producer_assignments a ON a.id = t.assignment_id
+             LEFT JOIN questionnaire_answers an ON an.target_id = t.id
+            WHERE t.status = 'pending' OR t.done_at > now() - interval '60 days'
+            ORDER BY a.created_at DESC LIMIT 20000`)).rows;
+          const ids = [...new Set(assignments.map((r: any) => r.questionnaire_id).filter(Boolean))];
+          const questionnaires: Record<string, unknown> = {};
+          if (ids.length) for (const r of (await c.query(`SELECT id, questions FROM questionnaires WHERE id = ANY($1::uuid[])`, [ids])).rows) questionnaires[r.id] = r.questions;
+          return { assignments, questionnaires };
+        });
+      }
       return this.db.tx(req.org.id, async (c) => (await c.query(
         `SELECT t.id AS target_id, t.producer_id, t.status, t.done_at, a.id, a.kind, a.title, a.instructions, a.due_date, a.created_at, a.questionnaire_id, q.questions, an.answers
          FROM producer_assignment_targets t JOIN producer_assignments a ON a.id = t.assignment_id LEFT JOIN questionnaires q ON q.id = a.questionnaire_id
