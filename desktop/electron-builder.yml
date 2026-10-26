@@ -14,7 +14,6 @@ files:
 extraResources:
   - { from: payload, to: app-payload }
   - { from: build/icon.ico, to: icon.ico }
-  - { from: build/default-config.json, to: default-config.json }
 win:
   icon: build/icon.ico
   target: [{ target: nsis, arch: [x64] }]
