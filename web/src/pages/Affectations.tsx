@@ -3,7 +3,7 @@ import { get, post } from '../api';
 import { useAuth } from '../auth';
 import { Badge, Card, ErrorBox, Field, Loading, Modal, Table, useAction, useAsync } from '../ui';
 
-export const KIND_LABEL: Record<string, string> = { formation: 'Module de formation', distribution: 'Distribution', tache: 'Tâche' };
+export const KIND_LABEL: Record<string, string> = { formation: 'Module de formation', distribution: 'Distribution', tache: 'Tâche', inspection: 'Inspection interne' };
 const d = (x: string | null) => (x ? new Date(x).toLocaleDateString('fr-FR') : '—');
 import { AnswerForm } from './QuestionnaireAnswer';
 
@@ -45,7 +45,7 @@ export function AssignDialog({ title, forwardUrl, modules, producer, questionnai
       <div className="form-grid">
         {questionnaire ? <Field label="Questionnaire (tâche)"><input value={questionnaire.title} readOnly /></Field> : <Field label="Nature de l'élément">
           <select aria-label="Nature" value={kind} onChange={(e) => setKind(e.target.value)}>
-            {Object.entries(KIND_LABEL).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+            {Object.entries(KIND_LABEL).filter(([k]) => k !== 'inspection').map(([k, l]) => <option key={k} value={k}>{l}</option>)}
           </select>
         </Field>}
         {needModule && (

@@ -6,7 +6,7 @@ import { AuditService } from '../audit/audit.service';
 import { DbService } from '../db/db.service';
 import { NotificationsService } from '../notifications/notifications.service';
 
-export const KINDS = ['formation', 'distribution', 'tache'];
+export const KINDS = ['formation', 'distribution', 'tache', 'inspection'];
 export class AssignTargetDto {
   @IsIn(KINDS) kind: string;
   @IsIn(['all', 'selected']) scope: string;
@@ -42,7 +42,7 @@ export async function createAssignment(c: any, orgId: string, userId: string, no
     `INSERT INTO producer_assignments(organization_id, kind, scope, title, instructions, due_date, module_id, submission_id, created_by, questionnaire_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
     [orgId, a.kind, a.scope, a.title, (a.instructions ?? '').trim(), a.due_date ?? null, a.module_id ?? null, a.submission_id ?? null, userId, a.questionnaire_id ?? null])).rows[0];
   await c.query(`INSERT INTO producer_assignment_targets(organization_id, assignment_id, producer_id) SELECT $1, $2, unnest($3::uuid[])`, [orgId, row.id, ids]);
-  const label = a.kind === 'formation' ? 'Module de formation' : a.kind === 'distribution' ? 'Distribution' : 'Tâche';
+  const label = a.kind === 'formation' ? 'Module de formation' : a.kind === 'distribution' ? 'Distribution' : a.kind === 'inspection' ? 'Inspection interne' : 'Tâche';
   await notif.notifyPermission(c, orgId, 'training:report', { kind: 'producer_assignment', title: `${label} ajouté(e) au profil de ${ids.length} producteur(s)`, body: a.title, entityType: 'producer_assignment', entityId: row.id }, userId);
   return { ...row, targets: ids.length };
 }
@@ -61,9 +61,9 @@ export class ProducerAssignmentsController {
     const out = await this.db.tx(req.org.id, async (c) => {
       let title = b.title?.trim();
       if (b.questionnaire_id) {
-        const q = (await c.query(`SELECT title FROM questionnaires WHERE id = $1 AND NOT archived`, [b.questionnaire_id])).rows[0];
+        const q = (await c.query(`SELECT title, template_code FROM questionnaires WHERE id = $1 AND NOT archived`, [b.questionnaire_id])).rows[0];
         if (!q) throw new NotFoundException('Questionnaire introuvable ou archivé');
-        title = title || q.title; b.kind = 'tache';
+        title = title || q.title; b.kind = String(q.template_code ?? '').startsWith('ii-') ? 'inspection' : 'tache'; // les fiches d'inspection interne apparaissent comme telles dans les tâches du producteur
       } else if (b.module_id) {
         const m = (await c.query(`SELECT title FROM training_modules WHERE id = $1`, [b.module_id])).rows[0];
         if (!m) throw new NotFoundException('Module introuvable');

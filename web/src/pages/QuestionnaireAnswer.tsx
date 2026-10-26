@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { get, post } from '../api';
+import { download, get, post } from '../api';
 import { Badge, ErrorBox, Field, Loading, Modal, useAction, useAsync } from '../ui';
 
 export type QType = 'text' | 'number' | 'yesno' | 'choice' | 'multi' | 'date';
@@ -16,6 +16,8 @@ export function AnswerForm({ targetId, onClose, onDone }: { targetId: string; on
   const { busy, error, run } = useAction();
   const set = (id: string, v: any) => setAns((a) => ({ ...a, [id]: v }));
   const done = t.data?.status === 'done';
+  const [cert, setCert] = useState('');
+  const isInspection = String(t.data?.template_code ?? '').startsWith('ii-');
   const qs: Question[] = t.data?.questions ?? [];
   const missing = qs.some((q) => q.required && (ans[q.id] === undefined || ans[q.id] === '' || (Array.isArray(ans[q.id]) && !ans[q.id].length)));
   return (
@@ -35,7 +37,7 @@ export function AnswerForm({ targetId, onClose, onDone }: { targetId: string; on
             </Field>
           ))}
           {error && <ErrorBox message={error} />}
-          <div className="modal-foot"><button className="btn btn-secondary" onClick={onClose}>{done ? 'Fermer' : 'Annuler'}</button>
+          <div className="modal-foot">{done && <span style={{ marginRight: 'auto', display: 'inline-flex', gap: '.5rem', alignItems: 'center' }}><select aria-label="Certification" value={cert} onChange={(e) => setCert(e.target.value)}><option value="">Certification de la fiche</option><option value="rainforest_alliance">Rainforest Alliance</option><option value="fairtrade">Fairtrade</option><option value="fairtrade_usa">Fairtrade USA</option></select><button className="btn btn-secondary" onClick={() => download(`/questionnaires/targets/${targetId}/export${cert ? `?certification=${cert}` : ''}`, `${isInspection ? 'inspection-interne' : 'fiche'}-${t.data.internal_code}.pdf`)}>Exporter (PDF)</button></span>}<button className="btn btn-secondary" onClick={onClose}>{done ? 'Fermer' : 'Annuler'}</button>
             {!done && <button className="btn" disabled={busy || missing} onClick={() => run(async () => { await post(`/questionnaires/targets/${targetId}/answers`, { answers: ans }); onDone(); })}>{busy ? 'Enregistrement…' : 'Enregistrer les réponses'}</button>}</div>
         </>
       )}

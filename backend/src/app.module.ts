@@ -38,6 +38,7 @@ import { DeliveriesController } from './deliveries/deliveries.controller';
 import { AuditsController } from './audits/audits.controller';
 import { ProducerAssignmentsController } from './training/producer-assignments.controller';
 import { QuestionnairesController } from './training/questionnaires.controller';
+import { CertificationLogosController } from './training/certification-logos.controller';
 import { QualityController } from './quality/quality.controller';
 import { ParcelsController } from './parcels/parcels.controller';
 import { MeController } from './users/me.controller';
@@ -75,7 +76,7 @@ import { ReplicationService } from './replication/replication.service';
     OrganizationsController, LogoController, PhotosController, UsersController, ReferentialsController, ProducersController,
     CollectorsController, DeclarationsController, FinanceController,
     ReceptionController, StockController, LotsController, SyncController,
-    AccountingController, LoansController, PaymentsController, QualityController, ComplianceController, ParcelsController, GeoController, ReferenceLayersController, TasksController, LogisticsController, SalesController, NotificationsController, AccessAdminController, ProducerStatusController, PrefinancingController, StockCountController, MeController, OpsController, AppUpdateController, MapPacksController, ReplicationController, MessagesController, ConvoysController, SavingsController, ProductsController, DuesController, OperationsController, BankStatementsController, ReportSchedulesController, PushTokenController, ProfileController, WorkstationsController, ReportsController, FieldRecordsController, TrainingController, TrainingExchangeController, DispatchController, DeliveriesController, AuditsController, ProducerAssignmentsController, QuestionnairesController,
+    AccountingController, LoansController, PaymentsController, QualityController, ComplianceController, ParcelsController, GeoController, ReferenceLayersController, TasksController, LogisticsController, SalesController, NotificationsController, AccessAdminController, ProducerStatusController, PrefinancingController, StockCountController, MeController, OpsController, AppUpdateController, MapPacksController, ReplicationController, MessagesController, ConvoysController, SavingsController, ProductsController, DuesController, OperationsController, BankStatementsController, ReportSchedulesController, PushTokenController, ProfileController, WorkstationsController, ReportsController, FieldRecordsController, TrainingController, TrainingExchangeController, DispatchController, DeliveriesController, AuditsController, ProducerAssignmentsController, QuestionnairesController, CertificationLogosController,
   ],
   providers: [NotificationsService, ReportScheduler, PushService, ReportsController, ReplicationService, 
     GeoService, GeoImportService,

@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { download, get, post, postForm } from '../api';
+import { del, download, get, post, postForm, putForm } from '../api';
 import { useAuth } from '../auth';
 import { Badge, Card, ErrorBox, Field, Loading, Modal, PageHeader, Table, useAction, useAsync } from '../ui';
 import { AssignDialog } from './Affectations';
@@ -20,11 +20,12 @@ export default function Questionnaires() {
   const [assign, setAssign] = useState<Q | null>(null);
   const [coaching, setCoaching] = useState(false);
   const [results, setResults] = useState<Q | null>(null);
+  const [logos, setLogos] = useState(false);
   const act = useAction();
   return (
     <>
       <PageHeader title="Questionnaires (tâches)" subtitle="Un questionnaire est une tâche que le coach renseigne auprès du producteur. Créez-le ou importez-le, puis envoyez-le à tous les producteurs ou à certains."
-        actions={<>{can('training:assign') && <button className="btn" onClick={() => setCoaching(true)}>Lancer le coaching agricole (6 étapes)</button>}{manage && <><button className="btn btn-secondary" onClick={() => setCreating(true)}>Créer un questionnaire</button><button className="btn btn-secondary" onClick={() => setImporting(true)}>Importer (Excel / CSV)</button><button className="btn btn-ghost" disabled={act.busy} onClick={() => act.run(async () => { await post('/questionnaires/defaults'); list.reload(); })}>Recharger les modèles types</button></>}</>} />
+        actions={<>{can('training:assign') && <button className="btn" onClick={() => setCoaching(true)}>Lancer le coaching agricole (6 étapes)</button>}{manage && <button className="btn btn-secondary" onClick={() => setLogos(true)}>Logos des certifications</button>}{manage && <><button className="btn btn-secondary" onClick={() => setCreating(true)}>Créer un questionnaire</button><button className="btn btn-secondary" onClick={() => setImporting(true)}>Importer (Excel / CSV)</button><button className="btn btn-ghost" disabled={act.busy} onClick={() => act.run(async () => { await post('/questionnaires/defaults'); list.reload(); })}>Recharger les modèles types</button></>}</>} />
       <Card>
         {act.error && <ErrorBox message={act.error} />}
         {list.loading ? <Loading /> : list.error ? <ErrorBox message={list.error} onRetry={list.reload} /> : (
@@ -50,6 +51,7 @@ export default function Questionnaires() {
       {coaching && <AssignDialog program title="Lancer le coaching agricole (6 étapes)" questionnaire={{ id: 'coaching', title: 'Diagnostic → PDE → BPA → Champ école → Suivi → Évaluation' }} onClose={() => setCoaching(false)} onDone={() => { setCoaching(false); list.reload(); }} />}
       {assign && <AssignDialog title={`Envoyer « ${assign.title} »`} questionnaire={assign} onClose={() => setAssign(null)} onDone={() => { setAssign(null); list.reload(); }} />}
       {results && <Results q={results} onClose={() => setResults(null)} />}
+      {logos && <CertificationLogos onClose={() => setLogos(false)} />}
     </>
   );
 }
@@ -143,6 +145,30 @@ function Results({ q, onClose }: { q: Q; onClose: () => void }) {
           )}
         </>
       )}
+      <div className="modal-foot"><button className="btn btn-secondary" onClick={onClose}>Fermer</button></div>
+    </Modal>
+  );
+}
+
+/** Logos des certifications (fournis par la coopérative) : ils s'impriment en tête des fiches d'inspection interne exportées. */
+function CertificationLogos({ onClose }: { onClose: () => void }) {
+  const list = useAsync(() => get<{ scheme: string; label: string; has_logo: boolean }[]>('/certification-logos'), []);
+  const { busy, error, run } = useAction();
+  return (
+    <Modal title="Logos des certifications" onClose={onClose}>
+      <p className="muted">Téléversez le logo officiel de chaque certification (PNG ou JPEG, 1 Mo maximum). Lors de l'export d'une fiche d'inspection interne, le logo de la certification choisie figure en tête du PDF.</p>
+      {list.loading ? <Loading /> : list.error ? <ErrorBox message={list.error} onRetry={list.reload} /> : (list.data ?? []).map((c) => (
+        <Field key={c.scheme} label={`${c.label}${c.has_logo ? ' — logo enregistré' : ' — aucun logo'}`}>
+          <span style={{ display: 'inline-flex', gap: '.5rem', alignItems: 'center' }}>
+            <input type="file" accept="image/png,image/jpeg" aria-label={`Logo ${c.label}`} disabled={busy} onChange={(e) => {
+              const f = e.target.files?.[0]; if (!f) return;
+              run(async () => { const form = new FormData(); form.append('file', f); await putForm(`/certification-logos/${c.scheme}`, form); list.reload(); });
+            }} />
+            {c.has_logo && <button className="btn btn-small btn-ghost" disabled={busy} onClick={() => run(async () => { await del(`/certification-logos/${c.scheme}`); list.reload(); })}>Retirer</button>}
+          </span>
+        </Field>
+      ))}
+      {error && <ErrorBox message={error} />}
       <div className="modal-foot"><button className="btn btn-secondary" onClick={onClose}>Fermer</button></div>
     </Modal>
   );

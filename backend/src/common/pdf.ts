@@ -93,3 +93,47 @@ export function traceabilityPdf(t: any): Promise<Buffer> {
     for (const m of t.missing) doc.font('Helvetica').fontSize(9).text(`- ${m}`);
   });
 }
+
+/** Fiche d'inspection interne remplie (un producteur) : logos de la certification et de la coopérative, informations, exigences, score et signatures. */
+export function inspectionPdf(f: {
+  certification: string | null; certLogo: Buffer | null; orgLogo: Buffer | null; orgName: string; title: string;
+  producer: string; code: string; village?: string | null; answeredAt: any; answeredBy?: string | null;
+  items: { label: string; answer: string }[];
+}): Promise<Buffer> {
+  return render((doc) => {
+    const top = doc.y;
+    try { if (f.certLogo) doc.image(f.certLogo, 50, top, { fit: [150, 60] }); } catch { /* logo illisible : ignoré */ }
+    try { if (f.orgLogo) doc.image(f.orgLogo, 395, top, { fit: [150, 60], align: 'right' }); } catch { /* idem */ }
+    doc.y = top + 70;
+    doc.fillColor('#000').fontSize(16).font('Helvetica-Bold').text(`FICHE D'INSPECTION INTERNE${f.certification ? ' — ' + f.certification.toUpperCase() : ''}`, 50, doc.y, { align: 'center', width: 495 });
+    doc.font('Helvetica').fontSize(10).fillColor('#444').text(f.title, { align: 'center', width: 495 }).text(f.orgName, { align: 'center', width: 495 }).moveDown();
+    doc.strokeColor(GREEN).lineWidth(1).moveTo(50, doc.y).lineTo(545, doc.y).stroke().moveDown(0.6);
+    doc.fillColor('#000');
+    row(doc, 'Producteur', `${f.producer} (${f.code})`);
+    if (f.village) row(doc, 'Village', f.village);
+    row(doc, 'Date de l\'inspection', f.answeredAt ? new Date(f.answeredAt).toISOString().slice(0, 10) : '—');
+    row(doc, 'Inspecteur interne', f.answeredBy ?? '—');
+    const c = f.items.filter((i) => i.answer === 'Conforme').length, nc = f.items.filter((i) => i.answer === 'Non conforme').length, na = f.items.filter((i) => i.answer === 'Non applicable').length;
+    if (c + nc + na) {
+      doc.moveDown(0.5);
+      row(doc, 'Exigences', `${c} conforme(s), ${nc} non conforme(s), ${na} non applicable(s)`);
+      row(doc, 'Score obtenu', c + nc ? `${Math.round((c / (c + nc)) * 1000) / 10} %` : '—');
+    }
+    doc.moveDown();
+    for (const it of f.items) {
+      if (doc.y > 740) doc.addPage();
+      const colour = it.answer === 'Non conforme' ? '#B00020' : it.answer === 'Conforme' ? GREEN : '#333';
+      doc.font('Helvetica').fontSize(9).fillColor('#000').text(it.label, 50, doc.y, { width: 360, continued: false });
+      const y = doc.y;
+      doc.font('Helvetica-Bold').fillColor(colour).text(it.answer, 50, y, { width: 495 });
+      doc.moveDown(0.4);
+    }
+    if (doc.y > 680) doc.addPage();
+    doc.moveDown(2).fillColor('#000').font('Helvetica').fontSize(10);
+    const y = doc.y;
+    doc.text('Signature ou empreinte du membre', 50, y, { width: 220 }).text('Signature de l\'inspecteur interne', 325, y, { width: 220 });
+    doc.rect(50, y + 15, 220, 60).stroke('#999').rect(325, y + 15, 220, 60).stroke('#999');
+    doc.y = y + 90;
+    doc.fontSize(8).fillColor('#666').text(`Document généré le ${fmtDate(new Date())}`, 50, doc.y);
+  });
+}

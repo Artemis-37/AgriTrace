@@ -8,6 +8,8 @@ import { RequirePermissions } from '../access/decorators';
 import { AuditService } from '../audit/audit.service';
 import { DbService } from '../db/db.service';
 import { QUESTIONNAIRE_TEMPLATES } from './questionnaire-templates';
+import { inspectionPdf } from '../common/pdf';
+import { CERT_SCHEMES } from './certification-logos.controller';
 
 export type QType = 'text' | 'number' | 'yesno' | 'choice' | 'multi' | 'date';
 export interface Question { id: string; label: string; type: QType; options?: string[]; required: boolean }
@@ -219,12 +221,42 @@ export class QuestionnairesController {
   async target(@Param('targetId', ParseUUIDPipe) targetId: string, @Req() req: any) {
     this.readAccess(req);
     const r = await this.db.tx(req.org.id, async (c) => (await c.query(
-      `SELECT t.id AS target_id, t.status, t.producer_id, a.id AS assignment_id, a.title, a.instructions, a.due_date, q.id AS questionnaire_id, q.questions,
+      `SELECT t.id AS target_id, t.status, t.producer_id, a.id AS assignment_id, a.title, a.instructions, a.due_date, q.id AS questionnaire_id, q.template_code, q.questions,
               an.answers, an.answered_at, p.internal_code, p.last_name, p.first_names
          FROM producer_assignment_targets t JOIN producer_assignments a ON a.id = t.assignment_id JOIN questionnaires q ON q.id = a.questionnaire_id
          JOIN producers p ON p.id = t.producer_id LEFT JOIN questionnaire_answers an ON an.target_id = t.id WHERE t.id = $1`, [targetId])).rows[0]);
     if (!r) throw new NotFoundException('Questionnaire introuvable');
     return r;
+  }
+
+  /** Fiche remplie d'un producteur, en PDF, avec le logo de la certification choisie par l'ADG (téléversé par la coopérative). */
+  @Get('targets/:targetId/export')
+  async exportTarget(@Param('targetId', ParseUUIDPipe) targetId: string, @Req() req: any, @Query('certification') cert?: string) {
+    if (!['training:assign', 'questionnaires:manage'].some((x) => req.org.permissions.has(x))) throw new ForbiddenException('Droit insuffisant');
+    if (cert && !CERT_SCHEMES[cert]) throw new BadRequestException('Certification inconnue');
+    const d = await this.db.tx(req.org.id, async (c) => {
+      const t = (await c.query(
+        `SELECT t.status, q.title AS q_title, q.template_code, q.questions, an.answers, an.answered_at, u.full_name AS answered_by, p.internal_code, p.last_name, p.first_names, p.village
+           FROM producer_assignment_targets t JOIN producer_assignments a ON a.id = t.assignment_id JOIN questionnaires q ON q.id = a.questionnaire_id
+           JOIN producers p ON p.id = t.producer_id LEFT JOIN questionnaire_answers an ON an.target_id = t.id LEFT JOIN users u ON u.id = an.answered_by WHERE t.id = $1`, [targetId])).rows[0];
+      if (!t) throw new NotFoundException('Fiche introuvable');
+      if (t.status !== 'done') throw new BadRequestException('La fiche n\'est pas encore renseignée');
+      const logo = async (scheme: string | null) => (scheme ? (await c.query(`SELECT data FROM certification_logos WHERE scheme = $1`, [scheme])).rows[0]?.data ?? null : null);
+      const byCode: Record<string, string> = { 'ii-ra': 'rainforest_alliance', 'ii-ft': 'fairtrade', 'ii-ft-usa': 'fairtrade_usa' };
+      const scheme = cert ?? byCode[t.template_code] ?? null;
+      const org = (await c.query(`SELECT data FROM organization_logos`)).rows[0]?.data ?? null;
+      return { t, scheme, certLogo: await logo(scheme), orgLogo: org };
+    });
+    const [o] = await this.db.query<any>(`SELECT name FROM organizations WHERE id = $1`, [req.org.id]);
+    const val = (v: any) => (v === undefined || v === null || v === '' ? '—' : Array.isArray(v) ? v.join(', ') : v === 'oui' ? 'Oui' : v === 'non' ? 'Non' : String(v));
+    const pdf = await inspectionPdf({
+      certification: d.scheme ? CERT_SCHEMES[d.scheme] : d.t.template_code === 'ii-fusion' ? 'Rainforest Alliance, Fairtrade, Fairtrade USA' : null,
+      certLogo: d.certLogo, orgLogo: d.orgLogo, orgName: o?.name ?? '', title: d.t.q_title,
+      producer: `${d.t.last_name} ${d.t.first_names}`, code: d.t.internal_code, village: d.t.village, answeredAt: d.t.answered_at, answeredBy: d.t.answered_by,
+      items: (d.t.questions as Question[]).map((q, i) => ({ label: `${i + 1}. ${q.label}`, answer: val(d.t.answers?.[q.id]) })),
+    });
+    await this.audit.log({ organizationId: req.org.id, actorUserId: req.user.id, action: 'questionnaire.export', entityType: 'producer_assignment_target', entityId: targetId, details: { certification: d.scheme } });
+    return new StreamableFile(pdf, { type: 'application/pdf', disposition: `attachment; filename="inspection-interne-${d.t.internal_code}.pdf"` });
   }
 
   @Post('targets/:targetId/answers')
