@@ -276,4 +276,44 @@ export const QUESTIONNAIRE_TEMPLATES: { code: string; title: string; description
       ['Observations de l\'inspecteur', 'text'],
     ]),
   },
+  {
+    code: 'ii-fusion', title: 'Inspection interne — fiche unique Rainforest Alliance + Fairtrade + Fairtrade USA',
+    description: 'Une seule visite pour les trois normes. Chaque point indique les normes concernées : RA = Rainforest Alliance, FT = Fairtrade, FTUSA = Fairtrade USA.',
+    questions: mk([
+      ['Date de l\'inspection interne', 'date', true], ['Inspecteur interne (nom)', 'text', true],
+      ['Type de visite', 'choice', true, ['Annuelle', 'Suivi d\'une non-conformité', 'Avant audit externe']],
+      ['Normes concernées par cette visite', 'multi', true, ['Rainforest Alliance', 'Fairtrade', 'Fairtrade USA']],
+      // Membre, registre et traçabilité
+      ['[RA · FT · FTUSA] Le producteur est inscrit au registre des membres et à jour (cotisation, liste des membres certifiés)', 'yesno', true],
+      ['[RA · FTUSA] Sa parcelle est cartographiée (polygone) et les limites sont connues', 'yesno', true],
+      ['[RA · FT · FTUSA] Les livraisons sont enregistrées avec reçu et rattachables à un lot (traçabilité jusqu\'à l\'exploitation)', 'yesno', true],
+      ['[FT · FTUSA] Aucun mélange avec du cacao non certifié ni livraison hors organisation sous couvert de la certification', 'yesno', true],
+      ['[RA] Carnet de ventes et de récoltes tenu à jour', 'yesno', true],
+      ['[RA] Plan de gestion de l\'exploitation existant et appliqué', 'yesno'],
+      ['[FT] Participation à l\'assemblée générale de l\'année', 'yesno'],
+      ['[FT · FTUSA] Le producteur connaît les règles de la certification, le prix minimum et la prime', 'yesno', true],
+      // Environnement
+      ['[RA · FT · FTUSA] Parcelle hors forêt classée et aire protégée, sans extension ni déforestation depuis la date de référence', 'yesno', true],
+      ['[RA] Arbres d\'ombrage en nombre suffisant et diversifiés', 'choice', false, ['Oui', 'Insuffisant', 'Non']],
+      ['[RA · FT] Protection des sols et de l\'eau', 'multi', false, ['Couverture végétale', 'Paillage', 'Compost', 'Zone tampon le long des cours d\'eau', 'Aucune']],
+      ['[RA · FT] Gestion des déchets (cabosses, emballages vides : ni réutilisés ni brûlés)', 'choice', false, ['Conforme', 'Partielle', 'Non conforme']],
+      // Produits et sécurité
+      ['[RA · FT] Produits phytosanitaires autorisés uniquement ; aucun produit de la liste rouge ou interdit', 'yesno', true],
+      ['[RA · FT] Stockage des produits sécurisé, séparé des aliments, hors de portée des enfants', 'yesno', true],
+      ['[RA · FT · FTUSA] Équipements de protection portés et formation à l\'usage des produits', 'choice', true, ['Conformes', 'Partiels', 'Non conformes']],
+      // Social
+      ['[RA · FT · FTUSA] Aucun enfant de moins de 15 ans sur des travaux dangereux', 'yesno', true],
+      ['[FTUSA] Suivi et remédiation du travail des enfants appliqués au besoin', 'choice', false, ['Oui', 'Non applicable', 'Non']],
+      ['[RA · FT · FTUSA] Pas de travail forcé, ni de rétention de documents ou de salaires, ni de discrimination', 'yesno', true],
+      ['[RA · FT] Travailleurs : conditions claires, paiement régulier et au moins au salaire minimum', 'yesno'],
+      ['[RA · FTUSA] Mécanisme de plainte connu et registre des incidents consulté', 'yesno'],
+      ['[RA · FT · FTUSA] Prime ou différentiel reçu, projet communautaire connu et suivi', 'yesno'],
+      // Conclusion
+      ['Non-conformités constatées', 'multi', false, ['Aucune', 'Mineure', 'Majeure', 'Critique']],
+      ['Normes pour lesquelles une non-conformité est relevée', 'multi', false, ['Rainforest Alliance', 'Fairtrade', 'Fairtrade USA', 'Aucune']],
+      ['Actions correctives demandées (avec délai)', 'text'], ['Date limite de correction', 'date'],
+      ['Résultat de l\'inspection', 'choice', true, ['Conforme aux trois normes', 'Conforme avec réserves', 'Non conforme']],
+      ['Observations de l\'inspecteur', 'text'],
+    ]),
+  },
 ];
