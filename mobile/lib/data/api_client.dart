@@ -96,7 +96,7 @@ class ApiClient {
 
   Future<List<dynamic>> myOrganizations() async => (await _send('GET', '/organizations', org: false)) as List<dynamic>;
 
-  Future<dynamic> get(String path, {Map<String, String>? query}) => _send('GET', path, query: query);
+  Future<dynamic> get(String path, {Map<String, String>? query, Duration? timeout}) => _send('GET', path, query: query, timeout: timeout);
   Future<dynamic> post(String path, Object body) => _send('POST', path, body: body);
 
   /// Lecture d'un fichier binaire (logo) : null s'il n'existe pas (404).
@@ -129,7 +129,7 @@ class ApiClient {
   }
 
   Future<dynamic> _send(String method, String path,
-      {Object? body, Map<String, String>? query, bool auth = true, bool org = true}) async {
+      {Object? body, Map<String, String>? query, bool auth = true, bool org = true, Duration? timeout}) async {
     Future<http.Response> once() async {
       final headers = <String, String>{'content-type': 'application/json'};
       if (auth) {
@@ -144,7 +144,7 @@ class ApiClient {
       }
       final req = http.Request(method, _uri(path, query))..headers.addAll(headers);
       if (body != null) req.body = jsonEncode(body);
-      final streamed = await _http.send(req).timeout(method == 'GET' ? Config.readTimeout : Config.requestTimeout);
+      final streamed = await _http.send(req).timeout(timeout ?? (method == 'GET' ? Config.readTimeout : Config.requestTimeout));
       return http.Response.fromStream(streamed);
     }
 

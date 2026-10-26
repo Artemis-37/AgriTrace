@@ -285,32 +285,52 @@ class Repository {
     return id;
   }
 
+  /// Noms des producteurs visés par des opérations (pour nommer chaque élément à envoyer).
+  Future<Map<String, String>> producerNames(List<Map<String, Object?>> ops) async {
+    final ids = <String>{};
+    for (final o in ops) {
+      try { final p = jsonDecode(o['payload'] as String); if (p is Map && p['producer_id'] is String) ids.add(p['producer_id'] as String); } catch (_) {}
+    }
+    if (ids.isEmpty) return {};
+    final rows = await db.raw.query('producers', columns: ['id', 'last_name', 'first_names'], where: 'id IN (${List.filled(ids.length, '?').join(',')})', whereArgs: ids.toList());
+    return {for (final r in rows) r['id'] as String: '${r['last_name'] ?? ''} ${r['first_names'] ?? ''}'.trim().toUpperCase()};
+  }
+
+  /// Libellé d'une opération en attente : ce qu'elle est et à quoi elle se rapporte (producteur, convoi, titre…).
+  static ({String label, String detail}) opLabel(String t, Map<String, dynamic> p, [Map<String, String> producers = const {}]) {
+    final who = producers['${p['producer_id']}'] ?? '';
+    String label, detail = '';
+    switch (t) {
+      case 'producer.create': label = 'Nouveau producteur'; detail = '${p['last_name'] ?? ''} ${p['first_names'] ?? ''}'.trim().toUpperCase(); break;
+      case 'field_record.create':
+        label = const {'social_infrastructure': 'Infrastructure sociale', 'training': 'Formation', 'distribution': 'Distribution'}[p['kind']] ?? 'Enregistrement';
+        detail = '${p['title'] ?? ''}'; break;
+      case 'parcel.create': label = 'Parcelle relevée'; detail = [who, if (p['declared_area_ha'] != null) '${p['declared_area_ha']} ha'].where((x) => x.isNotEmpty).join(' · '); break;
+      case 'parcel.update': label = 'Nouveau tracé de parcelle'; detail = who; break;
+      case 'purchase_declaration.create': label = 'Achat'; detail = [who, '${p['quantity'] ?? ''} ${p['unit'] ?? ''}'.trim()].where((x) => x.isNotEmpty).join(' · '); break;
+      case 'purchase_declaration.submit': label = 'Achat à soumettre'; break;
+      case 'convoy.create': label = 'Convoi'; detail = '${p['convoy_no'] ?? ''}'; break;
+      case 'task.start': label = 'Mission démarrée'; break;
+      case 'task.submit': label = 'Mission soumise'; break;
+      case 'task.entry': label = 'Saisie de mission'; detail = '${p['content'] ?? p['kind'] ?? ''}'; break;
+      case 'producer_assignment.done': label = 'Élément du profil marqué fait'; break;
+      case 'questionnaire.answer': label = 'Questionnaire rempli'; detail = who; break;
+      case 'training_result.create': label = 'Résultats de formation'; detail = '${p['village'] ?? ''}'; break;
+      default: label = t;
+    }
+    return (label: label, detail: detail);
+  }
+
   /// Éléments conservés sur l'appareil et pas encore confirmés par le serveur (opérations puis photos), du plus récent au plus ancien.
   Future<List<({String label, String detail, String state, String? error})>> pendingItems() async {
     final ops = await db.raw.query('outbox', where: "status IN ('pending','pending_validation','to_correct','rejected','conflict')", orderBy: 'seq DESC', limit: 100);
     final out = <({String label, String detail, String state, String? error})>[];
+    final names = await producerNames(ops);
     for (final o in ops) {
       Map<String, dynamic> p = {};
       try { p = jsonDecode(o['payload'] as String) as Map<String, dynamic>; } catch (_) { /* illisible : libellé générique */ }
-      final t = o['op_type'] as String;
-      String label, detail = '';
-      switch (t) {
-        case 'producer.create': label = 'Nouveau producteur'; detail = '${p['last_name'] ?? ''} ${p['first_names'] ?? ''}'.trim().toUpperCase(); break;
-        case 'field_record.create':
-          label = const {'social_infrastructure': 'Infrastructure sociale', 'training': 'Formation', 'distribution': 'Distribution'}[p['kind']] ?? 'Enregistrement';
-          detail = '${p['title'] ?? ''}'; break;
-        case 'parcel.create': label = 'Parcelle relevée'; detail = '${p['declared_area_ha'] ?? ''} ha déclarés'; break;
-        case 'parcel.update': label = 'Nouveau tracé de parcelle'; break;
-        case 'purchase_declaration.create': label = 'Achat'; detail = '${p['quantity'] ?? ''} ${p['unit'] ?? ''}'.trim(); break;
-        case 'purchase_declaration.submit': label = 'Achat à soumettre'; break;
-        case 'convoy.create': label = 'Convoi'; detail = '${p['convoy_no'] ?? ''}'; break;
-        case 'task.start': label = 'Mission démarrée'; break;
-        case 'task.submit': label = 'Mission soumise'; break;
-        case 'task.entry': label = 'Saisie de mission'; detail = '${p['content'] ?? p['kind'] ?? ''}'; break;
-        case 'producer_assignment.done': label = 'Élément du profil marqué fait'; break;
-        case 'training_result.create': label = 'Résultats de formation'; detail = '${p['village'] ?? ''}'; break;
-        default: label = t;
-      }
+      final d = opLabel(o['op_type'] as String, p, names);
+      final label = d.label, detail = d.detail;
       out.add((label: label, detail: detail, state: o['status'] as String, error: o['error'] as String?));
     }
     final photos = await db.raw.query('pending_uploads', where: "status IN ('pending','error')", orderBy: 'created_at DESC', limit: 50);

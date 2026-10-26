@@ -151,7 +151,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         if (_coachMode) Expanded(child: _coachBody()) else Expanded(
           child: RefreshIndicator(
-            onRefresh: () async { await services.sync.run(); await _reload(); },
+            onRefresh: () async { await syncWithDialog(context); await _reload(); },
             child: ListView(padding: const EdgeInsets.fromLTRB(16, 12, 16, 24), children: [
               for (final b in buttons) Padding(padding: const EdgeInsets.only(bottom: 12), child: b),
               if (_items.isNotEmpty) ...[
@@ -214,7 +214,7 @@ class _HomeScreenState extends State<HomeScreen> {
     ];
     Widget row(List<Widget> w) => Row(children: [for (var i = 0; i < w.length; i++) ...[if (i > 0) const SizedBox(width: 10), Expanded(child: w[i])]]);
     return RefreshIndicator(
-      onRefresh: () async { await services.sync.run(); await _reload(); },
+      onRefresh: () async { await syncWithDialog(context); await _reload(); },
       child: ListView(padding: const EdgeInsets.fromLTRB(12, 14, 12, 24), children: [
         for (final r in [r1, r2, r3]) ...[row(r), const SizedBox(height: 10)],
         const SizedBox(height: 6),
@@ -395,7 +395,7 @@ class _SyncBanner extends StatelessWidget {
         text = status.lastSuccess == null ? 'Pas encore synchronisé' : 'Synchronisé à ${TimeOfDay.fromDateTime(status.lastSuccess!).format(context)}';
         color = Colors.green.shade800; break;
     }
-    final extra = [if (pending > 0) '$pending en attente', if (problems > 0) '$problems à corriger'].join('  •  ');
+    final extra = [if (pending > 0) '$pending en attente (touchez l\'icône de synchronisation)', if (problems > 0) '$problems à corriger'].join('  •  ');
     return Container(
       width: double.infinity,
       color: color.withOpacity(0.12),

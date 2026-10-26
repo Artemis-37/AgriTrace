@@ -64,7 +64,7 @@ class _Api extends ApiClient {
   final Map<String, dynamic> routes;
   _Api(this.routes) : super(_Store());
   @override
-  Future<dynamic> get(String path, {Map<String, String>? query}) async {
+  Future<dynamic> get(String path, {Map<String, String>? query, Duration? timeout}) async {
     final r = routes[path];
     if (r == null) throw ApiException(404, path);
     return r;

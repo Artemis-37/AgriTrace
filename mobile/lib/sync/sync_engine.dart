@@ -70,7 +70,10 @@ class SyncEngine {
     status.value = SyncStatus(SyncPhase.blocked, lastSuccess: status.value.lastSuccess, message: 'Session expirée ou accès retiré');
   }
 
-  Future<void> run() async {
+  /// Une synchronisation ne démarre que sur demande de l'utilisateur (icône, bandeau, tirer pour actualiser, connexion) : `manual: true`.
+  /// Les appels implicites (après une saisie, au retour du réseau) sont sans effet : le téléphone ne synchronise pas en continu.
+  Future<void> run({bool manual = false}) async {
+    if (!manual) return;
     if (_blocked) {
       // Levée du blocage dès qu'une nouvelle connexion a fourni un autre jeton.
       final t = await api.store.refreshToken;
@@ -147,7 +150,16 @@ class SyncEngine {
       if (rows.isEmpty) return;
       lastSeq = rows.last['seq'] as int;
       _pushed += rows.length;
-      _step(0, SyncStepState.doing, '$_pushed / $_pushTotal');
+      // Nom des éléments en cours d'envoi (ex. « Achat · ADIO YAO RAPHAEL · 9 SAC »).
+      final names = await Repository(db).producerNames(rows);
+      final labels = <String>[];
+      for (final r in rows) {
+        try {
+          final d = Repository.opLabel(r['op_type'] as String, jsonDecode(r['payload'] as String) as Map<String, dynamic>, names);
+          labels.add(d.detail.isEmpty ? d.label : '${d.label} · ${d.detail}');
+        } catch (_) { labels.add('${r['op_type']}'); }
+      }
+      _step(0, SyncStepState.doing, '$_pushed / $_pushTotal\n${labels.take(2).join('\n')}${labels.length > 2 ? '\n+ ${labels.length - 2} autre(s)' : ''}');
 
       final res = await api.post('/sync/batch', {
         'operations': [
@@ -173,6 +185,11 @@ class SyncEngine {
     }
   }
 
+  Future<String> _declName(String id) async {
+    final r = await db.raw.rawQuery("SELECT p.last_name, p.first_names FROM declarations d JOIN producers p ON p.id = d.producer_id WHERE d.id = ?", [id]);
+    return r.isEmpty ? '' : '${r.first['last_name'] ?? ''} ${r.first['first_names'] ?? ''}'.trim().toUpperCase();
+  }
+
   /// Envoi des photos en attente, une à une, une fois leur déclaration créée sur le serveur.
   /// Réseau coupé : on s'arrête et on reprendra ; refus définitif du serveur : la photo est mise de côté avec son motif.
   Future<void> _pushPhotos() async {
@@ -187,6 +204,7 @@ class SyncEngine {
         continue;
       }
       try {
+        _step(1, SyncStepState.doing, 'Photo · ${r['kind'] ?? ''}${(await _declName(r['declaration_id'] as String)).isEmpty ? '' : ' · ${await _declName(r['declaration_id'] as String)}'}');
         await api.upload('/documents', filePath: file.path, filename: 'photo.jpg', fields: {
           'subject_type': type, 'subject_id': r['declaration_id'] as String, 'kind': r['kind'] as String, 'client_key': r['client_key'] as String,
         });
@@ -296,18 +314,26 @@ class SyncEngine {
   Future<void> _pull() async {
     _received = 0;
     var cursor = await db.getKv('cursor');
+    // Les pages se téléchargent à la suite pendant que la précédente s'enregistre : le réseau n'attend jamais la base.
+    Future<Map<String, dynamic>> fetch(String? c) async => await api.get('/sync/changes', query: {if (c != null) 'cursor': c, 'limit': '1000'}, timeout: const Duration(seconds: 90)) as Map<String, dynamic>;
+    var next = fetch(cursor);
+    List<String>? lastPerms;
     while (true) {
-      final j = await api.get('/sync/changes', query: {if (cursor != null) 'cursor': cursor, 'limit': '1000'}) as Map<String, dynamic>;
+      final j = await next;
       final perms = (j['permissions'] as List).cast<String>();
       if (!canSync(perms)) throw ApiException(403, 'Synchronisation non autorisée pour ce compte');
+      lastPerms = perms;
+      final more = j['has_more'] == true;
+      final nextCursor = j['next_cursor'] as String;
+      if (more) { next = fetch(nextCursor); next.ignore(); }
       await db.raw.transaction((txn) => _apply(txn, j, perms));
-      await Repository(db).claimOrphans(perms);
       _received += ((j['changes'] ?? {}) as Map).values.fold<int>(0, (n, v) => n + (v is List ? v.length : 0));
       _step(3, SyncStepState.doing, '$_received élément(s) reçus');
-      cursor = j['next_cursor'] as String;
+      cursor = nextCursor;
       await db.setKv('cursor', cursor); // le curseur n'avance qu'après l'application des changements
-      if (j['has_more'] != true) break;
+      if (!more) break;
     }
+    await Repository(db).claimOrphans(lastPerms);
   }
 
   static Future<void> _apply(Transaction txn, Map<String, dynamic> j, List<String> perms) async {

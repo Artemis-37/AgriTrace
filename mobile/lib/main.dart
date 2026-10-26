@@ -89,13 +89,10 @@ class _SyncShellState extends State<SyncShell> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    services.sync.run();
     _fetchMap();
     _sub = Connectivity().onConnectivityChanged.listen((r) {
-      if (r.any((x) => x != ConnectivityResult.none)) services.sync.run();
       if (r.any((x) => x == ConnectivityResult.wifi || x == ConnectivityResult.ethernet)) _fetchMap();
     });
-    _timer = Timer.periodic(const Duration(minutes: Config.syncIntervalMinutes), (_) => services.sync.run());
   }
 
   /// Le fond de carte (plusieurs dizaines de Mo) ne se télécharge tout seul que sur Wi-Fi ; sur données mobiles, c'est à l'utilisateur de le demander.
@@ -106,7 +103,6 @@ class _SyncShellState extends State<SyncShell> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) services.sync.run();
   }
 
   @override

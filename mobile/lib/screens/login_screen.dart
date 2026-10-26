@@ -176,7 +176,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
     // À la connexion : synchronisation immédiate (profil, producteurs, tâches, opérations en attente), avec l'icône de synchronisation.
     if (mounted) setState(() => _syncing = true);
-    try { await services.sync.run().timeout(const Duration(seconds: 25)); } catch (_) { /* hors connexion : l'accueil réessaiera */ }
+    try { await services.sync.run(manual: true).timeout(const Duration(seconds: 25)); } catch (_) { /* hors connexion : l'accueil réessaiera */ }
     if (!mounted) return;
     void go() => Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const SyncShell(child: HomeScreen())));
     if (forced) {

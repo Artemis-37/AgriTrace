@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../main.dart';
 import 'map_pack_screen.dart';
+import 'sync_dialog.dart';
 
 /// « Télécharger les données » : ce que le téléphone peut récupérer pour travailler hors connexion.
 class DownloadScreen extends StatelessWidget {
@@ -18,8 +18,7 @@ class DownloadScreen extends StatelessWidget {
       appBar: AppBar(title: const Text('Télécharger les données')),
       body: ListView(padding: const EdgeInsets.all(12), children: [
         row(Icons.sync, 'Télécharger les données des producteurs', () async {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Synchronisation lancée…')));
-          await services.sync.run();
+          await syncWithDialog(context);
         }),
         row(Icons.layers_outlined, 'Télécharger le fond de carte', () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MapPackScreen()))),
       ]),
