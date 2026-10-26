@@ -13,12 +13,21 @@ const days = (n) => new Date(Date.now() + n * 86400000).toISOString().slice(0, 1
 const warnings = [];
 const N = Number(process.env.DEMO_OPS || 22);
 
+/** Les serveurs en ligne limitent le débit : sur « 429 », on attend puis on recommence (le chargement est simplement plus lent). */
+async function fetchRetry(url, init) {
+  for (let i = 0; ; i++) {
+    const r = await fetch(url, init);
+    if (r.status !== 429 || i >= 20) return r;
+    await new Promise((s) => setTimeout(s, (Number(r.headers.get('retry-after')) || 8) * 1000));
+  }
+}
+
 async function call(method, p, { token, org, body, client } = {}) {
   const headers = { 'x-client': client || 'web' };
   if (token) headers.authorization = `Bearer ${token}`;
   if (org) headers['x-organization-id'] = org;
   if (body) headers['content-type'] = 'application/json';
-  const res = await fetch(API + p, { method, headers, body: body ? JSON.stringify(body) : undefined });
+  const res = await fetchRetry(API + p, { method, headers, body: body ? JSON.stringify(body) : undefined });
   const t = await res.text(); let j; try { j = JSON.parse(t); } catch { j = t; }
   if (res.status >= 400) throw new Error(`${method} ${p} → ${res.status} ${String(t).slice(0, 180)}`);
   return j;
