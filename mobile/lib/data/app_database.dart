@@ -5,13 +5,28 @@ import 'package:sqflite_sqlcipher/sqflite.dart';
 /// pour mettre à jour l'application sans perdre les opérations en attente.
 class AppDatabase {
   static const schemaVersion = 5;
-  final Database raw;
-  AppDatabase._(this.raw);
+  Database raw;
+  /// Fichier de la base ouverte : une base par compte, pour que chacun garde ses propres données, son curseur de synchronisation
+  /// et ses saisies en attente (changer de compte ne retélécharge rien).
+  String file;
+  final String _key;
+  AppDatabase._(this.raw, this.file, this._key);
 
-  static Future<AppDatabase> open(String key) async {
+  static Future<AppDatabase> open(String key, {String file = 'agritrace.db'}) async => AppDatabase._(await _openFile(key, file), file, key);
+
+  /// Passe à la base d'un autre compte (la précédente est fermée, rien n'y est effacé).
+  Future<void> useFile(String name) async {
+    if (name == file) return;
+    final old = raw;
+    raw = await _openFile(_key, name);
+    file = name;
+    await old.close();
+  }
+
+  static Future<Database> _openFile(String key, String file) async {
     final dir = await getDatabasesPath();
-    final db = await openDatabase(
-      p.join(dir, 'agritrace.db'),
+    return openDatabase(
+      p.join(dir, file),
       password: key,
       version: schemaVersion,
       onCreate: (d, v) async {
@@ -25,7 +40,6 @@ class AppDatabase {
         }
       },
     );
-    return AppDatabase._(db);
   }
 
   static final Map<int, Future<void> Function(Database)> _migrations = {

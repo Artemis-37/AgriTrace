@@ -92,6 +92,16 @@ class SessionStore {
 
   Future<void> setOrg(String id) => _s.write(key: 'org', value: id);
 
+  /// Base locale de chaque compte (e-mail → fichier) et base en cours : chaque compte garde ses données sur le téléphone.
+  Future<Map<String, String>> dbMap() async {
+    final r = await _s.read(key: 'dbmap');
+    if (r == null) return {};
+    try { return Map<String, String>.from(jsonDecode(r) as Map); } catch (_) { return {}; }
+  }
+  Future<void> setDbMap(Map<String, String> m) => _s.write(key: 'dbmap', value: jsonEncode(m));
+  Future<String> get currentDbFile async => (await _s.read(key: 'dbcurrent')) ?? 'agritrace.db';
+  Future<void> setCurrentDbFile(String f) => _s.write(key: 'dbcurrent', value: f);
+
   /// Clé de chiffrement SQLCipher, générée une fois et jamais affichée ni envoyée.
   Future<String> databaseKey() async {
     var k = await _s.read(key: 'dbkey');

@@ -31,7 +31,7 @@ late Services services;
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final store = SessionStore();
-  final db = await AppDatabase.open(await store.databaseKey());
+  final db = await AppDatabase.open(await store.databaseKey(), file: await store.currentDbFile);
   final saved = await store.serverUrl;
   if (saved != null && saved.isNotEmpty) {
     Config.apiBaseRuntime = Config.normalizeBase(saved);

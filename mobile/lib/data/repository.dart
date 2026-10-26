@@ -9,6 +9,7 @@ import 'package:sqflite_sqlcipher/sqflite.dart';
 import 'package:uuid/uuid.dart';
 
 import 'app_database.dart';
+import 'session_store.dart';
 
 /// Accès aux données locales et création d'opérations hors connexion.
 /// Produits proposés à la déclaration d'un convoi : les produits actifs seulement.
@@ -360,43 +361,23 @@ class Repository {
     });
   }
 
-  /// Propriétaire des saisies en attente : l'e-mail du compte connecté. Quand un autre compte se connecte sur le même téléphone,
-  /// les saisies non envoyées du précédent sont mises de côté (et rendues à leur auteur quand il se reconnecte) : elles ne partent
-  /// jamais sous le nom d'un autre. Les données venues du serveur sont effacées, la synchronisation suivante recharge celles du nouveau compte.
-  Future<void> switchUser(String email) async {
+  /// Chaque compte a sa propre base sur le téléphone : ses producteurs, son curseur de synchronisation et ses saisies non envoyées.
+  /// Changer de compte ouvre l'autre base, sans rien effacer ni retélécharger : la synchronisation ne compare et ne transfère que
+  /// ce qui diffère entre ce téléphone et le serveur. Les saisies d'un compte ne partent jamais sous le nom d'un autre.
+  Future<void> switchUser(String email, SessionStore store) async {
     final me = email.trim().toLowerCase();
     if (me.isEmpty) return;
-    final prev = await db.getKv('device_user');
-    if (prev == me) return;
-    // Première utilisation de cette version : propriétaire inconnu, on garde tout tel quel (rien n'est perdu) et on mémorise le compte.
-    if (prev == null) { await db.setKv('device_user', me); return; }
-    await db.raw.transaction((txn) async {
-      {
-        await txn.execute("INSERT OR REPLACE INTO outbox_parked (owner, idempotency_key, op_type, payload, entity_id, status, error, attempts, created_at, updated_at) SELECT ?, idempotency_key, op_type, payload, entity_id, status, error, attempts, created_at, updated_at FROM outbox", [prev]);
-        for (final r in await txn.query('declarations', where: "local_state IN ('local_only','pending','pending_validation','error')")) {
-          await txn.insert('declarations_parked', {'owner': prev, 'id': r['id'], 'data': jsonEncode(r)}, conflictAlgorithm: ConflictAlgorithm.replace);
-        }
-        for (final r in await txn.query('pending_uploads')) {
-          await txn.insert('uploads_parked', {'owner': prev, 'client_key': r['client_key'], 'data': jsonEncode(r)}, conflictAlgorithm: ConflictAlgorithm.replace);
-        }
-      }
-      for (final t in ['value_chains', 'campaigns', 'unit_conversions', 'price_versions', 'producers', 'my_assignments', 'parcels', 'declarations', 'outbox', 'pending_uploads']) {
-        await txn.delete(t);
-      }
-      await txn.delete('kv', where: "k IN ('cursor','permissions','my_collector_id','me_name','tasks_cache','assignments_cache') OR k LIKE 'cache:%'");
-      // Rend à ce compte ses propres saisies non envoyées.
-      for (final r in await txn.query('outbox_parked', where: 'owner = ?', whereArgs: [me])) {
-        await txn.insert('outbox', {for (final k in ['idempotency_key', 'op_type', 'payload', 'entity_id', 'status', 'error', 'attempts', 'created_at', 'updated_at']) k: r[k]}, conflictAlgorithm: ConflictAlgorithm.replace);
-      }
-      for (final r in await txn.query('declarations_parked', where: 'owner = ?', whereArgs: [me])) {
-        await txn.insert('declarations', Map<String, Object?>.from(jsonDecode(r['data'] as String) as Map), conflictAlgorithm: ConflictAlgorithm.replace);
-      }
-      for (final r in await txn.query('uploads_parked', where: 'owner = ?', whereArgs: [me])) {
-        await txn.insert('pending_uploads', Map<String, Object?>.from(jsonDecode(r['data'] as String) as Map), conflictAlgorithm: ConflictAlgorithm.replace);
-      }
-      for (final t in ['outbox_parked', 'declarations_parked', 'uploads_parked']) { await txn.delete(t, where: 'owner = ?', whereArgs: [me]); }
-      await txn.insert('kv', {'k': 'device_user', 'v': me}, conflictAlgorithm: ConflictAlgorithm.replace);
-    });
+    final map = await store.dbMap();
+    if (map.isEmpty) {
+      // Première utilisation de cette version : la base existante appartient au dernier compte qui l'a utilisée (sinon à celui-ci).
+      final owner = (await db.getKv('device_user')) ?? me;
+      map[owner] = db.file;
+    }
+    final file = map.putIfAbsent(me, () => 'agritrace_${map.length}.db');
+    await store.setDbMap(map);
+    await db.useFile(file);
+    await store.setCurrentDbFile(file);
+    await db.setKv('device_user', me);
   }
 
   /// Anciennes versions : des achats d'un autre compte, refusés ici faute de droit, restaient dans « Éléments à soumettre ».

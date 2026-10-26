@@ -50,7 +50,7 @@ class _LoginScreenState extends State<LoginScreen> {
         await services.api.get('/me');
       } on NetworkException {
         if (!mounted) return;
-        await services.repo.switchUser(a.email);
+        await services.repo.switchUser(a.email, services.store);
         if (!mounted) return;
         Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const SyncShell(child: HomeScreen())));
         return;
@@ -158,7 +158,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _enter(String orgId, {bool remember = true}) async {
-    await services.repo.switchUser(_who.isEmpty ? _email.text : _who);
+    await services.repo.switchUser(_who.isEmpty ? _email.text : _who, services.store);
     final ok = await services.repo.switchOrganization(orgId);
     if (!ok) {
       setState(() => _error = "Des opérations d'une autre coopérative ne sont pas encore envoyées. Reconnectez-vous à celle-ci et synchronisez d'abord.");
