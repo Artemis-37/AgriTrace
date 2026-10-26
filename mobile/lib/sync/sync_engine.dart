@@ -11,7 +11,8 @@ import '../data/app_database.dart';
 import '../data/repository.dart';
 import 'sync_state.dart';
 
-enum SyncPhase { idle, syncing, offline, error, blocked }
+/// `refused` : synchronisation refusée parce qu'il reste des éléments à soumettre (ce n'est pas une erreur).
+enum SyncPhase { idle, syncing, offline, error, blocked, refused }
 
 class SyncStatus {
   final SyncPhase phase;
@@ -104,7 +105,7 @@ class SyncEngine {
           _step(0, SyncStepState.skipped, '$waiting à soumettre');
           _step(1, SyncStepState.skipped, 'Non concerné');
           for (var i = 2; i < 4; i++) _step(i, SyncStepState.skipped, 'Suspendu');
-          status.value = SyncStatus(SyncPhase.error, lastSuccess: previousSuccess, message: '$waiting élément(s) à soumettre : envoyez-les vous-même (bouton d\'envoi de chaque élément, ou « Éléments à soumettre »), puis relancez la synchronisation.');
+          status.value = SyncStatus(SyncPhase.refused, lastSuccess: previousSuccess, message: '$waiting élément(s) à soumettre : envoyez-les vous-même (bouton d\'envoi de chaque élément, ou « Éléments à soumettre »), puis relancez la synchronisation.');
           return;
         }
         _step(0, SyncStepState.done, 'Rien à envoyer'); _step(1, SyncStepState.done, 'Rien à envoyer');

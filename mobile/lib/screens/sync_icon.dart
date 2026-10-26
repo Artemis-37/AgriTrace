@@ -42,7 +42,7 @@ class _SyncIconState extends State<SyncIcon> with SingleTickerProviderStateMixin
     return ValueListenableBuilder<SyncStatus>(
       valueListenable: services.sync.status,
       builder: (_, s, __) {
-        final icon = s.phase == SyncPhase.offline ? Icons.sync_disabled : (s.phase == SyncPhase.error || s.phase == SyncPhase.blocked) ? Icons.sync_problem : Icons.sync;
+        final icon = s.phase == SyncPhase.offline ? Icons.sync_disabled : (s.phase == SyncPhase.error || s.phase == SyncPhase.blocked || s.phase == SyncPhase.refused) ? Icons.sync_problem : Icons.sync;
         final w = RotationTransition(turns: Tween(begin: 1.0, end: 0.0).animate(_c), child: Icon(icon, color: widget.color, size: widget.size));
         if (!widget.tappable) return w;
         return IconButton(tooltip: 'Synchroniser', onPressed: s.phase == SyncPhase.syncing ? null : () => syncWithDialog(context), icon: w);

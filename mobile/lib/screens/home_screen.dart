@@ -382,7 +382,9 @@ class _SyncBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     String text;
     Color color;
-    switch (status.phase) {
+    // Plus rien à soumettre : la mention « synchronisation en attente » disparaît.
+    final phase = status.phase == SyncPhase.refused && pending == 0 ? SyncPhase.idle : status.phase;
+    switch (phase) {
       case SyncPhase.syncing:
         text = 'Synchronisation en cours…'; color = Colors.blueGrey; break;
       case SyncPhase.offline:
@@ -391,11 +393,13 @@ class _SyncBanner extends StatelessWidget {
         text = 'Synchronisation suspendue : session expirée ou accès retiré. Utilisez « Se reconnecter » dans le menu ⋮, ou contactez votre administrateur. Vos saisies restent sur le téléphone.'; color = Colors.red.shade700; break;
       case SyncPhase.error:
         text = 'Erreur de synchronisation : ${status.message ?? ''}'; color = Colors.red.shade700; break;
+      case SyncPhase.refused:
+        text = 'Synchronisation en attente : soumettez d\'abord vos éléments.'; color = Colors.orange.shade800; break;
       case SyncPhase.idle:
         text = status.lastSuccess == null ? 'Pas encore synchronisé' : 'Synchronisé à ${TimeOfDay.fromDateTime(status.lastSuccess!).format(context)}';
         color = Colors.green.shade800; break;
     }
-    final extra = [if (pending > 0) '$pending à soumettre (touchez « Éléments à soumettre » ou l\'envoi de chaque élément)', if (problems > 0) '$problems à corriger'].join('  •  ');
+    final extra = [if (pending > 0) '$pending à soumettre', if (problems > 0) '$problems à corriger'].join('  •  ');
     return Container(
       width: double.infinity,
       color: color.withOpacity(0.12),

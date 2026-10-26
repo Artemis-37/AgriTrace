@@ -71,7 +71,7 @@ class _SyncDialogState extends State<_SyncDialog> {
               _over
                   ? (st.phase == SyncPhase.idle ? 'Synchronisation terminée.' : (st.message ?? 'Synchronisation interrompue.'))
                   : "Seul ce qui est nouveau ou modifié depuis la dernière synchronisation est reçu. S'il reste des éléments à soumettre, la synchronisation est refusée : soumettez-les d'abord vous-même.",
-              style: TextStyle(fontSize: 12.5, color: _over && st.phase != SyncPhase.idle ? Colors.red.shade800 : Colors.black54)),
+              style: TextStyle(fontSize: 12.5, color: _over && st.phase == SyncPhase.refused ? Colors.orange.shade900 : _over && st.phase != SyncPhase.idle ? Colors.red.shade800 : Colors.black54)),
           ]);
         },
       ),
