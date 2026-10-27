@@ -16,9 +16,10 @@ def stills(*imgs): return {'type': 'stills', 'images': [f'{CAP}/{i}' for i in im
 
 scene('intro', 'Présentation', """
 Bienvenue dans Agri Trace, la plateforme intégrée de gestion agricole, de traçabilité et de gestion financière des coopératives.
+Cet outil a été créé par Dominique N'Guessan.
 Dans cette présentation, nous parcourons l'outil de bout en bout : ce que voit chaque profil, sur ordinateur comme sur téléphone,
 depuis la parcelle du producteur jusqu'à la comptabilité, et jusqu'à l'exportateur.""",
-  card('title', title='AgriTrace', subtitle='Gestion agricole · Traçabilité · Gestion financière des coopératives', note='Présentation de l\'outil'))
+  card('title', title='AgriTrace', subtitle='Gestion agricole · Traçabilité · Gestion financière des coopératives', note='Présentation de l\'outil', contact=[('Créateur : Dominique N\'Guessan', (40, 'Bold'), (34, 61, 48)), ('Téléphone : 05 05 05 45 63', (36, 'Medium'), (40, 52, 46)), ('E-mail : dominiquenguessan414@gmail.com', (36, 'Medium'), (40, 52, 46))]))
 
 scene('architecture', 'Les quatre briques', """
 Agri Trace repose sur quatre briques. D'abord un serveur, avec une base de données PostgreSQL qui isole strictement les données de chaque coopérative.
@@ -41,7 +42,7 @@ et les trois profils de terrain : collecteur, agent de terrain et coach, qui se 
   card('profils'))
 
 scene('dashboard', 'Tableau de bord', """
-Voici le portail, vu par l'administrateur de la coopérative. Le tableau de bord rassemble l'essentiel : commandes, créances, missions en retard, anomalies de cartographie.
+Voici le portail, vu par l'administrateur de la coopérative. Le tableau de bord rassemble l'essentiel : commandes, créances, anomalies de cartographie.
 En haut à droite, la messagerie et la cloche de notifications avec leurs compteurs, et l'indicateur de synchronisation.
 Le logo de la coopérative figure sur ses reçus imprimés. L'affichage est volontairement sobre, avec un seul thème, doux pour les yeux.""",
   live('coop_admin', [{'goto': '/', 'w': 2}, {'scroll': 500, 'w': 2}, {'scroll': -500, 'w': 1}]))
@@ -87,7 +88,7 @@ Le comptable passe l'écriture, la direction suit les résultats. À chaque éta
 scene('declarations', 'Traçabilité : déclarations d\'achat', """
 Côté traçabilité, le responsable reçoit les déclarations d'achat des collecteurs. Il les met en vérification, puis les valide ou demande une correction avec un motif.
 Le collecteur voit alors l'achat marqué à corriger dans son application. Les reçus sont numérotés, et chaque déclaration est rattachée à un producteur, une filière et une campagne.""",
-  live('responsable_tracabilite', [{'goto': '/declarations', 'w': 3}, {'scroll': 400, 'w': 3}, {'goto': '/missions', 'w': 2}]))
+  live('responsable_tracabilite', [{'goto': '/declarations', 'w': 3}, {'scroll': 400, 'w': 3}, {'goto': '/producteurs', 'w': 2}]))
 
 scene('convois', 'Réception au magasin', """
 Le magasinier voit les convois en route. Il ouvre un convoi arrivé, pèse en brut, déduit la tare, obtient le poids net, et constate les écarts avec le poids annoncé.
@@ -130,11 +131,12 @@ scene('commerce', 'L\'acheteur partenaire', """
 Voici la vue d'un acheteur partenaire : uniquement ses commandes et ses documents. Le reste de la coopérative lui est invisible.""",
   live('acheteur', [{'goto': '/commerce', 'w': 3}, {'scroll': 300, 'w': 2}]))
 
-scene('missions', 'Missions et tâches de terrain', """
-L'Administrateur de groupe met en place les missions des coachs : titre, catégorie, priorité, échéance, producteur, coach assigné, instructions et critères de validation.
-Le coach exécute et joint ses preuves ; l'Administrateur de groupe relit puis valide, ou demande une correction. Une fois la tâche terminée et validée, elle est grisée et n'est plus cliquable,
-puis elle disparaît de la liste après le délai fixé par l'Administrateur de groupe, sept jours par défaut. Une case permet de revoir les tâches masquées.""",
-  live('adg', [{'goto': '/missions', 'w': 3}, {'scroll': 350, 'w': 3}, {'click': 'text=Afficher aussi les missions terminées masquées', 'w': 3}, {'scroll': 300, 'w': 2}]))
+scene('nouveautes', 'Les dernières évolutions', """
+Voici les dernières évolutions. La synchronisation du téléphone est désormais manuelle : une boîte de dialogue affiche chaque étape, avec le nom de chaque élément envoyé ou reçu.
+À la connexion, la synchronisation est complète. Ensuite, elle est sélective : seules les nouveautés sont échangées, et seulement celles qui concernent le profil de l'utilisateur. Tant qu'il reste des éléments à soumettre, elle est refusée.
+Sur le portail, un délégué peut être payé en espèces, ou par chèque, en choisissant la banque. Sur les cartes, une croix de visée affiche la latitude et la longitude du point visé.
+Et le profil d'un producteur liste toutes ses parcelles, y compris celles importées.""",
+  card('bullets', title='Dernières évolutions', items=['Synchronisation manuelle, avec le nom de chaque élément', 'Complète à la connexion, puis seulement les nouveautés du profil', 'Refusée tant que des éléments sont à soumettre', 'Paiement d\'un délégué en espèces ou par chèque (banque au choix)', 'Cartes : croix de visée, latitude et longitude', 'Profil producteur : toutes ses parcelles, importées comprises']))
 
 scene('coach', 'Le coach sur le terrain', """
 Le coach utilise l'application mobile. Il choisit un producteur, avec recherche par nom, code ou téléphone, et filtre par section. La fiche du producteur donne ses tâches, ses parcelles et ses informations.
@@ -222,7 +224,7 @@ il choisit le rapport, la fréquence, quotidienne, hebdomadaire ou mensuelle, l'
   live('coop_admin', [{'goto': '/rapports', 'w': 3}, {'scroll': 300, 'w': 2}, {'tab': 'Envoi automatique', 'w': 4}]))
 
 scene('horsligne', 'Hors connexion et synchronisation', """
-Sur le téléphone, tout ce qui est saisi est gardé sur l'appareil, puis envoyé au retour du réseau, sans doublon : chaque opération porte une clé unique. Le bandeau de l'accueil indique l'état :
+Sur le téléphone, tout ce qui est saisi est gardé sur l'appareil, puis envoyé quand l'utilisateur lance la synchronisation, sans doublon : chaque opération porte une clé unique. Le bandeau de l'accueil indique l'état :
 synchronisé, hors connexion, éléments en attente, ou éléments à corriger, avec le motif du refus du serveur. Des fonds de carte peuvent être téléchargés en Wi-Fi pour travailler sans réseau.
 Si l'accès d'un utilisateur est retiré, les données de la coopérative sont effacées du téléphone.""",
   card('bullets', title='Travailler sans réseau', items=['Saisie conservée sur l\'appareil, envoi au retour du réseau', 'Clé d\'idempotence : jamais de doublon', 'Bandeau d\'état : synchronisé · hors connexion · en attente · à corriger', 'Fonds de carte hors ligne téléchargés en Wi-Fi', 'Bibliothèque de modules lisible sans réseau', 'Compte suspendu : données effacées du téléphone']))
@@ -235,7 +237,7 @@ Un menu permet de sauvegarder les données sur une clé U S B, et le serveur loc
 
 scene('securite', 'Sécurité et traçabilité', """
 La sécurité est au cœur de l'outil. Chaque coopérative est isolée au niveau de la base de données. Les droits sont vérifiés par le serveur à chaque requête. Le journal d'audit conserve qui a fait quoi, et quand.
-Les écritures, les historiques de prix et les versions de tracés sont immuables. Les actions sensibles exigent deux personnes. Les identifiants de connexion sont protégés contre les essais répétés.
+Les données du téléphone sont chiffrées, y compris les photos en attente d'envoi, et les pièces jointes sont chiffrées sur le serveur. Les écritures, les historiques de prix et les versions de tracés sont immuables. Les actions sensibles exigent deux personnes. Les identifiants de connexion sont protégés contre les essais répétés.
 Et les comptes de terrain ne se connectent que par le mobile : c'est une règle d'usage de l'interface, les droits restant contrôlés par le serveur.""",
   card('bullets', title='Sécurité et traçabilité', items=['Isolation des coopératives dans la base (RLS)', 'Permissions vérifiées par le serveur à chaque requête', 'Journal d\'audit : qui, quoi, quand', 'Écritures et versions de tracé immuables', 'Demandeur ≠ approbateur', 'Limitation des essais de connexion', 'Comptes de terrain : mobile uniquement']))
 
@@ -246,8 +248,8 @@ Les résultats de formation demandent une connexion pour être envoyés. Ces poi
   card('bullets', title='Avant la mise en service', items=['Compiler l\'APK (workflow GitHub) et l\'essayer sur de vrais téléphones', 'Tester l\'installateur Windows sur un poste de la coopérative', 'Relire et adapter les modules de formation à la certification visée', 'Faire valider les règles métier par la coopérative', 'Plan de recette : document « Défauts connus et recette »']))
 
 scene('fin', 'Merci', """
-Voilà Agri Trace : une chaîne complète, de la parcelle du producteur à la comptabilité et à l'exportateur, sur ordinateur et sur téléphone, avec une traçabilité sans trou. Merci de votre attention.""",
-  card('title', title='AgriTrace', subtitle='De la parcelle au marché', note='Guides, démonstration et comptes d\'essai fournis'))
+Voilà Agri Trace : une chaîne complète, de la parcelle du producteur à la comptabilité et à l'exportateur, sur ordinateur et sur téléphone, avec une traçabilité sans trou. Merci de votre attention. Pour toute question, contactez le créateur, Dominique N'Guessan : téléphone, zéro cinq, zéro cinq, zéro cinq, quarante-cinq, soixante-trois ; adresse électronique, dominique n guessan quatre cent quatorze, arobase gmail point com.""",
+  card('title', title='AgriTrace', subtitle='De la parcelle au marché', note='Guides, démonstration et comptes d\'essai fournis', contact=[('Créateur : Dominique N\'Guessan', (40, 'Bold'), (34, 61, 48)), ('Téléphone : 05 05 05 45 63', (36, 'Medium'), (40, 52, 46)), ('E-mail : dominiquenguessan414@gmail.com', (36, 'Medium'), (40, 52, 46))]))
 
 json.dump(S, open('scenario.json', 'w'), ensure_ascii=False, indent=1)
 print(len(S), 'scènes ;', sum(len(s['narration'].split()) for s in S), 'mots')

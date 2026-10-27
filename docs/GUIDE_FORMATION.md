@@ -44,7 +44,7 @@ Mot de passe commun : `Demo-AgriTrace-2026!` (à changer pour toute utilisation 
 | Caissier / caissière | Aya Kouamé | `caissier@demo.agritrace.test` |
 | Comptable | Salif Ouédraogo | `comptable@demo.agritrace.test` |
 | Direction | Nathalie Boni | `direction@demo.agritrace.test` |
-| Responsable traçabilité | Éric Tano | `responsable.tracabilite@demo.agritrace.test` |
+| Responsable traçabilité — **plusieurs rôles** : + responsable cartographie, responsable qualité, responsable logistique | Éric Tano | `responsable.tracabilite@demo.agritrace.test` |
 | Responsable cartographie | Clarisse Ahoua | `responsable.cartographie@demo.agritrace.test` |
 | Cartographe | Jean-Marc Gnahoré | `cartographe@demo.agritrace.test` |
 | Agent de terrain | Rosine Yapi | `agent.terrain@demo.agritrace.test` |
@@ -60,8 +60,6 @@ Mot de passe commun : `Demo-AgriTrace-2026!` (à changer pour toute utilisation 
 | Exportateur (partenaire) | Karim Diallo | `exportateur@demo.agritrace.test` |
 | Responsable pont bascule (exportateur) | Seydou Bamba | `pont.bascule@exportateur-demo.test` |
 | Analyste (exportateur) | Carine Amani | `analyste@exportateur-demo.test` |
-| Caissier (exportateur) | Paul Zézé | `exp.caissier@exportateur-demo.test` |
-| Administrateur (exportateur) | Yves Kouadio | `admin@exportateur-demo.test` |
 
 ## 4. Parcours conseillés
 
@@ -442,7 +440,6 @@ Réceptionne et pèse les convois au magasin central, tient les stocks et l'inve
 - Caisse et comptabilité
 - Finances
 - Équipe
-- Missions
 - Préfinancement
 
 ### Exercices
@@ -506,7 +503,6 @@ Traite les convois reçus, règle les délégués, tient la caisse et les compte
 - Cartographie
 - Conformité / qualité
 - Équipe
-- Missions
 - Stocks
 
 ### Exercices
@@ -567,7 +563,6 @@ Passe et consulte les écritures comptables, suit les comptes financiers ; peut 
 - Cartographie
 - Conformité / qualité
 - Équipe
-- Missions
 - Stocks
 
 ### Exercices
@@ -680,7 +675,6 @@ Supervise la caisse, les comptes et les prêts ; approuve les paiements, les cor
 ### Ce que ce profil ne voit pas
 
 - Cartographie
-- Missions
 
 ### Exercices
 
@@ -918,12 +912,12 @@ Relève et saisit les parcelles, importe les tracés, consulte les anomalies.
 
 **Niveau 1 — Opérateur** · durée indicative : 1 h 30 · compte de démonstration : `agent.terrain@demo.agritrace.test`
 
-Enregistre les producteurs et les données de terrain, exécute les missions qui lui sont confiées.
+Enregistre les producteurs et les données de terrain, exécute les tâches qui lui sont confiées.
 
 ### Objectifs
 
 - Enregistrer un producteur
-- Exécuter une mission
+- Exécuter les éléments de sa liste de tâches
 - Saisir un relevé de terrain (même hors connexion)
 
 ### Sur le téléphone
@@ -934,7 +928,7 @@ Enregistre les producteurs et les données de terrain, exécute les missions qui
 
 1. **Se connecter.** **Application mobile uniquement** : ce compte est refusé sur le portail web (message « Ce compte se connecte uniquement par l'application mobile »).
 2. **Enregistrer un producteur.** Application → **Producteurs** → nouveau : nom, prénoms, village, section, téléphone, filière. Recherche par nom ou code et filtre par section.
-3. **Exécuter une mission.** Fiche du producteur → onglet **Tâches** : suivez les instructions, joignez des preuves (photos). Une tâche terminée et validée par l'ADG est grisée, non cliquable, puis disparaît de la liste après le délai fixé par l'ADG.
+3. **Exécuter un élément de la liste de tâches.** Fiche du producteur → onglet **Liste des tâches** : formation, distribution, inspection ou service ; saisissez les résultats, joignez des preuves (photos) puis soumettez ou marquez « fait ».
 4. **Saisir un relevé.** Formation, infrastructure sociale ou distribution. La saisie fonctionne hors connexion et se synchronise ensuite.
 
 ### Ce que ce profil ne voit pas
@@ -949,12 +943,12 @@ Enregistre les producteurs et les données de terrain, exécute les missions qui
 | # | À faire | Résultat attendu |
 |---|---|---|
 | 1 | Enregistrez un nouveau producteur fictif dans le village de Hiré. | Il apparaît dans la liste, filière Cacao. |
-| 2 | Exécutez la mission « Visite de la parcelle de Awa KONE ». | La mission passe en attente de validation ; une fois validée par l'ADG, elle est grisée dans la liste. |
+| 2 | Dans la liste des tâches d'un producteur, ouvrez un élément et saisissez son résultat. | L'élément est conservé sur le téléphone puis envoyé à la synchronisation ; une fois fait, il est grisé dans la liste. |
 
 ### Acquis (à cocher)
 
 - [ ] Enregistrer un producteur
-- [ ] Exécuter une mission
+- [ ] Exécuter les éléments de sa liste de tâches
 - [ ] Saisir un relevé de terrain (même hors connexion)
 
 ---
@@ -1139,13 +1133,13 @@ Partenaire autorisé : consulte les commandes, les expéditions et les documents
 
 **Niveau 3 — Pilotage** · durée indicative : 2 h · compte de démonstration : `adg@demo.agritrace.test`
 
-Responsable de la conformité et de la certification : suit les certificats, les inspections et la qualité, contrôle et vérifie les parcelles, met en place les missions des coachs et décide de leurs demandes.
+Responsable de la conformité et de la certification : suit les certificats, les inspections et la qualité, contrôle et vérifie les parcelles, suit le travail des coachs.
 
 ### Objectifs
 
 - Suivre la conformité et les certificats
-- Mettre en place les missions des coachs
-- Décider de leurs demandes
+- Affecter des éléments aux profils des producteurs
+- Suivre le travail des coachs
 
 ### Ce que vous voyez
 
@@ -1168,12 +1162,10 @@ Responsable de la conformité et de la certification : suit les certificats, les
 ### Pas à pas
 
 1. **Suivre les certificats.** Rapports et alertes : le certificat de démonstration expire dans moins de 30 jours.
-2. **Créer et affecter une mission.** Menu **Missions** : titre, catégorie, priorité, échéance, producteur, coach assigné, critères de validation ; publiez.
-3. **Valider le résultat.** Revoyez les preuves transmises par le coach puis validez ou demandez une correction. Une tâche validée est grisée ; elle disparaît de la liste après le nombre de jours réglé en haut de la page *Missions* (« Jours de visibilité des missions validées », 7 par défaut).
-4. **Transmettre les modules des exportateurs.** Menu **Modules des exportateurs** → onglet *Propositions* : lisez le module puis cliquez **Transmettre aux coachs** : une fenêtre demande la **nature** (module de formation, distribution ou tâche) et la **cible** (tous les producteurs, ou certains : recherche par nom/code et filtre par section), avec échéance et consigne facultatives. L'élément s'ajoute au profil de chaque producteur ciblé. Vous pouvez aussi **Décliner** (motif facultatif). Le contenu est transmis **tel que proposé** : l'ADG ne peut pas le modifier. Le module apparaît alors dans la bibliothèque des coachs, marqué « Proposé par … ».
-5. **Affecter un modèle aux producteurs.** Onglet *Affectations aux producteurs* → **Affecter un modèle** : choisissez la nature (module de la bibliothèque, distribution ou tâche libre), tous les producteurs ou certains, une échéance et une consigne. Le tableau montre, pour chaque affectation, le nombre de producteurs ciblés et l'avancement (faits / total). Le nom d'un producteur, dans *Producteurs*, ouvre son profil avec ces éléments.
-6. **Transmettre les résultats à l'exportateur.** Onglet *Résultats* : les coachs envoient d'abord leurs résultats à l'ADG (date, village, participants, score moyen, observations). Cliquez **Transmettre à l'exportateur** : les résultats sont transmis **tels que saisis**, sans modification possible.
-7. **Gérer les modules de formation.** Menu **Modules de formation** : une bibliothèque agricole (cacao en priorité, puis café) liée aux certifications est préchargée. Pour chaque module : *Conserver* (validé tel quel), *Modifier* ou *Supprimer*. *Rétablir les modules par défaut* ne rajoute que les modules supprimés. Le contenu fourni est un socle général : adaptez-le à votre cahier des charges de certification.
+2. **Transmettre les modules des exportateurs.** Menu **Modules des exportateurs** → onglet *Propositions* : lisez le module puis cliquez **Transmettre aux coachs** : une fenêtre demande la **nature** (module de formation, distribution ou tâche) et la **cible** (tous les producteurs, ou certains : recherche par nom/code et filtre par section), avec échéance et consigne facultatives. L'élément s'ajoute au profil de chaque producteur ciblé. Vous pouvez aussi **Décliner** (motif facultatif). Le contenu est transmis **tel que proposé** : l'ADG ne peut pas le modifier. Le module apparaît alors dans la bibliothèque des coachs, marqué « Proposé par … ».
+3. **Affecter un modèle aux producteurs.** Onglet *Affectations aux producteurs* → **Affecter un modèle** : choisissez la nature (module de la bibliothèque, distribution ou tâche libre), tous les producteurs ou certains, une échéance et une consigne. Le tableau montre, pour chaque affectation, le nombre de producteurs ciblés et l'avancement (faits / total). Le nom d'un producteur, dans *Producteurs*, ouvre son profil avec ces éléments.
+4. **Transmettre les résultats à l'exportateur.** Onglet *Résultats* : les coachs envoient d'abord leurs résultats à l'ADG (date, village, participants, score moyen, observations). Cliquez **Transmettre à l'exportateur** : les résultats sont transmis **tels que saisis**, sans modification possible.
+5. **Gérer les modules de formation.** Menu **Modules de formation** : une bibliothèque agricole (cacao en priorité, puis café) liée aux certifications est préchargée. Pour chaque module : *Conserver* (validé tel quel), *Modifier* ou *Supprimer*. *Rétablir les modules par défaut* ne rajoute que les modules supprimés. Le contenu fourni est un socle général : adaptez-le à votre cahier des charges de certification.
 
 ### Ce que ce profil ne voit pas
 
@@ -1187,15 +1179,15 @@ Responsable de la conformité et de la certification : suit les certificats, les
 
 | # | À faire | Résultat attendu |
 |---|---|---|
-| 1 | Créez une mission de formation et assignez-la au coach. | Le coach la voit dans ses missions (application mobile). |
+| 1 | Dans **Modules de formation**, affectez un module à quelques producteurs (onglet *Affectations*). | Le coach voit l'élément dans la liste des tâches de ces producteurs (application mobile), après sa prochaine synchronisation. |
 | 2 | Dans **Modules des exportateurs**, transmettez la proposition en attente aux coachs, puis transmettez à l'exportateur le résultat reçu du coach. | La proposition passe « Transmise aux coachs » ; le résultat est marqué « Transmis ». Aucun champ n'a été modifié. |
 | 3 | Dans **Modules de formation**, modifiez un module cacao puis supprimez un module café. | Le module modifié est marqué « Modifié » ; le coach ne voit plus le module supprimé après actualisation. |
 
 ### Acquis (à cocher)
 
 - [ ] Suivre la conformité et les certificats
-- [ ] Mettre en place les missions des coachs
-- [ ] Décider de leurs demandes
+- [ ] Affecter des éléments aux profils des producteurs
+- [ ] Suivre le travail des coachs
 
 ---
 
@@ -1203,11 +1195,11 @@ Responsable de la conformité et de la certification : suit les certificats, les
 
 **Niveau 1 — Opérateur** · durée indicative : 2 h · compte de démonstration : `coach@demo.agritrace.test`
 
-Agent de terrain suivi par l'ADG : exécute ses missions, enregistre des producteurs, relève des parcelles, des infrastructures sociales, des formations et des distributions, joint des photos et demande de nouvelles missions.
+Agent de terrain suivi par l'ADG : exécute ses tâches, enregistre des producteurs, relève des parcelles, des infrastructures sociales, des formations et des distributions, joint des photos.
 
 ### Objectifs
 
-- Exécuter ses missions
+- Exécuter les éléments de sa liste de tâches
 - Rechercher et filtrer les producteurs par section
 - Consulter les modules de formation
 - Enregistrer producteurs, parcelles et relevés
@@ -1223,7 +1215,7 @@ Agent de terrain suivi par l'ADG : exécute ses missions, enregistre des product
 3. **Lire un module de formation.** Application → **Modules de formation** : filtrez par culture (cacao, café) ou par thème, ouvrez un module (objectifs, points à enseigner, erreurs à éviter, questions de vérification). Les modules sont conservés sur le téléphone pour être lus sans réseau.
 4. **Dispenser un module d'exportateur et saisir ses résultats.** Un module marqué « Proposé par … » vient d'un exportateur (transmis par l'ADG). Après la séance, ouvrez le module → **Saisir les résultats** : date, village, participants, score moyen (facultatif), observations (conservés sur le téléphone puis envoyés à la synchronisation). L'envoi demande une connexion ; les résultats vont à l'ADG et ne sont plus modifiables. *Mes résultats saisis* indique s'ils ont été transmis à l'exportateur.
 5. **Voir ce que l'ADG a ajouté au profil.** Fiche du producteur → onglet *Liste des tâches* : sous « Formations, distributions et tâches », les éléments ajoutés par l'Administrateur de groupe (nature, échéance, consigne). Touchez **Fait** une fois réalisé : l'élément est grisé, conservé sur le téléphone et envoyé à la synchronisation (réseau non nécessaire sur le moment).
-6. **Lire ses missions.** Fiche du producteur → **Tâches** : instructions, échéance, résultat attendu. Les tâches terminées et validées sont grisées.
+6. **Lire sa liste de tâches.** Fiche du producteur → **Tâches** : instructions, échéance, résultat attendu. Les tâches terminées et validées sont grisées.
 7. **Saisir un relevé.** Formations, infrastructures sociales, distributions (liste de bénéficiaires, articles) avec photos.
 
 ### Ce que ce profil ne voit pas
@@ -1243,7 +1235,7 @@ Agent de terrain suivi par l'ADG : exécute ses missions, enregistre des product
 
 ### Acquis (à cocher)
 
-- [ ] Exécuter ses missions
+- [ ] Exécuter les éléments de sa liste de tâches
 - [ ] Rechercher et filtrer les producteurs par section
 - [ ] Consulter les modules de formation
 - [ ] Enregistrer producteurs, parcelles et relevés
@@ -1317,16 +1309,6 @@ Chez l'exportateur : pèse l'entrée (camion chargé) et la sortie (camion vide)
 - Peser la sortie (camion vide) et lire le poids net
 - Refouler un chargement non conforme
 
-### Ce que vous voyez
-
-![Tableau de bord : les indicateurs affichés dépendent de vos droits.](captures/formation/pont_bascule-accueil.png)
-
-*Tableau de bord : les indicateurs affichés dépendent de vos droits.*
-
-![Livraisons : pont bascule, analyse, bulletin de pesée et règlement.](captures/formation/pont_bascule-livraisons.png)
-
-*Livraisons : pont bascule, analyse, bulletin de pesée et règlement.*
-
 ### Pas à pas
 
 1. **Ouvrir les livraisons.** Menu **Pont bascule et analyse** : chaque fiche d'accompagnement transmise par une coopérative liée est une livraison **Attendue** (camion, poids déclaré). Vous êtes notifié à l'arrivée.
@@ -1368,16 +1350,6 @@ Chez l'exportateur : saisit les résultats de l'analyse des livraisons (humidit�
 - Saisir les résultats de l'analyse
 - Décider : acceptée ou rejetée
 - Produire et imprimer le bulletin de pesée
-
-### Ce que vous voyez
-
-![Tableau de bord : les indicateurs affichés dépendent de vos droits.](captures/formation/analyste-accueil.png)
-
-*Tableau de bord : les indicateurs affichés dépendent de vos droits.*
-
-![Livraisons : pont bascule, analyse, bulletin de pesée et règlement.](captures/formation/analyste-livraisons.png)
-
-*Livraisons : pont bascule, analyse, bulletin de pesée et règlement.*
 
 ### Pas à pas
 

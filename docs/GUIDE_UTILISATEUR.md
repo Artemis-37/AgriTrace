@@ -8,9 +8,9 @@ Ce guide présente chaque utilisateur **sur ordinateur** (portail web dans le na
 | Utilisateur | Ordinateur (portail / bureau) | Téléphone (Android) |
 |---|---|---|
 | Délégué | — (**mobile uniquement** : connexion refusée sur le portail) | **Outil principal** : achats, convois, stock, fiche de compte, hors connexion |
-| Coach / agent de terrain | — (**mobile uniquement** : connexion refusée sur le portail) | **Outil principal** : producteurs (recherche et filtre par section), missions, modules de formation, relevé de parcelle, photos |
+| Coach / agent de terrain | — (**mobile uniquement** : connexion refusée sur le portail) | **Outil principal** : producteurs (recherche et filtre par section), éléments de leur liste de tâches, modules de formation, relevé de parcelle, photos |
 | Exportateur (partenaire) | **Outil principal** : proposer des modules, lire les résultats transmis | — |
-| Administrateur de groupe (ADG) | **Outil principal** : missions, cartographie, qualité, rapports | Consultation (missions, parcelles) |
+| Administrateur de groupe (ADG) | **Outil principal** : cartographie, qualité, rapports, modules de formation | Consultation (parcelles) |
 | Magasinier | **Outil principal** : convois, stocks, inventaire | — |
 | Caissier | **Outil principal** : convois, caisse, finances | — |
 | Administrateur de coopérative | **Outil principal** : équipe, rôles, référentiels, producteurs | — |
@@ -33,7 +33,7 @@ Ce guide présente chaque utilisateur **sur ordinateur** (portail web dans le na
 
 ### Hors connexion
 - **Téléphone** : tout ce qui est saisi est gardé sur l'appareil puis envoyé au retour du réseau, sans doublon. Le bandeau en haut de l'accueil indique l'état : « Synchronisé », « Hors connexion », « n en attente », « n à corriger ».
-- **Synchronisation (connexion, retour du réseau, appui sur l'icône)** : le téléphone reçoit les nouveautés du serveur pour les consulter et les traiter **hors connexion** (profil, producteurs, parcelles, missions et leurs consignes, éléments ajoutés aux profils par l'Administrateur de groupe, modules de formation), puis envoie ce qui a été fait. Hors connexion, on peut : démarrer et soumettre une mission, ajouter une saisie ou une photo, marquer un élément du profil « fait », saisir les résultats d'une séance de formation, enregistrer achats, convois, producteurs, parcelles et relevés. Tout est conservé sur l'appareil, listé « en attente », et envoyé sans doublon à la synchronisation suivante. Une synchronisation démarre dès la connexion (logo et icône qui tourne) ; l'icône en haut de l'accueil tourne pendant l'échange et un appui la relance. Un refus du serveur (ex. mission déjà validée) apparaît dans les éléments « à corriger ». Les nouvelles missions publiées après la dernière synchronisation n'apparaissent qu'à la suivante.
+- **Synchronisation** : elle est **manuelle** (appui sur l'icône en haut de l'accueil), sauf à la **connexion** où le téléphone fait une synchronisation complète. Une boîte de dialogue montre chaque étape et **le nom de chaque élément** envoyé ou reçu. Les synchronisations suivantes sont **sélectives** : le téléphone ne reçoit que ce qui est nouveau ou modifié depuis la dernière fois (et n'envoie que ce qui a changé) ; s'il n'y a rien de nouveau, elle se termine aussitôt. Le téléphone ne reçoit que ce qui concerne le **profil** de l'utilisateur (un délégué ne reçoit pas ce que reçoit un coach). **Tant qu'il reste des éléments à soumettre, la synchronisation est refusée** : l'utilisateur les soumet lui-même, un par un ou par groupe, depuis « Éléments à soumettre », puis relance la synchronisation. Hors connexion, on peut ajouter une saisie ou une photo, marquer un élément du profil « fait », saisir les résultats d'une séance de formation, enregistrer achats, convois, producteurs, parcelles et relevés : tout est conservé sur l'appareil, listé « en attente », et envoyé sans doublon. Un refus du serveur apparaît dans les éléments « à corriger ». Chaque utilisateur a sa propre base chiffrée sur le téléphone : sur un téléphone partagé, les saisies d'un utilisateur ne partent jamais sous le compte d'un autre.
 - **Ordinateur** : un poste client enregistre les achats et les messages hors connexion, rejoués au retour du serveur. Validation, paiements et stocks demandent le serveur.
 
 ### Accès retiré
@@ -46,8 +46,8 @@ Si l'administrateur suspend le compte, le **téléphone efface les données de l
 
 <table class="phones"><tr><td><img src="captures/mobile/notifications.png" alt="Téléphone : notifications"><br><em>Téléphone : notifications</em></td></tr></table>
 
-![Portail : tableau de bord (commandes, créances, missions en retard, anomalies)](captures/tableau-de-bord.png)
-*Portail : tableau de bord (commandes, créances, missions en retard, anomalies)*
+![Portail : tableau de bord (commandes, créances, anomalies)](captures/tableau-de-bord.png)
+*Portail : tableau de bord (commandes, créances, anomalies)*
 
 ## Délégué
 
@@ -73,7 +73,7 @@ Aucun accès : le compte délégué se connecte **uniquement par l'application m
 - **Distribution et services** : on choisit la catégorie (Finance, Intrants et Outils, Services et Dépistages) et le groupe ; la liste des articles vient du catalogue tenu par l'administrateur (le dernier catalogue reçu reste disponible hors connexion) ; on coche les articles (ils apparaissent en pastilles), on vérifie la devise de chacun (unités, FCFA, euro, dollar), on choisit les bénéficiaires (recherche, section), puis pour chaque bénéficiaire on saisit la quantité, on prend la photo de preuve et on recueille sa signature ; une page de révision précède l'enregistrement (un dossier par bénéficiaire, envoyé à la synchronisation).
 - **Enregistrer une formation** : « Dossiers de formation » (liste), puis le registre : thème, module, photo, participants (agriculteurs principaux choisis parmi les producteurs, parties prenantes saisies à la main) et scores de 0 à 100.
 - **Producteurs et enquêtes** : on choisit d'abord le producteur (recherche par nom, code ou téléphone, hors connexion). Des pastilles **Section** sous la barre de recherche réduisent la liste aux producteurs d'une section (touchez de nouveau la pastille pour retirer le filtre). Sa fiche a deux onglets :
-  - **Liste des tâches** : les missions de ce producteur (en retard signalées en rouge). On ouvre une tâche pour la démarrer, saisir les résultats (texte, coordonnées, photos) et la soumettre. Le coach ne modifie pas les instructions : il peut **demander une mission** pour ce producteur, que l'ADG accepte ou refuse. Les tâches demandent le réseau.
+  - **Liste des tâches** : les éléments affectés à ce producteur (formations, distributions, inspections, services ; en retard signalés en rouge). On ouvre un élément pour saisir les résultats (texte, coordonnées, photos) et le soumettre, ou on le marque « fait ».
   - **Informations sur le producteur** : téléphone, code, localité, section, **nombre de parcelles capturées** avec la taille de chacune, bouton **Relever une parcelle** (le producteur est déjà choisi) et bouton **Ouvrir la carte**. Chaque parcelle permet d'ajouter une photo et, avec le droit de modification, de reprendre le tracé ; un nouveau tracé en attente d'envoi est signalé.
 - **Modules de formation** (tuile de l'accueil) : bibliothèque agricole préchargée (cacao en priorité, puis café) liée aux certifications. Filtrer par culture ou par thème, ouvrir un module (objectifs, points à enseigner, erreurs à éviter, questions de vérification). Lecture seule ; le contenu est géré par l'ADG. Une copie reste sur le téléphone pour la lecture sans réseau (ouvrir l'écran une première fois avec du réseau).
 - **Tâches terminées** : une tâche terminée et validée par l'ADG apparaît grisée et ne s'ouvre plus ; elle disparaît de la liste après le délai fixé par l'ADG.
@@ -92,13 +92,12 @@ Aucun accès : le compte délégué se connecte **uniquement par l'application m
 <table class="phones"><tr><td><img src="captures/mobile/coach-producteur-taches.png" alt="Fiche : liste des tâches"><br><em>Fiche : liste des tâches</em></td><td><img src="captures/mobile/coach-producteur-infos.png" alt="Fiche : informations sur le producteur"><br><em>Fiche : informations sur le producteur</em></td></tr></table>
 
 ### Sur ordinateur
-Aucun accès : le compte coach se connecte **uniquement par l'application mobile**. L'ADG suit son travail depuis le portail (missions, relevés de terrain, modules de formation).
+Aucun accès : le compte coach se connecte **uniquement par l'application mobile**. L'ADG suit son travail depuis le portail (relevés de terrain, modules de formation).
 
 ## Administrateur de groupe (ADG)
 Responsable de la conformité et de la certification.
 
 ### Sur ordinateur
-- **Missions** : créer les tâches des coachs, les assigner, relire les résultats, clôturer, décider des demandes. Une tâche terminée et validée est **grisée** (non cliquable pour les autres profils) puis **retirée de la liste** après le nombre de jours réglé en haut de la page (« Jours de visibilité des missions validées », 7 par défaut) ; la case « Afficher aussi les missions terminées masquées » permet de les revoir (droit de lecture de toutes les missions).
 - **Modules de formation** : bibliothèque préchargée (cacao puis café, liée aux certifications). Pour chaque module : *Conserver* (validé tel quel), *Modifier* ou *Supprimer* ; *Rétablir les modules par défaut* ne rajoute que ceux qui ont été supprimés. Le contenu fourni est un socle général, sans chiffres réglementaires précis : à adapter à votre cahier des charges de certification avant de s'en servir en formation.
 - **Modules des exportateurs** (l'exportateur arrive sur un tableau de bord à quatre indicateurs : propositions en attente, transmises, non retenues, résultats reçus ; l'ADG voit en plus le nombre de modules et de résultats à transmettre) : un exportateur partenaire propose des modules ; l'ADG (Administrateur de groupe) les lit puis clique **Transmettre aux coachs** (ou **Décliner**) ; une fenêtre lui demande la **nature** de l'élément (module de formation, distribution ou tâche) et sa **cible** (tous les producteurs ou certains, par recherche et section) : il s'ajoute au profil de chacun, où le coach le voit et le marque *Fait*. L'onglet **Affectations aux producteurs** permet la même chose avec un modèle de la bibliothèque, une distribution ou une tâche libre, et affiche l'avancement. Les coachs dispensent la formation et saisissent leurs résultats sur l'application ; l'ADG clique **Transmettre à l'exportateur**. À aucun moment l'ADG ne modifie le contenu ou les résultats (ils sont figés à l'enregistrement), et un module d'exportateur n'est ni modifiable ni supprimable dans la bibliothèque. Chaque étape notifie le destinataire et est tracée dans le journal d'audit.
 
@@ -118,8 +117,6 @@ Responsable de la conformité et de la certification.
 - **Parcelles** : contrôler puis vérifier (déclarée → contrôlée → vérifiée).
 - **Qualité et conformité** : certificats, inspections, alertes d'échéance. **Rapports** : achats, finance, stock, qualité, avec filtres et export Excel.
 
-![Portail : missions des coachs](captures/missions.png)
-*Portail : missions des coachs*
 
 ![Portail : carte, les parcelles avec anomalie ouverte sont cerclées de rouge](captures/cartographie-carte.png)
 *Portail : carte, les parcelles avec anomalie ouverte sont cerclées de rouge*
@@ -137,7 +134,7 @@ Responsable de la conformité et de la certification.
 *Portail : qualité et conformité*
 
 ### Sur téléphone
-Consultation des missions et des parcelles (mêmes écrans que le coach, selon les droits du compte). Le travail de supervision se fait sur ordinateur.
+Consultation des parcelles (mêmes écrans que le coach, selon les droits du compte). Le travail de supervision se fait sur ordinateur.
 
 ## Magasinier (ordinateur)
 - **Convois** : ouvrir un convoi arrivé, peser (brut, tare, net), constater les écarts, réceptionner en totalité ou en partie.
@@ -231,3 +228,13 @@ Tant qu'aucun modèle n'est déployé, l'application utilise ses modèles intég
 ## Fiches d'accompagnement (responsable de traçabilité et exportateur)
 **Responsable de traçabilité** — menu **Opérations › Fiches d'accompagnement** : *Convois pesés* → **Consulter** (producteurs du convoi) ou **Exporter (Excel)** (modèle de la coopérative). Pour un chargement : cochez les convois, **Créer la fiche**, complétez l'en-tête (chauffeur, camion, remorque, LOT ID DSE, connaissement, date de départ, type de cacao, certifications). **Importer une fiche (Excel)** reprend une fiche déjà remplie ; **Transmettre à l'exportateur** la fige et la lui envoie.
 **Exportateur** — menu **Fiches d'accompagnement** : fiches transmises à son compte, consultation des producteurs et téléchargement Excel.
+
+
+## Nouveautés de cette version
+
+- **Paiement d'un délégué** (Convois › « Payer un délégué ») : en **espèces** (choix de la caisse) ou par **chèque** (choix de la banque / du compte bancaire et n° du chèque). Le compte du délégué est débité et l'écriture passe en caisse ou en banque.
+- **Fiche de compte du délégué** : le solde est en **rouge** quand le délégué doit à la coopérative et en **bleu** quand la coopérative lui doit.
+- **Cartes (mobile et portail)** : une **croix de visée** au centre (quatre traits séparés et un point au milieu) indique le point visé ; sa **latitude et sa longitude** s'affichent en bas à droite et suivent le déplacement de la carte. Fond de carte **OpenStreetMap** ; le fond **Google Maps** est proposé quand une clé Google Maps Platform est fournie à l'installation.
+- **Mobile** : le profil d'un producteur liste **toutes ses parcelles**, y compris celles **importées** (rattachées au producteur par son code). La liste des accès mémorisés s'affiche en touchant le champ e-mail de la connexion et remplit l'e-mail et le mot de passe.
+- **Sécurité des données** : base du téléphone chiffrée, photos en attente chiffrées sur l'appareil (AES-256-GCM, clé dans le Keystore Android), pièces jointes chiffrées sur le serveur, serveur Windows avec clé de chiffrement propre.
+- **Retrait des « missions »** : la rubrique n'existe plus ; le travail du terrain passe par la liste des tâches du producteur (formations, distributions, inspections, services).

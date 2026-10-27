@@ -6,7 +6,7 @@ const perms = new Map();
 for (const f of fs.readdirSync(path.join(root, 'migrations')).filter((x) => x.endsWith('.sql')).sort()) {
   const sql = fs.readFileSync(path.join(root, 'migrations', f), 'utf8');
   for (const blk of sql.match(/INSERT INTO permissions\s*\(code, description\)\s*VALUES[\s\S]*?(?:ON CONFLICT[^;]*)?;/g) ?? [])
-    for (const m of blk.matchAll(/\(\s*'([a-z_]+:[a-z_]+)'\s*,\s*'((?:[^']|'')*)'\s*\)/g)) perms.set(m[1], m[2].replace(/''/g, "'"));
+    for (const m of blk.matchAll(/\(\s*'([a-z_]+:[a-z_]+)'\s*,\s*'((?:[^']|'')*)'\s*\)/g)) perms.set(m[1], m[2].replace(/''/g, "'").replace(/\bmissions\b/gi, 'tâches').replace(/\bmission\b/gi, 'tâche')); // la rubrique « missions » n'existe plus dans l'interface
 }
 const routes = new Map(); // permission -> ["GET /x", ...]
 const walk = (d) => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => e.isDirectory() ? walk(path.join(d, e.name)) : e.name.endsWith('.controller.ts') ? [path.join(d, e.name)] : []);

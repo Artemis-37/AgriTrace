@@ -284,18 +284,11 @@
       "visible": true
     },
     {
-      "name": "missions",
-      "route": "/missions",
-      "tab": null,
-      "file": "responsable_tracabilite-missions.png",
-      "visible": false
-    },
-    {
       "name": "stocks",
       "route": "/stocks",
       "tab": null,
       "file": "responsable_tracabilite-stocks.png",
-      "visible": false
+      "visible": true
     }
   ],
   "responsable_cartographie": [
@@ -547,13 +540,6 @@
       "visible": true
     },
     {
-      "name": "missions",
-      "route": "/missions",
-      "tab": null,
-      "file": "adg-missions.png",
-      "visible": true
-    },
-    {
       "name": "rapports",
       "route": "/rapports",
       "tab": null,
@@ -588,91 +574,6 @@
       "route": "/fiches-accompagnement",
       "tab": null,
       "file": "exportateur-fiches-accompagnement.png",
-      "visible": true
-    }
-  ],
-  "pont_bascule": [
-    {
-      "name": "accueil",
-      "route": "/",
-      "tab": null,
-      "file": "pont_bascule-accueil.png",
-      "visible": true
-    },
-    {
-      "name": "livraisons",
-      "route": "/livraisons",
-      "tab": null,
-      "file": "pont_bascule-livraisons.png",
-      "visible": true
-    }
-  ],
-  "analyste": [
-    {
-      "name": "accueil",
-      "route": "/",
-      "tab": null,
-      "file": "analyste-accueil.png",
-      "visible": true
-    },
-    {
-      "name": "livraisons",
-      "route": "/livraisons",
-      "tab": null,
-      "file": "analyste-livraisons.png",
-      "visible": true
-    }
-  ],
-  "exp_caissier": [
-    {
-      "name": "accueil",
-      "route": "/",
-      "tab": null,
-      "file": "exp_caissier-accueil.png",
-      "visible": true
-    },
-    {
-      "name": "livraisons",
-      "route": "/livraisons",
-      "tab": null,
-      "file": "exp_caissier-livraisons.png",
-      "visible": true
-    },
-    {
-      "name": "caisse",
-      "route": "/caisse",
-      "tab": null,
-      "file": "exp_caissier-caisse.png",
-      "visible": true
-    }
-  ],
-  "exp_admin": [
-    {
-      "name": "accueil",
-      "route": "/",
-      "tab": null,
-      "file": "exp_admin-accueil.png",
-      "visible": true
-    },
-    {
-      "name": "organisations-liees",
-      "route": "/organisations-liees",
-      "tab": null,
-      "file": "exp_admin-organisations-liees.png",
-      "visible": true
-    },
-    {
-      "name": "equipe",
-      "route": "/equipe",
-      "tab": null,
-      "file": "exp_admin-equipe.png",
-      "visible": true
-    },
-    {
-      "name": "finances",
-      "route": "/finances",
-      "tab": null,
-      "file": "exp_admin-finances.png",
       "visible": true
     }
   ]

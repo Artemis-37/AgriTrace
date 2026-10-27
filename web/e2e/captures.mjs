@@ -61,7 +61,6 @@ await shot('rapports', '/rapports');
 await shot('qualite', '/qualite');
 await shot('equipe', '/equipe');
 await shot('operations', '/operations');
-await shot('missions', '/missions');
 await shot('declarations', '/declarations');
 
 await browser.close();

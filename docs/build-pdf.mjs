@@ -24,6 +24,8 @@ const DOCS = [
   ['SECURITE.md', 'AgriTrace - Rapport de securite', 'Rapport de sécurité', false],
   ['DONNEES_PERSONNELLES.md', 'AgriTrace - Donnees personnelles', 'Données personnelles', false],
 ];
+// Informations du créateur : en couverture de chaque document et en pied de chaque page.
+const AUTEUR = { nom: "Dominique N'Guessan", tel: '05 05 05 45 63', mail: 'dominiquenguessan414@gmail.com' };
 const css = `
 @page { size: A4; margin: 31mm 14mm 18mm; }
 body { font: 10.5pt/1.5 "Poppins","Segoe UI",Helvetica,Arial,sans-serif; color: #26332b; }
@@ -43,6 +45,8 @@ blockquote { border-left: 4px solid #b6cf8e; margin-left: 0; padding-left: 12px;
 .cover .logo { font-size: 40pt; font-weight: 700; color: #2f5d46; } .cover .logo span { color: #8fb15a; }
 .cover .coverlogo { width: 110mm; border: 0; margin: 0 auto 14mm; }
 .cover p { color: #55625a; font-size: 13pt; }
+.cover .auteur { margin: 22mm auto 0; display: inline-block; text-align: left; border-left: 4px solid #b6cf8e; padding: 2px 0 2px 14px; }
+.cover .auteur p { margin: 2px 0; font-size: 11.5pt; color: #26332b; } .cover .auteur strong { color: #2f5d46; }
 `;
 const b64 = (f) => 'data:image/png;base64,' + fs.readFileSync(path.join(dir, 'brand', f)).toString('base64');
 const logo = b64('logo-nom.png'), logoFull = b64('logo-horizontal.png');
@@ -51,7 +55,7 @@ for (const [file, title, heading, landscape] of DOCS) {
   const body = execFileSync('pandoc', ['-f', 'gfm', '-t', 'html5', path.join(dir, file)], { cwd: dir, maxBuffer: 1 << 28 }).toString();
   const date = new Date().toISOString().slice(0, 10);
   const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>${title}</title><base href="file://${dir}/"><style>${css}${landscape ? '@page { size: A4 landscape; }' : ''}</style></head><body>
-<div class="cover"><img class="coverlogo" src="${logoFull}"><h1 style="border:0">${heading}</h1><p>La traçabilité agricole, de la parcelle au marché.</p><p>Version du ${date}</p></div>${body}</body></html>`;
+<div class="cover"><img class="coverlogo" src="${logoFull}"><h1 style="border:0">${heading}</h1><p>La traçabilité agricole, de la parcelle au marché.</p><p>Version du ${date}</p><div class="auteur"><p><strong>Créateur :</strong> ${AUTEUR.nom}</p><p><strong>Téléphone :</strong> ${AUTEUR.tel}</p><p><strong>E-mail :</strong> ${AUTEUR.mail}</p></div></div>${body}</body></html>`;
   const tmp = path.join(out, '_tmp.html'); fs.writeFileSync(tmp, html);
   const page = await browser.newPage();
   await page.goto('file://' + tmp); await page.waitForLoadState('load');
@@ -59,7 +63,7 @@ for (const [file, title, heading, landscape] of DOCS) {
   await page.pdf({ path: path.join(out, `AgriTrace_${name}.pdf`), format: 'A4', landscape, printBackground: true, displayHeaderFooter: true,
     margin: { top: '30mm', bottom: '18mm', left: '14mm', right: '14mm' },
     headerTemplate: `<div style="width:100%;padding:0 14mm;box-sizing:border-box;display:flex;align-items:center;gap:10px;border-bottom:1px solid #c9d6b8;padding-bottom:4px;font-family:Helvetica,Arial,sans-serif"><img src="${logo}" style="height:13mm"><span style="font-size:10px;color:#0B5E3B;font-style:italic;flex:1">La traçabilité agricole, de la parcelle au marché.</span><span style="font-size:8px;color:#55625a">${heading}</span></div>`,
-    footerTemplate: '<div style="font-size:8px;width:100%;text-align:center;color:#777">AgriTrace — page <span class="pageNumber"></span> / <span class="totalPages"></span></div>' });
+    footerTemplate: `<div style="font-size:8px;width:100%;text-align:center;color:#777;font-family:Helvetica,Arial,sans-serif">AgriTrace — Créateur : ${AUTEUR.nom} · Tél. ${AUTEUR.tel} · ${AUTEUR.mail} — page <span class="pageNumber"></span> / <span class="totalPages"></span></div>` });
   await page.close(); fs.unlinkSync(tmp); console.log('  ✓', file);
 }
 await browser.close();

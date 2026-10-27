@@ -17,7 +17,7 @@ Coopérative **fictive** avec des données d'exemple et **un compte par profil**
 | Prêts | 1 demande en attente, 1 prêt approuvé avec échéancier |
 | Qualité | Règle d'humidité, inspection conforme, certificat expirant sous 30 jours |
 | Ventes | 1 acheteur fictif, 1 contrat, 1 commande |
-| Terrain | 3 missions publiées, 2 relevés (formation, infrastructure sociale) |
+| Terrain | 2 relevés (formation, infrastructure sociale), éléments de profil affectés aux producteurs |
 | Contrôle | 1 demande d'annulation en attente (réception du 2e convoi) |
 | Automatisation | 1 rapport Finances programmé chaque lundi |
 
@@ -28,7 +28,7 @@ Après le chargement de base, le script enchaîne `seed-demo-enrichi.js`, `seed-
 - **Champ** : une parcelle tracée (polygone) pour chaque producteur, formations, distributions et infrastructures relevées par les agents.
 - **Banques, mobile money, trésorerie, caisse** (coopérative et exportateur) : comptes, entrées et sorties, relevés bancaires importés et rapprochés, écritures comptables, paiements.
 - **Exportateur** : livraisons pesées, analysées et réglées, acheteurs, contrats, commandes.
-- **Chaque compte** a plus de 20 opérations ou tâches à son nom (écritures, missions, inspections, mouvements de stock, prêts approuvés, pesées, analyses, règlements…). Les profils en lecture seule (auditeur, acheteur, exportateur partenaire) n'effectuent pas d'opérations : ils reçoivent 22 messages d'équipe.
+- **Chaque compte** a plus de 20 opérations ou tâches à son nom (écritures, inspections, mouvements de stock, prêts approuvés, pesées, analyses, règlements…). Les profils en lecture seule (auditeur, acheteur, exportateur partenaire) n'effectuent pas d'opérations : ils reçoivent 22 messages d'équipe.
 - Tout produit créé par la coopérative est **lié à tous ses producteurs** : à la déclaration d'achat, le délégué choisit d'abord le producteur, puis le produit.
 
 ## Installation
@@ -72,7 +72,7 @@ Pour repartir de zéro, recréez la base de démonstration (ou utilisez une base
 | Préfinancement | administrateur, responsable financier, direction (approbation) |
 | Qualité et certificats | administrateur, responsable qualité, ADG, direction, auditeur |
 | Commerce | administrateur, responsable logistique, acheteur (ses commandes) |
-| Missions / Relevés de terrain | administrateur, ADG, direction — agent de terrain et coach : **application mobile** |
+| Relevés de terrain | administrateur, ADG, direction — agent de terrain et coach : **application mobile** |
 | Modules des exportateurs (nature + cible à la transmission, onglet Affectations) | exportateur (ses propositions et résultats transmis) ; ADG et administrateur (transmettre aux coachs, transmettre les résultats) ; coach : saisie des résultats sur l'application |
 | Modules de formation | administrateur et ADG (conserver, modifier, supprimer) ; coach : lecture sur l'application mobile |
 | Rapports et envoi automatique | administrateur, direction, responsable financier, comptable, ADG, auditeur |
