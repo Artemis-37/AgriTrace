@@ -39,8 +39,8 @@ class AddProducerScreen extends StatefulWidget {
 
 class _AddProducerScreenState extends State<AddProducerScreen> {
   final _last = TextEditingController(), _first = TextEditingController(), _idNo = TextEditingController(), _phone = TextEditingController();
-  final _section = TextEditingController();
-  String? _region, _quartier, _lieu;
+  String? _region, _quartier, _lieu, _section;
+  List<String> _sections = [];
   List<Map<String, dynamic>> _known = [];
   String _gender = 'Homme';
   DateTime? _birth;
@@ -54,6 +54,14 @@ class _AddProducerScreenState extends State<AddProducerScreen> {
     super.initState();
     services.repo.identity().then((i) { if (mounted) setState(() => _org = i.org); });
     _loadLocalities();
+    _loadSections();
+  }
+
+  /// Sections de la coopérative (copie gardée sur l'appareil pour le travail hors connexion).
+  Future<void> _loadSections() async {
+    final r = await services.repo.cachedGet('sections', () => services.api.get('/producers/sections'));
+    if (r == null || !mounted) return;
+    setState(() => _sections = _distinct([for (final e in (r.data as List)) (e as Map)['section'] as String?]));
   }
 
   /// Localités déjà connues (copie gardée sur l'appareil : les listes restent disponibles hors connexion).
@@ -100,7 +108,7 @@ class _AddProducerScreenState extends State<AddProducerScreen> {
 
   @override
   void dispose() {
-    for (final c in [_last, _first, _idNo, _phone, _section]) { c.dispose(); }
+    for (final c in [_last, _first, _idNo, _phone]) { c.dispose(); }
     super.dispose();
   }
 
@@ -146,7 +154,7 @@ class _AddProducerScreenState extends State<AddProducerScreen> {
       birthDate: _birth == null ? null : '${_birth!.year}-${two(_birth!.month)}-${two(_birth!.day)}',
       idDocType: _noId || _idNo.text.trim().isEmpty ? null : _idType, idDocNumber: _noId || _idNo.text.trim().isEmpty ? null : _idNo.text.trim(),
       phone: _noPhone ? null : _phoneE164, region: _region, department: _quartier,
-      section: _section.text.trim().isEmpty ? null : _section.text.trim(), village: _lieu, consent: true);
+      section: _section, village: _lieu, consent: true);
     if (_photo != null) await services.repo.queuePhoto(subjectType: 'producer', subjectId: id, kind: 'Photo du producteur', sourcePath: _photo!);
     final sig = File('${Directory.systemTemp.path}/signature-$id.png');
     await sig.writeAsBytes(_signature!);
@@ -225,7 +233,7 @@ class _AddProducerScreenState extends State<AddProducerScreen> {
           FieldCard(title: 'Coopérative', child: Row(children: [
             Expanded(child: InputDecorator(decoration: fieldDeco('').copyWith(filled: true, fillColor: const Color(0xFFEEEEEE)), child: Text(_org.isEmpty ? 'Ma coopérative' : _org))),
             const SizedBox(width: 8),
-            Expanded(child: TextField(controller: _section, decoration: fieldDeco('Section'))),
+            Expanded(child: FieldDropdown(value: _section, hint: 'Sélectionnez la section', items: _sections, onChanged: (v) => setState(() => _section = v))),
           ])),
           if (_msg != null) Padding(padding: const EdgeInsets.fromLTRB(16, 10, 16, 0), child: Text(_msg!, style: TextStyle(color: Colors.red.shade700, fontWeight: FontWeight.w600))),
         ])),
