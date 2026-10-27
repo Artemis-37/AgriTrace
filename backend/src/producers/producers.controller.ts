@@ -34,6 +34,7 @@ export class CreateProducerDto {
   @IsOptional() @Matches(/^\+?\d{8,15}$/) phone?: string;
   @IsOptional() @IsString() region?: string;
   @IsOptional() @IsString() department?: string;
+  @IsOptional() @IsString() @Length(0, 100) sub_prefecture?: string;
   @IsOptional() @IsString() section?: string;
   @IsOptional() @IsString() village?: string;
   @IsOptional() @Matches(/^\d+(\.\d{1,4})?$/) area_ha?: string;
@@ -55,6 +56,7 @@ export class UpdateProducerDto {
   @IsOptional() @IsString() @Length(0, 20) phone?: string;
   @IsOptional() @IsString() @Length(0, 100) region?: string;
   @IsOptional() @IsString() @Length(0, 100) department?: string;
+  @IsOptional() @IsString() @Length(0, 100) sub_prefecture?: string;
   @IsOptional() @IsString() @Length(0, 100) section?: string;
   @IsOptional() @IsString() @Length(0, 100) village?: string;
   @IsOptional() @IsString() @Length(0, 10) birth_date?: string;
@@ -94,7 +96,7 @@ export class ProducersController {
     const staff = req.org.permissions.has('declarations:validate');
     return this.db.tx(req.org.id, async (c) =>
       (await c.query(
-        `SELECT p.id, p.internal_code, p.last_name, p.first_names, p.phone, p.region, p.department, p.section, p.village, p.joined_on, p.status, p.area_ha, p.estimated_kg, p.gender,
+        `SELECT p.id, p.internal_code, p.last_name, p.first_names, p.phone, p.region, p.department, p.sub_prefecture, p.section, p.village, p.joined_on, p.status, p.area_ha, p.estimated_kg, p.gender,
                 (SELECT coalesce(json_agg(x.value_chain_id), '[]') FROM producer_value_chains x WHERE x.producer_id = p.id) AS value_chain_ids,
                 (SELECT count(*)::int FROM parcels pa WHERE pa.producer_id = p.id AND pa.status = 'active') AS parcels_count,
                 (SELECT coalesce(sum(pa.geometry_area_ha), 0)::float8 FROM parcels pa WHERE pa.producer_id = p.id AND pa.status = 'active' AND pa.geometry IS NOT NULL) AS parcels_area_ha
@@ -123,9 +125,9 @@ export class ProducersController {
   @RequirePermissions('producers:read')
   localities(@Req() req: any) {
     return this.db.tx(req.org.id, async (c) => (await c.query(
-      `SELECT btrim(region) AS region, btrim(department) AS department, btrim(village) AS village, count(*)::int AS producers
+      `SELECT btrim(region) AS region, btrim(department) AS department, btrim(sub_prefecture) AS sub_prefecture, count(*)::int AS producers
          FROM producers
-        WHERE (region IS NOT NULL AND btrim(region) <> '') OR (department IS NOT NULL AND btrim(department) <> '') OR (village IS NOT NULL AND btrim(village) <> '')
+        WHERE (region IS NOT NULL AND btrim(region) <> '') OR (department IS NOT NULL AND btrim(department) <> '') OR (sub_prefecture IS NOT NULL AND btrim(sub_prefecture) <> '')
         GROUP BY 1, 2, 3 ORDER BY 1, 2, 3`)).rows);
   }
 
@@ -172,7 +174,7 @@ export class ProducersController {
     const ws = wb.addWorksheet('Producteurs');
     ws.addRow(TARGET_FIELDS.map((f) => TEMPLATE_HEADERS[f]));
     ws.getRow(1).font = { bold: true };
-    const sample: Record<string, string> = { internal_code: '', last_name: 'KONE', first_names: 'Awa', phone: '+2250701020304', region: 'Haut-Sassandra', department: 'Daloa', section: 'Hiré', village: 'Zoukougbeu', area_ha: '2.5', estimated_kg: '1200', value_chains: 'CACAO', joined_on: '2024-05-12', gender: 'F', birth_date: '14/03/1985', id_doc_type: 'CNI ivoirienne', id_doc_number: 'C0012345678' };
+    const sample: Record<string, string> = { internal_code: '', last_name: 'KONE', first_names: 'Awa', phone: '+2250701020304', region: 'Haut-Sassandra', department: 'Daloa', sub_prefecture: 'Zoukougbeu', section: 'Hiré', village: 'Hiré centre', area_ha: '2.5', estimated_kg: '1200', value_chains: 'CACAO', joined_on: '2024-05-12', gender: 'F', birth_date: '14/03/1985', id_doc_type: 'CNI ivoirienne', id_doc_number: 'C0012345678' };
     ws.addRow(TARGET_FIELDS.map((f) => sample[f] ?? ''));
     ws.columns.forEach((col) => (col.width = 22));
     ws.views = [{ state: 'frozen', ySplit: 1 }];
@@ -186,7 +188,8 @@ export class ProducersController {
       ['Date de naissance', 'JJ/MM/AAAA.'],
       ["Type de pièce d'identité", "Par exemple : CNI ivoirienne, CNI malienne, CNI burkinabé, Passeport, Numéro matricule CCC du producteur, Pas de CNI ni matricule CCC. Obligatoire si le numéro de pièce est rempli."],
       ['Téléphone', 'Avec ou sans +225 (8 à 15 chiffres).'],
-      ['Région, Département, Sous-préfecture', "Mêmes noms que dans la fiche producteur du téléphone : Région (ex. Haut-Sassandra) > Département (ville chef-lieu de région, ex. Daloa) > Sous-préfecture (ex. Zoukougbeu). Les anciens intitulés « Quartier », « Ville », « Lieu » et « Village » sont toujours reconnus."],
+      ['Région, Département, Sous-préfecture', "Mêmes noms que dans la fiche producteur du téléphone : Région (ex. Haut-Sassandra) > Département (ville chef-lieu de région, ex. Daloa) > Sous-préfecture (ex. Zoukougbeu). Les anciens intitulés « Quartier », « Ville » et « Lieu » sont toujours reconnus."],
+      ['Village', 'Village ou campement du producteur (facultatif), placé après la Section.'],
       ['Section', 'Section de la coopérative, telle qu\'elle figure dans la liste de Paramètres.'],
       ['Superficie (ha), Estimation (kg)', 'Nombres positifs, virgule décimale acceptée.'],
       ['Filières', 'Codes séparés par une virgule (ex. CACAO). Vide : toutes les filières de la coopérative.'],
@@ -266,12 +269,12 @@ export class ProducersController {
       if (exists.rowCount) throw new ConflictException('Code producteur déjà utilisé');
       const ins = await c.query(
         `INSERT INTO producers(id, organization_id, internal_code, last_name, first_names, phone, region, department, section, village, joined_on, created_by,
-                               gender, birth_date, id_doc_type, id_doc_number, consent_at, area_ha, estimated_kg)
-         VALUES (coalesce($12::uuid, gen_random_uuid()),$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$13,$14,$15,$16, CASE WHEN $17::boolean THEN now() END, $18, $19)
+                               gender, birth_date, id_doc_type, id_doc_number, consent_at, area_ha, estimated_kg, sub_prefecture)
+         VALUES (coalesce($12::uuid, gen_random_uuid()),$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$13,$14,$15,$16, CASE WHEN $17::boolean THEN now() END, $18, $19, $20)
          ON CONFLICT (id) DO UPDATE SET id = producers.id RETURNING *`,
         [req.org.id, code, b.last_name, b.first_names, b.phone ?? null, b.region ?? null, b.department ?? null,
          b.section ?? null, b.village ?? null, b.joined_on ?? null, req.user.id, b.id ?? null,
-         b.gender ?? null, b.birth_date ?? null, b.id_doc_type ?? null, b.id_doc_number ?? null, b.consent === true, b.area_ha ?? null, b.estimated_kg ?? null]);
+         b.gender ?? null, b.birth_date ?? null, b.id_doc_type ?? null, b.id_doc_number ?? null, b.consent === true, b.area_ha ?? null, b.estimated_kg ?? null, b.sub_prefecture?.trim() || null]);
       const wanted = b.value_chain_ids?.length ? b.value_chain_ids : (await c.query(`SELECT id FROM value_chains WHERE status = 'active'`)).rows.map((r: any) => r.id);
       for (const vc of wanted) {
         const ok = await c.query(`SELECT 1 FROM value_chains WHERE id = $1`, [vc]);
@@ -288,7 +291,7 @@ export class ProducersController {
   @Put(':id')
   @RequirePermissions('producers:update')
   async update(@Param('id', ParseUUIDPipe) id: string, @Body() b: UpdateProducerDto, @Req() req: any) {
-    const cols = ['gender', 'last_name', 'first_names', 'phone', 'region', 'department', 'section', 'village', 'birth_date', 'id_doc_type', 'id_doc_number', 'area_ha', 'estimated_kg'] as const;
+    const cols = ['gender', 'last_name', 'first_names', 'phone', 'region', 'department', 'sub_prefecture', 'section', 'village', 'birth_date', 'id_doc_type', 'id_doc_number', 'area_ha', 'estimated_kg'] as const;
     if (b.phone && !/^\+?\d{8,15}$/.test(b.phone)) throw new BadRequestException('Téléphone : format international, par exemple +2250701020304');
     if (b.area_ha && !/^\d+(\.\d{1,4})?$/.test(b.area_ha)) throw new BadRequestException('Superficie invalide');
     if (b.estimated_kg && !/^\d+(\.\d{1,2})?$/.test(b.estimated_kg)) throw new BadRequestException('Estimation invalide');
@@ -391,11 +394,11 @@ export class ProducersController {
         if (!result.dry_run) {
           const code = r.data.internal_code ?? (await this.nextCode(c, req.org.id));
           const ins = await c.query(
-            `INSERT INTO producers(organization_id, internal_code, last_name, first_names, phone, region, department, section, village, joined_on, created_by, area_ha, estimated_kg, gender, birth_date, id_doc_type, id_doc_number)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) RETURNING id`,
+            `INSERT INTO producers(organization_id, internal_code, last_name, first_names, phone, region, department, section, village, joined_on, created_by, area_ha, estimated_kg, gender, birth_date, id_doc_type, id_doc_number, sub_prefecture)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18) RETURNING id`,
             [req.org.id, code, r.data.last_name, r.data.first_names, r.data.phone ?? null, r.data.region ?? null,
              r.data.department ?? null, r.data.section ?? null, r.data.village ?? null, r.data.joined_on ?? null, req.user.id, r.data.area_ha ?? null, r.data.estimated_kg ?? null, r.data.gender ?? null,
-             r.data.birth_date ?? null, r.data.id_doc_type ?? null, r.data.id_doc_number ?? null]);
+             r.data.birth_date ?? null, r.data.id_doc_type ?? null, r.data.id_doc_number ?? null, r.data.sub_prefecture ?? null]);
           for (const vc of (chainIds.length ? chainIds : [...chains.values()]))
             await c.query(`INSERT INTO producer_value_chains(producer_id, value_chain_id, organization_id) VALUES ($1,$2,$3)`, [ins.rows[0].id, vc, req.org.id]);
         }

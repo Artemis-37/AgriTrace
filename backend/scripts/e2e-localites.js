@@ -16,13 +16,13 @@ const login = async (e, p) => (await call('POST', '/auth/login', { body: { email
   await call('POST', `/organizations/${org.id}/admins`, { token: adm, body: { email: `lc.${run}@t.test`, full_name: 'Chef', password: pw } });
   const J = { token: await login(`lc.${run}@t.test`, pw), org: org.id };
   check('aucune localité au départ', (await call('GET', '/producers/localities', J)).body.length === 0);
-  const mk = (n, region, department, village) => call('POST', '/producers', { ...J, body: { last_name: n, first_names: 'Test', region, department, village } });
+  const mk = (n, region, department, sub_prefecture) => call('POST', '/producers', { ...J, body: { last_name: n, first_names: 'Test', region, department, sub_prefecture } });
   check('producteur 1', (await mk('A', 'Sud-Ouest', 'San Pedro', 'Grobonou Dan')).status === 201);
   check('producteur 2', (await mk('B', 'Sud-Ouest', 'San Pedro', 'Grobonou Dan')).status === 201);
   check('producteur 3', (await mk('C', 'Sud', 'Tiassale', 'Kouassi kro')).status === 201);
   const l = (await call('GET', '/producers/localities', J)).body;
   check('2 localités distinctes regroupées', l.length === 2, l);
-  check('compte des producteurs', l.find((x) => x.village === 'Grobonou Dan')?.producers === 2, l);
+  check('compte des producteurs', l.find((x) => x.sub_prefecture === 'Grobonou Dan')?.producers === 2, l);
   check('hiérarchie conservée', l.find((x) => x.region === 'Sud')?.department === 'Tiassale', l);
   console.log(`\n${ok} réussis, ${ko} échecs`); process.exit(ko ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(1); });

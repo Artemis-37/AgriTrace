@@ -39,6 +39,7 @@ class AddProducerScreen extends StatefulWidget {
 
 class _AddProducerScreenState extends State<AddProducerScreen> {
   final _last = TextEditingController(), _first = TextEditingController(), _idNo = TextEditingController(), _phone = TextEditingController();
+  final _village = TextEditingController();
   String? _region, _quartier, _lieu, _section;
   List<String> _sections = [];
   List<Map<String, dynamic>> _known = [];
@@ -84,7 +85,7 @@ class _AddProducerScreenState extends State<AddProducerScreen> {
   bool _same(String? a, String? b) => (a ?? '').trim().toLowerCase() == (b ?? '').trim().toLowerCase();
   List<String> get _regions => _distinct(_known.map((e) => e['region'] as String?), base: _regionsCI);
   List<String> get _quartiers => _distinct(_known.where((e) => _same(e['region'] as String?, _region)).map((e) => e['department'] as String?));
-  List<String> get _lieux => _distinct(_known.where((e) => _same(e['region'] as String?, _region) && _same(e['department'] as String?, _quartier)).map((e) => e['village'] as String?));
+  List<String> get _lieux => _distinct(_known.where((e) => _same(e['region'] as String?, _region) && _same(e['department'] as String?, _quartier)).map((e) => e['sub_prefecture'] as String?));
 
   Future<String?> _askName(String title) async {
     final c = TextEditingController();
@@ -108,7 +109,7 @@ class _AddProducerScreenState extends State<AddProducerScreen> {
 
   @override
   void dispose() {
-    for (final c in [_last, _first, _idNo, _phone]) { c.dispose(); }
+    for (final c in [_last, _first, _idNo, _phone, _village]) { c.dispose(); }
     super.dispose();
   }
 
@@ -153,8 +154,8 @@ class _AddProducerScreenState extends State<AddProducerScreen> {
       lastName: _last.text.trim(), firstNames: _first.text.trim(), gender: _gender == 'Homme' ? 'male' : 'female',
       birthDate: _birth == null ? null : '${_birth!.year}-${two(_birth!.month)}-${two(_birth!.day)}',
       idDocType: _noId || _idNo.text.trim().isEmpty ? null : _idType, idDocNumber: _noId || _idNo.text.trim().isEmpty ? null : _idNo.text.trim(),
-      phone: _noPhone ? null : _phoneE164, region: _region, department: _quartier,
-      section: _section, village: _lieu, consent: true);
+      phone: _noPhone ? null : _phoneE164, region: _region, department: _quartier, subPrefecture: _lieu,
+      section: _section, village: _village.text.trim().isEmpty ? null : _village.text.trim(), consent: true);
     if (_photo != null) await services.repo.queuePhoto(subjectType: 'producer', subjectId: id, kind: 'Photo du producteur', sourcePath: _photo!);
     final sig = File('${Directory.systemTemp.path}/signature-$id.png');
     await sig.writeAsBytes(_signature!);
@@ -230,6 +231,7 @@ class _AddProducerScreenState extends State<AddProducerScreen> {
             fieldLabel("Rôle de l'agriculteur"),
             InputDecorator(decoration: fieldDeco('').copyWith(filled: true, fillColor: const Color(0xFFEEEEEE)), child: const Text('Agriculteur principal')),
           ])),
+          FieldCard(title: 'Village', child: TextField(controller: _village, textCapitalization: TextCapitalization.words, decoration: fieldDeco('Village ou campement (facultatif)'))),
           FieldCard(title: 'Coopérative', child: Row(children: [
             Expanded(child: InputDecorator(decoration: fieldDeco('').copyWith(filled: true, fillColor: const Color(0xFFEEEEEE)), child: Text(_org.isEmpty ? 'Ma coopérative' : _org))),
             const SizedBox(width: 8),

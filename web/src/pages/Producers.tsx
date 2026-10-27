@@ -80,7 +80,7 @@ export default function Producers() {
                 <FicheRow label="ID"><code>{cur.internal_code}</code></FicheRow><FicheRow label="Statut"><StatusBadge map={PRODUCER_STATUS} value={cur.status} /></FicheRow>
                 <FicheRow label="Nom">{cur.last_name}</FicheRow><FicheRow label="Prénoms">{cur.first_names}</FicheRow>
                 <FicheRow label="Sexe">{cur.gender === 'female' ? 'Féminin' : cur.gender === 'male' ? 'Masculin' : '—'}</FicheRow><FicheRow label="Contact">{cur.phone ?? '—'}</FicheRow>
-                <FicheRow label="Village">{cur.village ?? '—'}</FicheRow><FicheRow label="Section">{cur.section ?? '—'}</FicheRow>
+                <FicheRow label="Sous-préfecture">{cur.sub_prefecture ?? '—'}</FicheRow><FicheRow label="Village">{cur.village ?? '—'}</FicheRow><FicheRow label="Section">{cur.section ?? '—'}</FicheRow>
                 <FicheRow label="Superficie (ha)">{num(cur.area_ha)}</FicheRow><FicheRow label="Estimation (kg)">{num(cur.estimated_kg, 0)}</FicheRow>
                 <FicheRow label="Filières">{(cur.value_chain_ids ?? []).length ? (cur.value_chain_ids as string[]).map((id) => <span key={id} className="chip">{chainName(id)}</span>) : '—'}</FicheRow>
               </div></div>
@@ -248,8 +248,8 @@ function ChangeStatus({ p, onClose, onDone }: { p: any; onClose: () => void; onD
 }
 
 const IMPORT_FIELDS: [string, string][] = [
-  ['last_name', 'Nom *'], ['first_names', 'Prénoms *'], ['internal_code', 'Code'], ['gender', 'Sexe'], ['phone', 'Téléphone'], ['region', 'Région'], ['department', 'Département'],
-  ['section', 'Section'], ['village', 'Sous-préfecture'], ['area_ha', 'Superficie (ha)'], ['estimated_kg', 'Estimation (kg)'], ['value_chains', 'Filières'], ['joined_on', "Date d'adhésion"], ['birth_date', 'Date de naissance'], ['id_doc_type', "Type de pièce d'identité"], ['id_doc_number', "Numéro de la pièce d'identité"],
+  ['last_name', 'Nom *'], ['first_names', 'Prénoms *'], ['internal_code', 'Code'], ['gender', 'Sexe'], ['phone', 'Téléphone'], ['region', 'Région'], ['department', 'Département'], ['sub_prefecture', 'Sous-préfecture'],
+  ['section', 'Section'], ['village', 'Village'], ['area_ha', 'Superficie (ha)'], ['estimated_kg', 'Estimation (kg)'], ['value_chains', 'Filières'], ['joined_on', "Date d'adhésion"], ['birth_date', 'Date de naissance'], ['id_doc_type', "Type de pièce d'identité"], ['id_doc_number', "Numéro de la pièce d'identité"],
 ];
 
 /** Import d'une liste de producteurs depuis un classeur Excel : simulation (rapport), correspondance des colonnes si besoin, puis confirmation. */

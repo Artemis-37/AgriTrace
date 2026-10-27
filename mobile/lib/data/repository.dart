@@ -249,7 +249,7 @@ class Repository {
   /// créé côté serveur à la prochaine connexion avec le même identifiant. Le code officiel est attribué par le serveur.
   Future<String> queueProducer({
     required String lastName, required String firstNames, String? gender, String? birthDate, String? idDocType, String? idDocNumber,
-    String? phone, String? region, String? department, String? section, String? village, required bool consent,
+    String? phone, String? region, String? department, String? subPrefecture, String? section, String? village, required bool consent,
   }) async {
     final id = _uuid.v4();
     final key = 'producer-${_uuid.v4()}';
@@ -257,7 +257,7 @@ class Repository {
       'id': id, 'last_name': lastName, 'first_names': firstNames, 'consent': consent,
       if (gender != null) 'gender': gender, if (birthDate != null) 'birth_date': birthDate,
       if (idDocType != null) 'id_doc_type': idDocType, if (idDocNumber != null) 'id_doc_number': idDocNumber,
-      if (phone != null) 'phone': phone, if (region != null) 'region': region, if (department != null) 'department': department, if (section != null) 'section': section, if (village != null) 'village': village,
+      if (phone != null) 'phone': phone, if (region != null) 'region': region, if (department != null) 'department': department, if (subPrefecture != null) 'sub_prefecture': subPrefecture, if (section != null) 'section': section, if (village != null) 'village': village,
     };
     await db.raw.transaction((txn) async {
       await txn.insert('outbox', {'idempotency_key': key, 'op_type': 'producer.create', 'payload': jsonEncode(payload), 'entity_id': id, 'created_at': DateTime.now().toIso8601String()});

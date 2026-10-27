@@ -21,7 +21,7 @@ const upload = (buf) => { const f = new FormData(); f.append('file', new Blob([b
   const wb = new ExcelJS.Workbook(); await wb.xlsx.load(t.buf);
   const ws = wb.getWorksheet('Producteurs');
   const head = ws.getRow(1).values.slice(1);
-  check('modèle : colonnes Département et Sous-préfecture', head.includes('Département') && head.includes('Sous-préfecture') && !head.includes('Village'), head);
+  check('modèle : colonnes Département, Sous-préfecture et Village (après Section)', head.includes('Département') && head.includes('Sous-préfecture') && head.includes('Village') && head.indexOf('Village') === head.indexOf('Section') + 1, head);
   check("modèle : naissance et pièce d'identité", head.includes('Date de naissance') && head.includes("Type de pièce d'identité") && head.includes("Numéro de la pièce d'identité"), head);
   check('modèle : feuille Instructions', !!wb.getWorksheet('Instructions'));
   ws.getRow(2).getCell(head.indexOf('Nom') + 1).value = 'TRAORE';
@@ -32,7 +32,7 @@ const upload = (buf) => { const f = new FormData(); f.append('file', new Blob([b
   check('import du modèle rempli accepté', r.body?.created === 1 && r.body?.skipped === 0, r.body?.issues);
   const list = (await call('GET', '/producers', J)).body;
   const p = (Array.isArray(list) ? list : list.items ?? [])[0];
-  check('ville et sous-préfecture enregistrées', p?.department === 'Daloa' && p?.village === 'Zoukougbeu', p);
+  check('département, sous-préfecture et village enregistrés', p?.department === 'Daloa' && p?.sub_prefecture === 'Zoukougbeu' && p?.village === 'Hiré centre', p);
   const one = (await call('GET', `/producers/${p.id}`, J)).body; const q = one.producer ?? one;
   check('naissance et pièce enregistrées', String(q.birth_date).startsWith('1985-03-14') && q.id_doc_type === 'CNI ivoirienne' && q.id_doc_number === 'C0012345678', q);
   const w2 = new ExcelJS.Workbook(); const s2 = w2.addWorksheet('P');

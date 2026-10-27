@@ -1,7 +1,7 @@
 /** Logique pure d'import des producteurs (testable sans base ni fichier). */
 
 export const TARGET_FIELDS = [
-  'internal_code', 'last_name', 'first_names', 'phone', 'region', 'department',
+  'internal_code', 'last_name', 'first_names', 'phone', 'region', 'department', 'sub_prefecture',
   'section', 'village', 'area_ha', 'estimated_kg', 'value_chains', 'joined_on', 'gender',
   'birth_date', 'id_doc_type', 'id_doc_number',
 ] as const;
@@ -16,7 +16,7 @@ export const TEMPLATE_HEADERS: Record<TargetField, string> = {
   region: 'Région',
   department: 'Département',
   section: 'Section',
-  village: 'Sous-préfecture',
+  village: 'Village',
   area_ha: 'Superficie (ha)',
   estimated_kg: 'Estimation (kg)',
   value_chains: 'Filières',
@@ -25,12 +25,14 @@ export const TEMPLATE_HEADERS: Record<TargetField, string> = {
   birth_date: 'Date de naissance',
   id_doc_type: "Type de pièce d'identité",
   id_doc_number: "Numéro de la pièce d'identité",
+  sub_prefecture: 'Sous-préfecture',
 };
 
 /** Anciens intitulés (et variantes courantes) toujours reconnus à l'import. */
 export const HEADER_ALIASES: Partial<Record<TargetField, string[]>> = {
   department: ['Quartier', 'Ville', 'Ville (chef-lieu de région)', 'Chef-lieu', 'Departement'],
-  village: ['Lieu', 'Sous-préfecture', 'Sous prefecture', 'Village', 'Localité', 'Localite'],
+  sub_prefecture: ['Sous prefecture', 'Sous-prefecture', 'Lieu'],
+  village: ['Localité', 'Localite', 'Campement'],
   gender: ['Genre'],
   birth_date: ['Naissance', 'Né(e) le', 'Date naissance'],
   id_doc_type: ['Type de pièce', 'Type pièce', 'ID type'],
