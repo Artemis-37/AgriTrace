@@ -157,7 +157,7 @@ class _ProducerDetailScreenState extends State<ProducerDetailScreen> {
                   decoration: BoxDecoration(color: const Color(0xFFE6E6E6), borderRadius: BorderRadius.circular(4)),
                   clipBehavior: Clip.antiAlias,
                   child: _avatar == null ? const Icon(Icons.person, size: 64, color: Color(0xFF757575)) : Image.memory(_avatar!, fit: BoxFit.cover, gaplessPlayback: true))),
-                Positioned(right: -8, bottom: -8, child: Material(color: _action, shape: const CircleBorder(), elevation: 2,
+                Positioned(right: -8, bottom: -8, child: Material(color: const Color(0xFFF28C1E), shape: const CircleBorder(), elevation: 2,
                   child: InkWell(customBorder: const CircleBorder(), onTap: _takeAvatar, child: const Padding(padding: EdgeInsets.all(9), child: Icon(Icons.add_a_photo_outlined, color: Colors.white, size: 22))))),
               ]))),
             ]),
