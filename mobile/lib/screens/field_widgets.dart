@@ -120,51 +120,75 @@ class _SignatureDialog extends StatefulWidget {
   State<_SignatureDialog> createState() => _SignatureDialogState();
 }
 
+/// Fenêtre de signature plein format : titre avec croix, case quadrillée où signer, boutons Effacer et Confirmer.
 class _SignatureDialogState extends State<_SignatureDialog> {
   final List<List<Offset>> _strokes = [];
-  static const _w = 300.0, _h = 160.0;
+  Size _size = const Size(300, 400);
 
   Future<Uint8List?> _png() async {
     if (_strokes.isEmpty) return null;
+    final w = _size.width, h = _size.height;
     final rec = ui.PictureRecorder();
     final canvas = Canvas(rec);
-    canvas.drawRect(const Rect.fromLTWH(0, 0, _w, _h), Paint()..color = Colors.white);
+    canvas.drawRect(Rect.fromLTWH(0, 0, w, h), Paint()..color = Colors.white);
     final paint = Paint()..color = Colors.black..strokeWidth = 2.5..strokeCap = StrokeCap.round..style = PaintingStyle.stroke;
     for (final s in _strokes) {
-      if (s.length == 1) { canvas.drawCircle(s.first, 1.5, paint..style = PaintingStyle.fill); paint.style = PaintingStyle.stroke; continue; }
+      if (s.length == 1) { canvas.drawCircle(s.first, 1.5, Paint()..color = Colors.black); continue; }
       final path = Path()..moveTo(s.first.dx, s.first.dy);
       for (final o in s.skip(1)) { path.lineTo(o.dx, o.dy); }
       canvas.drawPath(path, paint);
     }
-    final img = await rec.endRecording().toImage(_w.toInt() * 2, _h.toInt() * 2);
+    final img = await rec.endRecording().toImage((w * 2).round(), (h * 2).round());
     final data = await img.toByteData(format: ui.ImageByteFormat.png);
     return data?.buffer.asUint8List();
   }
 
   @override
-  Widget build(BuildContext context) => AlertDialog(
-        title: const Text('Signature'),
-        content: Container(
-          width: _w, height: _h, decoration: BoxDecoration(color: Colors.white, border: Border.all(color: Colors.black38)),
-          child: GestureDetector(
-            onPanStart: (d) => setState(() => _strokes.add([d.localPosition])),
-            onPanUpdate: (d) => setState(() => _strokes.last.add(d.localPosition)),
-            child: CustomPaint(painter: _InkPainter(_strokes), size: const Size(_w, _h)),
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => setState(_strokes.clear), child: const Text('Effacer')),
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
-          FilledButton(onPressed: _strokes.isEmpty ? null : () async { final b = await _png(); if (context.mounted) Navigator.pop(context, b); }, child: const Text('Valider')),
-        ],
+  Widget build(BuildContext context) => Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24), shape: const RoundedRectangleBorder(), backgroundColor: Colors.white,
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Padding(padding: const EdgeInsets.fromLTRB(16, 6, 4, 6), child: Row(children: [
+            const Expanded(child: Text('Signature', style: TextStyle(fontSize: 20))),
+            IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close, size: 30), tooltip: 'Fermer'),
+          ])),
+          const Divider(height: 1, thickness: 1),
+          const Padding(padding: EdgeInsets.fromLTRB(16, 14, 16, 10), child: Align(alignment: Alignment.centerLeft, child: Text("Veuillez signer à l'intérieur de la case", style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)))),
+          Flexible(child: Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: AspectRatio(
+            aspectRatio: 0.78,
+            child: LayoutBuilder(builder: (ctx, box) {
+              _size = Size(box.maxWidth, box.maxHeight);
+              return Container(
+                decoration: BoxDecoration(color: Colors.white, border: Border.all(color: Colors.black54)),
+                child: ClipRect(child: GestureDetector(
+                  onPanStart: (d) => setState(() => _strokes.add([d.localPosition])),
+                  onPanUpdate: (d) => setState(() => _strokes.last.add(d.localPosition)),
+                  child: CustomPaint(painter: _InkPainter(_strokes, grid: true), size: _size),
+                )),
+              );
+            }),
+          ))),
+          Padding(padding: const EdgeInsets.all(16), child: Row(children: [
+            Expanded(child: FilledButton(onPressed: () => setState(_strokes.clear),
+                style: FilledButton.styleFrom(backgroundColor: const Color(0xFF555555), shape: const RoundedRectangleBorder(), minimumSize: const Size(0, 48)), child: const Text('EFFACER', style: TextStyle(fontWeight: FontWeight.w800)))),
+            const SizedBox(width: 24),
+            Expanded(child: FilledButton(onPressed: _strokes.isEmpty ? null : () async { final b = await _png(); if (context.mounted) Navigator.pop(context, b); },
+                style: FilledButton.styleFrom(backgroundColor: fieldGreen, shape: const RoundedRectangleBorder(), minimumSize: const Size(0, 48)), child: const Text('CONFIRMER', style: TextStyle(fontWeight: FontWeight.w800)))),
+          ])),
+        ]),
       );
 }
 
 class _InkPainter extends CustomPainter {
   final List<List<Offset>> strokes;
-  _InkPainter(this.strokes);
+  final bool grid;
+  _InkPainter(this.strokes, {this.grid = false});
   @override
   void paint(Canvas canvas, Size size) {
+    if (grid) {
+      final g = Paint()..color = const Color(0xFF9AA5A0)..strokeWidth = 0.6;
+      for (double x = 0; x <= size.width; x += 8) { canvas.drawLine(Offset(x, 0), Offset(x, size.height), g); }
+      for (double y = 0; y <= size.height; y += 8) { canvas.drawLine(Offset(0, y), Offset(size.width, y), g); }
+    }
     final paint = Paint()..color = Colors.black..strokeWidth = 2.5..strokeCap = StrokeCap.round..style = PaintingStyle.stroke;
     for (final s in strokes) {
       if (s.length == 1) { canvas.drawCircle(s.first, 1.5, Paint()..color = Colors.black); continue; }
