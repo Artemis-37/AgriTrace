@@ -13,7 +13,7 @@
     "test:e2e": "node scripts/e2e-p1.js && node scripts/e2e-p2-p3.js && node scripts/e2e-p4.js && node scripts/e2e-p4b.js && node scripts/e2e-parcelles.js && node scripts/e2e-recus.js && node scripts/e2e-geo.js && node scripts/e2e-taches.js && node scripts/e2e-ventes.js && node scripts/e2e-etape-e.js && node scripts/e2e-messagerie.js && node scripts/e2e-convois.js && node scripts/e2e-bulletin.js && node scripts/e2e-convois-liaison.js && node scripts/e2e-app-update.js && node scripts/e2e-fonds-carte.js && node scripts/e2e-postgis.js && node scripts/e2e-zones-protegees.js && node scripts/e2e-terrain.js && node scripts/e2e-annulations.js && node scripts/e2e-compte.js && node scripts/e2e-ecarts.js && node scripts/e2e-numero-convoi.js && node scripts/e2e-roles.js && node scripts/e2e-postes.js && node scripts/e2e-replication.js && node scripts/e2e-bibliotheque-formation.js && node scripts/e2e-producteurs-sections.js && node scripts/e2e-taches-terminees.js && node scripts/e2e-mobile-uniquement.js && node scripts/e2e-modules-exportateurs.js && node scripts/e2e-affectations.js && node scripts/e2e-sync-profils.js"
   },
   "dependencies": {
-    "@nestjs/common": "^11.2.7",
+    "@nestjs/common": "^12.2.0",
     "@nestjs/config": "^4.0.4",
     "@nestjs/core": "^11.2.7",
     "@nestjs/jwt": "^11.0.2",
