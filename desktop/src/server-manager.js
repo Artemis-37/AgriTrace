@@ -38,13 +38,27 @@ class LocalServer {
   secrets() {
     if (!this._secrets) {
       fs.mkdirSync(this.dataDir, { recursive: true });
-      if (fs.existsSync(this.secretsFile)) this._secrets = JSON.parse(fs.readFileSync(this.secretsFile, 'utf8'));
-      else {
-        this._secrets = { ownerPassword: crypto.randomBytes(18).toString('base64url'), appPassword: crypto.randomBytes(18).toString('base64url'), jwtSecret: crypto.randomBytes(48).toString('base64url') };
-        fs.writeFileSync(this.secretsFile, JSON.stringify(this._secrets), { mode: 0o600 });
-      }
+      let s = null;
+      if (fs.existsSync(this.secretsFile)) s = JSON.parse(fs.readFileSync(this.secretsFile, 'utf8'));
+      const fresh = !s;
+      s = s ?? { ownerPassword: crypto.randomBytes(18).toString('base64url'), appPassword: crypto.randomBytes(18).toString('base64url'), jwtSecret: crypto.randomBytes(48).toString('base64url') };
+      // Clé de chiffrement des pièces jointes (photos, pièces d'identité) : ajoutée aux installations existantes ; les anciens fichiers restent lisibles.
+      let changed = fresh;
+      if (!s.documentsKey) { s.documentsKey = crypto.randomBytes(32).toString('base64'); changed = true; }
+      if (changed) fs.writeFileSync(this.secretsFile, JSON.stringify(s), { mode: 0o600 });
+      this.restrictToOwner(this.secretsFile);
+      this._secrets = s;
     }
     return this._secrets;
+  }
+
+  /** Fichier de secrets lisible par le seul utilisateur Windows qui fait tourner le serveur (sous Windows, le mode 0o600 n'a aucun effet). */
+  restrictToOwner(file) {
+    if (process.platform !== 'win32') return;
+    try {
+      const user = process.env.USERNAME;
+      if (user) require('child_process').execFileSync('icacls', [file, '/inheritance:r', '/grant:r', `${user}:F`], { stdio: 'ignore', windowsHide: true });
+    } catch (e) { this.log('droits du fichier de secrets non restreints : ' + e.message); }
   }
 
   ownerUrl() { return `postgres://agritrace_owner:${encodeURIComponent(this.secrets().ownerPassword)}@127.0.0.1:${this.pgPort}/${DB}`; }
@@ -150,7 +164,7 @@ class LocalServer {
       env: this.backendEnv({
         AGRITRACE_MODE: 'local', DATABASE_URL: this.appUrl(), JWT_SECRET: this.secrets().jwtSecret, PORT: String(this.port), ...(this.localOnly ? { HOST: '127.0.0.1' } : {}),
         ...(this.tls ? { TLS_DIR: path.join(this.dataDir, 'tls'), HTTP_LOOPBACK_PORT: String(this.loopbackPort) } : {}),
-        DOCUMENTS_DIR: docs, WEB_DIR: path.join(this.appDir, 'web'), APP_VERSION: this.version ?? '0.1.0', THROTTLE_LIMIT: '600',
+        DOCUMENTS_DIR: docs, DOCUMENTS_KEY: this.secrets().documentsKey, WEB_DIR: path.join(this.appDir, 'web'), APP_VERSION: this.version ?? '0.1.0', THROTTLE_LIMIT: '600',
       }),
     });
     this.api.stdout.on('data', (d) => this.log('[api] ' + String(d).trim()));

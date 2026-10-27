@@ -8,6 +8,7 @@ import 'package:sqflite_sqlcipher/sqflite.dart';
 import '../config.dart';
 import '../data/api_client.dart';
 import '../data/app_database.dart';
+import '../data/photo_vault.dart';
 import '../data/repository.dart';
 import 'sync_state.dart';
 
@@ -228,7 +229,8 @@ class SyncEngine {
       }
       try {
         _step(1, SyncStepState.doing, 'Photo · ${r['kind'] ?? ''}${(await _declName(r['declaration_id'] as String)).isEmpty ? '' : ' · ${await _declName(r['declaration_id'] as String)}'}');
-        await api.upload('/documents', filePath: file.path, filename: 'photo.jpg', fields: {
+        final enc = PhotoVault.isEncrypted(file.path);
+        await api.upload('/documents', filePath: enc ? null : file.path, bytes: enc ? await PhotoVault().decrypt(file.path) : null, filename: 'photo.jpg', fields: {
           'subject_type': type, 'subject_id': r['declaration_id'] as String, 'kind': r['kind'] as String, 'client_key': r['client_key'] as String,
         });
         await db.raw.delete('pending_uploads', where: 'client_key = ?', whereArgs: [r['client_key']]);

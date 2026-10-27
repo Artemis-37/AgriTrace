@@ -173,7 +173,7 @@ class ApiClient {
   }
 
   /// Envoi d'un fichier (pièce jointe). Même gestion de session et d'erreurs que les autres appels.
-  Future<dynamic> upload(String path, {required Map<String, String> fields, required String filePath, required String filename}) async {
+  Future<dynamic> upload(String path, {required Map<String, String> fields, String? filePath, List<int>? bytes, required String filename}) async {
     Future<http.Response> once() async {
       final req = http.MultipartRequest('POST', _uri(path))..fields.addAll(fields);
       final t = await store.accessToken;
@@ -182,7 +182,7 @@ class ApiClient {
       if (dev != null) req.headers['x-device-token'] = dev;
       final o = await store.orgId;
       if (o != null) req.headers['x-organization-id'] = o;
-      req.files.add(await http.MultipartFile.fromPath('file', filePath, filename: filename));
+      req.files.add(bytes != null ? http.MultipartFile.fromBytes('file', bytes, filename: filename) : await http.MultipartFile.fromPath('file', filePath!, filename: filename));
       final streamed = await _http.send(req).timeout(const Duration(seconds: 90));
       return http.Response.fromStream(streamed);
     }

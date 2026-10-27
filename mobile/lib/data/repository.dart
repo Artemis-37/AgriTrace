@@ -9,6 +9,7 @@ import 'package:sqflite_sqlcipher/sqflite.dart';
 import 'package:uuid/uuid.dart';
 
 import 'app_database.dart';
+import 'photo_vault.dart';
 import 'session_store.dart';
 
 /// Accès aux données locales et création d'opérations hors connexion.
@@ -129,12 +130,15 @@ class Repository {
       queuePhoto(subjectType: 'declaration', subjectId: declarationId, kind: 'Photo du reçu', sourcePath: sourcePath);
 
   /// Photo d'un objet du serveur (reçu, parcelle) : même mécanisme, même garantie contre les doublons.
+  final PhotoVault _vault = PhotoVault();
   Future<void> queuePhoto({required String subjectType, required String subjectId, required String kind, required String sourcePath}) async {
     final dir = Directory(p.join((await getApplicationDocumentsDirectory()).path, 'pending_photos'));
     await dir.create(recursive: true);
     final key = 'photo-${_uuid.v4()}';
-    final dest = p.join(dir.path, '$key${p.extension(sourcePath).isEmpty ? '.jpg' : p.extension(sourcePath)}');
-    await File(sourcePath).copy(dest);
+    final dest = p.join(dir.path, '$key.enc');
+    await _vault.encryptTo(sourcePath, dest);
+    // La copie en clair (cache de l'appareil photo, signature temporaire) est supprimée : seule la copie chiffrée reste.
+    try { if (sourcePath.startsWith(Directory.systemTemp.path) || sourcePath.contains('/cache/')) await File(sourcePath).delete(); } catch (_) { /* déjà supprimée */ }
     await db.raw.insert('pending_uploads', {'client_key': key, 'subject_type': subjectType, 'declaration_id': subjectId, 'kind': kind, 'file_path': dest, 'created_at': DateTime.now().toIso8601String()});
   }
 
