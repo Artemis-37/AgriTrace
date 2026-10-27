@@ -40,48 +40,11 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _loadKnown() async {
-    final k = await services.store.knownAccounts();
     final sv = await services.store.savedLogins();
-    if (mounted) setState(() { _known = k; _saved = sv; });
+    if (mounted) setState(() => _saved = sv);
   }
 
-  /// Compte déjà connecté sur ce téléphone : reprise de la session sans mot de passe ; hors connexion, accès aux données de l'appareil.
-  Future<void> _useKnown(KnownAccount a) async {
-    setState(() { _busy = true; _error = null; });
-    try {
-      _who = a.email;
-      final used = await services.store.useAccount(a.email);
-      if (used == null) { _askPassword(a); return; }
-      try {
-        await services.api.get('/me');
-      } on NetworkException {
-        if (!mounted) return;
-        await services.repo.switchUser(a.email, services.store);
-        if (!mounted) return;
-        Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const SyncShell(child: HomeScreen())));
-        return;
-      } on ApiException {
-        await services.store.invalidateCurrentAccount();
-        await services.store.signOut();
-        await _loadKnown();
-        _askPassword(a);
-        return;
-      }
-      final orgs = await services.api.myOrganizations();
-      if (a.org.isNotEmpty && orgs.any((o) => o['id'] == a.org)) { await _enter(a.org, remember: false); }
-      else if (orgs.length == 1) { await _enter(orgs.first['id'] as String, remember: false); }
-      else { setState(() => _orgs = orgs); }
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  void _askPassword(KnownAccount a) {
-    if (!mounted) return;
-    setState(() { _email.text = a.email; _password.clear(); _error = 'Session expirée pour ${a.name.isEmpty ? a.email : a.name} : saisissez votre mot de passe.'; });
-  }
   List<dynamic> _orgs = [];
-  List<KnownAccount> _known = [];
   bool _testing = false;
   String? _serverResult;
 
@@ -165,7 +128,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  Future<void> _enter(String orgId, {bool remember = true}) async {
+  Future<void> _enter(String orgId) async {
     await services.repo.switchUser(_who.isEmpty ? _email.text : _who, services.store);
     final ok = await services.repo.switchOrganization(orgId);
     if (!ok) {
@@ -231,17 +194,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   FilledButton(onPressed: _busy ? null : _pair, child: Text(_busy ? 'Association…' : 'Associer ce téléphone')),
                   TextButton(onPressed: () => setState(() => _pairing = false), child: const Text('Retour')),
                 ] else if (_orgs.isEmpty) ...[
-                  if (_known.isNotEmpty) ...[
-                    const Text('Comptes sur ce téléphone', style: TextStyle(fontWeight: FontWeight.bold)),
-                    for (final a in _known) Card(elevation: 0, shape: RoundedRectangleBorder(side: const BorderSide(color: Color(0xFFDDDDDD)), borderRadius: BorderRadius.circular(14)), child: ListTile(
-                      leading: CircleAvatar(child: Text(a.initials)),
-                      title: Text(a.name.isEmpty ? a.email : a.name), subtitle: Text(a.refresh.isEmpty ? '${a.email}\nMot de passe requis' : a.email), isThreeLine: a.refresh.isEmpty,
-                      trailing: IconButton(tooltip: 'Oublier ce compte', icon: const Icon(Icons.close), onPressed: _busy ? null : () async { await services.store.forgetAccount(a.email); await _loadKnown(); }),
-                      onTap: _busy ? null : () => a.refresh.isEmpty ? _askPassword(a) : _useKnown(a))),
-                    const SizedBox(height: 8),
-                    const Text('Ou connectez-vous avec un autre compte', style: TextStyle(color: Colors.black54)),
-                    const SizedBox(height: 8),
-                  ],
                   RawAutocomplete<SavedLogin>(
                     textEditingController: _email,
                     focusNode: _emailFocus,

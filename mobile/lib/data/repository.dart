@@ -228,6 +228,12 @@ class Repository {
     });
   }
 
+  /// Toutes les parcelles d'un producteur (relevées par le téléphone ou importées côté serveur), rattachées par l'identifiant du producteur — sans plafond de nombre.
+  Future<List<Map<String, Object?>>> parcelsOfProducer(String producerId) => db.raw.rawQuery('''
+    SELECT c.*, p.internal_code AS producer_code, p.last_name, p.first_names,
+           (SELECT count(*) FROM outbox o WHERE o.entity_id = c.id AND o.op_type = 'parcel.update' AND o.status IN ('pending','pending_validation')) AS pending_updates
+      FROM parcels c LEFT JOIN producers p ON p.id = c.producer_id WHERE c.producer_id = ? ORDER BY c.code''', [producerId]);
+
   /// Parcelles connues de l'appareil, avec le producteur et l'envoi en attente éventuel.
   Future<List<Map<String, Object?>>> parcels() => db.raw.rawQuery('''
     SELECT c.*, p.last_name || ' ' || p.first_names AS producer_name, p.internal_code AS producer_code,

@@ -39,11 +39,10 @@ class _ProducerDetailScreenState extends State<ProducerDetailScreen> {
   }
 
   Future<void> _load() async {
-    final all = await services.repo.parcels();
+    final mine = await services.repo.parcelsOfProducer('${widget.producer['id']}');
     final perms = await services.repo.permissions();
-    final code = widget.producer['internal_code'];
     if (mounted) setState(() {
-      _parcels = all.where((r) => r['producer_code'] == code).toList();
+      _parcels = mine;
       _canSurvey = canSurveyParcel(perms); _canEdit = canUpdateParcel(perms); _canDone = perms.contains('training:report');
     });
   }
