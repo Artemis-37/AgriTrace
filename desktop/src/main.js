@@ -137,6 +137,7 @@ function scheduleUpdateChecks() {
 // Retrouve le serveur sur le réseau local et met à jour l'adresse mémorisée. Au plus une recherche à la fois, et une toutes les 20 s.
 let finding = null, lastFind = 0;
 async function refindServer() {
+  if (cfg?.fixedServer) return false;   // serveur en ligne (adresse fixe) : pas de recherche sur le réseau local
   if (finding) return finding;
   if (Date.now() - lastFind < 20000) return false;
   lastFind = Date.now();
@@ -267,6 +268,7 @@ async function showNetwork() {
   if (choice.response === 1) { lastFind = 0; const ok = await refindServer(); dialog.showMessageBox({ message: ok ? 'Serveur trouvé et connecté.' : 'Aucun serveur trouvé sur le réseau.', detail: ok ? '' : 'Vérifiez que le poste serveur est allumé avec AgriTrace ouvert, sur le même réseau.' }); if (ok) win?.reload(); }
 }
 async function resetRole() {
+  if (cfg?.fixedServer) { dialog.showMessageBox({ message: 'Ce poste est relié au serveur AgriTrace de démonstration.', detail: cfg.serverUrl }); return; }
   const r = await dialog.showMessageBox({ type: 'warning', buttons: ['Annuler', 'Changer de mode'], defaultId: 0, cancelId: 0, message: 'Changer de mode ?', detail: 'Les données du serveur sur ce poste ne sont PAS supprimées. Le serveur sera arrêté et le choix initial vous sera reproposé.' });
   if (r.response !== 1) return;
   quitting = true;
@@ -338,6 +340,13 @@ async function main() {
   if (!enforceLimit(true)) return;
   setInterval(() => enforceLimit(false), 3600 * 1000);
   cfg = loadCfg();
+  // Version livrée avec une adresse de serveur fixe (default-config.json à côté de l'exécutable, lu à chaque démarrage) : le poste s'y relie d'office, sans assistant.
+  try {
+    const f = JSON.parse(fs.readFileSync(path.join(app.isPackaged ? process.resourcesPath : path.join(__dirname, '..', 'build'), 'default-config.json'), 'utf8'));
+    if (f?.role === 'client' && /^https:\/\//.test(f.serverUrl ?? '') && (!cfg || !cfg.fixedServer || cfg.serverUrl !== f.serverUrl)) {
+      saveCfg({ role: 'client', serverUrl: f.serverUrl, stationName: f.stationName ?? 'Poste', fixedServer: true }); log(`configuration d'usine : serveur ${f.serverUrl}`);
+    }
+  } catch { /* pas de configuration d'usine : assistant de premier lancement */ }
   buildMenu();
   if (!cfg) {
     const setup = new BrowserWindow({ width: 640, height: 600, resizable: false, title: 'AgriTrace — installation', webPreferences: { contextIsolation: true, sandbox: true, preload: page('preload.js') } });

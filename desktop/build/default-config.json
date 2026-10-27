@@ -1,0 +1,6 @@
+{
+  "role": "client",
+  "serverUrl": "https://agritrace-pe24.onrender.com",
+  "stationName": "Démo",
+  "fixedServer": true
+}
