@@ -14,9 +14,9 @@ export const TEMPLATE_HEADERS: Record<TargetField, string> = {
   first_names: 'Prénoms',
   phone: 'Téléphone',
   region: 'Région',
-  department: 'Quartier',
+  department: 'Ville (chef-lieu de région)',
   section: 'Section',
-  village: 'Lieu',
+  village: 'Sous-préfecture',
   area_ha: 'Superficie (ha)',
   estimated_kg: 'Estimation (kg)',
   value_chains: 'Filières',
@@ -29,8 +29,8 @@ export const TEMPLATE_HEADERS: Record<TargetField, string> = {
 
 /** Anciens intitulés (et variantes courantes) toujours reconnus à l'import. */
 export const HEADER_ALIASES: Partial<Record<TargetField, string[]>> = {
-  department: ['Département', 'Departement', 'Quartier / Département'],
-  village: ['Village', 'Localité', 'Localite', 'Lieu / Village'],
+  department: ['Quartier', 'Ville', 'Chef-lieu', 'Département', 'Departement'],
+  village: ['Lieu', 'Sous-préfecture', 'Sous prefecture', 'Village', 'Localité', 'Localite'],
   gender: ['Genre'],
   birth_date: ['Naissance', 'Né(e) le', 'Date naissance'],
   id_doc_type: ['Type de pièce', 'Type pièce', 'ID type'],

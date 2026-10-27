@@ -172,7 +172,7 @@ export class ProducersController {
     const ws = wb.addWorksheet('Producteurs');
     ws.addRow(TARGET_FIELDS.map((f) => TEMPLATE_HEADERS[f]));
     ws.getRow(1).font = { bold: true };
-    const sample: Record<string, string> = { internal_code: '', last_name: 'KONE', first_names: 'Awa', phone: '+2250701020304', region: 'Haut-Sassandra', department: 'Daloa', section: 'Hiré', village: 'Hiré centre', area_ha: '2.5', estimated_kg: '1200', value_chains: 'CACAO', joined_on: '2024-05-12', gender: 'F', birth_date: '14/03/1985', id_doc_type: 'CNI ivoirienne', id_doc_number: 'C0012345678' };
+    const sample: Record<string, string> = { internal_code: '', last_name: 'KONE', first_names: 'Awa', phone: '+2250701020304', region: 'Haut-Sassandra', department: 'Daloa', section: 'Hiré', village: 'Zoukougbeu', area_ha: '2.5', estimated_kg: '1200', value_chains: 'CACAO', joined_on: '2024-05-12', gender: 'F', birth_date: '14/03/1985', id_doc_type: 'CNI ivoirienne', id_doc_number: 'C0012345678' };
     ws.addRow(TARGET_FIELDS.map((f) => sample[f] ?? ''));
     ws.columns.forEach((col) => (col.width = 22));
     ws.views = [{ state: 'frozen', ySplit: 1 }];
@@ -186,7 +186,7 @@ export class ProducersController {
       ['Date de naissance', 'JJ/MM/AAAA.'],
       ["Type de pièce d'identité", "Par exemple : CNI ivoirienne, CNI malienne, CNI burkinabé, Passeport, Numéro matricule CCC du producteur, Pas de CNI ni matricule CCC. Obligatoire si le numéro de pièce est rempli."],
       ['Téléphone', 'Avec ou sans +225 (8 à 15 chiffres).'],
-      ['Région, Quartier, Lieu', "Mêmes noms que dans la fiche producteur du téléphone : Région (ex. Haut-Sassandra) > Quartier (ex. Daloa) > Lieu (village ou campement). Les anciens intitulés « Département » et « Village » sont toujours reconnus."],
+      ['Région, Ville (chef-lieu de région), Sous-préfecture', "Mêmes noms que dans la fiche producteur du téléphone : Région (ex. Haut-Sassandra) > Ville chef-lieu de région (ex. Daloa) > Sous-préfecture (ex. Zoukougbeu). Les anciens intitulés « Quartier », « Lieu », « Département » et « Village » sont toujours reconnus."],
       ['Section', 'Section de la coopérative, telle qu\'elle figure dans la liste de Paramètres.'],
       ['Superficie (ha), Estimation (kg)', 'Nombres positifs, virgule décimale acceptée.'],
       ['Filières', 'Codes séparés par une virgule (ex. CACAO). Vide : toutes les filières de la coopérative.'],
