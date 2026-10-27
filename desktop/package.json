@@ -1,6 +1,6 @@
 {
   "name": "agritrace-desktop",
-  "version": "0.1.13",
+  "version": "0.2.3",
   "description": "AgriTrace — application de bureau Windows (serveur local de coopérative ou poste client)",
   "main": "src/main.js",
   "author": "AgriTrace",
@@ -8,7 +8,7 @@
   "private": true,
   "scripts": {
     "start": "electron .",
-    "test": "node test/orchestration.js && node test/discovery.js && node test/tls.js && node test/updater.js",
+    "test": "node test/orchestration.js && node test/discovery.js && node test/tls.js && node test/updater.js && node test/trial.js",
     "dist": "electron-builder --win nsis --x64 --publish never",
     "dist:dir": "electron-builder --win --dir --x64 --publish never",
     "prepare-payload": "node scripts/prepare-payload.js"

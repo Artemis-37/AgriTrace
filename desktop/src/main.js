@@ -10,7 +10,8 @@ const { LocalServer } = require('./server-manager');
 const { discover, findServer, startBeacon, probe, probeHost } = require('./discovery');
 const { electronFingerprintToHex, securityCode } = require('./secure-fetch');
 const { checkUpdate, downloadInstaller, installCommand, cleanOld } = require('./updater');
-const { spawn } = require('child_process');
+const { spawn, execFileSync } = require('child_process');
+const trial = require('./trial');
 
 const PORT = 3000;
 
@@ -302,7 +303,40 @@ async function startServerRole() {
   scheduleUpdateChecks();
 }
 
+// ---- Période d'essai (version livrée avec trial-config.json : { "days": N }) : N jours à partir du PREMIER LANCEMENT ----
+// Contrôlée au démarrage puis chaque heure ; à l'échéance l'application se ferme (les données sont conservées).
+function trialDays() {
+  try { return Number(JSON.parse(fs.readFileSync(path.join(app.isPackaged ? process.resourcesPath : path.join(__dirname, '..', 'build'), 'trial-config.json'), 'utf8')).days) || 0; } catch { return 0; }
+}
+function trialStores() {
+  const file = (p) => ({ read: () => (fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : null), write: (v) => { fs.mkdirSync(path.dirname(p), { recursive: true }); fs.writeFileSync(p, v); } });
+  const stores = [file(path.join(app.getPath('userData'), 'trial.dat')), file(path.join(process.env.ProgramData || process.env.ALLUSERSPROFILE || os.tmpdir(), 'AgriTrace', 'trial.dat'))];
+  if (process.platform === 'win32') stores.push({
+    read: () => { try { const o = execFileSync('reg', ['query', 'HKCU\\Software\\AgriTrace', '/v', 'Essai'], { encoding: 'utf8', windowsHide: true, stdio: ['ignore', 'pipe', 'ignore'] }); const m = /REG_SZ\s+(.+)/.exec(o); return m ? Buffer.from(m[1].trim(), 'base64').toString('utf8') : null; } catch { return null; } },
+    write: (v) => { execFileSync('reg', ['add', 'HKCU\\Software\\AgriTrace', '/v', 'Essai', '/t', 'REG_SZ', '/d', Buffer.from(v, 'utf8').toString('base64'), '/f'], { windowsHide: true, stdio: 'ignore' }); },
+  });
+  return stores;
+}
+/** true si l'application peut continuer. Sans trial-config.json : aucune limite. */
+function enforceLimit(startup) {
+  const days = trialDays();
+  if (!days) return true;
+  const r = trial.evaluate({ days, stores: trialStores() });
+  if (r.state === 'ok') {
+    if (startup && r.daysLeft <= 7) dialog.showMessageBox({ type: 'info', message: `Période d'essai : il reste ${r.daysLeft} jour${r.daysLeft > 1 ? 's' : ''}`, detail: "À la fin de l'essai, l'application ne s'ouvrira plus. Vos données restent intactes sur ce poste." });
+    return true;
+  }
+  log(`période d'essai : ${r.state}`);
+  dialog.showMessageBoxSync({ type: 'warning', buttons: ['Fermer'], message: r.state === 'expired' ? `La période d'essai de ${days} jours est terminée` : 'La date de ce poste est incohérente',
+    detail: r.state === 'expired' ? "Contactez votre fournisseur pour obtenir la version complète. Vos données restent intactes sur ce poste." : "La date de l'ordinateur semble avoir été reculée. Remettez la date correcte puis relancez AgriTrace." });
+  quitting = true;
+  app.exit(0);
+  return false;
+}
+
 async function main() {
+  if (!enforceLimit(true)) return;
+  setInterval(() => enforceLimit(false), 3600 * 1000);
   cfg = loadCfg();
   buildMenu();
   if (!cfg) {
