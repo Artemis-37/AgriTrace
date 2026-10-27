@@ -1,3 +1,4 @@
+import { campaignSummary, copyCampaignPrices } from './campaign-lifecycle';
 import { BadRequestException, Body, ConflictException, Controller, Delete, Get, NotFoundException, Param, ParseUUIDPipe, Post, Put, Query, Req } from '@nestjs/common';
 import { ApiBearerAuth, ApiHeader, ApiTags } from '@nestjs/swagger';
 import { IsDateString, IsIn, IsOptional, IsString, IsUUID, Length, Matches } from 'class-validator';
@@ -26,6 +27,8 @@ class CampaignDto {
   @IsOptional() @IsIn(['planned', 'open', 'closed']) status?: string;
   /** Grande traite (octobre–mars) ou petite traite (avril–septembre) ; dates libres. */
   @IsOptional() @IsIn(['grande', 'petite']) traite?: string;
+  /** Traite dont les produits et les derniers prix sont repris dans la nouvelle. */
+  @IsOptional() @IsUUID() copy_from_campaign_id?: string;
 }
 class CampaignUpdateDto {
   @IsOptional() @IsString() @Length(2, 100) name?: string;
@@ -114,12 +117,23 @@ export class ReferentialsController {
   @RequirePermissions('campaigns:read')
   listCampaigns(@Req() req: any) {
     return this.db.tx(req.org.id, async (c) =>
-      (await c.query(`SELECT k.id, k.value_chain_id, k.code, k.name, k.starts_on, k.ends_on, k.status, k.traite,
+      (await c.query(`SELECT k.id, k.value_chain_id, k.code, k.name, k.starts_on, k.ends_on, k.status, k.traite, k.closed_at,
         coalesce((SELECT json_agg(json_build_object('id', p.id, 'name', p.name,
             'buy_price_per_kg', (SELECT x.buy_price_per_kg FROM product_prices x WHERE x.product_id = p.id AND x.campaign_id = k.id AND x.buy_price_per_kg IS NOT NULL ORDER BY x.created_at DESC LIMIT 1),
             'sell_price_per_kg', (SELECT x.sell_price_per_kg FROM product_prices x WHERE x.product_id = p.id AND x.campaign_id = k.id AND x.sell_price_per_kg IS NOT NULL ORDER BY x.created_at DESC LIMIT 1)) ORDER BY p.name)
           FROM campaign_products cp JOIN products p ON p.id = cp.product_id WHERE cp.campaign_id = k.id), '[]'::json) AS products
        FROM campaigns k ORDER BY k.starts_on DESC`)).rows);
+  }
+
+  /** Bilan de la traite : celui figé à la clôture, ou calculé à la demande tant qu'elle est en cours. */
+  @Get('campaigns/:id/summary')
+  @RequirePermissions('campaigns:read')
+  summary(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
+    return this.db.tx(req.org.id, async (c) => {
+      const k = (await c.query(`SELECT status, closing_summary FROM campaigns WHERE id = $1`, [id])).rows[0];
+      if (!k) throw new NotFoundException('Traite introuvable');
+      return k.closing_summary ?? campaignSummary(c, id);
+    });
   }
 
   /** Associe un produit à une traite (le prix s'y fixe ensuite). */
@@ -162,10 +176,15 @@ export class ReferentialsController {
           const over = await c.query(`SELECT name FROM campaigns WHERE value_chain_id = $1 AND traite IS NOT NULL AND status <> 'closed' AND starts_on <= $3::date AND ends_on >= $2::date LIMIT 1`, [b.value_chain_id, b.starts_on, b.ends_on]);
           if (over.rowCount) throw new BadRequestException(`Ces dates chevauchent la traite « ${over.rows[0].name} » de la même filière`);
         }
-        return (await c.query(
+        const created = (await c.query(
           `INSERT INTO campaigns(organization_id, value_chain_id, code, name, starts_on, ends_on, status, created_by, traite)
            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id, value_chain_id, code, name, starts_on, ends_on, status, traite`,
           [req.org.id, b.value_chain_id, b.code, b.name, b.starts_on, b.ends_on, b.status ?? 'open', req.user.id, b.traite ?? null])).rows[0];
+        if (b.copy_from_campaign_id) {
+          if (!(await c.query(`SELECT 1 FROM campaigns WHERE id = $1`, [b.copy_from_campaign_id])).rowCount) throw new BadRequestException('Traite à copier introuvable');
+          created.prices_copied = await copyCampaignPrices(c, req.org.id, b.copy_from_campaign_id, created.id, req.user.id);
+        }
+        return created;
       });
       await this.audited(req, 'campaign.create', 'campaign', row.id);
       return row;

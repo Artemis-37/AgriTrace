@@ -238,3 +238,11 @@ Tant qu'aucun modèle n'est déployé, l'application utilise ses modèles intég
 - **Mobile** : le profil d'un producteur liste **toutes ses parcelles**, y compris celles **importées** (rattachées au producteur par son code). La liste des accès mémorisés s'affiche en touchant le champ e-mail de la connexion et remplit l'e-mail et le mot de passe.
 - **Sécurité des données** : base du téléphone chiffrée, photos en attente chiffrées sur l'appareil (AES-256-GCM, clé dans le Keystore Android), pièces jointes chiffrées sur le serveur, serveur Windows avec clé de chiffrement propre.
 - **Retrait des « missions »** : la rubrique n'existe plus ; le travail du terrain passe par la liste des tâches du producteur (formations, distributions, inspections, services).
+
+## Cycle d'une traite (Paramètres › Traites)
+
+- **Clôture automatique** : à la date de fin, la traite passe à « Clôturée » (vérification toutes les heures) et son bilan est figé. Une fois clôturée, plus aucun achat ne peut y être déclaré.
+- **Ouverture automatique** : une traite « Planifiée » s'ouvre seule à sa date de début.
+- **Alerte** : l'administrateur reçoit une notification chaque jour dans les 15 derniers jours de la traite (réglable par `CAMPAIGN_ALERT_DAYS`), puis lors de l'ouverture et de la clôture.
+- **Reprendre les prix** : à la création d'une traite, le champ « Reprendre les produits et les prix de » copie ceux de la traite choisie ; ils restent modifiables.
+- **Bilan** : le bouton « Bilan » affiche, par produit, les poids, sacs et montants réglés, les achats acceptés et les prix de fin de traite (provisoire tant que la traite est en cours).

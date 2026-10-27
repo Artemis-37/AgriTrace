@@ -128,6 +128,7 @@ function Campaigns() {
   const [adding, setAdding] = useState(false);
   const [edit, setEdit] = useState<any | null>(null);
   const [prices, setPrices] = useState<any | null>(null);
+  const [bilan, setBilan] = useState<any | null>(null);
   const today = new Date().toISOString().slice(0, 10);
   const current = (c: any) => c.status === 'open' && String(c.starts_on).slice(0, 10) <= today && today <= String(c.ends_on).slice(0, 10);
   return (
@@ -143,10 +144,12 @@ function Campaigns() {
         { header: 'État', render: (c) => <Badge tone={current(c) ? 'ok' : 'neutral'}>{current(c) ? 'En cours' : CSTATUS[c.status] ?? c.status}</Badge> },
         { header: '', render: (c) => <span className="row-actions">
           {can('products:read') && <button className="btn btn-small btn-secondary" onClick={() => setPrices(c)}>Prix</button>}
+          <button className="btn btn-small btn-ghost" onClick={() => setBilan(c)}>Bilan</button>
           {can('campaigns:manage') && <button className="btn btn-small btn-ghost" onClick={() => setEdit(c)}>Modifier</button>}</span> },
       ]} />}
-      {adding && data && <CampaignForm chains={data.chains} onClose={() => setAdding(false)} onDone={() => { setAdding(false); reload(); }} />}
+      {adding && data && <CampaignForm chains={data.chains} previous={data.list} onClose={() => setAdding(false)} onDone={() => { setAdding(false); reload(); }} />}
       {edit && <CampaignEdit c={edit} onClose={() => setEdit(null)} onDone={() => { setEdit(null); reload(); }} />}
+      {bilan && <CampaignBilan c={bilan} onClose={() => setBilan(null)} />}
       {prices && <TraitePrices c={prices} onClose={() => { setPrices(null); reload(); }} />}
     </Card>
   );
@@ -168,13 +171,15 @@ function PriceFields({ prods, px, setPx, existing }: { prods: any[]; px: Record<
         <Field label="Vente (FCFA/kg)"><input inputMode="decimal" value={val(p).sell} onChange={(e) => setPx({ ...px, [p.id]: { ...val(p), sell: e.target.value } })} /></Field></div></div>))}</>;
 }
 
-function CampaignForm({ chains, onClose, onDone }: { chains: any[]; onClose: () => void; onDone: () => void }) {
+function CampaignForm({ chains, previous, onClose, onDone }: { chains: any[]; previous: any[]; onClose: () => void; onDone: () => void }) {
   const y = new Date().getFullYear();
   const [kind, setKind] = useState<'grande' | 'petite'>('grande');
   const [f, setF] = useState({ chain: (chains.find((c) => String(c.code).toUpperCase() === 'CACAO') ?? chains[0])?.id ?? '', ...traiteDefaults('grande', new Date().getMonth() < 3 ? y - 1 : y) });
   const act = useAction();
   const prods = useAsync(() => get<any[]>('/products'), []);
   const [px, setPx] = useState<Record<string, { buy: string; sell: string }>>({});
+  const olds = previous.filter((p) => p.value_chain_id === f.chain && (p.products ?? []).length);
+  const [copyFrom, setCopyFrom] = useState<string>(() => previous.find((p) => (p.products ?? []).length)?.id ?? '');
   const set = (k: keyof typeof f) => (e: any) => setF({ ...f, [k]: e.target.value });
   const pick = (k: 'grande' | 'petite') => { setKind(k); setF({ ...f, ...traiteDefaults(k, k === 'petite' && new Date().getMonth() >= 9 ? y + 1 : new Date().getMonth() < 3 && k === 'grande' ? y - 1 : y) }); };
   const okPx = (p: any) => (['buy', 'sell'] as const).every((k) => (px[p.id]?.[k] ?? '') === '' || PRICE.test(String(px[p.id][k])));
@@ -184,15 +189,38 @@ function CampaignForm({ chains, onClose, onDone }: { chains: any[]; onClose: () 
         <Field label="Filière"><select value={f.chain} onChange={set('chain')}>{chains.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></Field></div>
       <div className="grid-2"><Field label="Début de la traite"><input type="date" value={f.starts_on} onChange={set('starts_on')} /></Field><Field label="Fin de la traite"><input type="date" value={f.ends_on} onChange={set('ends_on')} /></Field>
         <Field label="Nom"><input value={f.name} onChange={set('name')} /></Field><Field label="Code" hint="Majuscules, chiffres, tirets"><input value={f.code} onChange={set('code')} /></Field></div>
+      {olds.length > 0 && <Field label="Reprendre les produits et les prix de" hint="Les prix copiés restent modifiables ensuite"><select value={olds.some((o) => o.id === copyFrom) ? copyFrom : ''} onChange={(e) => setCopyFrom(e.target.value)}><option value="">Ne rien reprendre</option>{olds.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}</select></Field>}
       <fieldset className="bloc"><legend>Prix de la traite (au kilo)</legend>
         <p className="muted">Fixés par l'administrateur ; ils s'appliquent à toutes les pesées de cette traite (caisse, stocks, ventes) et restent modifiables ensuite.</p>
         <PriceFields prods={prods.data ?? []} px={px} setPx={setPx} />
       </fieldset>
       {act.error && <ErrorBox message={act.error} />}
       <div className="modal-actions"><button className="btn" disabled={act.busy || !f.chain || !f.name.trim() || !f.starts_on || !f.ends_on || f.ends_on < f.starts_on || !(prods.data ?? []).every(okPx)} onClick={() => act.run(async () => {
-        const camp: any = await post('/campaigns', { value_chain_id: f.chain, code: f.code.trim().toUpperCase(), name: f.name.trim(), starts_on: f.starts_on, ends_on: f.ends_on, traite: kind });
+        const camp: any = await post('/campaigns', { value_chain_id: f.chain, code: f.code.trim().toUpperCase(), name: f.name.trim(), starts_on: f.starts_on, ends_on: f.ends_on, traite: kind, ...(copyFrom && olds.some((o) => o.id === copyFrom) && { copy_from_campaign_id: copyFrom }) });
         for (const p of (prods.data ?? []).filter((x) => x.active)) { const v = px[p.id]; if (v && (v.buy !== '' || v.sell !== '')) await post(`/products/${p.id}/prices`, { campaign_id: camp.id, ...(v.buy !== '' && { buy_price_per_kg: String(v.buy) }), ...(v.sell !== '' && { sell_price_per_kg: String(v.sell) }) }); }
         onDone(); })}>Enregistrer</button><button className="btn btn-ghost" onClick={onClose}>Annuler</button></div>
+    </Modal>
+  );
+}
+
+/** Bilan d'une traite : figé à la clôture automatique, calculé à la demande tant qu'elle est en cours. */
+function CampaignBilan({ c, onClose }: { c: any; onClose: () => void }) {
+  const { data, loading, error } = useAsync(() => get<any>(`/campaigns/${c.id}/summary`), [c.id]);
+  const n = (v: number) => FR(String(Math.round(v)));
+  return (
+    <Modal title={`Bilan — ${c.name}`} onClose={onClose}>
+      {error && <ErrorBox message={error} />}
+      {loading || !data ? <Loading /> : <>
+        <p className="muted">{c.status === 'closed' ? `Traite clôturée${c.closed_at ? ` le ${date(c.closed_at)}` : ''} : bilan arrêté à cette date.` : 'Traite en cours : bilan provisoire à ce jour.'}</p>
+        <Table rows={data.by_product} empty="Aucune pesée dans cette traite." columns={[
+          { header: 'Produit', render: (r: any) => <strong>{r.name ?? '—'}</strong> }, { header: 'Pesées', render: (r: any) => r.receptions },
+          { header: 'Poids (kg)', render: (r: any) => n(r.kg) }, { header: 'Sacs', render: (r: any) => n(r.bags) }, { header: 'Montant réglé', render: (r: any) => n(r.amount) },
+        ]} />
+        <p><strong>Total :</strong> {n(data.totals.kg)} kg, {n(data.totals.bags)} sacs, {n(data.totals.amount)} réglés.</p>
+        <p>Achats déclarés acceptés : {data.declarations.accepted} ({n(data.declarations.kg)} kg, {data.declarations.producers} producteur(s)). {data.declarations.still_open > 0 ? `${data.declarations.still_open} déclaration(s) encore en attente.` : ''}</p>
+        {data.final_prices.length > 0 && <p className="muted">Prix en fin de traite (achat / vente au kg) : {data.final_prices.map((p: any) => `${p.name} ${p.buy ?? '—'} / ${p.sell ?? '—'}`).join(' ; ')}</p>}
+      </>}
+      <div className="modal-actions"><button className="btn btn-ghost" onClick={onClose}>Fermer</button></div>
     </Modal>
   );
 }

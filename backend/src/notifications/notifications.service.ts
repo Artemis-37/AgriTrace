@@ -2,6 +2,7 @@ import { Injectable, Logger, OnApplicationBootstrap, OnApplicationShutdown } fro
 import { randomUUID } from 'crypto';
 import { PoolClient } from 'pg';
 import { DbService } from '../db/db.service';
+import { runCampaignLifecycle } from '../referentials/campaign-lifecycle';
 
 export interface Notice {
   kind: string; title: string; body?: string; severity?: 'info' | 'warning' | 'critical';
@@ -42,6 +43,16 @@ export class NotificationsService implements OnApplicationBootstrap, OnApplicati
       const day = new Date().toISOString().slice(0, 10);
       const found: Record<string, number> = {};
       const add = async (kind: string, n: number) => { found[kind] = (found[kind] ?? 0) + n; };
+
+      // Cycle des traites : ouverture/clôture automatiques à la date, alerte avant la fin
+      const life = await runCampaignLifecycle(c);
+      for (const k of life.opened)
+        await add('campaign_opened', await this.notifyPermission(c, orgId, 'campaigns:read', { kind: 'campaign_opened', title: `Traite ouverte : ${k.name}`, body: 'Ouverture automatique à la date de début', entityType: 'campaign', entityId: k.id, dedupe: `campaign_opened:${k.id}` }));
+      for (const k of life.closed)
+        await add('campaign_closed', await this.notifyPermission(c, orgId, 'campaigns:read', { kind: 'campaign_closed', severity: 'warning', title: `Traite clôturée : ${k.name}`, body: 'Clôture automatique à la date de fin ; le bilan est disponible', entityType: 'campaign', entityId: k.id, dedupe: `campaign_closed:${k.id}` }));
+      for (const k of life.ending)
+        await add('campaign_ending', await this.notifyPermission(c, orgId, 'campaigns:manage', { kind: 'campaign_ending', severity: 'warning', title: `La traite « ${k.name} » se termine dans ${k.days} jour(s)`,
+          body: `Fin le ${k.ends_on}. Préparez la traite suivante et ses prix.`, entityType: 'campaign', entityId: k.id, dedupe: `campaign_ending:${k.id}:${day}` }));
 
       for (const t of (await c.query(
         `SELECT id, code, title, assignee_id, due_date::text AS due FROM tasks WHERE due_date < current_date AND status IN ('open','in_progress','pending_sync','to_correct')`)).rows) {
