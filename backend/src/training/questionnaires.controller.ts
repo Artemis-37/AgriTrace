@@ -8,7 +8,7 @@ import { RequirePermissions } from '../access/decorators';
 import { AuditService } from '../audit/audit.service';
 import { DbService } from '../db/db.service';
 import { QUESTIONNAIRE_TEMPLATES } from './questionnaire-templates';
-import { inspectionPdf, sketchDescription } from '../common/pdf';
+import { inspectionPdf, raInspectionPdf, sketchDescription } from '../common/pdf';
 import { NotificationsService } from '../notifications/notifications.service';
 import { applyAuto, evaluate, findQuestion, isInspection, APPROVAL_THRESHOLD } from './inspection';
 import { CERT_SCHEMES } from './certification-logos.controller';
@@ -252,7 +252,7 @@ export class QuestionnairesController {
     if (cert && !CERT_SCHEMES[cert]) throw new BadRequestException('Certification inconnue');
     const d = await this.db.tx(req.org.id, async (c) => {
       const t = (await c.query(
-        `SELECT t.status, t.producer_id, q.title AS q_title, q.template_code, q.questions, an.answers, an.answered_at, u.full_name AS answered_by, p.internal_code, p.last_name, p.first_names, p.village
+        `SELECT t.status, t.producer_id, q.title AS q_title, q.template_code, q.questions, an.answers, an.answered_at, u.full_name AS answered_by, p.internal_code, p.last_name, p.first_names, p.village, p.phone, p.section, p.region, p.department, p.gender, p.birth_date, p.id_doc_type, p.id_doc_number
            FROM producer_assignment_targets t JOIN producer_assignments a ON a.id = t.assignment_id JOIN questionnaires q ON q.id = a.questionnaire_id
            JOIN producers p ON p.id = t.producer_id LEFT JOIN questionnaire_answers an ON an.target_id = t.id LEFT JOIN users u ON u.id = an.answered_by WHERE t.id = $1`, [targetId])).rows[0];
       if (!t) throw new NotFoundException('Fiche introuvable');
@@ -274,6 +274,35 @@ export class QuestionnairesController {
     const shown = insp ? applyAuto(d.t.questions, d.t.answers ?? {}).answers : d.t.answers;
     const croquis = insp ? findQuestion(d.t.questions, /^Croquis de l.exploitation/i) : undefined;
     if (croquis) shown[croquis.id] = sketchDescription(d.parcels);
+    if (d.t.template_code === 'ii-ra') {
+      const qs = d.t.questions as Question[], ans = shown ?? {};
+      const A = (re: RegExp) => { const q = findQuestion(qs, re); return q ? ans[q.id] : undefined; };
+      const str = (v: any) => (v === undefined || v === null ? '' : Array.isArray(v) ? v.join(', ') : String(v));
+      const ev = evaluate(qs, ans);
+      const reqs = qs.map((q) => { const m = /^(\d+(?:\.\d+)+)\s*(EF|ES|EAC)\s*[—–-]\s*([\s\S]*)$/.exec(q.label.trim()); return m && q.options?.includes('Conforme')
+        ? { num: m[1], type: m[2], text: m[3].replace(/\s+—\s+/g, '\n').replace(/\*/g, '').trim(), answer: str(ans[q.id]) } : null; }).filter((x): x is { num: string; type: string; text: string; answer: string } => !!x);
+      const first = d.parcels[0];
+      const fr = (n: number) => n.toFixed(2).replace('.', ',');
+      const yn = (v: any) => (v === 'oui' ? true : v === 'non' ? false : null);
+      const ra = await raInspectionPdf({
+        orgName: o?.name ?? '', certLogo: d.certLogo, orgLogo: d.orgLogo,
+        f: {
+          name: `${d.t.last_name} ${d.t.first_names}`.trim(), idDoc: [d.t.id_doc_type, d.t.id_doc_number].filter(Boolean).join(' ') || str(A(/^1\. Membre du groupe : type/)), birth: d.t.birth_date ? new Date(d.t.birth_date).toISOString().slice(0, 10) : '',
+          phone: d.t.phone ?? '', code: d.t.internal_code ?? '', village: d.t.village ?? '', section: d.t.section ?? '', region: d.t.region ?? '', department: d.t.department ?? '',
+          farmId: d.t.internal_code ?? '', totalArea: d.parcels.length ? `${fr(d.parcels.reduce((t: number, p: any) => t + (p.ha ?? 0), 0))} ha` : '', farms: d.parcels.length ? String(d.parcels.length) : '',
+          unitId: str(A(/^3\. Identifiant/)) || first?.code || '', unitArea: str(A(/^3\. Superficie/)) ? `${str(A(/^3\. Superficie/))} ha` : '', units: d.parcels.length ? String(d.parcels.length) : '',
+          lat: first ? (first.ring.reduce((t: number, c: number[]) => t + c[1], 0) / first.ring.length).toFixed(4) : '', lon: first ? (first.ring.reduce((t: number, c: number[]) => t + c[0], 0) / first.ring.length).toFixed(4) : '',
+          others: str(A(/^4\. Autres unités/)), workers: str(A(/^5\. Nombre de travailleurs/)),
+          inspDate: str(A(/^Date de l.inspection/)) || (d.t.answered_at ? new Date(d.t.answered_at).toISOString().slice(0, 10) : ''), inspector: str(A(/^Inspecteur interne : nom/)) || (d.t.answered_by ?? ''),
+          inspId: str(A(/^Inspecteur interne : type/)), inspPhone: str(A(/^Inspecteur interne : contact/)),
+        },
+        male: d.t.gender === 'male' ? true : d.t.gender === 'female' ? false : null, owner: yn(A(/^2\. Le membre est-il le propriétaire/)), hasWorkers: yn(A(/^5\. Le membre a-t-il des travailleurs/)),
+        reqs, decision: str(A(/^Recommandation de l.inspecteur/)) || null, corrective: str(A(/^Mesures correctives/)), remarks: str(A(/^Remarques additionnelles/)),
+        nc: ev.lines, score: ev.score, threshold: APPROVAL_THRESHOLD, sketch: d.parcels,
+      });
+      await this.audit.log({ organizationId: req.org.id, actorUserId: req.user.id, action: 'questionnaire.export', entityType: 'producer_assignment_target', entityId: targetId, details: { certification: d.scheme, layout: 'ra-v1.4' } });
+      return new StreamableFile(ra, { type: 'application/pdf', disposition: `attachment; filename="inspection-interne-${d.t.internal_code}.pdf"` });
+    }
     const pdf = await inspectionPdf({
       certification: d.scheme ? CERT_SCHEMES[d.scheme] : d.t.template_code === 'ii-fusion' ? 'Rainforest Alliance, Fairtrade, Fairtrade USA' : null,
       certLogo: d.certLogo, orgLogo: d.orgLogo, orgName: o?.name ?? '', title: d.t.q_title,
