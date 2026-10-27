@@ -100,6 +100,8 @@ void main() {
     await t.pumpWidget(MaterialApp(home: Scaffold(body: BasemapView(tiles: tiles, points: pts, height: 240))));
     await t.pump();
     expect(urls, isEmpty, reason: 'le paquet de la coopérative ne touche pas au réseau');
+    expect(find.text('6.083750'), findsWidgets, reason: 'latitude du point visé (centre de la carte) affichée');
+    expect(find.text('-5.282850'), findsWidgets, reason: 'longitude du point visé affichée');
     await t.tap(find.text('Coopérative'));
     await t.pumpAndSettle();
     // Les lectures de fichiers et les requêtes se font en temps réel : on laisse tourner la vraie boucle d'événements.

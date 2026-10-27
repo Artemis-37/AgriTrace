@@ -16,6 +16,8 @@ enum BaseLayer {
   plan('Plan', '© les contributeurs d\'OpenStreetMap', 19),
   /// Imagerie satellite : tuiles en ligne ; hors connexion, seules les zones déjà consultées s'affichent.
   satellite('Satellite', 'Imagerie © Esri, Maxar, Earthstar Geographics', 18),
+  /// Google Maps (plan) par l'API officielle « Map Tiles » : nécessite la clé GOOGLE_MAPS_KEY fournie à la compilation.
+  google('Google Maps', 'Données cartographiques © Google', 21),
   /// Paquet MBTiles déposé par l'administrateur de la coopérative : lu sur le téléphone, sans réseau.
   pack('Coopérative', '', 22);
 
@@ -91,7 +93,8 @@ class MapTiles {
   final MapPackStore pack;
   final Future<Directory> Function() _cacheDir;
   final http.Client _client;
-  final String planUrl, satelliteUrl;
+  final String planUrl, satelliteUrl, googleKey;
+  Future<String?>? _googleSession;
   final Duration offlineBackoff;
   final int maxParallel;
   TileCache? _cache;
@@ -103,7 +106,7 @@ class MapTiles {
   /// Indique que le réseau semble absent (dernier essai échoué) : l'écran peut en avertir l'utilisateur.
   final ValueNotifier<bool> offline = ValueNotifier<bool>(false);
 
-  MapTiles(this.pack, {Future<Directory> Function()? cacheDir, http.Client? client, this.planUrl = Config.osmTileUrl, this.satelliteUrl = Config.satelliteTileUrl,
+  MapTiles(this.pack, {Future<Directory> Function()? cacheDir, http.Client? client, this.planUrl = Config.osmTileUrl, this.satelliteUrl = Config.satelliteTileUrl, this.googleKey = Config.googleMapsKey,
       this.offlineBackoff = const Duration(seconds: 20), this.maxParallel = 2})
       : _cacheDir = cacheDir ?? (() async => Directory(p.join((await getApplicationSupportDirectory()).path, 'tiles'))),
         _client = client ?? http.Client();
@@ -112,13 +115,23 @@ class MapTiles {
 
   int minZoom(BaseLayer l) => l == BaseLayer.pack ? pack.minZoom : 0;
   int maxZoom(BaseLayer l) => l == BaseLayer.pack ? pack.maxZoom : l.maxZoom;
-  bool available(BaseLayer l) => l != BaseLayer.pack || pack.ready;
+  bool available(BaseLayer l) => l == BaseLayer.pack ? pack.ready : l == BaseLayer.google ? googleKey.isNotEmpty : true;
 
   /// Au démarrage : nettoie le cache s'il dépasse son plafond.
   Future<void> init() async => unawaited((await _cacheOnce()).prune());
 
   Future<int> cacheSize() async => (await _cacheOnce()).size();
   Future<void> clearCache() async => (await _cacheOnce()).clear();
+
+  /// Session de l'API Map Tiles de Google (une par lancement) ; null si la clé est refusée ou le réseau absent (nouvel essai au prochain affichage).
+  Future<String?> _session() => _googleSession ??= () async {
+        try {
+          final r = await _client.post(Uri.parse('https://tile.googleapis.com/v1/createSession?key=$googleKey'),
+              headers: {'content-type': 'application/json'}, body: '{"mapType":"roadmap","language":"fr","region":"CI"}').timeout(const Duration(seconds: 8));
+          if (r.statusCode != 200) { _googleSession = null; return null; }
+          return RegExp(r'"session"\s*:\s*"([^"]+)"').firstMatch(r.body)?.group(1);
+        } catch (_) { _googleSession = null; return null; }
+      }();
 
   String _url(BaseLayer l, int z, int x, int y) =>
       (l == BaseLayer.plan ? planUrl : satelliteUrl).replaceAll('{z}', '$z').replaceAll('{x}', '$x').replaceAll('{y}', '$y');
@@ -142,7 +155,13 @@ class MapTiles {
       final again = await cache.get(l.name, z, x, y);
       if (again != null) return again;
       if (_offlineUntil != null && DateTime.now().isBefore(_offlineUntil!)) return null;
-      final res = await _client.get(Uri.parse(_url(l, z, x, y)), headers: {'user-agent': Config.tileUserAgent}).timeout(const Duration(seconds: 8));
+      var url = _url(l, z, x, y);
+      if (l == BaseLayer.google) {
+        final sess = await _session();
+        if (sess == null) return null;
+        url = 'https://tile.googleapis.com/v1/2dtiles/$z/$x/$y?session=$sess&key=$googleKey';
+      }
+      final res = await _client.get(Uri.parse(url), headers: {'user-agent': Config.tileUserAgent}).timeout(const Duration(seconds: 8));
       offline.value = false;
       _offlineUntil = null;
       if (res.statusCode != 200 || res.bodyBytes.isEmpty) return null;

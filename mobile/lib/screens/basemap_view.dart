@@ -17,7 +17,9 @@ class BasemapView extends StatefulWidget {
   final double height;
   /// Autres tracés à afficher (par exemple toutes les parcelles d'un producteur), sans numérotation.
   final List<List<GeoPoint>> shapes;
-  const BasemapView({super.key, required this.tiles, required this.points, this.me, this.height = 260, this.shapes = const []});
+  /// Croix de visée au centre de la carte, avec la latitude et la longitude du point visé (en bas à droite) : la carte glisse sous la croix.
+  final bool crosshair;
+  const BasemapView({super.key, required this.tiles, required this.points, this.me, this.height = 260, this.shapes = const [], this.crosshair = true});
   @override
   State<BasemapView> createState() => _BasemapViewState();
 }
@@ -119,7 +121,13 @@ class _BasemapViewState extends State<BasemapView> {
                 onChanged: (l) => setState(() { if (l != null) { _layer = l; _cache.clear(); _zoom = _zoom.clamp(_minZ, _maxZ); } }),
               ))),
             )),
-            Positioned(left: 8, right: 52, bottom: 6, child: ValueListenableBuilder<bool>(
+            if (widget.crosshair) ...[
+              const Positioned.fill(child: IgnorePointer(child: CustomPaint(painter: _CrosshairPainter()))),
+              Positioned(right: 12, bottom: 8, child: IgnorePointer(child: Column(crossAxisAlignment: CrossAxisAlignment.end, mainAxisSize: MainAxisSize.min, children: [
+                _halo(_lat.toStringAsFixed(6)), _halo(_lon.toStringAsFixed(6)),
+              ]))),
+            ],
+            Positioned(left: 8, right: widget.crosshair ? 130 : 52, bottom: 6, child: ValueListenableBuilder<bool>(
               valueListenable: widget.tiles.offline,
               builder: (_, off, __) => Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -137,6 +145,34 @@ class _BasemapViewState extends State<BasemapView> {
       ),
     );
   }
+}
+
+/// Texte noir gras cerné de blanc : lisible sur le plan comme sur l'imagerie.
+Widget _halo(String t) => Stack(children: [
+      Text(t, style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, height: 1.15, foreground: Paint()..style = PaintingStyle.stroke..strokeWidth = 4..color = Colors.white)),
+      Text(t, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, height: 1.15, color: Colors.black)),
+    ]);
+
+/// Croix au centre de la carte : quatre traits qui ne se touchent pas, avec un point au milieu.
+class _CrosshairPainter extends CustomPainter {
+  const _CrosshairPainter();
+  @override
+  void paint(Canvas canvas, Size size) {
+    final c = Offset(size.width / 2, size.height / 2);
+    const gap = 7.0, len = 24.0;
+    final arms = <(Offset, Offset)>[
+      (c + const Offset(-len, 0), c + const Offset(-gap, 0)), (c + const Offset(gap, 0), c + const Offset(len, 0)),
+      (c + const Offset(0, -len), c + const Offset(0, -gap)), (c + const Offset(0, gap), c + const Offset(0, len)),
+    ];
+    for (final w in [(6.0, Colors.white), (3.0, Colors.black)]) {
+      final paint = Paint()..color = w.$2..strokeWidth = w.$1..strokeCap = StrokeCap.butt;
+      for (final a in arms) { canvas.drawLine(a.$1, a.$2, paint); }
+    }
+    canvas.drawCircle(c, 3.2, Paint()..color = Colors.white);
+    canvas.drawCircle(c, 2, Paint()..color = Colors.black);
+  }
+  @override
+  bool shouldRepaint(covariant CustomPainter old) => false;
 }
 
 class _MapButton extends StatelessWidget {

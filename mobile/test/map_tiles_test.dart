@@ -126,4 +126,20 @@ void main() {
     await t.clearCache();
     expect(await t.cacheSize(), 0);
   });
+
+  test('Google Maps : proposé seulement avec une clé ; session créée une fois, tuile demandée avec session et clé', () async {
+    expect(make(MockClient((r) async => ok())).available(BaseLayer.google), isFalse);
+    final urls = <String>[];
+    var sessions = 0;
+    final t = MapTiles(newPack(), cacheDir: () async => dir, googleKey: 'CLE', client: MockClient((r) async {
+      urls.add(r.url.toString());
+      if (r.url.path.endsWith('createSession')) { sessions++; return http.Response('{"session":"SESS1","expiry":"1"}', 200); }
+      return ok();
+    }));
+    expect(t.available(BaseLayer.google), isTrue);
+    expect(await t.tile(BaseLayer.google, 15, 1, 2), png);
+    expect(await t.tile(BaseLayer.google, 15, 1, 3), png);
+    expect(sessions, 1);
+    expect(urls.where((u) => u.contains('/2dtiles/15/1/2')).single, contains('session=SESS1&key=CLE'));
+  });
 }

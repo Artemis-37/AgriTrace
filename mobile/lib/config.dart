@@ -28,6 +28,8 @@ class Config {
   static const osmTileUrl = String.fromEnvironment('OSM_TILE_URL', defaultValue: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png');
   static const satelliteTileUrl = String.fromEnvironment('SATELLITE_TILE_URL',
       defaultValue: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
+  /// Clé Google Maps Platform (API « Map Tiles »), fournie à la compilation : --dart-define=GOOGLE_MAPS_KEY=… Sans clé, le fond « Google Maps » n'est pas proposé.
+  static const googleMapsKey = String.fromEnvironment('GOOGLE_MAPS_KEY');
   static const tileUserAgent = 'AgriTrace/0.1 (application de traçabilité des coopératives agricoles)';
   static const syncIntervalMinutes = 2;
   static const batchSize = 50;

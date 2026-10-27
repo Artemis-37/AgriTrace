@@ -84,6 +84,7 @@ export default function ParcelMap() {
             <i style={{ background: COLOR.verified }} className="dot" /> Vérifiée <i style={{ background: COLOR.controlled }} className="dot" /> Contrôlée <i style={{ background: COLOR.declared }} className="dot" /> Déclarée <i style={{ background: '#d9382f' }} className="dot" /> Anomalie
           </span>
         </div>
+        <div style={{ position: 'relative' }}>
         <svg ref={svg} role="img" aria-label="Carte des parcelles" viewBox={`${v.x} ${v.y} ${v.w} ${v.h}`} style={{ width: '100%', height: 480, background: 'var(--map-bg, #eef3ec)', borderRadius: 8, touchAction: 'none', cursor: drag.current ? 'grabbing' : 'grab' }}
           onWheel={onWheel} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={() => { drag.current = null; }} onPointerLeave={() => { drag.current = null; }}>
           {tiles.map((t) => {
@@ -98,6 +99,15 @@ export default function ParcelMap() {
               onClick={(e) => { e.stopPropagation(); setSel(p.id); }} onKeyDown={(e) => { if (e.key === 'Enter') setSel(p.id); }}><title>{p.code}</title></path>;
           })}
         </svg>
+        {/* Croix de visée au centre (quatre traits séparés, point au milieu) et coordonnées du point visé : la carte glisse sous la croix. */}
+        <svg aria-hidden="true" width="56" height="56" viewBox="-28 -28 56 56" style={{ position: 'absolute', left: '50%', top: 240, marginLeft: -28, marginTop: -28, pointerEvents: 'none' }}>
+          {[[-24, 0, -7, 0], [7, 0, 24, 0], [0, -24, 0, -7], [0, 7, 0, 24]].map(([x1, y1, x2, y2], i) => <g key={i}><line x1={x1} y1={y1} x2={x2} y2={y2} stroke="#fff" strokeWidth="6" /><line x1={x1} y1={y1} x2={x2} y2={y2} stroke="#000" strokeWidth="3" /></g>)}
+          <circle r="3.2" fill="#fff" /><circle r="2" fill="#000" />
+        </svg>
+        <div role="status" aria-label="Coordonnées du point visé" style={{ position: 'absolute', right: 12, bottom: 8, textAlign: 'right', fontWeight: 800, fontSize: 16, lineHeight: 1.15, pointerEvents: 'none', color: '#000', textShadow: '-1px -1px 0 #fff,1px -1px 0 #fff,-1px 1px 0 #fff,1px 1px 0 #fff,0 0 4px #fff' }}>
+          <div>{geo.inv.lat(v.y + v.h / 2).toFixed(6)}</div><div>{geo.inv.lon(v.x + v.w / 2).toFixed(6)}</div>
+        </div>
+        </div>
         <p className="muted" style={{ margin: '6px 0 0' }}>Molette ou boutons pour zoomer, glisser pour déplacer. {layer === 'none' ? 'Fond neutre : la carte fonctionne sans connexion.' : online ? ATTRIBUTION[layer] + '. Les images du fond ne se chargent que lorsque vous êtes connecté.' : 'Hors connexion : fond neutre affiché.'}</p>
         {picked && (
           <div className="notice" role="status">
