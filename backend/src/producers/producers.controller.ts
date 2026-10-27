@@ -118,6 +118,17 @@ export class ProducersController {
       `SELECT section, count(*)::int AS producers, count(DISTINCT village)::int AS villages FROM producers WHERE section IS NOT NULL AND btrim(section) <> '' GROUP BY section ORDER BY section`)).rows);
   }
 
+  /** Localités déjà connues de la coopérative (région > quartier > lieu) : alimente les listes en cascade de la fiche producteur. */
+  @Get('localities')
+  @RequirePermissions('producers:read')
+  localities(@Req() req: any) {
+    return this.db.tx(req.org.id, async (c) => (await c.query(
+      `SELECT btrim(region) AS region, btrim(department) AS department, btrim(village) AS village, count(*)::int AS producers
+         FROM producers
+        WHERE (region IS NOT NULL AND btrim(region) <> '') OR (department IS NOT NULL AND btrim(department) <> '') OR (village IS NOT NULL AND btrim(village) <> '')
+        GROUP BY 1, 2, 3 ORDER BY 1, 2, 3`)).rows);
+  }
+
   /**
    * Suppression définitive d'un ou plusieurs producteurs (administrateur de la coopérative).
    * Refusée pour un producteur qui a des opérations enregistrées (déclarations, paiements, missions…) : l'archiver à la place.

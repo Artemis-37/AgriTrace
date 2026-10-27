@@ -16,7 +16,18 @@ const consentText =
     "Je peux demander à tout moment à consulter ou corriger mes informations auprès de la coopérative.\n\n"
     "(Texte type à faire valider par la coopérative avant usage.)";
 
-const _idTypes = ["Carte nationale d'identité", 'Passeport', "Attestation d'identité", 'Carte consulaire', 'Permis de conduire'];
+const _idTypes = [
+  "Carte nationale d'identité", 'CNI ivoirienne', 'CNI malienne', 'CNI burkinabé', 'CNI nigérienne', 'CNI togolaise', 'CNI béninoise', 'CNI sénégalaise', 'CNI guinéenne', 'CNI ghanéenne',
+  'Passeport', "Attestation d'identité", 'Carte consulaire', 'Permis de conduire', 'Numéro matricule CCC du producteur', 'Pas de CNI ni matricule CCC',
+];
+
+/// Régions et districts de Côte d'Ivoire : liste de base, complétée par les localités déjà enregistrées par la coopérative.
+const _regionsCI = [
+  'Abidjan', 'Yamoussoukro', 'Agnéby-Tiassa', 'Bafing', 'Bagoué', 'Bélier', 'Béré', 'Bounkani', 'Cavally', 'Folon', 'Gbêkê', 'Gbôklé', 'Gôh', 'Gontougo',
+  'Grands-Ponts', 'Guémon', 'Hambol', 'Haut-Sassandra', 'Iffou', 'Indénié-Djuablin', 'Kabadougou', 'La Mé', 'Lôh-Djiboua', 'Marahoué', 'Moronou', "N'Zi",
+  'Nawa', 'Poro', 'San-Pédro', 'Sud-Comoé', 'Tchologo', 'Tonkpi', 'Worodougou',
+];
+const _other = 'Autre (saisir)…';
 
 /// Ajouter un nouveau producteur sur le terrain (hors connexion possible) : identité, naissance, pièce d'identité, téléphone,
 /// localité, coopérative, consentement signé. Le producteur est utilisable tout de suite ; le serveur lui attribue son code à l'envoi.
@@ -28,7 +39,9 @@ class AddProducerScreen extends StatefulWidget {
 
 class _AddProducerScreenState extends State<AddProducerScreen> {
   final _last = TextEditingController(), _first = TextEditingController(), _idNo = TextEditingController(), _phone = TextEditingController();
-  final _region = TextEditingController(), _village = TextEditingController(), _section = TextEditingController();
+  final _section = TextEditingController();
+  String? _region, _quartier, _lieu;
+  List<Map<String, dynamic>> _known = [];
   String _gender = 'Homme';
   DateTime? _birth;
   bool _noId = false, _noPhone = false, _consent = false, _busy = false;
@@ -40,11 +53,54 @@ class _AddProducerScreenState extends State<AddProducerScreen> {
   void initState() {
     super.initState();
     services.repo.identity().then((i) { if (mounted) setState(() => _org = i.org); });
+    _loadLocalities();
+  }
+
+  /// Localités déjà connues (copie gardée sur l'appareil : les listes restent disponibles hors connexion).
+  Future<void> _loadLocalities() async {
+    final r = await services.repo.cachedGet('localities', () => services.api.get('/producers/localities'));
+    if (r == null || !mounted) return;
+    setState(() => _known = [for (final e in (r.data as List)) Map<String, dynamic>.from(e as Map)]);
+  }
+
+  List<String> _distinct(Iterable<String?> v, {Iterable<String> base = const []}) {
+    final seen = <String, String>{};
+    for (final x in [...base, ...v]) {
+      final t = (x ?? '').trim();
+      if (t.isNotEmpty) seen.putIfAbsent(t.toLowerCase(), () => t);
+    }
+    final l = seen.values.toList()..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    return l;
+  }
+
+  bool _same(String? a, String? b) => (a ?? '').trim().toLowerCase() == (b ?? '').trim().toLowerCase();
+  List<String> get _regions => _distinct(_known.map((e) => e['region'] as String?), base: _regionsCI);
+  List<String> get _quartiers => _distinct(_known.where((e) => _same(e['region'] as String?, _region)).map((e) => e['department'] as String?));
+  List<String> get _lieux => _distinct(_known.where((e) => _same(e['region'] as String?, _region) && _same(e['department'] as String?, _quartier)).map((e) => e['village'] as String?));
+
+  Future<String?> _askName(String title) async {
+    final c = TextEditingController();
+    final v = await showDialog<String>(context: context, builder: (d) => AlertDialog(
+      title: Text(title), content: TextField(controller: c, autofocus: true, textCapitalization: TextCapitalization.characters, decoration: fieldDeco('Nom')),
+      actions: [TextButton(onPressed: () => Navigator.pop(d), child: const Text('Annuler')), FilledButton(onPressed: () => Navigator.pop(d, c.text.trim()), child: const Text('Valider'))]));
+    return (v == null || v.isEmpty) ? null : v;
+  }
+
+  /// Liste déroulante de localité : permet aussi de saisir un nom absent de la liste (nouveau quartier ou nouveau lieu).
+  Widget _loc(String hint, String? value, List<String> items, ValueChanged<String?> set, String askTitle, {bool enabled = true}) {
+    final all = [...items, if (value != null && !items.any((i) => _same(i, value))) value];
+    return DropdownButtonFormField<String>(
+      key: ValueKey('$hint-$value-${all.length}'), value: all.contains(value) ? value : null, isExpanded: true, decoration: fieldDeco(hint).copyWith(filled: true, fillColor: Colors.white), hint: Text(hint),
+      items: [for (final i in all) DropdownMenuItem(value: i, child: Text(i, overflow: TextOverflow.ellipsis)), const DropdownMenuItem(value: _other, child: Text(_other, style: TextStyle(fontStyle: FontStyle.italic)))],
+      onChanged: !enabled ? null : (v) async {
+        if (v == _other) { final n = await _askName(askTitle); if (n != null) set(n); return; }
+        set(v);
+      });
   }
 
   @override
   void dispose() {
-    for (final c in [_last, _first, _idNo, _phone, _region, _village, _section]) { c.dispose(); }
+    for (final c in [_last, _first, _idNo, _phone, _section]) { c.dispose(); }
     super.dispose();
   }
 
@@ -89,8 +145,8 @@ class _AddProducerScreenState extends State<AddProducerScreen> {
       lastName: _last.text.trim(), firstNames: _first.text.trim(), gender: _gender == 'Homme' ? 'male' : 'female',
       birthDate: _birth == null ? null : '${_birth!.year}-${two(_birth!.month)}-${two(_birth!.day)}',
       idDocType: _noId || _idNo.text.trim().isEmpty ? null : _idType, idDocNumber: _noId || _idNo.text.trim().isEmpty ? null : _idNo.text.trim(),
-      phone: _noPhone ? null : _phoneE164, region: _region.text.trim().isEmpty ? null : _region.text.trim(),
-      section: _section.text.trim().isEmpty ? null : _section.text.trim(), village: _village.text.trim().isEmpty ? null : _village.text.trim(), consent: true);
+      phone: _noPhone ? null : _phoneE164, region: _region, department: _quartier,
+      section: _section.text.trim().isEmpty ? null : _section.text.trim(), village: _lieu, consent: true);
     if (_photo != null) await services.repo.queuePhoto(subjectType: 'producer', subjectId: id, kind: 'Photo du producteur', sourcePath: _photo!);
     final sig = File('${Directory.systemTemp.path}/signature-$id.png');
     await sig.writeAsBytes(_signature!);
@@ -119,8 +175,12 @@ class _AddProducerScreenState extends State<AddProducerScreen> {
               const SizedBox(width: 12),
               GestureDetector(
                 onTap: () async { final p = await takePhotoPath(); if (p != null && mounted) setState(() => _photo = p); },
-                child: Container(width: 96, height: 120, color: const Color(0xFFE6E6E6),
-                    child: _photo == null ? const Icon(Icons.add_a_photo_outlined, size: 40, color: Colors.black45) : Image.file(File(_photo!), fit: BoxFit.cover)),
+                child: SizedBox(width: 104, height: 128, child: Stack(clipBehavior: Clip.none, children: [
+                  Positioned.fill(child: Container(color: const Color(0xFFE6E6E6),
+                      child: _photo == null ? const Icon(Icons.person, size: 72, color: Colors.black38) : Image.file(File(_photo!), fit: BoxFit.cover))),
+                  Positioned(right: -8, bottom: -8, child: Container(width: 40, height: 40, decoration: const BoxDecoration(color: Color(0xFFF28C1E), shape: BoxShape.circle),
+                      child: const Icon(Icons.add_a_photo_outlined, color: Colors.white, size: 22))),
+                ])),
               ),
             ]),
           ]),
@@ -146,9 +206,17 @@ class _AddProducerScreenState extends State<AddProducerScreen> {
             ]),
           ])),
           FieldCard(title: 'Localité', child: Column(children: [
-            TextField(controller: _region, decoration: fieldDeco('Région')),
+            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Expanded(child: DropdownButtonFormField<String>(value: "CÔTE D'IVOIRE", isExpanded: true, decoration: fieldDeco('Pays'),
+                  items: const [DropdownMenuItem(value: "CÔTE D'IVOIRE", child: Text("CÔTE D'IVOIRE", overflow: TextOverflow.ellipsis))], onChanged: (_) {})),
+              const SizedBox(width: 8),
+              Expanded(child: _loc('Région', _region, _regions, (v) => setState(() { _region = v; _quartier = null; _lieu = null; }), 'Nouvelle région')),
+            ]),
             const SizedBox(height: 8),
-            TextField(controller: _village, decoration: fieldDeco('Village ou quartier')),
+            _loc('Sélectionnez le quartier', _quartier, _quartiers, (v) => setState(() { _quartier = v; _lieu = null; }), 'Nouveau quartier', enabled: _region != null),
+            const SizedBox(height: 8),
+            Align(alignment: Alignment.centerLeft, child: FractionallySizedBox(widthFactor: 0.6,
+                child: _loc('Sélectionnez lieu', _lieu, _lieux, (v) => setState(() => _lieu = v), 'Nouveau lieu', enabled: _quartier != null))),
           ])),
           FieldCard(title: "Informations sur l'exploitation agricole", child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             fieldLabel("Rôle de l'agriculteur"),
