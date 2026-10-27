@@ -4,7 +4,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:uuid/uuid.dart';
 
 /// Compte déjà connecté sur ce téléphone : reconnu à l'écran de connexion, sans ressaisie du mot de passe tant que la session reste valide.
-/// Aucun mot de passe n'est conservé : seulement le jeton de renouvellement, dans le Keystore.
+/// Ici, seulement le jeton de renouvellement (dans le Keystore) ; les mots de passe mémorisés à la demande de l'utilisateur sont à part (SavedLogin).
 class KnownAccount {
   final String email, name, org, refresh;
   final DateTime last;
@@ -13,6 +13,12 @@ class KnownAccount {
   factory KnownAccount.fromJson(Map<String, dynamic> j) => KnownAccount(email: '${j['email']}', name: '${j['name'] ?? ''}', org: '${j['org'] ?? ''}', refresh: '${j['refresh'] ?? ''}', last: DateTime.tryParse('${j['last']}') ?? DateTime.now());
   KnownAccount copy({String? refresh, DateTime? last, String? name, String? org}) => KnownAccount(email: email, name: name ?? this.name, org: org ?? this.org, refresh: refresh ?? this.refresh, last: last ?? this.last);
   String get initials { final p = name.trim().split(RegExp(r'\s+')).where((x) => x.isNotEmpty).toList(); return p.isEmpty ? email.substring(0, 1).toUpperCase() : p.take(2).map((x) => x[0].toUpperCase()).join(); }
+}
+
+/// Accès mémorisé (« Se souvenir de mes identifiants ») : e-mail et mot de passe, proposés dans une liste quand on touche le champ e-mail.
+class SavedLogin {
+  final String email, password;
+  const SavedLogin(this.email, this.password);
 }
 
 /// Jetons et clé de chiffrement de la base locale, dans le stockage sécurisé d'Android (Keystore).
@@ -56,6 +62,35 @@ class SessionStore {
     await _saveAccounts(l);
   }
 
+  // ── Accès mémorisés (stockage sécurisé Android, chiffré par le Keystore)
+  Future<List<SavedLogin>> savedLogins() async {
+    final raw = await _s.read(key: 'saved_logins');
+    if (raw == null) return [];
+    try {
+      return (jsonDecode(raw) as List).map((e) => SavedLogin('${(e as Map)['e']}', '${e['p']}')).where((x) => x.email.isNotEmpty).toList();
+    } catch (_) { return []; }
+  }
+
+  Future<void> _writeLogins(List<SavedLogin> l) => l.isEmpty ? _s.delete(key: 'saved_logins') : _s.write(key: 'saved_logins', value: jsonEncode(l.map((x) => {'e': x.email, 'p': x.password}).toList()));
+
+  /// Mémorise (ou met à jour) l'accès ; le plus récent passe en tête de liste.
+  Future<void> saveLogin(String email, String password) async {
+    final e = email.trim().toLowerCase();
+    if (e.isEmpty || password.isEmpty) return;
+    final l = (await savedLogins()).where((x) => x.email != e).toList()..insert(0, SavedLogin(e, password));
+    await _writeLogins(l);
+  }
+
+  Future<void> removeLogin(String email) async => _writeLogins((await savedLogins()).where((x) => x.email != email.trim().toLowerCase()).toList());
+
+  /// Mot de passe changé pour le compte en cours : la copie mémorisée (s'il y en a une) est mise à jour.
+  Future<void> updateSavedPassword(String password) async {
+    final cur = await _s.read(key: 'current');
+    if (cur == null) return;
+    final l = await savedLogins();
+    if (l.any((x) => x.email == cur)) await _writeLogins([for (final x in l) x.email == cur ? SavedLogin(cur, password) : x]);
+  }
+
   /// Après une connexion réussie : ce compte devient le compte en cours et est mémorisé.
   Future<void> rememberAccount({required String email, required String name, required String org}) async {
     final e = email.trim().toLowerCase();
@@ -78,7 +113,7 @@ class SessionStore {
   }
 
   /// « Oublier ce compte » : il disparaît de la liste (la prochaine connexion exigera le mot de passe).
-  Future<void> forgetAccount(String email) async => _saveAccounts((await knownAccounts()).where((a) => a.email != email).toList());
+  Future<void> forgetAccount(String email) async { await _saveAccounts((await knownAccounts()).where((a) => a.email != email).toList()); await removeLogin(email); }
 
   /// Session refusée par le serveur (accès retiré ou expiré) : le compte reste dans la liste mais devra ressaisir son mot de passe.
   Future<void> invalidateCurrentAccount() async {

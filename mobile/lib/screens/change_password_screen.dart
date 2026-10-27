@@ -23,6 +23,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     setState(() { _busy = true; _error = null; });
     try {
       await services.api.post('/auth/change-password', {'current_password': _cur.text, 'new_password': _next.text});
+      await services.store.updateSavedPassword(_next.text);
       if (mounted) widget.onDone();
     } on NetworkException {
       setState(() => _error = 'Pas de connexion : le changement nécessite Internet.');

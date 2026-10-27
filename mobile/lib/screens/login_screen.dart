@@ -23,6 +23,9 @@ class _LoginScreenState extends State<LoginScreen> {
   final _otp = TextEditingController();
   bool _needOtp = false; // double authentification demandée par le serveur
   bool _busy = false;
+  bool _remember = true; // « Se souvenir de mes identifiants »
+  List<SavedLogin> _saved = [];
+  final _emailFocus = FocusNode();
   bool _show = false; // afficher le mot de passe saisi
   bool _syncing = false;
   String? _error;
@@ -38,7 +41,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _loadKnown() async {
     final k = await services.store.knownAccounts();
-    if (mounted) setState(() => _known = k);
+    final sv = await services.store.savedLogins();
+    if (mounted) setState(() { _known = k; _saved = sv; });
   }
 
   /// Compte déjà connecté sur ce téléphone : reprise de la session sans mot de passe ; hors connexion, accès aux données de l'appareil.
@@ -140,6 +144,8 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       _who = _email.text.trim().toLowerCase();
       await services.api.login(_email.text.trim().toLowerCase(), _password.text, deviceLabel: 'Android', otp: _needOtp ? _otp.text.trim() : null);
+      // Identifiants valides : mémorisés (ou retirés de la liste si la case est décochée).
+      try { if (_remember) { await services.store.saveLogin(_email.text, _password.text); } else { await services.store.removeLogin(_email.text); } } catch (_) { /* stockage indisponible : sans conséquence */ }
       final orgs = await services.api.myOrganizations();
       if (orgs.isEmpty) {
         await services.store.signOut();
@@ -236,9 +242,33 @@ class _LoginScreenState extends State<LoginScreen> {
                     const Text('Ou connectez-vous avec un autre compte', style: TextStyle(color: Colors.black54)),
                     const SizedBox(height: 8),
                   ],
-                  TextField(controller: _email, keyboardType: TextInputType.emailAddress, autofillHints: const [AutofillHints.username], decoration: const InputDecoration(labelText: 'E-mail', border: OutlineInputBorder())),
+                  RawAutocomplete<SavedLogin>(
+                    textEditingController: _email,
+                    focusNode: _emailFocus,
+                    displayStringForOption: (o) => o.email,
+                    // Les accès mémorisés sortent dès qu'on touche le champ ; la saisie filtre la liste.
+                    optionsBuilder: (v) {
+                      final q = v.text.trim().toLowerCase();
+                      return _saved.where((x) => q.isEmpty || x.email.contains(q)).where((x) => x.email != q);
+                    },
+                    onSelected: (o) => setState(() { _email.text = o.email; _password.text = o.password; _remember = true; _error = null; }),
+                    // Saisie semi-automatique du système désactivée (liste vide) : c'est la liste des accès mémorisés de l'application qui s'affiche, pas celle d'un autre service.
+                    fieldViewBuilder: (context, controller, focus, onSubmit) => TextField(controller: controller, focusNode: focus, keyboardType: TextInputType.emailAddress, autofillHints: const <String>[], autocorrect: false, enableSuggestions: false,
+                      decoration: InputDecoration(labelText: 'E-mail', border: const OutlineInputBorder(),
+                        suffixIcon: _saved.isEmpty ? null : IconButton(tooltip: 'Choisir un accès enregistré', icon: const Icon(Icons.arrow_drop_down), onPressed: () { focus.unfocus(); Future.microtask(focus.requestFocus); }))),
+                    optionsViewBuilder: (context, onSelected, options) => Align(alignment: Alignment.topLeft, child: Material(
+                      elevation: 4, borderRadius: BorderRadius.circular(12), clipBehavior: Clip.antiAlias,
+                      child: ConstrainedBox(constraints: const BoxConstraints(maxHeight: 240, maxWidth: 420), child: ListView(padding: EdgeInsets.zero, shrinkWrap: true, children: [
+                        for (final o in options) ListTile(
+                          leading: const Icon(Icons.key_outlined), title: Text(o.email), subtitle: const Text('Mot de passe enregistré'),
+                          trailing: IconButton(tooltip: 'Supprimer cet accès', icon: const Icon(Icons.close), onPressed: () async { await services.store.removeLogin(o.email); await _loadKnown(); _emailFocus.unfocus(); }),
+                          onTap: () => onSelected(o)),
+                      ])),
+                    )),
+                  ),
                   const SizedBox(height: 12),
-                  TextField(controller: _password, obscureText: !_show, autofillHints: const [AutofillHints.password], decoration: InputDecoration(labelText: 'Mot de passe', border: const OutlineInputBorder(), suffixIcon: IconButton(tooltip: _show ? 'Masquer le mot de passe' : 'Afficher le mot de passe', icon: Icon(_show ? Icons.visibility_off : Icons.visibility), onPressed: () => setState(() => _show = !_show))), onSubmitted: (_) => _login()),
+                  TextField(controller: _password, obscureText: !_show, autofillHints: const <String>[], enableSuggestions: false, autocorrect: false, decoration: InputDecoration(labelText: 'Mot de passe', border: const OutlineInputBorder(), suffixIcon: IconButton(tooltip: _show ? 'Masquer le mot de passe' : 'Afficher le mot de passe', icon: Icon(_show ? Icons.visibility_off : Icons.visibility), onPressed: () => setState(() => _show = !_show))), onSubmitted: (_) => _login()),
+                  CheckboxListTile(value: _remember, onChanged: (v) => setState(() => _remember = v ?? true), controlAffinity: ListTileControlAffinity.leading, contentPadding: EdgeInsets.zero, dense: true, title: const Text('Se souvenir de mes identifiants')),
                   if (_needOtp) ...[
                     const SizedBox(height: 12),
                     TextField(controller: _otp, keyboardType: TextInputType.number, autofocus: true, autofillHints: const [AutofillHints.oneTimeCode], decoration: const InputDecoration(labelText: "Code de vérification (application d'authentification) ou code de secours", border: OutlineInputBorder()), onSubmitted: (_) => _login()),
