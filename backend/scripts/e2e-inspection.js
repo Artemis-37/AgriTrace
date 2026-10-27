@@ -50,6 +50,9 @@ const login = async (e, p) => (await call('POST', '/auth/login', { body: { email
   const pdf = await call('GET', `/questionnaires/targets/${t1}/export`, J);
   check('export PDF avec croquis', pdf.status === 200 && pdf.buf.slice(0, 4).toString() === '%PDF' && pdf.buf.length > 3000, pdf.status);
   require('fs').writeFileSync('/tmp/inspection-test.pdf', pdf.buf);
+  const wd = await call('GET', `/questionnaires/targets/${t1}/export?format=docx`, J);
+  check('export Word (.docx valide)', wd.status === 200 && wd.buf.slice(0, 2).toString() === 'PK' && wd.buf.length > 5000, wd.status);
+  require('fs').writeFileSync('/tmp/inspection-test.docx', wd.buf);
   // beaucoup de non-conformités → reprise
   const a2 = { ...base }; ev.slice(0, Math.ceil(ev.length / 2)).forEach((x) => { a2[x.id] = 'Non conforme'; });
   const r2 = await call('POST', `/questionnaires/targets/${t2}/answers`, { ...J, body: { answers: a2 } });

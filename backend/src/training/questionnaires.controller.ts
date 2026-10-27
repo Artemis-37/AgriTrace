@@ -9,6 +9,7 @@ import { AuditService } from '../audit/audit.service';
 import { DbService } from '../db/db.service';
 import { QUESTIONNAIRE_TEMPLATES } from './questionnaire-templates';
 import { inspectionPdf, raInspectionPdf, sketchDescription } from '../common/pdf';
+import { raInspectionDocx } from '../common/word';
 import { NotificationsService } from '../notifications/notifications.service';
 import { applyAuto, evaluate, findQuestion, isInspection, APPROVAL_THRESHOLD } from './inspection';
 import { CERT_SCHEMES } from './certification-logos.controller';
@@ -247,7 +248,7 @@ export class QuestionnairesController {
 
   /** Fiche remplie d'un producteur, en PDF, avec le logo de la certification choisie par l'ADG (téléversé par la coopérative). */
   @Get('targets/:targetId/export')
-  async exportTarget(@Param('targetId', ParseUUIDPipe) targetId: string, @Req() req: any, @Query('certification') cert?: string) {
+  async exportTarget(@Param('targetId', ParseUUIDPipe) targetId: string, @Req() req: any, @Query('certification') cert?: string, @Query('format') format?: string) {
     if (!['training:assign', 'questionnaires:manage'].some((x) => req.org.permissions.has(x))) throw new ForbiddenException('Droit insuffisant');
     if (cert && !CERT_SCHEMES[cert]) throw new BadRequestException('Certification inconnue');
     const d = await this.db.tx(req.org.id, async (c) => {
@@ -274,6 +275,7 @@ export class QuestionnairesController {
     const shown = insp ? applyAuto(d.t.questions, d.t.answers ?? {}).answers : d.t.answers;
     const croquis = insp ? findQuestion(d.t.questions, /^Croquis de l.exploitation/i) : undefined;
     if (croquis) shown[croquis.id] = sketchDescription(d.parcels);
+    if (format === 'docx' && d.t.template_code !== 'ii-ra') throw new BadRequestException('L\'export Word est disponible pour la fiche d\'inspection Rainforest Alliance détaillée');
     if (d.t.template_code === 'ii-ra') {
       const qs = d.t.questions as Question[], ans = shown ?? {};
       const A = (re: RegExp) => { const q = findQuestion(qs, re); return q ? ans[q.id] : undefined; };
@@ -284,7 +286,7 @@ export class QuestionnairesController {
       const first = d.parcels[0];
       const fr = (n: number) => n.toFixed(2).replace('.', ',');
       const yn = (v: any) => (v === 'oui' ? true : v === 'non' ? false : null);
-      const ra = await raInspectionPdf({
+      const fiche = {
         orgName: o?.name ?? '', certLogo: d.certLogo, orgLogo: d.orgLogo,
         f: {
           name: `${d.t.last_name} ${d.t.first_names}`.trim(), idDoc: [d.t.id_doc_type, d.t.id_doc_number].filter(Boolean).join(' ') || str(A(/^1\. Membre du groupe : type/)), birth: d.t.birth_date ? new Date(d.t.birth_date).toISOString().slice(0, 10) : '',
@@ -299,7 +301,13 @@ export class QuestionnairesController {
         male: d.t.gender === 'male' ? true : d.t.gender === 'female' ? false : null, owner: yn(A(/^2\. Le membre est-il le propriétaire/)), hasWorkers: yn(A(/^5\. Le membre a-t-il des travailleurs/)),
         reqs, decision: str(A(/^Recommandation de l.inspecteur/)) || null, corrective: str(A(/^Mesures correctives/)), remarks: str(A(/^Remarques additionnelles/)),
         nc: ev.lines, score: ev.score, threshold: APPROVAL_THRESHOLD, sketch: d.parcels,
-      });
+      };
+      if (format === 'docx') {
+        const word = await raInspectionDocx(fiche);
+        await this.audit.log({ organizationId: req.org.id, actorUserId: req.user.id, action: 'questionnaire.export', entityType: 'producer_assignment_target', entityId: targetId, details: { certification: d.scheme, layout: 'ra-v1.4', format: 'docx' } });
+        return new StreamableFile(word, { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', disposition: `attachment; filename="inspection-interne-${d.t.internal_code}.docx"` });
+      }
+      const ra = await raInspectionPdf(fiche);
       await this.audit.log({ organizationId: req.org.id, actorUserId: req.user.id, action: 'questionnaire.export', entityType: 'producer_assignment_target', entityId: targetId, details: { certification: d.scheme, layout: 'ra-v1.4' } });
       return new StreamableFile(ra, { type: 'application/pdf', disposition: `attachment; filename="inspection-interne-${d.t.internal_code}.pdf"` });
     }

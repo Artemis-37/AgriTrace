@@ -279,3 +279,5 @@ Le serveur n'attribue plus de code producteur de sa propre initiative. Dans **Pa
 
 - Onglet Affectations : **Exporter toutes les tâches** (Excel, une ligne par producteur avec statut, date et score) et **Importer des tâches** (modèle fourni : titre, type, questionnaire ou module, échéance, consignes, codes producteurs ; vide = tous).
 - Questionnaires : bouton **Exporter** par questionnaire, au format du modèle d'importation (modifiable puis réimportable).
+
+La fiche d'inspection Rainforest Alliance s'exporte aussi en **Word (.docx)**, avec la même mise en page que le PDF (bouton « Exporter (Word) » dans la fiche renseignée).

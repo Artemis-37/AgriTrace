@@ -168,7 +168,7 @@ function drawSketch(doc: PDFKit.PDFDocument, parcels: { code: string; ha: number
 
 // ───────────── Fiche d'inspection interne Rainforest Alliance (mise en page de la fiche papier, version 1.4) ─────────────
 
-const SECTIONS_RA: [string, string][] = [
+export const SECTIONS_RA: [string, string][] = [
   ['1.2', '1.2.    ADMINISTRATION'], ['1.5', '1.5.    MÉCANISME DE RÉCLAMATION'], ['2.1', '2.1. TRAÇABILITÉ'], ['3.1', '3.1 PRIME'], ['4.1', '4.1. PLANTATION ET ROTATION'], ['4.2', '4.2 TAILLE ET ROTATION DES CULTURES'],
   ['4.3', '4.3. ORGANISMES GÉNÉTIQUEMENT MODIFIÉS (OGM)'], ['4.4', '4.4   CONSERVATION ET FERTILITÉ DES SOLS'], ['4.5', '4.5 PROTECTION INTÉGRÉE DES CULTURES (PIC)'], ['4.6', '4.6    GESTION DES PRODUITS CHIMIQUES'],
   ['4.7', '4.7.    PRATIQUES DE RÉCOLTES ET POST-RÉCOLTES'], ['5.2', "5.2. LIBERTÉ D'ASSOCIATION ET NÉGOCIATION COLLECTIVE"], ['5.3', '5.3. SALAIRES ET CONTRATS'], ['5.5', '5.5.   CONDITIONS DE TRAVAIL'],
