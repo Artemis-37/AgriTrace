@@ -221,7 +221,7 @@ class _AddProducerScreenState extends State<AddProducerScreen> {
               Expanded(child: _loc('Région', _region, _regions, (v) => setState(() { _region = v; _quartier = null; _lieu = null; }), 'Nouvelle région')),
             ]),
             const SizedBox(height: 8),
-            _loc('Sélectionnez la ville (chef-lieu)', _quartier, _quartiers, (v) => setState(() { _quartier = v; _lieu = null; }), 'Nouvelle ville (chef-lieu)', enabled: _region != null),
+            _loc('Sélectionnez le département', _quartier, _quartiers, (v) => setState(() { _quartier = v; _lieu = null; }), 'Nouveau département', enabled: _region != null),
             const SizedBox(height: 8),
             Align(alignment: Alignment.centerLeft, child: FractionallySizedBox(widthFactor: 0.6,
                 child: _loc('Sélectionnez la sous-préfecture', _lieu, _lieux, (v) => setState(() => _lieu = v), 'Nouvelle sous-préfecture', enabled: _quartier != null))),

@@ -186,7 +186,7 @@ export class ProducersController {
       ['Date de naissance', 'JJ/MM/AAAA.'],
       ["Type de pièce d'identité", "Par exemple : CNI ivoirienne, CNI malienne, CNI burkinabé, Passeport, Numéro matricule CCC du producteur, Pas de CNI ni matricule CCC. Obligatoire si le numéro de pièce est rempli."],
       ['Téléphone', 'Avec ou sans +225 (8 à 15 chiffres).'],
-      ['Région, Ville (chef-lieu de région), Sous-préfecture', "Mêmes noms que dans la fiche producteur du téléphone : Région (ex. Haut-Sassandra) > Ville chef-lieu de région (ex. Daloa) > Sous-préfecture (ex. Zoukougbeu). Les anciens intitulés « Quartier », « Lieu », « Département » et « Village » sont toujours reconnus."],
+      ['Région, Département, Sous-préfecture', "Mêmes noms que dans la fiche producteur du téléphone : Région (ex. Haut-Sassandra) > Département (ville chef-lieu de région, ex. Daloa) > Sous-préfecture (ex. Zoukougbeu). Les anciens intitulés « Quartier », « Ville », « Lieu » et « Village » sont toujours reconnus."],
       ['Section', 'Section de la coopérative, telle qu\'elle figure dans la liste de Paramètres.'],
       ['Superficie (ha), Estimation (kg)', 'Nombres positifs, virgule décimale acceptée.'],
       ['Filières', 'Codes séparés par une virgule (ex. CACAO). Vide : toutes les filières de la coopérative.'],

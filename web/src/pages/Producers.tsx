@@ -248,7 +248,7 @@ function ChangeStatus({ p, onClose, onDone }: { p: any; onClose: () => void; onD
 }
 
 const IMPORT_FIELDS: [string, string][] = [
-  ['last_name', 'Nom *'], ['first_names', 'Prénoms *'], ['internal_code', 'Code'], ['gender', 'Sexe'], ['phone', 'Téléphone'], ['region', 'Région'], ['department', 'Ville (chef-lieu)'],
+  ['last_name', 'Nom *'], ['first_names', 'Prénoms *'], ['internal_code', 'Code'], ['gender', 'Sexe'], ['phone', 'Téléphone'], ['region', 'Région'], ['department', 'Département'],
   ['section', 'Section'], ['village', 'Sous-préfecture'], ['area_ha', 'Superficie (ha)'], ['estimated_kg', 'Estimation (kg)'], ['value_chains', 'Filières'], ['joined_on', "Date d'adhésion"], ['birth_date', 'Date de naissance'], ['id_doc_type', "Type de pièce d'identité"], ['id_doc_number', "Numéro de la pièce d'identité"],
 ];
 
