@@ -35,7 +35,7 @@ class AddProducerScreen extends StatefulWidget {
 
 class _AddProducerScreenState extends State<AddProducerScreen> {
   final _last = TextEditingController(), _first = TextEditingController(), _idNo = TextEditingController(), _phone = TextEditingController();
-  final _village = TextEditingController();
+  final _village = TextEditingController(), _code = TextEditingController();
   String? _region, _quartier, _lieu, _section;
   List<String> _sections = [];
   List<Map<String, dynamic>> _known = [];
@@ -122,7 +122,7 @@ class _AddProducerScreenState extends State<AddProducerScreen> {
 
   @override
   void dispose() {
-    for (final c in [_last, _first, _idNo, _phone, _village]) { c.dispose(); }
+    for (final c in [_last, _first, _idNo, _phone, _village, _code]) { c.dispose(); }
     super.dispose();
   }
 
@@ -135,6 +135,7 @@ class _AddProducerScreenState extends State<AddProducerScreen> {
     if (_last.text.trim().isEmpty || _first.text.trim().isEmpty) return 'Le nom et les prénoms sont obligatoires.';
     if (!_noPhone && _phone.text.trim().isNotEmpty && !RegExp(r'^\d{8,12}$').hasMatch(_phone.text.replaceAll(RegExp(r'\D'), ''))) return 'Numéro de téléphone invalide.';
     if (!_noId && _idNo.text.trim().isNotEmpty && _idType == null) return "Choisissez le type de pièce d'identité.";
+    if (_code.text.trim().isNotEmpty && !RegExp(r'^[A-Za-z0-9_-]{1,30}$').hasMatch(_code.text.trim())) return 'Code producteur : lettres, chiffres, tiret ou souligné uniquement (30 caractères au plus).';
     if (!_consent) return 'La déclaration de consentement doit être lue et validée.';
     if (_signature == null) return 'La signature du producteur est obligatoire.';
     return null;
@@ -168,7 +169,7 @@ class _AddProducerScreenState extends State<AddProducerScreen> {
       birthDate: _birth == null ? null : '${_birth!.year}-${two(_birth!.month)}-${two(_birth!.day)}',
       idDocType: _noId || _idNo.text.trim().isEmpty ? null : _idType, idDocNumber: _noId || _idNo.text.trim().isEmpty ? null : _idNo.text.trim(),
       phone: _noPhone ? null : _phoneE164, region: _region, department: _quartier, subPrefecture: _lieu,
-      section: _section, village: _village.text.trim().isEmpty ? null : _village.text.trim(), consent: true);
+      section: _section, internalCode: _code.text.trim().isEmpty ? null : _code.text.trim(), village: _village.text.trim().isEmpty ? null : _village.text.trim(), consent: true);
     if (_photo != null) await services.repo.queuePhoto(subjectType: 'producer', subjectId: id, kind: 'Photo du producteur', sourcePath: _photo!);
     final sig = File('${Directory.systemTemp.path}/signature-$id.png');
     await sig.writeAsBytes(_signature!);
@@ -229,10 +230,11 @@ class _AddProducerScreenState extends State<AddProducerScreen> {
           ])),
           FieldCard(title: 'Localité', child: Column(children: [
             Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Expanded(child: DropdownButtonFormField<String>(value: "CÔTE D'IVOIRE", isExpanded: true, decoration: fieldDeco('Pays'),
-                  items: const [DropdownMenuItem(value: "CÔTE D'IVOIRE", child: Text("CÔTE D'IVOIRE", overflow: TextOverflow.ellipsis))], onChanged: (_) {})),
+              Expanded(flex: 5, child: DropdownButtonFormField<String>(value: "CÔTE D'IVOIRE", isExpanded: true, decoration: fieldDeco('Pays').copyWith(contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12)),
+                  style: const TextStyle(fontSize: 13, color: Colors.black87),
+                  items: const [DropdownMenuItem(value: "CÔTE D'IVOIRE", child: Text("CÔTE D'IVOIRE", maxLines: 1, softWrap: false, overflow: TextOverflow.fade))], onChanged: (_) {})),
               const SizedBox(width: 8),
-              Expanded(child: _loc('Région', _region, _regions, (v) => setState(() { _region = v; _quartier = null; _lieu = null; }), 'Nouvelle région')),
+              Expanded(flex: 6, child: _loc('Région', _region, _regions, (v) => setState(() { _region = v; _quartier = null; _lieu = null; }), 'Nouvelle région')),
             ]),
             const SizedBox(height: 8),
             _loc('Sélectionnez le département', _quartier, _quartiers, (v) => setState(() { _quartier = v; _lieu = null; }), 'Nouveau département', enabled: _region != null),
@@ -243,16 +245,18 @@ class _AddProducerScreenState extends State<AddProducerScreen> {
           FieldCard(title: "Informations sur l'exploitation agricole", child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             fieldLabel("Rôle de l'agriculteur"),
             InputDecorator(decoration: fieldDeco('').copyWith(filled: true, fillColor: const Color(0xFFEEEEEE)), child: const Text('Agriculteur principal')),
+            fieldLabel('Code du producteur'),
+            TextField(controller: _code, textCapitalization: TextCapitalization.characters, decoration: fieldDeco('Code du producteur (laissé vide : attribué automatiquement)')),
           ])),
           FieldCard(title: 'Village', child: TextField(controller: _village, textCapitalization: TextCapitalization.words, decoration: fieldDeco('Village ou campement (facultatif)'))),
-          FieldCard(title: 'Coopérative', child: Row(children: [
-            Expanded(child: InputDecorator(decoration: fieldDeco('').copyWith(filled: true, fillColor: const Color(0xFFEEEEEE)), child: Text(_org.isEmpty ? 'Ma coopérative' : _org))),
-            const SizedBox(width: 8),
-            Expanded(child: FieldDropdown(value: _section, hint: 'Sélectionnez la section', items: _sections, onChanged: (v) => setState(() => _section = v))),
+          FieldCard(title: 'Coopérative', child: Column(children: [
+            InputDecorator(decoration: fieldDeco('').copyWith(filled: true, fillColor: const Color(0xFFEEEEEE)), child: Text(_org.isEmpty ? 'Ma coopérative' : _org, maxLines: 1, overflow: TextOverflow.ellipsis)),
+            const SizedBox(height: 8),
+            FieldDropdown(value: _section, hint: 'Sélectionnez la section', items: _sections, onChanged: (v) => setState(() => _section = v)),
           ])),
           if (_msg != null) Padding(padding: const EdgeInsets.fromLTRB(16, 10, 16, 0), child: Text(_msg!, style: TextStyle(color: Colors.red.shade700, fontWeight: FontWeight.w600))),
         ])),
-        Material(color: Colors.white, elevation: 8, child: Padding(padding: const EdgeInsets.all(10), child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Material(color: Colors.white, elevation: 8, child: SafeArea(top: false, child: Padding(padding: const EdgeInsets.all(10), child: Column(mainAxisSize: MainAxisSize.min, children: [
           OutlinedButton(
             onPressed: _read, style: OutlinedButton.styleFrom(minimumSize: const Size(double.infinity, 48), side: BorderSide(color: _consent ? fieldAction : fieldGreen, width: 2), foregroundColor: fieldGreen),
             child: Text(_consent ? 'Déclaration de consentement validée ✓' : 'VEUILLEZ LIRE ET VALIDER LA DÉCLARATION DE CONSENTEMENT', textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.w700)),
@@ -265,7 +269,7 @@ class _AddProducerScreenState extends State<AddProducerScreen> {
             const SizedBox(width: 8),
             Expanded(child: FilledButton(onPressed: _busy ? null : _save, style: FilledButton.styleFrom(backgroundColor: fieldAction, minimumSize: const Size(0, 48)), child: const Text('SAUVEGARDER'))),
           ]),
-        ]))),
+        ])))),
       ]),
     );
   }
