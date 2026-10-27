@@ -172,9 +172,27 @@ export class ProducersController {
     const ws = wb.addWorksheet('Producteurs');
     ws.addRow(TARGET_FIELDS.map((f) => TEMPLATE_HEADERS[f]));
     ws.getRow(1).font = { bold: true };
-    const sample: Record<string, string> = { internal_code: '', last_name: 'KONE', first_names: 'Awa', phone: '+2250701020304', region: 'Haut-Sassandra', department: 'Daloa', section: 'Hiré', village: 'Hiré centre', area_ha: '2.5', estimated_kg: '1200', value_chains: 'CACAO', joined_on: '2024-05-12', gender: 'F' };
+    const sample: Record<string, string> = { internal_code: '', last_name: 'KONE', first_names: 'Awa', phone: '+2250701020304', region: 'Haut-Sassandra', department: 'Daloa', section: 'Hiré', village: 'Hiré centre', area_ha: '2.5', estimated_kg: '1200', value_chains: 'CACAO', joined_on: '2024-05-12', gender: 'F', birth_date: '14/03/1985', id_doc_type: 'CNI ivoirienne', id_doc_number: 'C0012345678' };
     ws.addRow(TARGET_FIELDS.map((f) => sample[f] ?? ''));
-    ws.columns.forEach((col) => (col.width = 18));
+    ws.columns.forEach((col) => (col.width = 22));
+    ws.views = [{ state: 'frozen', ySplit: 1 }];
+    const guide = wb.addWorksheet('Instructions');
+    guide.columns = [{ width: 34 }, { width: 90 }];
+    guide.addRow(['Colonne', 'Comment la remplir']).font = { bold: true };
+    for (const r of [
+      ['Nom, Prénoms', 'Obligatoires.'],
+      ['Code', 'Facultatif : laissé vide, le code est attribué automatiquement.'],
+      ['Sexe', 'M ou F (Homme / Femme acceptés).'],
+      ['Date de naissance', 'JJ/MM/AAAA.'],
+      ["Type de pièce d'identité", "Par exemple : CNI ivoirienne, CNI malienne, CNI burkinabé, Passeport, Numéro matricule CCC du producteur, Pas de CNI ni matricule CCC. Obligatoire si le numéro de pièce est rempli."],
+      ['Téléphone', 'Avec ou sans +225 (8 à 15 chiffres).'],
+      ['Région, Quartier, Lieu', "Mêmes noms que dans la fiche producteur du téléphone : Région (ex. Haut-Sassandra) > Quartier (ex. Daloa) > Lieu (village ou campement). Les anciens intitulés « Département » et « Village » sont toujours reconnus."],
+      ['Section', 'Section de la coopérative, telle qu\'elle figure dans la liste de Paramètres.'],
+      ['Superficie (ha), Estimation (kg)', 'Nombres positifs, virgule décimale acceptée.'],
+      ['Filières', 'Codes séparés par une virgule (ex. CACAO). Vide : toutes les filières de la coopérative.'],
+      ["Date d'adhésion", 'AAAA-MM-JJ.'],
+    ]) guide.addRow(r);
+    guide.getColumn(2).alignment = { wrapText: true, vertical: 'top' };
     return new StreamableFile(Buffer.from(await wb.xlsx.writeBuffer()), {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       disposition: 'attachment; filename="modele-producteurs.xlsx"',
@@ -373,10 +391,11 @@ export class ProducersController {
         if (!result.dry_run) {
           const code = r.data.internal_code ?? (await this.nextCode(c, req.org.id));
           const ins = await c.query(
-            `INSERT INTO producers(organization_id, internal_code, last_name, first_names, phone, region, department, section, village, joined_on, created_by, area_ha, estimated_kg, gender)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING id`,
+            `INSERT INTO producers(organization_id, internal_code, last_name, first_names, phone, region, department, section, village, joined_on, created_by, area_ha, estimated_kg, gender, birth_date, id_doc_type, id_doc_number)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) RETURNING id`,
             [req.org.id, code, r.data.last_name, r.data.first_names, r.data.phone ?? null, r.data.region ?? null,
-             r.data.department ?? null, r.data.section ?? null, r.data.village ?? null, r.data.joined_on ?? null, req.user.id, r.data.area_ha ?? null, r.data.estimated_kg ?? null, r.data.gender ?? null]);
+             r.data.department ?? null, r.data.section ?? null, r.data.village ?? null, r.data.joined_on ?? null, req.user.id, r.data.area_ha ?? null, r.data.estimated_kg ?? null, r.data.gender ?? null,
+             r.data.birth_date ?? null, r.data.id_doc_type ?? null, r.data.id_doc_number ?? null]);
           for (const vc of (chainIds.length ? chainIds : [...chains.values()]))
             await c.query(`INSERT INTO producer_value_chains(producer_id, value_chain_id, organization_id) VALUES ($1,$2,$3)`, [ins.rows[0].id, vc, req.org.id]);
         }

@@ -3,6 +3,7 @@
 export const TARGET_FIELDS = [
   'internal_code', 'last_name', 'first_names', 'phone', 'region', 'department',
   'section', 'village', 'area_ha', 'estimated_kg', 'value_chains', 'joined_on', 'gender',
+  'birth_date', 'id_doc_type', 'id_doc_number',
 ] as const;
 export type TargetField = (typeof TARGET_FIELDS)[number];
 
@@ -13,14 +14,27 @@ export const TEMPLATE_HEADERS: Record<TargetField, string> = {
   first_names: 'Prénoms',
   phone: 'Téléphone',
   region: 'Région',
-  department: 'Département',
+  department: 'Quartier',
   section: 'Section',
-  village: 'Village',
+  village: 'Lieu',
   area_ha: 'Superficie (ha)',
   estimated_kg: 'Estimation (kg)',
   value_chains: 'Filières',
   joined_on: "Date d'adhésion",
   gender: 'Sexe',
+  birth_date: 'Date de naissance',
+  id_doc_type: "Type de pièce d'identité",
+  id_doc_number: "Numéro de la pièce d'identité",
+};
+
+/** Anciens intitulés (et variantes courantes) toujours reconnus à l'import. */
+export const HEADER_ALIASES: Partial<Record<TargetField, string[]>> = {
+  department: ['Département', 'Departement', 'Quartier / Département'],
+  village: ['Village', 'Localité', 'Localite', 'Lieu / Village'],
+  gender: ['Genre'],
+  birth_date: ['Naissance', 'Né(e) le', 'Date naissance'],
+  id_doc_type: ['Type de pièce', 'Type pièce', 'ID type'],
+  id_doc_number: ['Numéro de pièce', 'N° pièce', 'Numéro pièce', 'N° CNI', 'CNI'],
 };
 
 export const normalize = (s: string) =>
@@ -31,8 +45,8 @@ export function resolveMapping(headers: string[], explicit?: Partial<Record<Targ
   const byNorm = new Map(headers.map((h) => [normalize(h), h]));
   const out: Partial<Record<TargetField, string>> = {};
   for (const f of TARGET_FIELDS) {
-    const wanted = explicit?.[f] ?? TEMPLATE_HEADERS[f];
-    const found = byNorm.get(normalize(wanted));
+    const names = explicit?.[f] ? [explicit[f]!] : [TEMPLATE_HEADERS[f], ...(HEADER_ALIASES[f] ?? [])];
+    const found = names.map((n) => byNorm.get(normalize(n))).find(Boolean);
     if (found) out[f] = found;
   }
   return out;
@@ -76,6 +90,13 @@ export function validateRow(line: number, raw: Record<string, string>, mapping: 
     else if (/^(f|feminin|femme|female)$/.test(g)) data.gender = 'female';
     else errors.push('Sexe invalide (M ou F)');
   }
+  if (data.birth_date) {
+    const m = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/.exec(data.birth_date);
+    if (m) data.birth_date = `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+    const d = new Date(data.birth_date);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(data.birth_date) || isNaN(d.getTime()) || d > new Date()) errors.push('Date de naissance invalide (JJ/MM/AAAA)');
+  }
+  if (data.id_doc_number && !data.id_doc_type) errors.push("Type de pièce d'identité manquant");
   if (data.joined_on && !/^\d{4}-\d{2}-\d{2}$/.test(data.joined_on)) errors.push("Date d'adhésion invalide (AAAA-MM-JJ)");
   if (data.internal_code && !/^[A-Za-z0-9_-]{1,30}$/.test(data.internal_code)) errors.push('Code invalide');
   return { line, data, errors };

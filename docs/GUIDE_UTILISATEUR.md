@@ -254,3 +254,7 @@ Chaque coopérative reçoit un catalogue de départ (catégories Finance, Intran
 ## Tâches de l'exportateur
 
 Comme pour ses modules de formation, l'exportateur peut créer une tâche (un questionnaire) : menu « Modules des exportateurs » › onglet « Tâches » › « Créer une tâche ». L'ADG la transmet aux coachs en un clic en choisissant les producteurs et l'échéance (elle s'ajoute au profil des producteurs). Les coachs répondent sur le téléphone ; l'ADG transmet ensuite les réponses à l'exportateur, qui peut les consulter et les exporter en CSV. L'ADG ne modifie ni les questions ni les réponses.
+
+## Modèle d'import des producteurs (mis à jour)
+
+Le modèle Excel téléchargeable (Producteurs → Importer) suit la fiche « Ajouter un producteur » du téléphone : Code, Nom, Prénoms, Téléphone, Région, **Quartier**, Section, **Lieu**, Superficie (ha), Estimation (kg), Filières, Date d'adhésion, Sexe, **Date de naissance**, **Type de pièce d'identité**, **Numéro de la pièce d'identité**. Une feuille « Instructions » explique chaque colonne. Les anciens fichiers avec « Département » et « Village » sont toujours acceptés. Test : `backend/scripts/e2e-import-modele.js`.

@@ -248,8 +248,8 @@ function ChangeStatus({ p, onClose, onDone }: { p: any; onClose: () => void; onD
 }
 
 const IMPORT_FIELDS: [string, string][] = [
-  ['last_name', 'Nom *'], ['first_names', 'Prénoms *'], ['internal_code', 'Code'], ['gender', 'Sexe'], ['phone', 'Téléphone'], ['region', 'Région'], ['department', 'Département'],
-  ['section', 'Section'], ['village', 'Village'], ['area_ha', 'Superficie (ha)'], ['estimated_kg', 'Estimation (kg)'], ['value_chains', 'Filières'], ['joined_on', "Date d'adhésion"],
+  ['last_name', 'Nom *'], ['first_names', 'Prénoms *'], ['internal_code', 'Code'], ['gender', 'Sexe'], ['phone', 'Téléphone'], ['region', 'Région'], ['department', 'Quartier'],
+  ['section', 'Section'], ['village', 'Lieu'], ['area_ha', 'Superficie (ha)'], ['estimated_kg', 'Estimation (kg)'], ['value_chains', 'Filières'], ['joined_on', "Date d'adhésion"], ['birth_date', 'Date de naissance'], ['id_doc_type', "Type de pièce d'identité"], ['id_doc_number', "Numéro de la pièce d'identité"],
 ];
 
 /** Import d'une liste de producteurs depuis un classeur Excel : simulation (rapport), correspondance des colonnes si besoin, puis confirmation. */
