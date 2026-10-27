@@ -384,7 +384,7 @@ export function raInspectionPdf(d: RaFiche): Promise<Buffer> {
     doc.fontSize(8).text('Score exigé (%)', L + 84, sy + 7, { width: 112 }).text('Score obtenu (%)', L + 204, sy + 7, { width: 122 });
     box(L, sy + 22, 80, 56); box(L + 80, sy + 22, 120, 56); box(L + 200, sy + 22, 130, 56);
     doc.font('Helvetica').fontSize(7.5).text('Exigences applicables = (A+B) − Nbre NA', L + 4, sy + 30, { width: 72 });
-    doc.font('Helvetica-Bold').fontSize(14).text(`${d.threshold} %`, L + 100, sy + 42, { width: 90, lineBreak: false });
+    doc.font('Helvetica-Bold').fontSize(14).text(`100 %`, L + 100, sy + 42, { width: 90, lineBreak: false });
     doc.text(d.score === null ? '—' : `${String(d.score).replace('.', ',')} %`, L + 224, sy + 42, { width: 100, lineBreak: false });
     doc.font('Helvetica').fontSize(7).text('Score = A ÷ (A+B) × 100', L + 204, sy + 64, { width: 122, lineBreak: false });
     doc.y = sy + 92;
