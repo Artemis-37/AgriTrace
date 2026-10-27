@@ -1,3 +1,4 @@
+import '../data/format.dart';
 import 'package:flutter/material.dart';
 
 import '../main.dart';
@@ -109,7 +110,7 @@ class _NewConvoyScreenState extends State<NewConvoyScreen> {
             CheckboxListTile(
               dense: true, contentPadding: EdgeInsets.zero, controlAffinity: ListTileControlAffinity.leading,
               value: _picked.contains(d['id']), title: Text('${d['producer_name'] ?? ''}'),
-              subtitle: Text('${d['operation_date']} · ${d['quantity']} ${d['unit']} · ${d['bags'] ?? 0} sacs'),
+              subtitle: Text('${d['operation_date']} · ${fmtQty(d['quantity'])} ${d['unit']} · ${d['bags'] ?? 0} sacs'),
               onChanged: (v) => setState(() { v == true ? _picked.add(d['id'] as String) : _picked.remove(d['id']); }),
             ),
           if (_picked.isNotEmpty) const Padding(padding: EdgeInsets.only(bottom: 8), child: Text('Si vous laissez le poids et les sacs vides, ils sont déduits de ces achats par le serveur.')),

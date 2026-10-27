@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -129,14 +130,14 @@ class _NewDeclarationScreenState extends State<NewDeclarationScreen> {
                 onChanged: (c) { setState(() => _campaign = c); _updateEstimate(); }),
             const SizedBox(height: 12),
             Row(children: [
-              Expanded(flex: 3, child: TextField(controller: _quantity, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Poids (kg)', border: OutlineInputBorder()), onChanged: (_) => _updateEstimate())),
+              Expanded(flex: 3, child: TextField(controller: _quantity, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly], decoration: const InputDecoration(labelText: 'Poids (kg)', border: OutlineInputBorder()), onChanged: (_) => _updateEstimate())),
               const SizedBox(width: 8),
               Expanded(flex: 2, child: DropdownButtonFormField<String>(
                   decoration: const InputDecoration(labelText: 'Unité', border: OutlineInputBorder()), value: _unit,
                   items: [for (final u in _units) DropdownMenuItem(value: u, child: Text(u))], onChanged: (u) { setState(() => _unit = u!); _updateEstimate(); })),
             ]),
             const SizedBox(height: 12),
-            TextField(controller: _bags, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Nombre de sacs', border: OutlineInputBorder())),
+            TextField(controller: _bags, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly], decoration: const InputDecoration(labelText: 'Nombre de sacs', border: OutlineInputBorder())),
             const SizedBox(height: 12),
             ListTile(contentPadding: EdgeInsets.zero, title: Text('Date de l\'opération : $_dateStr'), trailing: const Icon(Icons.calendar_today),
                 onTap: () async {

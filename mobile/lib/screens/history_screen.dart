@@ -1,3 +1,4 @@
+import '../data/format.dart';
 import 'package:flutter/material.dart';
 
 import '../main.dart';
@@ -65,7 +66,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         final d = Map<String, dynamic>.from(rows[i] as Map);
                         final amount = double.tryParse('${d['amount']}');
                         return ListTile(
-                          title: Text('${d['producer_name'] ?? 'Producteur'} • ${d['quantity']} ${d['unit']}'),
+                          title: Text('${d['producer_name'] ?? 'Producteur'} • ${fmtQty(d['quantity'])} ${d['unit']}'),
                           subtitle: Text('${d['operation_date'].toString().substring(0, 10)} • ${d['bags'] ?? '—'} sacs • reçu ${d['purchase_receipt_no'] ?? '—'}'),
                           trailing: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.end, children: [
                             Text(_states[d['status']] ?? '${d['status']}', style: const TextStyle(fontSize: 12)),

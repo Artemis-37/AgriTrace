@@ -1,3 +1,4 @@
+import 'format.dart';
 import 'dart:convert';
 
 import 'dart:io';
@@ -316,7 +317,7 @@ class Repository {
         detail = '${p['title'] ?? ''}'; break;
       case 'parcel.create': label = 'Parcelle relevée'; detail = [who, if (p['declared_area_ha'] != null) '${p['declared_area_ha']} ha'].where((x) => x.isNotEmpty).join(' · '); break;
       case 'parcel.update': label = 'Nouveau tracé de parcelle'; detail = who; break;
-      case 'purchase_declaration.create': label = 'Achat'; detail = [who, '${p['quantity'] ?? ''} ${p['unit'] ?? ''}'.trim()].where((x) => x.isNotEmpty).join(' · '); break;
+      case 'purchase_declaration.create': label = 'Achat'; detail = [who, '${fmtQty(p['quantity'])} ${p['unit'] ?? ''}'.trim()].where((x) => x.isNotEmpty).join(' · '); break;
       case 'purchase_declaration.submit': label = 'Achat à soumettre'; break;
       case 'convoy.create': label = 'Convoi'; detail = '${p['convoy_no'] ?? ''}'; break;
       case 'producer_assignment.done': label = 'Élément du profil marqué fait'; break;

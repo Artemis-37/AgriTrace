@@ -1,4 +1,5 @@
 
+import '../data/format.dart';
 import 'package:flutter/material.dart';
 
 
@@ -273,7 +274,7 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Row(children: [
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text('${d['producer_name'] ?? 'Producteur'}', style: const TextStyle(fontSize: 17)),
-          Text('${d['quantity']} ${d['unit']}'.toUpperCase(), style: const TextStyle(color: Colors.black54, fontSize: 15)),
+          Text('${fmtQty(d['quantity'])} ${d['unit']}'.toUpperCase(), style: const TextStyle(color: Colors.black54, fontSize: 15)),
           Text(info, style: const TextStyle(color: Colors.black54, fontSize: 13)),
           if (bad) Text(d['local_error'] == null || '${d['local_error']}'.isEmpty ? 'À corriger' : 'À corriger : ${d['local_error']}', style: TextStyle(color: Colors.red.shade700, fontSize: 13)),
         ])),
