@@ -266,3 +266,16 @@ L'application contient la liste des 31 régions, des districts d'Abidjan et de Y
 ## Code producteur : défini par la coopérative
 
 Le serveur n'attribue plus de code producteur de sa propre initiative. Dans **Paramètres → Société → Codes des producteurs**, la coopérative choisit son format (préfixe, nombre de chiffres, premier numéro ; exemple `SOC-0100`). Si le format est activé, le code est attribué automatiquement à chaque nouveau producteur (téléphone, portail, import Excel). Sinon le code reste **vide** et se saisit à la main : à la création (champ « Code du producteur » sur le téléphone et le portail), ou plus tard sur un producteur qui n'a pas encore de code. Un code déjà attribué ne se modifie pas et reste unique dans la coopérative. Les coopératives qui utilisaient déjà les codes `P00001` gardent ce format (activé par la migration 085). Test : `backend/scripts/e2e-code-producteur.js`.
+
+## Inspections internes : calcul automatique, approbation et reprise
+
+- **Non-conformités relevées** : renseignées automatiquement d'après les réponses « Non conforme » (numéro de l'exigence et constat). Le coach n'a rien à saisir.
+- **Approbation** : le score de conformité = conformes ÷ (conformes + non conformes), les « Non applicable » étant exclus. À **75 % ou plus**, la décision passe automatiquement à « Approuvé ».
+- **Moins de 75 %** : le questionnaire reste à faire, marqué « À reprendre » dans le profil du producteur avec le motif, et le coach qui l'a saisi reçoit une notification pour le reprendre (ses réponses sont conservées).
+- **Croquis de l'exploitation** : à l'export PDF, il est généré automatiquement avec les polygones des parcelles du producteur (surfaces, périmètres, échelle). Les voisins, cours d'eau, magasin phytosanitaire et habitations ne sont pas connus du logiciel : à noter dans « Remarques additionnelles ».
+- Le score automatique s'applique aux fiches dont les exigences se répondent par Conforme / Non conforme (fiche Rainforest Alliance détaillée). Les fiches Fairtrade, Fairtrade USA et la fiche unique ne sont pas notées automatiquement.
+
+## Export et import de toutes les tâches
+
+- Onglet Affectations : **Exporter toutes les tâches** (Excel, une ligne par producteur avec statut, date et score) et **Importer des tâches** (modèle fourni : titre, type, questionnaire ou module, échéance, consignes, codes producteurs ; vide = tous).
+- Questionnaires : bouton **Exporter** par questionnaire, au format du modèle d'importation (modifiable puis réimportable).

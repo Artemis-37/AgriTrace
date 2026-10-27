@@ -8,7 +8,9 @@ import { RequirePermissions } from '../access/decorators';
 import { AuditService } from '../audit/audit.service';
 import { DbService } from '../db/db.service';
 import { QUESTIONNAIRE_TEMPLATES } from './questionnaire-templates';
-import { inspectionPdf } from '../common/pdf';
+import { inspectionPdf, sketchDescription } from '../common/pdf';
+import { NotificationsService } from '../notifications/notifications.service';
+import { applyAuto, evaluate, findQuestion, isInspection, APPROVAL_THRESHOLD } from './inspection';
 import { CERT_SCHEMES } from './certification-logos.controller';
 
 export type QType = 'text' | 'number' | 'yesno' | 'choice' | 'multi' | 'date';
@@ -70,7 +72,7 @@ export class AnswerDto { @IsObject() answers: Record<string, any>; }
 @ApiHeader({ name: 'X-Organization-Id', required: true })
 @Controller('questionnaires')
 export class QuestionnairesController {
-  constructor(private readonly db: DbService, private readonly audit: AuditService) {}
+  constructor(private readonly db: DbService, private readonly audit: AuditService, private readonly notif: NotificationsService) {}
 
   private readAccess(req: any) {
     if (!['questionnaires:manage', 'training:assign', 'training:report', 'training:read'].some((x) => req.org.permissions.has(x))) throw new ForbiddenException('Droit insuffisant');
@@ -126,6 +128,20 @@ export class QuestionnairesController {
     ws.addRow(['Observations du coach', 'Texte', '', 'non']);
     ws.columns.forEach((c) => (c.width = 36));
     return new StreamableFile(Buffer.from(await wb.xlsx.writeBuffer()), { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', disposition: 'attachment; filename="modele-questionnaire.xlsx"' });
+  }
+
+  /** Exporte un questionnaire (tâche) au format du modèle d'importation : il peut être modifié puis réimporté. */
+  @Get(':id/export')
+  async exportOne(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
+    this.readAccess(req);
+    const r = await this.db.tx(req.org.id, async (c) => (await c.query(`SELECT title, questions FROM questionnaires WHERE id = $1`, [id])).rows[0]);
+    if (!r) throw new NotFoundException();
+    const wb = new ExcelJS.Workbook(); const ws = wb.addWorksheet('Questionnaire');
+    ws.addRow(['Question', 'Type', 'Choix (séparés par ;)', 'Obligatoire']); ws.getRow(1).font = { bold: true };
+    for (const q of r.questions as Question[]) ws.addRow([q.label, QTYPES[q.type], (q.options ?? []).join('; '), q.required ? 'oui' : 'non']);
+    ws.columns.forEach((c) => (c.width = 40));
+    const file = String(r.title).normalize('NFD').replace(/[^\w]+/g, '-').slice(0, 60);
+    return new StreamableFile(Buffer.from(await wb.xlsx.writeBuffer()), { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', disposition: `attachment; filename="questionnaire-${file}.xlsx"` });
   }
 
   @Post()
@@ -236,7 +252,7 @@ export class QuestionnairesController {
     if (cert && !CERT_SCHEMES[cert]) throw new BadRequestException('Certification inconnue');
     const d = await this.db.tx(req.org.id, async (c) => {
       const t = (await c.query(
-        `SELECT t.status, q.title AS q_title, q.template_code, q.questions, an.answers, an.answered_at, u.full_name AS answered_by, p.internal_code, p.last_name, p.first_names, p.village
+        `SELECT t.status, t.producer_id, q.title AS q_title, q.template_code, q.questions, an.answers, an.answered_at, u.full_name AS answered_by, p.internal_code, p.last_name, p.first_names, p.village
            FROM producer_assignment_targets t JOIN producer_assignments a ON a.id = t.assignment_id JOIN questionnaires q ON q.id = a.questionnaire_id
            JOIN producers p ON p.id = t.producer_id LEFT JOIN questionnaire_answers an ON an.target_id = t.id LEFT JOIN users u ON u.id = an.answered_by WHERE t.id = $1`, [targetId])).rows[0];
       if (!t) throw new NotFoundException('Fiche introuvable');
@@ -245,15 +261,25 @@ export class QuestionnairesController {
       const byCode: Record<string, string> = { 'ii-ra': 'rainforest_alliance', 'ii-ft': 'fairtrade', 'ii-ft-usa': 'fairtrade_usa' };
       const scheme = cert ?? byCode[t.template_code] ?? null;
       const org = (await c.query(`SELECT data FROM organization_logos`)).rows[0]?.data ?? null;
-      return { t, scheme, certLogo: await logo(scheme), orgLogo: org };
+      const parcels = isInspection(t.template_code)
+        ? (await c.query(`SELECT code, geometry, geometry_area_ha FROM parcels WHERE producer_id = $1 AND geometry IS NOT NULL ORDER BY code`, [t.producer_id])).rows
+            .map((r: any) => ({ code: r.code, ha: r.geometry_area_ha == null ? null : Number(r.geometry_area_ha), ring: (r.geometry?.coordinates?.[0] ?? []) as number[][] })).filter((p: any) => p.ring.length >= 4)
+        : [];
+      return { t, scheme, certLogo: await logo(scheme), orgLogo: org, parcels };
     });
     const [o] = await this.db.query<any>(`SELECT name FROM organizations WHERE id = $1`, [req.org.id]);
     const val = (v: any) => (v === undefined || v === null || v === '' ? '—' : Array.isArray(v) ? v.join(', ') : v === 'oui' ? 'Oui' : v === 'non' ? 'Non' : String(v));
+    // Inspection : non-conformités et décision recalculées d'après les réponses ; croquis tiré des parcelles du producteur
+    const insp = isInspection(d.t.template_code);
+    const shown = insp ? applyAuto(d.t.questions, d.t.answers ?? {}).answers : d.t.answers;
+    const croquis = insp ? findQuestion(d.t.questions, /^Croquis de l.exploitation/i) : undefined;
+    if (croquis) shown[croquis.id] = sketchDescription(d.parcels);
     const pdf = await inspectionPdf({
       certification: d.scheme ? CERT_SCHEMES[d.scheme] : d.t.template_code === 'ii-fusion' ? 'Rainforest Alliance, Fairtrade, Fairtrade USA' : null,
       certLogo: d.certLogo, orgLogo: d.orgLogo, orgName: o?.name ?? '', title: d.t.q_title,
       producer: `${d.t.last_name} ${d.t.first_names}`, code: d.t.internal_code, village: d.t.village, answeredAt: d.t.answered_at, answeredBy: d.t.answered_by,
-      items: (d.t.questions as Question[]).map((q, i) => ({ label: `${i + 1}. ${q.label}`, answer: val(d.t.answers?.[q.id]) })),
+      items: (d.t.questions as Question[]).map((q, i) => ({ label: `${i + 1}. ${q.label}`, answer: val(shown?.[q.id]) })),
+      sketch: insp ? { parcels: d.parcels } : null,
     });
     await this.audit.log({ organizationId: req.org.id, actorUserId: req.user.id, action: 'questionnaire.export', entityType: 'producer_assignment_target', entityId: targetId, details: { certification: d.scheme } });
     return new StreamableFile(pdf, { type: 'application/pdf', disposition: `attachment; filename="inspection-interne-${d.t.internal_code}.pdf"` });
@@ -264,15 +290,29 @@ export class QuestionnairesController {
     if (!['training:report', 'training:assign'].some((x) => req.org.permissions.has(x))) throw new ForbiddenException('Droit insuffisant');
     const out = await this.db.tx(req.org.id, async (c) => {
       const t = (await c.query(
-        `SELECT t.id, t.status, t.assignment_id, t.producer_id, q.questions FROM producer_assignment_targets t JOIN producer_assignments a ON a.id = t.assignment_id
-           JOIN questionnaires q ON q.id = a.questionnaire_id WHERE t.id = $1 FOR UPDATE OF t`, [targetId])).rows[0];
+        `SELECT t.id, t.status, t.assignment_id, t.producer_id, q.questions, q.template_code, p.last_name, p.first_names FROM producer_assignment_targets t JOIN producer_assignments a ON a.id = t.assignment_id
+           JOIN questionnaires q ON q.id = a.questionnaire_id JOIN producers p ON p.id = t.producer_id WHERE t.id = $1 FOR UPDATE OF t`, [targetId])).rows[0];
       if (!t) throw new NotFoundException('Questionnaire introuvable');
       if (t.status === 'done') throw new BadRequestException('Ce questionnaire a déjà été renseigné pour ce producteur');
-      const answers = checkAnswers(t.questions, b.answers);
-      await c.query(`INSERT INTO questionnaire_answers(organization_id, target_id, assignment_id, producer_id, answers, answered_by) VALUES ($1,$2,$3,$4,$5,$6)`,
-        [req.org.id, targetId, t.assignment_id, t.producer_id, JSON.stringify(answers), req.user.id]);
-      await c.query(`UPDATE producer_assignment_targets SET status = 'done', done_at = now(), done_by = $2 WHERE id = $1`, [targetId, req.user.id]);
-      return { target_id: targetId, status: 'done', answered: Object.keys(answers).length, assignment_id: t.assignment_id, producer_id: t.producer_id };
+      // Inspection interne : non-conformités et décision renseignées automatiquement d'après les réponses
+      const auto = isInspection(t.template_code) ? applyAuto(t.questions, b.answers) : null;
+      const answers = checkAnswers(t.questions, auto ? auto.answers : b.answers);
+      const score = auto?.ev.score ?? null;
+      await c.query(
+        `INSERT INTO questionnaire_answers(organization_id, target_id, assignment_id, producer_id, answers, answered_by, score) VALUES ($1,$2,$3,$4,$5,$6,$7)
+         ON CONFLICT (target_id) DO UPDATE SET answers = EXCLUDED.answers, answered_by = EXCLUDED.answered_by, answered_at = now(), score = EXCLUDED.score`,
+        [req.org.id, targetId, t.assignment_id, t.producer_id, JSON.stringify(answers), req.user.id, score]);
+      const redo = score !== null && score < APPROVAL_THRESHOLD;
+      if (redo) {
+        const reason = `Conformité de ${String(score).replace('.', ',')} % (minimum ${APPROVAL_THRESHOLD} %). Non-conformités : ${auto!.ev.nonConform}.`;
+        await c.query(`UPDATE producer_assignment_targets SET needs_redo = true, redo_reason = $2 WHERE id = $1`, [targetId, reason]);
+        await this.notif.notifyUsers(c, req.org.id, [req.user.id], {
+          kind: 'inspection_redo', severity: 'warning', title: `Inspection à reprendre : ${t.last_name} ${t.first_names}`,
+          body: `${reason} Reprenez le questionnaire avec le producteur, puis renvoyez-le.`, entityType: 'producer_assignment', entityId: t.assignment_id });
+        return { target_id: targetId, status: 'to_redo', score, answered: Object.keys(answers).length, assignment_id: t.assignment_id, producer_id: t.producer_id };
+      }
+      await c.query(`UPDATE producer_assignment_targets SET status = 'done', done_at = now(), done_by = $2, needs_redo = false, redo_reason = NULL WHERE id = $1`, [targetId, req.user.id]);
+      return { target_id: targetId, status: 'done', score, approved: score !== null, answered: Object.keys(answers).length, assignment_id: t.assignment_id, producer_id: t.producer_id };
     });
     await this.audit.log({ organizationId: req.org.id, actorUserId: req.user.id, action: 'questionnaire.answer', entityType: 'producer_assignment', entityId: out.assignment_id, details: { producer_id: out.producer_id } });
     return out;

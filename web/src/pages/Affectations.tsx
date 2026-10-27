@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { get, post } from '../api';
+import { useRef, useState } from 'react';
+import { download, get, post, postForm } from '../api';
 import { useAuth } from '../auth';
 import { Badge, Card, ErrorBox, Field, Loading, Modal, Table, useAction, useAsync } from '../ui';
 
@@ -129,9 +129,30 @@ export function AssignmentsTab() {
   const rows = useAsync(() => get<Row[]>('/producer-assignments'), []);
   const mods = useAsync(() => get<{ id: string; title: string }[]>('/training-modules'), []);
   const [open, setOpen] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [report, setReport] = useState<string | null>(null);
+  const file = useRef<HTMLInputElement>(null);
+  const doImport = async () => {
+    const f = file.current?.files?.[0]; if (!f) { setReport('Choisissez un fichier Excel.'); return; }
+    const fd = new FormData(); fd.append('file', f);
+    try {
+      const r = await postForm<{ created: number; skipped: number; issues: { row: number; message: string }[] }>('/producer-assignments/import', fd);
+      setReport(`${r.created} tâche(s) importée(s), ${r.skipped} ligne(s) ignorée(s).${r.issues.length ? ' ' + r.issues.map((i) => `Ligne ${i.row} : ${i.message}`).join(' · ') : ''}`);
+      rows.reload();
+    } catch (e: any) { setReport(e.message ?? 'Importation impossible'); }
+  };
   return (
     <Card>
-      <div className="toolbar"><button className="btn" onClick={() => setOpen(true)}>Affecter un modèle</button><span className="muted">Choisissez la nature (formation, distribution, tâche) puis tous les producteurs ou certains.</span></div>
+      <div className="toolbar"><button className="btn" onClick={() => setOpen(true)}>Affecter un modèle</button>
+        <button className="btn btn-secondary" onClick={() => download('/producer-assignments/export', 'taches.xlsx')}>Exporter toutes les tâches</button>
+        <button className="btn btn-secondary" onClick={() => { setReport(null); setImporting(!importing); }}>Importer des tâches</button><span className="muted">Choisissez la nature (formation, distribution, tâche) puis tous les producteurs ou certains.</span></div>
+      {importing && (
+        <div className="card" style={{ margin: '8px 0' }}>
+          <p className="muted">Une ligne par tâche (titre, type, questionnaire ou module, échéance, consignes, codes producteurs ; vide = tous). <button className="btn btn-secondary btn-small" onClick={() => download('/producer-assignments/import-template', 'modele-import-taches.xlsx')}>Télécharger le modèle</button></p>
+          <input ref={file} type="file" accept=".xlsx" aria-label="Fichier des tâches" /> <button className="btn" onClick={doImport}>Importer</button>
+        </div>
+      )}
+      {report && <p role="status">{report}</p>}
       {rows.loading ? <Loading /> : rows.error ? <ErrorBox message={rows.error} onRetry={rows.reload} /> : (
         <Table rows={rows.data ?? []} empty="Aucune affectation pour le moment." columns={[
           { header: 'Date', render: (r: Row) => d(r.created_at) },

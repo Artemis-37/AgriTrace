@@ -226,9 +226,10 @@ class _ProducerDetailScreenState extends State<ProducerDetailScreen> {
               title: Text('${a['title']}', maxLines: 2, overflow: TextOverflow.ellipsis),
               subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text('${a['kind'] == 'formation' ? 'Module de formation' : a['kind'] == 'distribution' ? 'Distribution' : a['kind'] == 'inspection' ? 'Inspection interne' : a['kind'] == 'service' ? 'Service' : 'Tâche'}${a['due_date'] != null ? ' • échéance ${a['due_date'].toString().substring(0, 10)}' : ''}${(a['instructions'] ?? '').toString().isNotEmpty ? '\n${a['instructions']}' : ''}'),
+                if (a['needs_redo'] == true && a['status'] != 'done') Text('À reprendre : ${a['redo_reason'] ?? ''}', style: TextStyle(color: Colors.red.shade700, fontWeight: FontWeight.w700)),
                 if (_draftOf(a['target_id']) != null && a['status'] != 'done') Text('Brouillon non terminé', style: TextStyle(color: Colors.orange.shade800, fontWeight: FontWeight.w700)),
               ]),
-              isThreeLine: (a['instructions'] ?? '').toString().isNotEmpty || _draftOf(a['target_id']) != null,
+              isThreeLine: (a['instructions'] ?? '').toString().isNotEmpty || a['needs_redo'] == true || _draftOf(a['target_id']) != null,
               onTap: a['questionnaire_id'] != null && a['questions'] != null ? () async {
                 final saved = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => QuestionnaireScreen(assignment: Map<String, dynamic>.from(a as Map), producer: widget.producer, draft: _draftOf(a['target_id']))));
                 _loadDrafts();

@@ -24,9 +24,78 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
   bool _busy = false;
   String? _draftId;
 
+  // ---- Inspection interne : champs renseignés automatiquement (comme le serveur) ----
+  static final _req = RegExp(r'^(\d+(?:\.\d+)+)\s*(EF|ES|EAC)?\s*[—–-]\s*([\s\S]*)$');
+  bool _isEval(Map<String, dynamic> q) {
+    final o = ((q['options'] as List?) ?? const []).map((e) => '$e').toList();
+    return q['type'] == 'choice' && o.contains('Conforme') && o.contains('Non conforme');
+  }
+  bool get _hasScore => _questions.any(_isEval);
+  bool _isNcQ(Map<String, dynamic> q) => RegExp(r'^Non-conformités relevées', caseSensitive: false).hasMatch('${q['label']}');
+  bool _isDecisionQ(Map<String, dynamic> q) => RegExp(r'^Recommandation de l.inspecteur', caseSensitive: false).hasMatch('${q['label']}');
+  bool _isSketchQ(Map<String, dynamic> q) => RegExp(r'^Croquis de l.exploitation', caseSensitive: false).hasMatch('${q['label']}');
+  bool _auto(Map<String, dynamic> q) => _hasScore && (_isNcQ(q) || _isDecisionQ(q) || _isSketchQ(q));
+
+  ({int c, int nc, double? score, List<String> lines}) _eval(Map<String, dynamic> ans) {
+    var c = 0, nc = 0;
+    final lines = <String>[];
+    for (var i = 0; i < _questions.length; i++) {
+      final q = _questions[i];
+      if (!_isEval(q)) continue;
+      final a = ans['${q['id']}'];
+      if (a == 'Conforme') { c++; }
+      else if (a == 'Non conforme') {
+        nc++;
+        final label = '${q['label']}'.trim();
+        final m = _req.firstMatch(label);
+        var text = (m != null ? m.group(3)! : label).replaceAll(RegExp(r'\s+'), ' ').replaceAll('*', '').trim();
+        if (text.length > 200) text = '${text.substring(0, 197)}…';
+        lines.add('${m != null ? '${m.group(1)}${m.group(2) != null ? ' ${m.group(2)}' : ''}' : 'Q${i + 1}'} — $text');
+      }
+    }
+    return (c: c, nc: nc, score: c + nc == 0 ? null : (c / (c + nc) * 1000).round() / 10, lines: lines);
+  }
+
+  /// Renseigne « Non-conformités relevées » et la décision d'après les réponses (≥ 75 % : approuvé).
+  void _applyAuto() {
+    if (!_hasScore) return;
+    final e = _eval(_ans);
+    if (e.score == null) return;
+    for (final q in _questions) {
+      final id = '${q['id']}';
+      if (_isNcQ(q)) { _ans[id] = e.lines.isEmpty ? 'Aucune non-conformité relevée.' : e.lines.join('\n'); }
+      if (_isDecisionQ(q)) {
+        final o = ((q['options'] as List?) ?? const []).map((x) => '$x').toList();
+        if (e.score! >= 75 && o.contains('Approuvé')) { _ans[id] = 'Approuvé'; }
+        else if (e.score! < 75) { final s = o.where((x) => x.startsWith('Sanctionn')); if (s.isNotEmpty && (_ans[id] == null || _ans[id] == 'Approuvé')) _ans[id] = s.first; }
+      }
+    }
+  }
+
+  Widget _autoPanel() {
+    final e = _eval(_ans);
+    final ok = e.score != null && e.score! >= 75;
+    final colour = e.score == null ? Colors.black54 : ok ? _green : Colors.red.shade700;
+    return Container(
+      padding: const EdgeInsets.all(12), margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(color: colour.withAlpha(20), border: Border.all(color: colour), borderRadius: BorderRadius.circular(8)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(e.score == null ? 'Conformité : répondez aux exigences' : 'Conformité : ${e.score.toString().replaceAll('.', ',')} % (${e.c} conforme(s), ${e.nc} non conforme(s))', style: TextStyle(fontWeight: FontWeight.w800, color: colour)),
+        Text(e.score == null ? 'Le score est calculé automatiquement.' : ok ? 'Au moins 75 % : l\'inspection sera approuvée automatiquement.' : 'Moins de 75 % : le questionnaire vous sera renvoyé pour être repris avec le producteur.', style: TextStyle(color: colour)),
+      ]));
+  }
+
   @override
   void initState() {
     super.initState();
+    final prev = widget.assignment['answers'];
+    if (widget.draft == null && !_done && prev is Map && prev.isNotEmpty) {
+      _ans.addAll(Map<String, dynamic>.from(prev));
+      for (final q in _questions) {
+        final id = '${q['id']}';
+        if ((q['type'] == 'text' || q['type'] == 'number') && _ans[id] != null) _text(id).text = '${_ans[id]}';
+      }
+    }
     final d = widget.draft;
     if (d != null) {
       _draftId = d['id'] as String?;
@@ -85,6 +154,7 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
         final t = _text(id).text.trim();
         if (t.isNotEmpty) { _ans[id] = t; } else { _ans.remove(id); }
       }
+      if (_auto(q)) continue;
       if (q['required'] == true && _empty(_ans[id])) {
         setState(() => _error = 'Réponse obligatoire : « ${q['label']} »');
         return;
@@ -94,12 +164,19 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
         return;
       }
     }
+    _applyAuto();
     setState(() { _busy = true; _error = null; });
     final targetId = widget.assignment['target_id'];
     await services.repo.queueOp('questionnaire.answer', {'id': targetId, 'answers': _ans});
-    await services.repo.patchCachedAssignment(targetId as Object, {'status': 'done', 'answers': _ans});
+    final e = _eval(_ans);
+    final redo = _hasScore && e.score != null && e.score! < 75;
+    if (redo) {
+      await services.repo.patchCachedAssignment(targetId as Object, {'status': 'pending', 'needs_redo': true, 'redo_reason': 'Conformité de ${e.score.toString().replaceAll('.', ',')} % (minimum 75 %). Non-conformités : ${e.nc}.', 'answers': _ans});
+    } else {
+      await services.repo.patchCachedAssignment(targetId as Object, {'status': 'done', 'needs_redo': false, 'answers': _ans});
+    }
     await services.repo.deleteDraft(_draftId);
-    widget.assignment['status'] = 'done';
+    widget.assignment['status'] = redo ? 'pending' : 'done';
     widget.assignment['answers'] = _ans;
     services.sync.run();
     if (mounted) Navigator.of(context).pop(true);
@@ -163,11 +240,17 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
         Text('${p['last_name'] ?? ''} ${p['first_names'] ?? ''} · ${p['internal_code'] ?? ''}', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17)),
         if (instr.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 6), child: Text(instr, style: const TextStyle(color: Colors.black54))),
         if (_done) const Padding(padding: EdgeInsets.only(top: 8), child: Text('Questionnaire déjà renseigné.', style: TextStyle(color: _green, fontWeight: FontWeight.w600))),
+        if (widget.assignment['needs_redo'] == true && !_done) Container(
+          padding: const EdgeInsets.all(12), margin: const EdgeInsets.only(top: 8), decoration: BoxDecoration(color: Colors.red.shade50, border: Border.all(color: Colors.red.shade300), borderRadius: BorderRadius.circular(8)),
+          child: Text('À reprendre avec le producteur. ${widget.assignment['redo_reason'] ?? ''}', style: TextStyle(color: Colors.red.shade800, fontWeight: FontWeight.w700))),
         const SizedBox(height: 12),
+        if (_hasScore && !_done) _autoPanel(),
         for (var i = 0; i < _questions.length; i++) ...[
           Text('${i + 1}. ${_questions[i]['label']}${_questions[i]['required'] == true ? ' *' : ''}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
           const SizedBox(height: 6),
-          if (_done) Text(_show(saved['${_questions[i]['id']}']), style: const TextStyle(fontSize: 16)) else _field(_questions[i]),
+          if (_done) Text(_show(saved['${_questions[i]['id']}']), style: const TextStyle(fontSize: 16))
+          else if (_auto(_questions[i])) Text(_isSketchQ(_questions[i]) ? 'Rempli automatiquement à l\'exportation avec les parcelles du producteur.' : (_isNcQ(_questions[i]) ? (_eval(_ans).lines.isEmpty ? 'Renseigné automatiquement d\'après vos réponses.' : _eval(_ans).lines.join('\n')) : (_eval(_ans).score == null ? 'Calculée automatiquement : approuvé si la conformité atteint 75 %.' : (_eval(_ans).score! >= 75 ? 'Approuvé' : 'Non approuvé : reprise demandée')) ), style: const TextStyle(fontSize: 15, color: Colors.black87))
+          else _field(_questions[i]),
           const SizedBox(height: 16),
         ],
         if (_error != null) Padding(padding: const EdgeInsets.only(bottom: 8), child: Text(_error!, style: TextStyle(color: Colors.red.shade700))),

@@ -38,6 +38,7 @@ export default function Questionnaires() {
               <span style={{ display: 'inline-flex', gap: '.4rem', flexWrap: 'wrap' }}>
                 {can('training:assign') && !q.archived && <button className="btn btn-small" onClick={() => setAssign(q)}>Envoyer aux producteurs</button>}
                 {q.assignments > 0 && <button className="btn btn-small btn-secondary" onClick={() => setResults(q)}>Résultats</button>}
+                <button className="btn btn-small btn-secondary" onClick={() => download(`/questionnaires/${q.id}/export`, 'questionnaire.xlsx')}>Exporter</button>
                 {manage && <button className="btn btn-small btn-secondary" onClick={() => setEditing(q)}>Modifier</button>}
                 {manage && <button className="btn btn-small btn-ghost" disabled={act.busy} onClick={() => act.run(async () => { await post(`/questionnaires/${q.id}/duplicate`); list.reload(); })}>Dupliquer</button>}
                 {manage && <button className="btn btn-small btn-ghost" disabled={act.busy} onClick={() => act.run(async () => { await post(`/questionnaires/${q.id}/archive`); list.reload(); })}>{q.archived ? 'Réactiver' : 'Archiver'}</button>}

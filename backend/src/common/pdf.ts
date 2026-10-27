@@ -99,6 +99,7 @@ export function inspectionPdf(f: {
   certification: string | null; certLogo: Buffer | null; orgLogo: Buffer | null; orgName: string; title: string;
   producer: string; code: string; village?: string | null; answeredAt: any; answeredBy?: string | null;
   items: { label: string; answer: string }[];
+  sketch?: { parcels: { code: string; ha: number | null; ring: number[][] }[] } | null;
 }): Promise<Buffer> {
   return render((doc) => {
     const top = doc.y;
@@ -128,6 +129,7 @@ export function inspectionPdf(f: {
       doc.font('Helvetica-Bold').fillColor(colour).text(it.answer, 50, y, { width: 495 });
       doc.moveDown(0.4);
     }
+    if (f.sketch && f.sketch.parcels.length) drawSketch(doc, f.sketch.parcels);
     if (doc.y > 680) doc.addPage();
     doc.moveDown(2).fillColor('#000').font('Helvetica').fontSize(10);
     const y = doc.y;
@@ -136,4 +138,59 @@ export function inspectionPdf(f: {
     doc.y = y + 90;
     doc.fontSize(8).fillColor('#666').text(`Document généré le ${fmtDate(new Date())}`, 50, doc.y);
   });
+}
+
+const rad = (d: number) => (d * Math.PI) / 180;
+function meters(a: number[], b: number[]) {
+  const R = 6371008.8, dLat = rad(b[1] - a[1]), dLon = rad(b[0] - a[0]);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a[1])) * Math.cos(rad(b[1])) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+export const perimeterM = (ring: number[][]) => ring.reduce((t, p, i) => (i ? t + meters(ring[i - 1], p) : t), 0);
+
+/** Description automatique de l'exploitation d'après les parcelles du producteur (limites, surfaces). */
+export function sketchDescription(parcels: { code: string; ha: number | null; ring: number[][] }[]) {
+  if (!parcels.length) return 'Aucune parcelle cartographiée pour ce producteur.';
+  const total = parcels.reduce((t, p) => t + (p.ha ?? 0), 0);
+  const fr = (n: number, d = 2) => n.toFixed(d).replace('.', ',');
+  const lines = [`${parcels.length} parcelle(s) cartographiée(s), superficie mesurée totale : ${fr(total)} ha.`];
+  for (const p of parcels) {
+    const xs = p.ring.map((c) => c[0]), ys = p.ring.map((c) => c[1]);
+    lines.push(`${p.code} : ${p.ha != null ? fr(p.ha) + ' ha' : 'surface non calculée'}, périmètre ${Math.round(perimeterM(p.ring))} m, ${p.ring.length - 1} sommets, centre ${fr((Math.min(...ys) + Math.max(...ys)) / 2, 5)}, ${fr((Math.min(...xs) + Math.max(...xs)) / 2, 5)}.`);
+  }
+  return lines.join('\n');
+}
+
+/** Croquis : les polygones des parcelles du producteur, à l'échelle, dans un cadre. */
+function drawSketch(doc: PDFKit.PDFDocument, parcels: { code: string; ha: number | null; ring: number[][] }[]) {
+  const W = 495, H = 260;
+  if (doc.y > 740 - H - 40) doc.addPage();
+  doc.moveDown(1).font('Helvetica-Bold').fontSize(11).fillColor('#000').text("Croquis de l'exploitation (parcelles du producteur)", 50, doc.y);
+  doc.font('Helvetica').fontSize(8).fillColor('#444').text(sketchDescription(parcels), 50, doc.y + 2, { width: W });
+  const top = doc.y + 6;
+  doc.rect(50, top, W, H).stroke('#999');
+  const all = parcels.flatMap((p) => p.ring);
+  const lon0 = Math.min(...all.map((c) => c[0])), lon1 = Math.max(...all.map((c) => c[0]));
+  const lat0 = Math.min(...all.map((c) => c[1])), lat1 = Math.max(...all.map((c) => c[1]));
+  const kx = Math.cos(rad((lat0 + lat1) / 2)); // correction de la longitude
+  const spanX = Math.max((lon1 - lon0) * kx, 1e-9), spanY = Math.max(lat1 - lat0, 1e-9);
+  const pad = 24, sc = Math.min((W - 2 * pad) / spanX, (H - 2 * pad) / spanY);
+  const ox = 50 + (W - spanX * sc) / 2, oy = top + (H - spanY * sc) / 2;
+  const pt = (c: number[]): [number, number] => [ox + (c[0] - lon0) * kx * sc, oy + (lat1 - c[1]) * sc];
+  parcels.forEach((p, i) => {
+    const pts = p.ring.map(pt);
+    doc.save().fillColor(GREEN).fillOpacity(0.18).strokeColor(GREEN).lineWidth(1.2);
+    doc.moveTo(pts[0][0], pts[0][1]);
+    for (const q of pts.slice(1)) doc.lineTo(q[0], q[1]);
+    doc.closePath().fillAndStroke();
+    doc.restore();
+    const cx = pts.reduce((t, q) => t + q[0], 0) / pts.length, cy = pts.reduce((t, q) => t + q[1], 0) / pts.length;
+    doc.fillColor('#000').font('Helvetica-Bold').fontSize(7).text(p.code || `P${i + 1}`, cx - 30, cy - 4, { width: 60, align: 'center' });
+  });
+  doc.fillColor('#000').font('Helvetica').fontSize(7).text('N ↑', 50 + W - 28, top + 6);
+  const m = Math.pow(10, Math.floor(Math.log10(((W - 2 * pad) / sc / kx) * 111320 / 3))); // longueur ronde de l'échelle
+  doc.moveTo(60, top + H - 12).lineTo(60 + (m / 111320) * kx * sc, top + H - 12).lineWidth(1.5).stroke('#000');
+  doc.text(`${m} m`, 60, top + H - 10);
+  doc.y = top + H + 6;
+  doc.fontSize(7).fillColor('#666').text('Limites tirées des polygones relevés. Voisins, cours d\'eau, magasin phytosanitaire et habitations ne sont pas connus du logiciel : à compléter dans « Remarques additionnelles ».', 50, doc.y, { width: W });
 }
