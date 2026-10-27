@@ -14,6 +14,7 @@ class TrainingListScreen extends StatefulWidget {
 
 class _TrainingListScreenState extends State<TrainingListScreen> {
   List<Map<String, dynamic>> _local = [];
+  List<Map<String, dynamic>> _drafts = [];
   List<dynamic>? _server;
   bool _offline = false;
 
@@ -22,34 +23,38 @@ class _TrainingListScreenState extends State<TrainingListScreen> {
 
   Future<void> _load() async {
     final local = await services.repo.localFieldRecords('training');
+    final drafts = await services.repo.drafts(kind: 'training');
     List<dynamic>? server;
     var off = false;
     final c = await services.repo.cachedGet('training-records', () => services.api.get('/field-records?kind=training'));
     if (c == null) { off = true; } else { server = c.data as List<dynamic>; off = c.stale; }
-    if (mounted) setState(() { _local = local; _server = server; _offline = off; });
+    if (mounted) setState(() { _local = local; _drafts = drafts; _server = server; _offline = off; });
   }
 
-  Future<void> _add() async {
-    final saved = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => const TrainingFormScreen()));
-    if (saved == true) _load();
+  Future<void> _add([Map<String, dynamic>? draft]) async {
+    final saved = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => TrainingFormScreen(draft: draft)));
+    if (saved == true) services.sync.run();
+    _load();
   }
 
   @override
   Widget build(BuildContext context) {
     final localIds = _local.map((l) => l['id']).toSet();
     final serverRows = (_server ?? const []).where((s) => !localIds.contains(s['id'])).toList();
-    final empty = _local.isEmpty && serverRows.isEmpty;
+    final empty = _local.isEmpty && serverRows.isEmpty && _drafts.isEmpty;
     return Scaffold(
       backgroundColor: const Color(0xFFF7FAF2),
       appBar: AppBar(title: const Text('Gérer la formation')),
       body: Column(children: [
         Container(width: double.infinity, color: fieldGreen, padding: const EdgeInsets.fromLTRB(16, 10, 8, 10), child: Row(children: [
           const Expanded(child: Text('Dossiers de formation', style: TextStyle(color: Colors.white, fontSize: 20))),
-          IconButton.filled(onPressed: _add, tooltip: 'Enregistrer une formation', style: IconButton.styleFrom(backgroundColor: const Color(0xFFF59E0B), foregroundColor: Colors.white), icon: const Icon(Icons.add, size: 30)),
+          IconButton.filled(onPressed: () => _add(), tooltip: 'Enregistrer une formation', style: IconButton.styleFrom(backgroundColor: const Color(0xFFF59E0B), foregroundColor: Colors.white), icon: const Icon(Icons.add, size: 30)),
         ])),
         Expanded(child: RefreshIndicator(onRefresh: _load, child: ListView(padding: const EdgeInsets.all(12), children: [
           if (_offline) const Padding(padding: EdgeInsets.only(bottom: 8), child: Text("Hors connexion : seules les formations en attente d'envoi sont affichées.", style: TextStyle(color: Colors.black54, fontSize: 12))),
           if (empty) const Padding(padding: EdgeInsets.all(8), child: Text('Lorsque vous ajoutez des dossiers de formation, ils apparaîtront ici.', style: TextStyle(fontSize: 16))),
+          for (final d in _drafts) Card(color: const Color(0xFFFFF4E5), elevation: 0, shape: RoundedRectangleBorder(side: BorderSide(color: Colors.orange.shade300), borderRadius: BorderRadius.circular(2)),
+              child: ListTile(title: Text('${d['title']}'), subtitle: Text('Brouillon non terminé', style: TextStyle(color: Colors.orange.shade800, fontWeight: FontWeight.w700)), trailing: const Icon(Icons.edit_note, size: 30), onTap: () => _add(d))),
           for (final l in _local) _row('${l['title']}', _count(l['data']), "En attente d'envoi", Colors.orange.shade800),
           for (final s in serverRows) _row('${s['title']}', _count(s['data']), 'Envoyée', Colors.green.shade800),
         ]))),
@@ -77,7 +82,8 @@ class _Participant {
 
 /// « Gérer le registre de formation » : thème, module, photo, participants (agriculteurs et parties prenantes) et scores.
 class TrainingFormScreen extends StatefulWidget {
-  const TrainingFormScreen({super.key});
+  const TrainingFormScreen({super.key, this.draft});
+  final Map<String, dynamic>? draft;
   @override
   State<TrainingFormScreen> createState() => _TrainingFormScreenState();
 }
@@ -88,11 +94,37 @@ class _TrainingFormScreenState extends State<TrainingFormScreen> {
   final _module = TextEditingController();
   final Set<String> _modules = {};
   final List<_Participant> _people = [];
-  String? _photo, _msg;
+  String? _photo, _msg, _draftId;
   bool _openPrincipal = true, _openStake = false, _busy = false;
 
   @override
-  void initState() { super.initState(); FieldTemplates.load().then((t) { if (mounted) setState(() => _themes = t.themes); }); }
+  void initState() {
+    super.initState();
+    FieldTemplates.load().then((t) { if (mounted) setState(() => _themes = t.themes); });
+    final d = widget.draft;
+    if (d != null) {
+      _draftId = d['id'] as String?;
+      final st = Map<String, dynamic>.from((d['state'] as Map?) ?? const {});
+      _theme = st['theme'] as String?;
+      _module.text = '${st['module_text'] ?? ''}';
+      _modules.addAll(((st['modules'] as List?) ?? const []).map((e) => '$e'));
+      _photo = st['photo'] as String?;
+      for (final p in ((st['people'] as List?) ?? const [])) {
+        final m = Map<String, dynamic>.from(p as Map);
+        _people.add(_Participant(producerId: m['producer_id'] as String?, name: '${m['name']}', role: '${m['role']}', phone: m['phone'] as String?)..score = (m['score'] as num?)?.toInt());
+      }
+    }
+  }
+
+  /// Enregistre la formation commencée sans l'envoyer : elle reste « Brouillon non terminé ».
+  Future<void> _saveDraft() async {
+    final ids = [for (final p in _people) if (p.producerId != null) p.producerId!];
+    await services.repo.saveDraft(id: _draftId, kind: 'training', title: _theme ?? 'Formation', producerIds: ids, state: {
+      'theme': _theme, 'modules': _modules.toList(), 'module_text': _module.text.trim(), 'photo': _photo, 'people': [for (final p in _people) p.toJson()]});
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Brouillon enregistré : formation non terminée.')));
+    Navigator.of(context).pop(false);
+  }
 
   @override
   void dispose() { _module.dispose(); super.dispose(); }
@@ -148,6 +180,7 @@ class _TrainingFormScreenState extends State<TrainingFormScreen> {
     setState(() { _busy = true; _msg = null; });
     final id = await services.repo.queueFieldRecord(kind: 'training', title: _theme!, data: {'theme': _theme, 'module': (_themes[_theme] ?? const []).isNotEmpty ? _modules.join(', ') : _module.text.trim(), 'modules': _modules.toList(), 'participants': [for (final p in _people) p.toJson()]});
     if (_photo != null) await services.repo.queuePhoto(subjectType: 'field_record', subjectId: id, kind: 'Photo de la formation', sourcePath: _photo!);
+    await services.repo.deleteDraft(_draftId);
     services.sync.run();
     if (mounted) Navigator.of(context).pop(true);
   }
@@ -157,7 +190,7 @@ class _TrainingFormScreenState extends State<TrainingFormScreen> {
     final farmers = _people.where((p) => p.role == 'principal').toList(), stakes = _people.where((p) => p.role != 'principal').toList();
     return Scaffold(
       backgroundColor: const Color(0xFFF7FAF2),
-      appBar: AppBar(title: const Text('Gérer le registre de formation')),
+      appBar: AppBar(title: const Text('Gérer le registre de formation'), actions: [IconButton(onPressed: _busy ? null : _saveDraft, tooltip: 'Enregistrer en brouillon', icon: const Icon(Icons.save_outlined))]),
       body: Column(children: [
         Expanded(child: ListView(padding: const EdgeInsets.only(bottom: 12), children: [
           const FieldBand('Gérer le registre de formation'),

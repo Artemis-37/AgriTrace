@@ -10,7 +10,9 @@ import '../sync/sync_state.dart';
 import 'parcel_survey_screen.dart';
 import 'photo_capture.dart';
 import 'producer_map_screen.dart';
+import 'distribution_screen.dart';
 import 'questionnaire_screen.dart';
+import 'training_screen.dart';
 
 const _green = Color(0xFF0B5E3B);
 const _action = Color(0xFF3F9B2E);
@@ -33,6 +35,7 @@ class _ProducerDetailScreenState extends State<ProducerDetailScreen> {
   bool _canSurvey = false, _canEdit = false;
   String? _taskError, _msg;
   Uint8List? _avatar;
+  List<Map<String, dynamic>> _drafts = [];
 
   @override
   void initState() {
@@ -40,6 +43,7 @@ class _ProducerDetailScreenState extends State<ProducerDetailScreen> {
     _load();
     _loadTasks();
     _loadAvatar();
+    _loadDrafts();
   }
 
   String get _avatarKey => 'producer_photo:${widget.producer['id']}';
@@ -68,6 +72,25 @@ class _ProducerDetailScreenState extends State<ProducerDetailScreen> {
       setState(() => _avatar = bytes);
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Photo de profil conservée sur l\'appareil, envoyée dès que la connexion le permet.')));
     }
+  }
+
+  Future<void> _loadDrafts() async {
+    final d = (await services.repo.drafts()).where((x) => ((x['producer_ids'] as List?) ?? const []).contains('${widget.producer['id']}')).toList();
+    if (mounted) setState(() => _drafts = d);
+  }
+
+  Map<String, dynamic>? _draftOf(Object? targetId) {
+    for (final d in _drafts) { if (d['kind'] == 'task' && d['target_id'] == targetId) return d; }
+    return null;
+  }
+
+  Future<void> _openDraft(Map<String, dynamic> d) async {
+    final kind = d['kind'];
+    final Widget? w = kind == 'training' ? TrainingFormScreen(draft: d) : kind == 'distribution' ? DistributionScreen(draft: d) : null;
+    if (w == null) return;
+    final saved = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => w));
+    if (saved == true) services.sync.run();
+    _loadDrafts();
   }
 
   Future<void> _load() async {
@@ -190,15 +213,25 @@ class _ProducerDetailScreenState extends State<ProducerDetailScreen> {
         if (_taskError != null) Padding(padding: const EdgeInsets.all(16), child: Text(_taskError!)),
         if (rows == null && _taskError == null) const Padding(padding: EdgeInsets.all(32), child: Center(child: CircularProgressIndicator())),
         if (rows != null && _assigned.isEmpty) Padding(padding: const EdgeInsets.all(24), child: Center(child: Text(_msg != null && _msg!.startsWith('Hors connexion') ? 'Aucune tâche pour ce producteur à la dernière synchronisation.\nSynchronisez avec du réseau pour recevoir les nouvelles.' : 'Aucune tâche pour ce producteur.', textAlign: TextAlign.center))),
+        for (final d in _drafts.where((d) => d['kind'] != 'task'))
+          Card(elevation: 0, color: const Color(0xFFFFF4E5), shape: RoundedRectangleBorder(side: BorderSide(color: Colors.orange.shade300), borderRadius: BorderRadius.circular(8)), child: ListTile(
+            leading: Icon(d['kind'] == 'training' ? Icons.school_outlined : Icons.volunteer_activism, color: Colors.orange.shade800),
+            title: Text('${d['title']}', maxLines: 2, overflow: TextOverflow.ellipsis),
+            subtitle: Text('${d['kind'] == 'training' ? 'Formation' : 'Distribution et services'} • Brouillon non terminé', style: TextStyle(color: Colors.orange.shade800, fontWeight: FontWeight.w700)),
+            trailing: const Icon(Icons.edit_note, size: 30, color: _action), onTap: () => _openDraft(d))),
         if (_assigned.isNotEmpty) ...[
           for (final a in _assigned)
             Opacity(opacity: a['status'] == 'done' ? 0.45 : 1, child: Card(elevation: 0, shape: RoundedRectangleBorder(side: const BorderSide(color: Color(0xFFDDDDDD)), borderRadius: BorderRadius.circular(18)), child: ListTile(
               leading: Icon(a['kind'] == 'formation' ? Icons.menu_book : a['kind'] == 'distribution' ? Icons.inventory_2_outlined : a['kind'] == 'inspection' ? Icons.fact_check_outlined : a['kind'] == 'service' ? Icons.support_agent : Icons.task_alt),
               title: Text('${a['title']}', maxLines: 2, overflow: TextOverflow.ellipsis),
-              subtitle: Text('${a['kind'] == 'formation' ? 'Module de formation' : a['kind'] == 'distribution' ? 'Distribution' : a['kind'] == 'inspection' ? 'Inspection interne' : a['kind'] == 'service' ? 'Service' : 'Tâche'}${a['due_date'] != null ? ' • échéance ${a['due_date'].toString().substring(0, 10)}' : ''}${(a['instructions'] ?? '').toString().isNotEmpty ? '\n${a['instructions']}' : ''}'),
-              isThreeLine: (a['instructions'] ?? '').toString().isNotEmpty,
+              subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('${a['kind'] == 'formation' ? 'Module de formation' : a['kind'] == 'distribution' ? 'Distribution' : a['kind'] == 'inspection' ? 'Inspection interne' : a['kind'] == 'service' ? 'Service' : 'Tâche'}${a['due_date'] != null ? ' • échéance ${a['due_date'].toString().substring(0, 10)}' : ''}${(a['instructions'] ?? '').toString().isNotEmpty ? '\n${a['instructions']}' : ''}'),
+                if (_draftOf(a['target_id']) != null && a['status'] != 'done') Text('Brouillon non terminé', style: TextStyle(color: Colors.orange.shade800, fontWeight: FontWeight.w700)),
+              ]),
+              isThreeLine: (a['instructions'] ?? '').toString().isNotEmpty || _draftOf(a['target_id']) != null,
               onTap: a['questionnaire_id'] != null && a['questions'] != null ? () async {
-                final saved = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => QuestionnaireScreen(assignment: Map<String, dynamic>.from(a as Map), producer: widget.producer)));
+                final saved = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => QuestionnaireScreen(assignment: Map<String, dynamic>.from(a as Map), producer: widget.producer, draft: _draftOf(a['target_id']))));
+                _loadDrafts();
                 if (saved == true) { await _applyLocalAssignments(); if (mounted) setState(() => _msg = 'Réponses conservées sur l\'appareil, envoyées à la synchronisation.'); }
               } : null,
               trailing: a['questionnaire_id'] != null && a['questions'] != null

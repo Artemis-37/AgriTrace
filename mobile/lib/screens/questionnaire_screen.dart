@@ -10,7 +10,9 @@ const _action = Color(0xFF3F9B2E);
 class QuestionnaireScreen extends StatefulWidget {
   final Map<String, dynamic> assignment;
   final Map<String, Object?> producer;
-  const QuestionnaireScreen({super.key, required this.assignment, required this.producer});
+  const QuestionnaireScreen({super.key, required this.assignment, required this.producer, this.draft});
+  /// Brouillon « non terminé » à reprendre (réponses déjà saisies).
+  final Map<String, dynamic>? draft;
   @override
   State<QuestionnaireScreen> createState() => _QuestionnaireScreenState();
 }
@@ -20,6 +22,38 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
   final Map<String, TextEditingController> _ctl = {};
   String? _error;
   bool _busy = false;
+  String? _draftId;
+
+  @override
+  void initState() {
+    super.initState();
+    final d = widget.draft;
+    if (d != null) {
+      _draftId = d['id'] as String?;
+      final a = Map<String, dynamic>.from(((d['state'] as Map?)?['answers'] as Map?) ?? const {});
+      _ans.addAll(a);
+      for (final q in _questions) {
+        final id = '${q['id']}';
+        if ((q['type'] == 'text' || q['type'] == 'number') && a[id] != null) _text(id).text = '${a[id]}';
+      }
+    }
+  }
+
+  /// Enregistre les réponses déjà saisies, sans obligation de tout renseigner.
+  Future<void> _saveDraft() async {
+    for (final q in _questions) {
+      final id = '${q['id']}';
+      if (q['type'] == 'text' || q['type'] == 'number') {
+        final t = _text(id).text.trim();
+        if (t.isNotEmpty) { _ans[id] = t; } else { _ans.remove(id); }
+      }
+    }
+    await services.repo.saveDraft(id: _draftId, kind: 'task', title: '${widget.assignment['title']}', producerIds: ['${widget.producer['id']}'],
+        targetId: widget.assignment['target_id'], state: {'answers': _ans});
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Brouillon enregistré : tâche non terminée.')));
+    Navigator.of(context).pop(false);
+  }
 
   List<Map<String, dynamic>> get _questions =>
       ((widget.assignment['questions'] as List?) ?? const []).map((q) => Map<String, dynamic>.from(q as Map)).toList();
@@ -64,6 +98,7 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
     final targetId = widget.assignment['target_id'];
     await services.repo.queueOp('questionnaire.answer', {'id': targetId, 'answers': _ans});
     await services.repo.patchCachedAssignment(targetId as Object, {'status': 'done', 'answers': _ans});
+    await services.repo.deleteDraft(_draftId);
     widget.assignment['status'] = 'done';
     widget.assignment['answers'] = _ans;
     services.sync.run();
@@ -122,7 +157,8 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
     final saved = _saved;
     final instr = '${widget.assignment['instructions'] ?? ''}';
     return Scaffold(
-      appBar: AppBar(title: Text('${widget.assignment['title']}'), backgroundColor: _green, foregroundColor: Colors.white),
+      appBar: AppBar(title: Text('${widget.assignment['title']}'), backgroundColor: _green, foregroundColor: Colors.white,
+          actions: [if (!_done) IconButton(onPressed: _busy ? null : _saveDraft, tooltip: 'Enregistrer en brouillon', icon: const Icon(Icons.save_outlined))]),
       body: ListView(padding: const EdgeInsets.all(16), children: [
         Text('${p['last_name'] ?? ''} ${p['first_names'] ?? ''} · ${p['internal_code'] ?? ''}', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17)),
         if (instr.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 6), child: Text(instr, style: const TextStyle(color: Colors.black54))),

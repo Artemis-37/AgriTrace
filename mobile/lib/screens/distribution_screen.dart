@@ -26,6 +26,36 @@ class _Pick {
   String get suffix => currencyLabel == 'Unités' ? 'unités' : (currencyLabel.contains('FCFA') ? 'FCFA' : currencyLabel.contains('€') ? '€' : '\$');
 }
 
+
+/// Référence partagée du brouillon en cours (une seule entrée de brouillon pour toute la chaîne d'écrans).
+class _DraftRef {
+  String? id;
+  _DraftRef([this.id]);
+}
+
+Map<String, Object?> _plain(Map<String, Object?> m) => {for (final e in m.entries) if (e.value == null || e.value is String || e.value is num || e.value is bool) e.key: e.value};
+
+/// « Distribution et services » commencée mais pas terminée : conservée sur l'appareil, jamais envoyée tant qu'elle n'est pas enregistrée.
+Future<void> _saveDistDraft(BuildContext context, _DraftRef ref, {required List<_Pick> picks, required String category, String? group,
+    List<Map<String, Object?>> producers = const [], List<_Beneficiary>? people, int index = 0}) async {
+  final prods = people != null ? [for (final b in people) b.producer] : producers;
+  final title = '${category.isEmpty ? 'Distribution' : category}${picks.isEmpty ? '' : ' — ${picks.map((p) => p.name).join(', ')}'}';
+  ref.id = await services.repo.saveDraft(id: ref.id, kind: 'distribution', title: title, producerIds: [for (final p in prods) '${p['id']}'], state: {
+    'category': category, 'group': group ?? (picks.isEmpty ? null : picks.first.group), 'index': index,
+    'picks': [for (final p in picks) {'article': p.article, 'currency': p.currencyLabel}],
+    'producers': [for (final p in prods) _plain(p)],
+    if (people != null) 'people': [for (final b in people) {
+      'id': b.id, 'signature': b.signature == null ? null : base64Encode(b.signature!),
+      'lines': {for (final e in b.lines.entries) e.key: {'qty': e.value.qty.text, 'proof': e.value.proofPath}},
+    }],
+  });
+  if (!context.mounted) return;
+  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Brouillon enregistré : distribution non terminée.')));
+  Navigator.of(context).popUntil((r) => r.isFirst);
+}
+
+Widget _draftAction(VoidCallback onTap) => IconButton(onPressed: onTap, tooltip: 'Enregistrer en brouillon', icon: const Icon(Icons.save_outlined));
+
 /// Ce que le bénéficiaire reçoit : quantité par article, preuves photo et signature.
 class _Line {
   final qty = TextEditingController();
@@ -46,7 +76,8 @@ class _Beneficiary {
 /// Catégorie, groupe, recherche, cases à cocher, articles choisis affichés en pastilles.
 /// Le catalogue est tenu par l'administrateur (réseau nécessaire ; le dernier catalogue reçu reste disponible hors connexion).
 class DistributionScreen extends StatefulWidget {
-  const DistributionScreen({super.key});
+  const DistributionScreen({super.key, this.draft});
+  final Map<String, dynamic>? draft;
   @override
   State<DistributionScreen> createState() => _DistributionScreenState();
 }
@@ -57,9 +88,50 @@ class _DistributionScreenState extends State<DistributionScreen> {
   String _q = '';
   final Map<String, Map<String, dynamic>> _chosen = {};
   bool _fromCache = false;
+  late final _DraftRef _ref = _DraftRef(widget.draft?['id'] as String?);
 
   @override
-  void initState() { super.initState(); _load(); }
+  void initState() {
+    super.initState();
+    _load();
+    if (widget.draft != null) WidgetsBinding.instance.addPostFrameCallback((_) => _resume());
+  }
+
+  /// Reprend le brouillon là où il s'est arrêté (bénéficiaires ou configuration), l'étape 1 est restaurée derrière.
+  Future<void> _resume() async {
+    final st = Map<String, dynamic>.from((widget.draft!['state'] as Map?) ?? const {});
+    final picks = <_Pick>[for (final p in (st['picks'] as List? ?? const [])) _Pick(Map<String, dynamic>.from((p as Map)['article'] as Map))..currencyLabel = '${p['currency'] ?? 'Unités'}'];
+    final category = '${st['category'] ?? ''}';
+    setState(() {
+      _category = category.isEmpty ? null : category; _group = st['group'] as String?;
+      _chosen..clear()..addAll({for (final p in picks) p.id: p.article});
+    });
+    final producers = [for (final p in (st['producers'] as List? ?? const [])) Map<String, Object?>.from(p as Map)];
+    if (picks.isEmpty || producers.isEmpty) return;
+    final saved = {for (final p in (st['people'] as List? ?? const [])) '${(p as Map)['id']}': Map<String, dynamic>.from(p)};
+    Widget next;
+    if (saved.isEmpty) {
+      next = _BeneficiariesScreen(ref: _ref, picks: picks, category: category, initial: producers);
+    } else {
+      final people = <_Beneficiary>[];
+      for (final prod in producers) {
+        final b = _Beneficiary(prod);
+        final d = saved['${prod['id']}'];
+        for (final p in picks) {
+          final line = _Line();
+          final l = (d?['lines'] as Map?)?[p.id] as Map?;
+          if (l != null) { line.qty.text = '${l['qty'] ?? ''}'; line.proofPath = l['proof'] as String?; }
+          b.lines[p.id] = line;
+        }
+        if (d?['signature'] != null) b.signature = base64Decode(d!['signature'] as String);
+        people.add(b);
+      }
+      next = _ConfigScreen(ref: _ref, picks: picks, category: category, people: people, initialIndex: ((st['index'] as num?)?.toInt() ?? 0).clamp(0, people.length - 1));
+    }
+    if (!mounted) return;
+    final done = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => next));
+    if (done == true && mounted) Navigator.of(context).pop(true);
+  }
 
   Future<void> _load() async {
     try {
@@ -79,7 +151,7 @@ class _DistributionScreenState extends State<DistributionScreen> {
 
   Future<void> _next() async {
     final picks = [for (final a in _chosen.values) _Pick(a)];
-    final done = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => _VerifyScreen(picks: picks, category: _category ?? '')));
+    final done = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => _VerifyScreen(ref: _ref, picks: picks, category: _category ?? '')));
     if (done == true && mounted) Navigator.of(context).pop(true);
   }
 
@@ -89,7 +161,7 @@ class _DistributionScreenState extends State<DistributionScreen> {
     final list = ready ? _list : <Map<String, dynamic>>[];
     return Scaffold(
       backgroundColor: const Color(0xFFF7FAF2),
-      appBar: AppBar(title: const Text('Parcourir les articles')),
+      appBar: AppBar(title: const Text('Parcourir les articles'), actions: [_draftAction(() => _saveDistDraft(context, _ref, picks: [for (final a in _chosen.values) _Pick(a)], category: _category ?? '', group: _group))]),
       body: Column(children: [
         Expanded(child: ListView(padding: const EdgeInsets.fromLTRB(16, 12, 16, 12), children: [
           const Text('Parcourir les articles', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800)),
@@ -145,9 +217,10 @@ class _BottomButton extends StatelessWidget {
 
 /// Étape 2 : « Vérifier les articles » — devise (ou unités) de chaque article.
 class _VerifyScreen extends StatefulWidget {
+  final _DraftRef ref;
   final List<_Pick> picks;
   final String category;
-  const _VerifyScreen({required this.picks, required this.category});
+  const _VerifyScreen({required this.ref, required this.picks, required this.category});
   @override
   State<_VerifyScreen> createState() => _VerifyScreenState();
 }
@@ -158,7 +231,7 @@ class _VerifyScreenState extends State<_VerifyScreen> {
     final n = widget.picks.length;
     return Scaffold(
       backgroundColor: const Color(0xFFF7FAF2),
-      appBar: AppBar(title: const Text("Vérifier l'article")),
+      appBar: AppBar(title: const Text("Vérifier l'article"), actions: [_draftAction(() => _saveDistDraft(context, widget.ref, picks: widget.picks, category: widget.category))]),
       body: Column(children: [
         Padding(padding: const EdgeInsets.fromLTRB(16, 16, 16, 8), child: Row(children: [
           const CircleAvatar(radius: 30, backgroundColor: Color(0xFFE8F3E4), child: Icon(Icons.view_list, color: fieldGreen, size: 30)),
@@ -181,7 +254,7 @@ class _VerifyScreenState extends State<_VerifyScreen> {
           ),
         ])),
         _BottomButton('CONTINUER VERS LES AGRICULTEURS', () async {
-          final done = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => _BeneficiariesScreen(picks: widget.picks, category: widget.category)));
+          final done = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => _BeneficiariesScreen(ref: widget.ref, picks: widget.picks, category: widget.category)));
           if (done == true && context.mounted) Navigator.of(context).pop(true);
         }),
       ]),
@@ -191,9 +264,11 @@ class _VerifyScreenState extends State<_VerifyScreen> {
 
 /// Étape 3 : « Sélectionner les bénéficiaires » (recherche, section, rôle, cases à cocher).
 class _BeneficiariesScreen extends StatefulWidget {
+  final _DraftRef ref;
   final List<_Pick> picks;
   final String category;
-  const _BeneficiariesScreen({required this.picks, required this.category});
+  final List<Map<String, Object?>> initial;
+  const _BeneficiariesScreen({required this.ref, required this.picks, required this.category, this.initial = const []});
   @override
   State<_BeneficiariesScreen> createState() => _BeneficiariesScreenState();
 }
@@ -205,7 +280,11 @@ class _BeneficiariesScreenState extends State<_BeneficiariesScreen> {
   String? _section;
 
   @override
-  void initState() { super.initState(); _find(); }
+  void initState() {
+    super.initState();
+    for (final p in widget.initial) { _sel['${p['id']}'] = p; }
+    _find();
+  }
 
   Future<void> _find() async {
     final r = await services.repo.searchProducers(_q);
@@ -220,7 +299,7 @@ class _BeneficiariesScreenState extends State<_BeneficiariesScreen> {
     final n = _sel.length;
     return Scaffold(
       backgroundColor: const Color(0xFFF7FAF2),
-      appBar: AppBar(title: const Text('Sélectionner les bénéficiaires')),
+      appBar: AppBar(title: const Text('Sélectionner les bénéficiaires'), actions: [_draftAction(() => _saveDistDraft(context, widget.ref, picks: widget.picks, category: widget.category, producers: _sel.values.toList()))]),
       body: Column(children: [
         FieldBand('Sélection des bénéficiaires', children: [
           const Text('Sélectionner le bénéficiaire pour la distribution', style: TextStyle(color: Colors.white)),
@@ -254,7 +333,7 @@ class _BeneficiariesScreenState extends State<_BeneficiariesScreen> {
           Text('$n', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 20, color: fieldGreen)),
         ])),
         Container(color: const Color(0xFFEDEDED), child: _BottomButton('CONTINUER AVEC ${n == 0 ? 'LES BÉNÉFICIAIRES' : n == 1 ? 'LE (1) BÉNÉFICIAIRE' : 'LES ($n) BÉNÉFICIAIRES'}', n == 0 ? null : () async {
-          final done = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => _ConfigScreen(picks: widget.picks, category: widget.category, people: [for (final p in _sel.values) _Beneficiary(p)])));
+          final done = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => _ConfigScreen(ref: widget.ref, picks: widget.picks, category: widget.category, people: [for (final p in _sel.values) _Beneficiary(p)])));
           if (done == true && context.mounted) Navigator.of(context).pop(true);
         })),
       ]),
@@ -264,16 +343,18 @@ class _BeneficiariesScreenState extends State<_BeneficiariesScreen> {
 
 /// Étape 4 : « Configuration de la distribution » — pour chaque bénéficiaire : quantités, preuve photo, signature.
 class _ConfigScreen extends StatefulWidget {
+  final _DraftRef ref;
   final List<_Pick> picks;
   final String category;
   final List<_Beneficiary> people;
-  const _ConfigScreen({required this.picks, required this.category, required this.people});
+  final int initialIndex;
+  const _ConfigScreen({required this.ref, required this.picks, required this.category, required this.people, this.initialIndex = 0});
   @override
   State<_ConfigScreen> createState() => _ConfigScreenState();
 }
 
 class _ConfigScreenState extends State<_ConfigScreen> {
-  int _i = 0;
+  late int _i = widget.initialIndex;
   String? _msg;
 
   _Beneficiary get _b => widget.people[_i];
@@ -281,7 +362,7 @@ class _ConfigScreenState extends State<_ConfigScreen> {
   @override
   void initState() {
     super.initState();
-    for (final b in widget.people) { for (final p in widget.picks) { b.lines[p.id] = _Line(); } }
+    for (final b in widget.people) { for (final p in widget.picks) { b.lines.putIfAbsent(p.id, () => _Line()); } }
   }
 
   String? _check() {
@@ -308,7 +389,7 @@ class _ConfigScreenState extends State<_ConfigScreen> {
     if (e != null) { setState(() => _msg = e); return; }
     setState(() => _msg = null);
     if (_i + 1 < widget.people.length) { setState(() => _i++); return; }
-    final done = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => _ReviewScreen(picks: widget.picks, category: widget.category, people: widget.people)));
+    final done = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => _ReviewScreen(ref: widget.ref, picks: widget.picks, category: widget.category, people: widget.people)));
     if (done == true && mounted) Navigator.of(context).pop(true);
   }
 
@@ -317,7 +398,7 @@ class _ConfigScreenState extends State<_ConfigScreen> {
     final total = widget.people.length;
     return Scaffold(
       backgroundColor: const Color(0xFFF7FAF2),
-      appBar: AppBar(title: const Text('Configuration de la distribution')),
+      appBar: AppBar(title: const Text('Configuration de la distribution'), actions: [_draftAction(() => _saveDistDraft(context, widget.ref, picks: widget.picks, category: widget.category, people: widget.people, index: _i))]),
       body: Column(children: [
         Container(color: Colors.white, padding: const EdgeInsets.fromLTRB(16, 12, 16, 10), child: Column(children: [
           Row(children: [
@@ -376,10 +457,11 @@ class _ConfigScreenState extends State<_ConfigScreen> {
 
 /// Révision finale avant enregistrement : un dossier de distribution par bénéficiaire, conservé sur l'appareil puis envoyé.
 class _ReviewScreen extends StatefulWidget {
+  final _DraftRef ref;
   final List<_Pick> picks;
   final String category;
   final List<_Beneficiary> people;
-  const _ReviewScreen({required this.picks, required this.category, required this.people});
+  const _ReviewScreen({required this.ref, required this.picks, required this.category, required this.people});
   @override
   State<_ReviewScreen> createState() => _ReviewScreenState();
 }
@@ -405,6 +487,7 @@ class _ReviewScreenState extends State<_ReviewScreen> {
       await sig.writeAsBytes(b.signature!);
       await services.repo.queuePhoto(subjectType: 'field_record', subjectId: id, kind: 'Signature du bénéficiaire', sourcePath: sig.path);
     }
+    await services.repo.deleteDraft(widget.ref.id);
     services.sync.run();
     if (mounted) Navigator.of(context).pop(true);
   }
@@ -412,7 +495,7 @@ class _ReviewScreenState extends State<_ReviewScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
         backgroundColor: const Color(0xFFF7FAF2),
-        appBar: AppBar(title: const Text('Réviser la distribution')),
+        appBar: AppBar(title: const Text('Réviser la distribution'), actions: [_draftAction(() => _saveDistDraft(context, widget.ref, picks: widget.picks, category: widget.category, people: widget.people, index: widget.people.length - 1))]),
         body: Column(children: [
           Expanded(child: ListView(padding: const EdgeInsets.all(12), children: [
             for (final b in widget.people) Container(

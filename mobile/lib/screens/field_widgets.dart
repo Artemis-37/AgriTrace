@@ -200,3 +200,28 @@ class _InkPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _InkPainter old) => true;
 }
+
+
+/// Propose de reprendre un brouillon « non terminé » de ce type, ou d'en commencer un nouveau.
+/// Renvoie `null` si l'utilisateur annule, `{}` pour un nouveau formulaire, ou le brouillon choisi.
+Future<Map<String, dynamic>?> chooseDraft(BuildContext context, String kind) async {
+  final list = await services.repo.drafts(kind: kind);
+  if (list.isEmpty || !context.mounted) return <String, dynamic>{};
+  return showDialog<Map<String, dynamic>>(context: context, builder: (c) => AlertDialog(
+    title: const Text('Brouillons non terminés'),
+    content: SizedBox(width: double.maxFinite, child: ListView(shrinkWrap: true, children: [
+      for (final d in list) ListTile(
+        contentPadding: EdgeInsets.zero, leading: const Icon(Icons.edit_note, color: Color(0xFFF28C1E)),
+        title: Text('${d['title']}', maxLines: 2, overflow: TextOverflow.ellipsis),
+        subtitle: Text('Brouillon non terminé • ${'${d['updated_at']}'.substring(0, 10)}'),
+        trailing: IconButton(tooltip: 'Supprimer le brouillon', icon: const Icon(Icons.delete_outline), onPressed: () async {
+          await services.repo.deleteDraft(d['id'] as String);
+          if (c.mounted) Navigator.pop(c, null);
+        }),
+        onTap: () => Navigator.pop(c, d)),
+    ])),
+    actions: [
+      TextButton(onPressed: () => Navigator.pop(c), child: const Text('Annuler')),
+      FilledButton(onPressed: () => Navigator.pop(c, <String, dynamic>{}), child: const Text('Nouveau')),
+    ]));
+}

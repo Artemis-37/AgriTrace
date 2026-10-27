@@ -272,6 +272,30 @@ class Repository {
     await db.raw.insert('outbox', {'idempotency_key': key, 'op_type': type, 'payload': jsonEncode(payload), 'entity_id': entityId ?? key, 'created_at': DateTime.now().toIso8601String()});
   }
 
+  /// Brouillons « non terminés » (tâche, formation, distribution, infrastructure sociale) : gardés sur l'appareil, jamais envoyés ni comptés dans « Éléments à soumettre ».
+  Future<List<Map<String, dynamic>>> drafts({String? kind}) async {
+    final raw = await db.getKv('drafts');
+    if (raw == null) return [];
+    try {
+      final all = (jsonDecode(raw) as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      return kind == null ? all : all.where((d) => d['kind'] == kind).toList();
+    } catch (_) { return []; }
+  }
+  Future<String> saveDraft({String? id, required String kind, required String title, List<String> producerIds = const [], Object? targetId, required Map<String, Object?> state}) async {
+    final all = await drafts();
+    final did = id ?? 'draft-${_uuid.v4()}';
+    all.removeWhere((d) => d['id'] == did);
+    all.insert(0, {'id': did, 'kind': kind, 'title': title, 'producer_ids': producerIds, 'target_id': targetId, 'updated_at': DateTime.now().toIso8601String(), 'state': state});
+    await db.setKv('drafts', jsonEncode(all));
+    return did;
+  }
+  Future<void> deleteDraft(String? id) async {
+    if (id == null) return;
+    final all = await drafts();
+    all.removeWhere((d) => d['id'] == id);
+    await db.setKv('drafts', jsonEncode(all));
+  }
+
   /// Copies des tâches et des éléments ajoutés aux profils, mises à jour à chaque synchronisation.
   Future<List<dynamic>> _cache(String k) async {
     final raw = await db.getKv(k);

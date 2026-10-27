@@ -6,7 +6,8 @@ import 'field_widgets.dart';
 
 /// Ajouter une infrastructure sociale (école) avec sa position GPS. Conservée sur l'appareil puis envoyée à la synchronisation.
 class SocialInfraScreen extends StatefulWidget {
-  const SocialInfraScreen({super.key});
+  const SocialInfraScreen({super.key, this.draft});
+  final Map<String, dynamic>? draft;
   @override
   State<SocialInfraScreen> createState() => _SocialInfraScreenState();
 }
@@ -19,14 +20,14 @@ class _SocialInfraScreenState extends State<SocialInfraScreen> {
   InfraTemplate? _cat;
   double? _lat, _lon;
   bool _locating = false, _busy = false;
-  String? _msg, _org;
+  String? _msg, _org, _draftId;
 
   @override
   void initState() {
     super.initState();
     services.repo.identity().then((i) { if (mounted) setState(() => _org = i.org); });
-    FieldTemplates.load().then((t) { if (mounted) setState(() { _tpl = t; if (t.infrastructures.length == 1) _choose(t.infrastructures.first); }); });
-    _locate();
+    FieldTemplates.load().then((t) { if (mounted) setState(() { _tpl = t; if (t.infrastructures.length == 1) _choose(t.infrastructures.first); _restore(); }); });
+    if (widget.draft == null) _locate();
   }
 
   void _choose(InfraTemplate? c) {
@@ -34,6 +35,38 @@ class _SocialInfraScreenState extends State<SocialInfraScreen> {
     _ctl.clear(); _sel.clear();
     _cat = c;
     if (c != null) { for (final q in c.questions) { _ctl[q.key] = TextEditingController(); } }
+  }
+
+  void _restore() {
+    final d = widget.draft;
+    if (d == null || _draftId != null) return;
+    _draftId = d['id'] as String?;
+    final st = Map<String, dynamic>.from((d['state'] as Map?) ?? const {});
+    _choose(_tpl?.infrastructures.where((c) => c.category == st['category']).firstOrNull);
+    _name.text = '${st['name'] ?? ''}'; _region.text = '${st['region'] ?? ''}'; _village.text = '${st['village'] ?? ''}'; _section.text = '${st['section'] ?? ''}';
+    _lat = (st['lat'] as num?)?.toDouble(); _lon = (st['lon'] as num?)?.toDouble();
+    final answers = Map<String, dynamic>.from((st['answers'] as Map?) ?? const {});
+    for (final q in _qs) {
+      final v = answers[q.key];
+      if (v == null) continue;
+      if (q.type == 'select') { _sel[q.key] = '$v'; } else { _ctl[q.key]?.text = '$v'; }
+    }
+  }
+
+  Future<void> _saveDraft() async {
+    final answers = <String, Object?>{};
+    for (final q in _qs) {
+      final v = q.type == 'select' ? _sel[q.key] : _ctl[q.key]?.text.trim();
+      if (v != null && v.isNotEmpty) answers[q.key] = v;
+    }
+    final nom = (_ctl['nom']?.text ?? '').trim();
+    final title = _name.text.trim().isNotEmpty ? _name.text.trim() : nom.isNotEmpty ? nom : (_cat?.category ?? 'Infrastructure sociale');
+    await services.repo.saveDraft(id: _draftId, kind: 'social_infrastructure', title: title, state: {
+      'category': _cat?.category, 'name': _name.text.trim(), 'region': _region.text.trim(), 'village': _village.text.trim(), 'section': _section.text.trim(),
+      'lat': _lat, 'lon': _lon, 'answers': answers});
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Brouillon enregistré : infrastructure non terminée.')));
+    Navigator.of(context).pop(false);
   }
 
   List<TemplateQuestion> get _qs => _cat?.questions ?? const [];
@@ -77,6 +110,7 @@ class _SocialInfraScreenState extends State<SocialInfraScreen> {
     final nom = (_ctl['nom']?.text ?? '').trim();
     final title = _name.text.trim().isNotEmpty ? _name.text.trim() : nom.isNotEmpty ? nom : _cat!.category;
     await services.repo.queueFieldRecord(kind: 'social_infrastructure', title: title, latitude: _lat, longitude: _lon, data: data);
+    await services.repo.deleteDraft(_draftId);
     services.sync.run();
     if (mounted) Navigator.of(context).pop(true);
   }
@@ -85,7 +119,7 @@ class _SocialInfraScreenState extends State<SocialInfraScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF7FAF2),
-      appBar: AppBar(title: const Text('Ajouter une infrastructure sociale')),
+      appBar: AppBar(title: const Text('Ajouter une infrastructure sociale'), actions: [IconButton(onPressed: _busy ? null : _saveDraft, tooltip: 'Enregistrer en brouillon', icon: const Icon(Icons.save_outlined))]),
       body: ListView(padding: const EdgeInsets.only(bottom: 24), children: [
         FieldBand('Ajouter une infrastructure sociale', children: [
           FieldDropdown(value: _cat?.category, hint: 'Type', items: [for (final c in _tpl?.infrastructures ?? const <InfraTemplate>[]) c.category],
