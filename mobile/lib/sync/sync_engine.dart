@@ -230,9 +230,14 @@ class SyncEngine {
       try {
         _step(1, SyncStepState.doing, 'Photo · ${r['kind'] ?? ''}${(await _declName(r['declaration_id'] as String)).isEmpty ? '' : ' · ${await _declName(r['declaration_id'] as String)}'}');
         final enc = PhotoVault.isEncrypted(file.path);
+        if (type == 'producer_photo') {
+          // Photo de profil : une seule par producteur, la dernière remplace la précédente (renvoi sans risque).
+          await api.upload('/producers/${r['declaration_id']}/photo', filePath: enc ? null : file.path, bytes: enc ? await PhotoVault().decrypt(file.path) : null, filename: 'photo.jpg', fields: const {});
+        } else {
         await api.upload('/documents', filePath: enc ? null : file.path, bytes: enc ? await PhotoVault().decrypt(file.path) : null, filename: 'photo.jpg', fields: {
           'subject_type': type, 'subject_id': r['declaration_id'] as String, 'kind': r['kind'] as String, 'client_key': r['client_key'] as String,
         });
+        }
         await db.raw.delete('pending_uploads', where: 'client_key = ?', whereArgs: [r['client_key']]);
         await file.delete().catchError((_) => file);
       } on ApiException catch (e) {

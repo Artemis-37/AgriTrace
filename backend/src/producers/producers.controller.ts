@@ -1,6 +1,6 @@
 import {
   BadRequestException, Body, ConflictException, Controller, Get, NotFoundException, Param, ParseUUIDPipe,
-  Post, Put, Query, Req, StreamableFile, UploadedFile, UseInterceptors,
+  ForbiddenException, Post, Put, Query, Req, Res, StreamableFile, UploadedFile, UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiHeader, ApiTags } from '@nestjs/swagger';
@@ -9,6 +9,7 @@ import * as ExcelJS from 'exceljs';
 import { PoolClient } from 'pg';
 import { RequirePermissions } from '../access/decorators';
 import { AuditService } from '../audit/audit.service';
+import { decryptFile, encryptFile } from '../common/crypto';
 import { DbService } from '../db/db.service';
 import {
   duplicateKeys, findInFileDuplicates, ParsedRow, resolveMapping, TARGET_FIELDS, TEMPLATE_HEADERS, validateRow,
@@ -167,6 +168,42 @@ export class ProducersController {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       disposition: 'attachment; filename="modele-producteurs.xlsx"',
     });
+  }
+
+  /** Photo de profil du producteur (fichier binaire ; 404 s'il n'y en a pas). */
+  @Get(':id/photo')
+  @RequirePermissions('producers:read')
+  async photo(@Param('id', ParseUUIDPipe) id: string, @Req() req: any, @Res() res: any) {
+    const r = (await this.db.tx(req.org.id, (c) => c.query(`SELECT mime, data FROM producer_photos WHERE producer_id = $1`, [id]))).rows[0];
+    if (!r) throw new NotFoundException('Aucune photo');
+    res.setHeader('Content-Type', r.mime);
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.end(decryptFile(r.data));
+  }
+
+  /** Enregistre ou remplace la photo de profil (JPEG ou PNG, 3 Mo au plus). */
+  @Post(':id/photo')
+  @RequirePermissions('producers:read')
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 3 * 1024 * 1024, files: 1 } }))
+  async setPhoto(@Param('id', ParseUUIDPipe) id: string, @UploadedFile() file: Express.Multer.File, @Req() req: any) {
+    const perms = req.org.permissions;
+    if (!(perms.has('producers:create') || perms.has('producers:update') || perms.has('documents:upload'))) throw new ForbiddenException('Droit insuffisant pour changer la photo');
+    if (!file) throw new BadRequestException('Fichier manquant (champ "file", 3 Mo maximum)');
+    const b = file.buffer;
+    const mime = b.length > 3 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff ? 'image/jpeg'
+      : b.length > 8 && b.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) ? 'image/png' : null;
+    if (!mime) throw new BadRequestException('Format non autorisé : JPEG ou PNG uniquement');
+    await this.db.tx(req.org.id, async (c) => {
+      if (!(await c.query(`SELECT 1 FROM producers WHERE id = $1`, [id])).rowCount) throw new NotFoundException('Producteur introuvable');
+      await c.query(
+        `INSERT INTO producer_photos(producer_id, organization_id, mime, data, updated_by) VALUES ($1,$2,$3,$4,$5)
+         ON CONFLICT (producer_id) DO UPDATE SET mime = EXCLUDED.mime, data = EXCLUDED.data, updated_by = EXCLUDED.updated_by, updated_at = now()`,
+        [id, req.org.id, mime, encryptFile(b), req.user.id]);
+    });
+    await this.audit.log({ organizationId: req.org.id, actorUserId: req.user.id, action: 'producer.photo', entityType: 'producer', entityId: id });
+    return { ok: true };
   }
 
   @Get(':id')

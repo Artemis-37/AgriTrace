@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
@@ -30,12 +32,42 @@ class _ProducerDetailScreenState extends State<ProducerDetailScreen> {
   bool _canDone = false;
   bool _canSurvey = false, _canEdit = false;
   String? _taskError, _msg;
+  Uint8List? _avatar;
 
   @override
   void initState() {
     super.initState();
     _load();
     _loadTasks();
+    _loadAvatar();
+  }
+
+  String get _avatarKey => 'producer_photo:${widget.producer['id']}';
+
+  /// Photo de profil : copie gardée sur l'appareil, mise à jour en ligne.
+  Future<void> _loadAvatar() async {
+    final cached = await services.db.getKv(_avatarKey);
+    if (cached != null && mounted) setState(() => _avatar = base64Decode(cached));
+    try {
+      final b = await services.api.getBytes('/producers/${widget.producer['id']}/photo');
+      if (b != null && b.isNotEmpty) {
+        await services.db.setKv(_avatarKey, base64Encode(b));
+        if (mounted) setState(() => _avatar = b);
+      }
+    } catch (_) { /* hors connexion : copie locale */ }
+  }
+
+  Future<void> _takeAvatar() async {
+    final path = await takePhotoPath();
+    if (path == null) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Aucune photo prise (appareil photo annulé ou indisponible).'))); return; }
+    final bytes = await File(path).readAsBytes();
+    await services.db.setKv(_avatarKey, base64Encode(bytes));
+    await services.repo.queuePhoto(subjectType: 'producer_photo', subjectId: widget.producer['id'] as String, kind: 'Photo de profil', sourcePath: path);
+    services.sync.run();
+    if (mounted) {
+      setState(() => _avatar = bytes);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Photo de profil conservée sur l\'appareil, envoyée dès que la connexion le permet.')));
+    }
   }
 
   Future<void> _load() async {
@@ -111,12 +143,23 @@ class _ProducerDetailScreenState extends State<ProducerDetailScreen> {
         body: Column(children: [
           Container(
             width: double.infinity, color: _green, padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Text('Voir le producteur', style: TextStyle(color: Colors.white, fontSize: 20)),
-              const SizedBox(height: 10),
-              _whiteBox(name),
-              const SizedBox(height: 8),
-              _whiteBox('${p['internal_code'] ?? ''}'),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Text('Voir le producteur', style: TextStyle(color: Colors.white, fontSize: 20)),
+                const SizedBox(height: 10),
+                _whiteBox(name),
+                const SizedBox(height: 8),
+                _whiteBox('${p['internal_code'] ?? ''}'),
+              ])),
+              const SizedBox(width: 12),
+              Padding(padding: const EdgeInsets.only(top: 4), child: SizedBox(width: 92, height: 106, child: Stack(clipBehavior: Clip.none, children: [
+                Positioned.fill(child: Container(
+                  decoration: BoxDecoration(color: const Color(0xFFE6E6E6), borderRadius: BorderRadius.circular(4)),
+                  clipBehavior: Clip.antiAlias,
+                  child: _avatar == null ? const Icon(Icons.person, size: 64, color: Color(0xFF757575)) : Image.memory(_avatar!, fit: BoxFit.cover, gaplessPlayback: true))),
+                Positioned(right: -8, bottom: -8, child: Material(color: const Color(0xFFF28C1E), shape: const CircleBorder(), elevation: 2,
+                  child: InkWell(customBorder: const CircleBorder(), onTap: _takeAvatar, child: const Padding(padding: EdgeInsets.all(9), child: Icon(Icons.add_a_photo_outlined, color: Colors.white, size: 22))))),
+              ]))),
             ]),
           ),
           const Material(color: Colors.white, child: TabBar(
