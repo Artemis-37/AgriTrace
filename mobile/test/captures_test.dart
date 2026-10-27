@@ -283,4 +283,72 @@ void main() {
     await shot(t, 'connexion', const LoginScreen());
     } finally { debugDisableShadows = true; }
   });
+
+  // Séquences pour le film : une image après chaque geste (touche, saisie caractère par caractère), dans SEQ_DIR/<nom>/NN.png.
+  // SEQ_DIR=/chemin CAPTURES_DIR=/tmp/x flutter test test/captures_test.dart --plain-name "séquences"
+  final seqDir = Platform.environment['SEQ_DIR'];
+  testWidgets('séquences', (t) async {
+    if (seqDir == null) return;
+    addTearDown(() => debugDisableShadows = true);
+    debugDisableShadows = false;
+    Finder field(String label) => find.byWidgetPredicate((w) => w is TextField && (w.decoration?.labelText ?? '').startsWith(label));
+    Future<void> settle(WidgetTester t, [int ms = 200]) async { await t.runAsync(() => Future<void>.delayed(Duration(milliseconds: ms))); await t.pump(const Duration(milliseconds: 300)); }
+    Future<void> run(String name, Widget screen, List<String> perms, Future<void> Function(WidgetTester, Future<void> Function() snap) flow, {int pending = 0}) async {
+      final db = _Db()..pending = pending;
+      db.kv['org_logo'] = base64Encode(File('../docs/brand/logo-cooperative-demo.png').readAsBytesSync());
+      final api = _Api(_routes); final pack = MapPackStore(api); final repo = _Repo(db, perms, _decls, _parcels);
+      services = Services(_Store(), api, db, repo, SyncEngine(db, api), pack, MapTiles(pack));
+      final key = GlobalKey();
+      t.view.physicalSize = const Size(1080, 2160); t.view.devicePixelRatio = 2.625;
+      await t.pumpWidget(RepaintBoundary(key: key, child: MaterialApp(debugShowCheckedModeBanner: false,
+        theme: ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF2F5D46), primary: const Color(0xFF2F5D46)), useMaterial3: true, fontFamily: 'Roboto', appBarTheme: const AppBarTheme(backgroundColor: Color(0xFF2F5D46), foregroundColor: Colors.white)),
+        home: ExcludeFocus(child: screen))));
+      await settle(t, 500);
+      final out = Directory('$seqDir/$name')..createSync(recursive: true); var n = 0;
+      Future<void> snap() async {
+        await settle(t, 250);
+        await t.runAsync(() async {
+          final b = key.currentContext!.findRenderObject() as RenderRepaintBoundary; final img = await b.toImage(pixelRatio: 1.0);
+          File('${out.path}/${(n++).toString().padLeft(2, '0')}.png').writeAsBytesSync((await img.toByteData(format: ui.ImageByteFormat.png))!.buffer.asUint8List());
+        });
+      }
+      await snap(); await flow(t, snap);
+    }
+    // Saisie progressive : 1 image par étape de texte
+    Future<void> type(WidgetTester t, Future<void> Function() snap, String label, List<String> steps) async {
+      for (final v in steps) { t.widget<TextField>(field(label)).controller!.text = v; await t.pump(const Duration(milliseconds: 120)); await snap(); }
+    }
+    await run('achat', const NewDeclarationScreen(), _collector, (t, snap) async {
+      await t.tap(find.text('KONÉ Awa')); await settle(t); await snap();
+      await t.tap(find.text('Continuer')); await settle(t, 300); await snap();
+      await type(t, snap, 'Poids (kg)', ['5', '52', '520']);
+      await type(t, snap, 'Nombre de sacs', ['8']);
+      await type(t, snap, 'N° du reçu', ['A-00', 'A-0004', 'A-000412']);
+    });
+    await run('convoi', const NewConvoyScreen(), _collector, (t, snap) async {
+      await type(t, snap, 'N° de connaissement du convoi', ['CV-', 'CV-0007']);
+      await type(t, snap, 'Nom du chauffeur', ['Traoré', 'Traoré Moussa']);
+      await type(t, snap, 'N° du camion', ['AB 12', 'AB 1234 CI']);
+      await type(t, snap, 'Nombre de sacs', ['4', '40']);
+      await type(t, snap, 'Poids annoncé', ['26', '2600']);
+    });
+    await run('producteur', const ProducersScreen(), _coach, (t, snap) async {
+      await t.tap(find.textContaining('KONÉ')); await t.pump(const Duration(milliseconds: 300)); await t.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200))); await t.pump(const Duration(milliseconds: 600)); await snap();
+      await t.tap(find.text('Informations sur le producteur')); await t.pump(const Duration(milliseconds: 400)); await snap();
+    });
+    Future<void> pickDropdown(WidgetTester t, int index, String text) async {
+      await t.tap(find.byType(DropdownButtonFormField<String>).at(index)); await t.pump(const Duration(milliseconds: 400));
+      await t.tap(find.text(text).last); await t.pump(const Duration(milliseconds: 400));
+    }
+    await run('distribution', const DistributionScreen(), _coach, (t, snap) async {
+      await pickDropdown(t, 0, 'Finance'); await snap();
+      await pickDropdown(t, 1, 'Primes'); await snap();
+      await t.tap(find.text('Prime de qualité')); await t.pump(const Duration(milliseconds: 300)); await snap();
+      await t.tap(find.textContaining("VOIR L'ARTICLE")); await t.pump(); await t.pump(const Duration(milliseconds: 600)); await t.pump(const Duration(milliseconds: 600)); await snap();
+      await t.tap(find.text('CONTINUER VERS LES AGRICULTEURS')); await t.pump(); await t.pump(const Duration(milliseconds: 600)); await settle(t); await snap();
+      await t.tap(find.textContaining('KONÉ')); await t.pump(const Duration(milliseconds: 300)); await snap();
+    });
+    await run('formation', const TrainingFormScreen(), _coach, (t, snap) async { await snap(); });
+    debugDisableShadows = true;
+  });
 }

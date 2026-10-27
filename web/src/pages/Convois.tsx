@@ -175,7 +175,7 @@ export function Receive({ initial }: { initial?: { collector: string; convoyNo: 
         <div className="grid-3">
           <Field label="N° de connaissement" hint={mine.length ? `En route : ${mine.map((v) => v.convoy_no).join(', ')}` : undefined}><input list="convois-attendus" value={convoyNo} onChange={(e) => setConvoyNo(e.target.value)} /></Field>
           <Field label="Sacs déclarés"><input inputMode="numeric" readOnly={!!expected} disabled={!collector} value={expected ? (expected.declared_bags ?? '') : m.bags} onChange={(e) => setM({ ...m, bags: e.target.value })} /></Field>
-          <Field label="Poids déclaré (kg)"><input inputMode="decimal" readOnly={!!expected} disabled={!collector} value={expected ? (expected.declared_kg ?? '') : m.kg} onChange={(e) => setM({ ...m, kg: e.target.value })} /></Field>
+          <Field label="Poids déclaré (kg)"><input inputMode="decimal" readOnly={!!expected} disabled={!collector} value={expected ? (expected.declared_kg != null ? Number(expected.declared_kg) : '') : m.kg} onChange={(e) => setM({ ...m, kg: e.target.value })} /></Field>
         </div>
         <datalist id="convois-attendus">{mine.map((v) => <option key={v.id} value={v.convoy_no} />)}</datalist>
         {manual && <p className="notice" role="status">Ce connaissement n'a pas été déclaré par le délégué : saisissez les informations du bordereau ; il sera enregistré à la réception.</p>}
