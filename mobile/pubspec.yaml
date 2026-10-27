@@ -18,7 +18,7 @@ dependencies:
   connectivity_plus: ^6.0.5
   uuid: ^4.5.0
   decimal: ^3.0.2               # estimation locale sans flottants
-  intl: ^0.19.0
+  intl: ^0.20.3
   image_picker: ^1.1.2          # photo du reçu d'achat
   geolocator: ^13.0.1           # position GPS pour le relevé du tracé des parcelles
   cryptography: ^2.9.0
