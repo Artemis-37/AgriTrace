@@ -1,0 +1,156 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><style>
+:root{--g9:#1d3a2c;--g8:#2b5240;--g6:#4c7a5c;--cream:#f2eee4;--ink:#25332b;--mute:#5d6b62;--amber:#d4a24c;--lime:#4c9a2a}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1280px;height:720px;overflow:hidden;background:#000;font-family:'Poppins',sans-serif}
+.sc{position:absolute;inset:0;opacity:0;overflow:hidden}
+.dark{background:radial-gradient(ellipse at 30% 20%,#2f5a45 0,#1d3a2c 60%,#152c21 100%);color:#f6f3ea}
+.light{background:var(--cream);color:var(--ink)}
+.abs{position:absolute}
+h1{font-weight:600;letter-spacing:-.02em;line-height:1.12}
+.amber{color:var(--amber)}
+/* pain cards */
+.card{position:absolute;width:262px;height:300px;top:230px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.06);border-radius:16px;padding:26px 22px}
+.card .ic{width:46px;height:46px;border-radius:12px;border:1px solid rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;margin-bottom:22px}
+.card .ic svg{width:24px;height:24px;stroke:#e9d9b0;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.card b{display:block;font-size:22px;font-weight:600;margin-bottom:8px}
+.card p{font-size:14.5px;line-height:1.5;color:#cfd8cf;min-height:88px}
+.card em{font-style:normal;font-weight:600;font-size:14px;color:#ef8a73;display:block;margin-top:14px}
+/* feature */
+.tag{display:inline-block;background:var(--g8);color:#f6f3ea;font-weight:600;font-size:13px;letter-spacing:.08em;padding:7px 14px;border-radius:7px}
+.ft h1{font-size:40px;margin:22px 0 16px}
+.ft p{font-size:19px;line-height:1.55;color:var(--mute)}
+.shot{position:absolute;left:500px;top:112px;width:716px;height:427px;border-radius:14px;overflow:hidden;background:#fff;box-shadow:0 30px 70px -20px rgba(29,58,44,.45),0 0 0 1px rgba(29,58,44,.12)}
+.shot .in{position:absolute;inset:0;transform-origin:0 0}
+.shot img{position:absolute;inset:0;width:100%;height:100%;display:block}
+.hl{position:absolute;border:3px solid var(--amber);border-radius:8px;box-shadow:0 0 0 9999px rgba(29,58,44,.0);background:rgba(212,162,76,.10);opacity:0}
+.phones{position:absolute;left:520px;top:34px;width:700px;height:640px}
+.ph{position:absolute;width:228px;height:468px;border-radius:30px;background:#16201a;padding:9px;box-shadow:0 30px 60px -18px rgba(0,0,0,.5)}
+.ph img{width:100%;height:100%;border-radius:22px;object-fit:cover;object-position:top;display:block}
+.cap{position:absolute;width:228px;text-align:center;font-size:15px;font-weight:500;color:var(--ink)}
+/* network */
+.node{position:absolute;width:190px;text-align:center;font-size:15px;font-weight:600}
+.node .b{width:84px;height:84px;margin:0 auto 10px;border-radius:20px;background:#fff;box-shadow:0 10px 26px -10px rgba(29,58,44,.45);display:flex;align-items:center;justify-content:center}
+.node svg{width:42px;height:42px;stroke:var(--g8);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.node small{display:block;font-weight:400;color:var(--mute);font-size:12.5px;margin-top:2px}
+/* closing */
+.chk{font-size:19px;line-height:1;display:flex;align-items:center;gap:14px;margin:0 0 17px}
+.chk i{width:22px;height:22px;border-radius:50%;background:var(--amber);display:inline-block;position:relative;flex:none}
+.chk i:after{content:'';position:absolute;left:7px;top:4px;width:5px;height:10px;border:solid #1d3a2c;border-width:0 2.4px 2.4px 0;transform:rotate(40deg)}
+.contact{position:absolute;left:760px;top:300px;width:420px;background:#f6f3ea;color:var(--ink);border-radius:18px;padding:30px 34px;box-shadow:0 30px 60px -20px rgba(0,0,0,.5)}
+.contact small{font-size:12px;font-weight:600;letter-spacing:.1em;color:var(--g6)}
+.contact .n{font-size:34px;font-weight:600;letter-spacing:-.01em;margin:10px 0 8px}
+.contact .c{font-size:17px;font-weight:600}
+.contact .m{font-size:15.5px;color:var(--mute);margin-top:4px}
+</style></head><body>
+
+<!-- 1 accroche -->
+<section class="sc dark" id="s1"><h1 class="abs" id="s1h" style="left:110px;top:240px;width:1060px;font-size:66px">Votre coopérative perd <span style="white-space:nowrap">peut-être</span> de l’argent <span class="amber">chaque jour.</span></h1></section>
+
+<!-- 2 coûts cachés -->
+<section class="sc dark" id="s2">
+ <h1 class="abs" style="left:110px;top:110px;font-size:40px">Ce qui coûte cher, sans bruit :</h1>
+ <div class="card" style="left:110px"><div class="ic"><svg viewBox="0 0 24 24"><path d="M6 8h12l1 12H5L6 8Z"/><path d="M9 8a3 3 0 0 1 6 0"/></svg></div><b>Les sacs</b><p>Achetés au village, jamais retrouvés au magasin.</p><em>– poids perdu</em></div>
+ <div class="card" style="left:394px"><div class="ic"><svg viewBox="0 0 24 24"><path d="M12 4v16M5 20h14M6 8l-3 7h6L6 8Zm12 0-3 7h6l-3-7Z"/><path d="M6 8h12"/></svg></div><b>Les pesées</b><p>Poids annoncé, poids reçu : personne ne compare.</p><em>– écarts non suivis</em></div>
+ <div class="card" style="left:678px"><div class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/></svg></div><b>Les avances</b><p>Aux délégués, notées dans un cahier, puis oubliées.</p><em>– créances perdues</em></div>
+ <div class="card" style="left:962px"><div class="ic"><svg viewBox="0 0 24 24"><path d="M12 21s-6-5.2-6-10a6 6 0 0 1 12 0c0 4.8-6 10-6 10Z"/><circle cx="12" cy="11" r="2"/></svg></div><b>L’origine</b><p>Un acheteur demande d’où vient le lot : pas de réponse.</p><em>– marché perdu</em></div>
+</section>
+
+<!-- 3 logo -->
+<section class="sc light" id="s3"><div class="abs" style="left:0;width:1280px;top:180px;text-align:center"><img id="s3l" src="logo.png" style="width:600px"><div id="s3t" style="font-size:24px;color:var(--mute);margin-top:26px">Gestion agricole, traçabilité et finances des coopératives</div><div id="s3r" style="width:90px;height:3px;background:var(--amber);margin:26px auto 0"></div></div></section>
+
+<!-- 4 fonctionnalités (générées) -->
+<div id="feats"></div>
+
+<!-- 5 partout -->
+<section class="sc light" id="s5">
+ <div class="abs ft" style="left:80px;top:230px;width:400px"><span class="tag">PARTOUT</span><h1>Un seul outil, sur tous vos postes</h1><p>Le téléphone travaille sans réseau et se synchronise ensuite. Le portail s’ouvre dans un navigateur, et sur Windows ou macOS.</p></div>
+ <svg class="abs" style="left:0;top:0" width="1280" height="720" id="s5l"></svg>
+ <div class="node" id="n0" style="left:750px;top:290px"><div class="b" style="width:108px;height:108px;background:var(--g8)"><svg viewBox="0 0 24 24" style="stroke:#f6f3ea;width:54px;height:54px"><rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M8 20h8M12 16v4"/></svg></div>AgriTrace<small>le serveur de la coopérative</small></div>
+ <div class="node" id="n1" style="left:620px;top:96px"><div class="b"><svg viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2"/><path d="M11 18.5h2"/></svg></div>Téléphone Android<small>achats, parcelles, stock</small></div>
+ <div class="node" id="n2" style="left:980px;top:96px"><div class="b"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.2 3 14.8 0 18M12 3c-3 3.2-3 14.8 0 18"/></svg></div>Portail web<small>dans un navigateur</small></div>
+ <div class="node" id="n3" style="left:620px;top:490px"><div class="b"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="12" rx="1.5"/><path d="M2 20h20"/></svg></div>Windows et macOS<small>installation sur le poste</small></div>
+ <div class="node" id="n4" style="left:980px;top:490px"><div class="b"><svg viewBox="0 0 24 24"><path d="M3 17V8l9-4 9 4v9M3 17h18M8 17v-5h8v5"/></svg></div>Exportateur<small>livraisons et résultats</small></div>
+</section>
+
+<!-- 6 fin -->
+<section class="sc dark" id="s6">
+ <div class="abs" id="s6a" style="left:100px;top:84px;width:620px">
+  <div style="background:#f6f3ea;border-radius:14px;padding:12px 22px;display:inline-block"><img src="logo.png" style="width:250px;display:block"></div>
+  <h1 style="font-size:35px;margin:26px 0 30px;line-height:1.2">Gardez le contrôle de chaque sac et de chaque franc.</h1>
+  <div id="chks"></div>
+ </div>
+ <div class="contact" id="s6c"><small>CONTACT</small><div class="n">05 05 05 45 63</div><div class="c">Dominique N’Guessan, créateur</div><div class="m">dominiquenguessan414@gmail.com</div></div>
+</section>
+
+<script>
+const clamp=(x,a=0,b=1)=>Math.min(b,Math.max(a,x));
+const eo=x=>1-Math.pow(1-clamp(x),3);
+const ei=x=>{x=clamp(x);return x*x*(3-2*x)};
+const $=id=>document.getElementById(id);
+// ---- scènes fonctionnalités
+const F=[
+ {tag:'TERRAIN',title:'L’achat saisi au village, même sans réseau',text:'Le délégué choisit le producteur, saisit le poids et les sacs. Tout part dès que le réseau revient.',phones:['collecteur-choix-producteur','collecteur-achat-saisi','collecteur-historique'],caps:['Choisir le producteur','Saisir l’achat','Suivre l’historique']},
+ {tag:'ACHATS',title:'Chaque achat reste lié à son producteur',text:'Le responsable de traçabilité vérifie les déclarations, avec la fiche du producteur sous les yeux.',img:'declarations',box:[70,300,1290,150]},
+ {tag:'MAGASIN',title:'La pesée calcule le poids net toute seule',text:'Poids brut, tare, écart avec le poids annoncé : tout est consigné sur le bulletin de pesée.',img:'pesees',box:[1000,425,370,250]},
+ {tag:'CONVOIS',title:'Les convois des délégués, de bout en bout',text:'Chauffeur, camion, sacs et poids reçu. Le camion arrive, le magasin pèse, la caisse règle.',img:'convois',box:[40,335,1330,210]},
+ {tag:'CAISSE',title:'Le fonds disponible, en un coup d’œil',text:'Espèces, banque, mobile money : chaque compte est affiché en haut de l’écran, avec le détail en un clic.',img:'caisse',box:[315,235,1080,205]},
+ {tag:'COMPTE DÉLÉGUÉ',title:'Le compte de chaque délégué, toujours à jour',text:'Avances, achats livrés, solde. Plus de cahier : le caissier clôture le compte quand tout est réglé.',img:'compte',box:[270,345,820,370]},
+ {tag:'FINANCES',title:'Comptes, paiements et rapprochement bancaire',text:'Chaque opération est tracée et justifiée. Une erreur se corrige par une écriture inverse, jamais en effaçant.',img:'finances',box:[60,500,1310,225]},
+ {tag:'STOCKS',title:'Le stock, par magasin et par lot',text:'Les quantités sont calculées depuis les mouvements. Chaque lot garde sa traçabilité jusqu’à l’exportateur.',img:'stocks',box:[55,330,1330,110]},
+ {tag:'RAPPORTS',title:'Des chiffres prêts pour la direction',text:'Achats, sacs, poids net et montants, par section, par délégué ou par filière, exportables vers Excel.',img:'rapports',box:[65,425,1310,120]},
+];
+const FD=6.3, F0=18.6;
+const feats=$('feats');
+F.forEach((f,i)=>{
+  const s=document.createElement('section');s.className='sc light ft';s.id='f'+i;
+  let right='';
+  if(f.phones){
+    right='<div class="phones">'+f.phones.map((p,k)=>`<div class="ph" id="f${i}p${k}" style="left:${k*236}px;top:${60+(k==1?-20:10)}px"><img src="m/${p}.png"></div><div class="cap" id="f${i}c${k}" style="left:${k*236}px;top:${(k==1?470:500)+68}px">${f.caps[k]}</div>`).join('')+'</div>';
+  } else {
+    right=`<div class="shot" id="f${i}s"><div class="in" id="f${i}i"><img src="shots/${f.img}.png"><div class="hl" id="f${i}h"></div></div></div>`;
+  }
+  s.innerHTML=`<div class="abs" style="left:80px;top:215px;width:390px" id="f${i}t"><span class="tag">${f.tag}</span><h1>${f.title}</h1><p>${f.text}</p></div>${right}`;
+  feats.appendChild(s);
+});
+// ---- fin : liste
+const items=['Producteurs, parcelles et cartographie','Achats, pesées et convois','Caisse, comptes des délégués et finances','Stocks, lots et ventes','Rapports et espace exportateur','Téléphone sans réseau, portail, Windows et macOS'];
+$('chks').innerHTML=items.map((t,k)=>`<div class="chk" id="k${k}"><i></i>${t}</div>`).join('');
+// ---- réseau : lignes
+const L=[[845,344,715,188],[845,344,1075,188],[845,344,715,490],[845,344,1075,490]];
+$('s5l').innerHTML=L.map((l,k)=>`<line id="l${k}" x1="${l[0]}" y1="${l[1]}" x2="${l[2]}" y2="${l[3]}" stroke="#c4a25f" stroke-width="2" stroke-dasharray="6 7"/>`).join('');
+// ---- minuterie
+const T={s1:[0,5.4],s2:[5,14.4],s3:[14,19],s5:[F0+F.length*FD-.4,F0+F.length*FD+7],s6:[F0+F.length*FD+6.6,F0+F.length*FD+19]};
+F.forEach((f,i)=>T['f'+i]=[F0+i*FD-.4,F0+(i+1)*FD+.1]);
+const TOTAL=T.s6[1]-0.3;
+function vis(id,t){const [a,b]=T[id];const e=$(id);const o=Math.min(ei((t-a)/.45),1-ei((t-(b-.45))/.45));e.style.opacity=t<a||t>b?0:o;e.style.display=(t<a-.05||t>b+.05)?'none':'block';return t-a;}
+function render(t){
+ // 1
+ let u=vis('s1',t); $('s1h').style.opacity=eo(u/.9); $('s1h').style.transform=`translateY(${(1-eo(u/.9))*18}px) scale(${1+u*.006})`;
+ // 2
+ u=vis('s2',t); document.querySelectorAll('#s2 .card').forEach((c,k)=>{const v=eo((u-.6-k*.9)/.6);c.style.opacity=v;c.style.transform=`translateY(${(1-v)*24}px)`});
+ // 3
+ u=vis('s3',t); $('s3l').style.opacity=eo(u/.7); $('s3l').style.transform=`scale(${.94+.06*eo(u/1.2)})`; $('s3t').style.opacity=eo((u-.9)/.6); $('s3r').style.opacity=eo((u-1.3)/.5);
+ // 4
+ F.forEach((f,i)=>{
+  const u=vis('f'+i,t); if(u<-1||u>FD+1) return;
+  const tx=$('f'+i+'t'); const v=eo((u-.35)/.6); tx.style.opacity=v; tx.style.transform=`translateX(${(1-v)*-26}px)`;
+  if(f.phones){f.phones.forEach((p,k)=>{const w=eo((u-.5-k*.35)/.7);const el=$('f'+i+'p'+k);el.style.opacity=w;el.style.transform=`translateY(${(1-w)*40}px)`;const c=$('f'+i+'c'+k);c.style.opacity=eo((u-1-k*.35)/.5);});}
+  else{
+   const sh=$('f'+i+'s'); const w=eo((u-.3)/.7); sh.style.opacity=w; sh.style.transform=`translateY(${(1-w)*26}px)`;
+   const [bx,by,bw,bh]=f.box; const k=716/1440; // coordonnées CSS 1440 -> 716
+   const x=bx*k,y=by*k,ww=bw*k,hh=bh*k; const cx=x+ww/2, cy=y+hh/2;
+   const zmax=Math.max(1.12,Math.min(1.55,Math.min(716/(ww*1.25),427/(hh*1.25)))); const p=ei((u-1.3)/3.4); const zz=1+(zmax-1)*p;
+   const inn=$('f'+i+'i'); let tx2=358-cx*zz, ty2=213-cy*zz; tx2=Math.min(0,Math.max(716-716*zz,tx2)); ty2=Math.min(0,Math.max(427-427*zz,ty2));
+   inn.style.transform=`translate(${tx2}px,${ty2}px) scale(${zz})`;
+   const h=$('f'+i+'h'); h.style.left=(x-4)+'px'; h.style.top=(y-4)+'px'; h.style.width=(ww+8)+'px'; h.style.height=(hh+8)+'px'; h.style.borderWidth=(3/zz)+'px'; h.style.opacity=eo((u-1.0)/.5);
+  }
+ });
+ // 5
+ u=vis('s5',t); ['n0','n1','n2','n3','n4'].forEach((id,k)=>{const v=eo((u-.5-k*.35)/.6);const e=$(id);e.style.opacity=v;e.style.transform=`scale(${.9+.1*v})`});
+ [0,1,2,3].forEach(k=>$('l'+k).style.opacity=eo((u-1-k*.3)/.6));
+ // 6
+ u=vis('s6',t); $('s6a').style.opacity=eo(u/.7); items.forEach((_,k)=>{const e=$('k'+k);const v=eo((u-1+k*-.0-.5-k*.35)/.5);e.style.opacity=v;e.style.transform=`translateX(${(1-v)*-16}px)`});
+ const cv=eo((u-1.2)/.8); $('s6c').style.opacity=cv; $('s6c').style.transform=`translateY(${(1-cv)*24}px)`;
+}
+window.TOTAL=TOTAL; window.render=render; render(0);
+</script></body></html>
