@@ -258,3 +258,7 @@ Comme pour ses modules de formation, l'exportateur peut créer une tâche (un qu
 ## Modèle d'import des producteurs (mis à jour)
 
 Le modèle Excel téléchargeable (Producteurs → Importer) suit la fiche « Ajouter un producteur » du téléphone : Code, Nom, Prénoms, Téléphone, Région, **Département**, **Sous-préfecture**, Section, **Village**, Superficie (ha), Estimation (kg), Filières, Date d'adhésion, Sexe, **Date de naissance**, **Type de pièce d'identité**, **Numéro de la pièce d'identité**. Une feuille « Instructions » explique chaque colonne. Les anciens fichiers avec « Quartier », « Lieu », « Département » et « Village » sont toujours acceptés. Test : `backend/scripts/e2e-import-modele.js`.
+
+## Localités de Côte d'Ivoire préchargées (téléphone)
+
+L'application contient la liste des 31 régions, des districts d'Abidjan et de Yamoussoukro, de leurs départements et de leurs sous-préfectures (fichier `mobile/assets/ci-geo.json`). Elle est disponible sans connexion ; les localités déjà enregistrées par la coopérative s'y ajoutent. Le village se saisit à la main (liste officielle des villages non préchargée).

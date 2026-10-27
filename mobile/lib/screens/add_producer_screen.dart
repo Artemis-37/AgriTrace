@@ -1,7 +1,9 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 
 import '../main.dart';
 import 'field_widgets.dart';
@@ -21,12 +23,6 @@ const _idTypes = [
   'Passeport', "Attestation d'identité", 'Carte consulaire', 'Permis de conduire', 'Numéro matricule CCC du producteur', 'Pas de CNI ni matricule CCC',
 ];
 
-/// Régions et districts de Côte d'Ivoire : liste de base, complétée par les localités déjà enregistrées par la coopérative.
-const _regionsCI = [
-  'Abidjan', 'Yamoussoukro', 'Agnéby-Tiassa', 'Bafing', 'Bagoué', 'Bélier', 'Béré', 'Bounkani', 'Cavally', 'Folon', 'Gbêkê', 'Gbôklé', 'Gôh', 'Gontougo',
-  'Grands-Ponts', 'Guémon', 'Hambol', 'Haut-Sassandra', 'Iffou', 'Indénié-Djuablin', 'Kabadougou', 'La Mé', 'Lôh-Djiboua', 'Marahoué', 'Moronou', "N'Zi",
-  'Nawa', 'Poro', 'San-Pédro', 'Sud-Comoé', 'Tchologo', 'Tonkpi', 'Worodougou',
-];
 const _other = 'Autre (saisir)…';
 
 /// Ajouter un nouveau producteur sur le terrain (hors connexion possible) : identité, naissance, pièce d'identité, téléphone,
@@ -43,6 +39,7 @@ class _AddProducerScreenState extends State<AddProducerScreen> {
   String? _region, _quartier, _lieu, _section;
   List<String> _sections = [];
   List<Map<String, dynamic>> _known = [];
+  List<dynamic> _geo = []; // découpage administratif de la Côte d'Ivoire fourni avec l'application
   String _gender = 'Homme';
   DateTime? _birth;
   bool _noId = false, _noPhone = false, _consent = false, _busy = false;
@@ -54,6 +51,7 @@ class _AddProducerScreenState extends State<AddProducerScreen> {
   void initState() {
     super.initState();
     services.repo.identity().then((i) { if (mounted) setState(() => _org = i.org); });
+    _loadGeo();
     _loadLocalities();
     _loadSections();
   }
@@ -64,6 +62,21 @@ class _AddProducerScreenState extends State<AddProducerScreen> {
     if (r == null || !mounted) return;
     setState(() => _sections = _distinct([for (final e in (r.data as List)) (e as Map)['section'] as String?]));
   }
+
+  /// Régions, départements et sous-préfectures de Côte d'Ivoire : liste préchargée, disponible sans connexion.
+  Future<void> _loadGeo() async {
+    try {
+      final j = jsonDecode(await rootBundle.loadString('assets/ci-geo.json')) as Map<String, dynamic>;
+      if (mounted) setState(() => _geo = j['regions'] as List<dynamic>);
+    } catch (_) {/* la liste reste alimentée par les localités connues */}
+  }
+
+  static String _fold(String? v) => (v ?? '').trim().toLowerCase()
+      .replaceAll(RegExp('[àâä]'), 'a').replaceAll(RegExp('[éèêë]'), 'e').replaceAll(RegExp('[îï]'), 'i').replaceAll(RegExp('[ôö]'), 'o').replaceAll(RegExp('[ùûü]'), 'u')
+      .replaceAll('ç', 'c').replaceAll(RegExp(r"[\s'’\-]+"), ' ');
+
+  Map<String, dynamic>? _geoRegion() { for (final r in _geo) { if (_fold((r as Map)['name'] as String?) == _fold(_region)) return Map<String, dynamic>.from(r); } return null; }
+  Map<String, dynamic>? _geoDept() { for (final d in (_geoRegion()?['departements'] as List? ?? const [])) { if (_fold((d as Map)['name'] as String?) == _fold(_quartier)) return Map<String, dynamic>.from(d); } return null; }
 
   /// Localités déjà connues (copie gardée sur l'appareil : les listes restent disponibles hors connexion).
   Future<void> _loadLocalities() async {
@@ -76,16 +89,16 @@ class _AddProducerScreenState extends State<AddProducerScreen> {
     final seen = <String, String>{};
     for (final x in [...base, ...v]) {
       final t = (x ?? '').trim();
-      if (t.isNotEmpty) seen.putIfAbsent(t.toLowerCase(), () => t);
+      if (t.isNotEmpty) seen.putIfAbsent(_fold(t), () => t);
     }
     final l = seen.values.toList()..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
     return l;
   }
 
   bool _same(String? a, String? b) => (a ?? '').trim().toLowerCase() == (b ?? '').trim().toLowerCase();
-  List<String> get _regions => _distinct(_known.map((e) => e['region'] as String?), base: _regionsCI);
-  List<String> get _quartiers => _distinct(_known.where((e) => _same(e['region'] as String?, _region)).map((e) => e['department'] as String?));
-  List<String> get _lieux => _distinct(_known.where((e) => _same(e['region'] as String?, _region) && _same(e['department'] as String?, _quartier)).map((e) => e['sub_prefecture'] as String?));
+  List<String> get _regions => _distinct(_known.map((e) => e['region'] as String?), base: [for (final r in _geo) (r as Map)['name'] as String]);
+  List<String> get _quartiers => _distinct(_known.where((e) => _fold(e['region'] as String?) == _fold(_region)).map((e) => e['department'] as String?), base: [for (final d in (_geoRegion()?['departements'] as List? ?? const [])) (d as Map)['name'] as String]);
+  List<String> get _lieux => _distinct(_known.where((e) => _fold(e['region'] as String?) == _fold(_region) && _fold(e['department'] as String?) == _fold(_quartier)).map((e) => e['sub_prefecture'] as String?), base: [for (final x in (_geoDept()?['sous_prefectures'] as List? ?? const [])) x as String]);
 
   Future<String?> _askName(String title) async {
     final c = TextEditingController();

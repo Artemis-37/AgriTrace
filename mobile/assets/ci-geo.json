@@ -1,0 +1,1230 @@
+{
+ "pays": "Côte d'Ivoire",
+ "source": "Découpage administratif de la Côte d'Ivoire (31 régions, districts autonomes d'Abidjan et de Yamoussoukro)",
+ "regions": [
+  {
+   "name": "Abidjan",
+   "departements": [
+    {
+     "name": "Abidjan",
+     "sous_prefectures": [
+      "Abobo",
+      "Adjamé",
+      "Anyama",
+      "Attécoubé",
+      "Bingerville",
+      "Brofodoumé",
+      "Cocody",
+      "Koumassi",
+      "Marcory",
+      "Plateau",
+      "Port-Bouët",
+      "Songon",
+      "Treichville",
+      "Yopougon"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Agnéby-Tiassa",
+   "departements": [
+    {
+     "name": "Agboville",
+     "sous_prefectures": [
+      "Aboudé",
+      "Agboville",
+      "Ananguié",
+      "Attobrou",
+      "Azaguié",
+      "Céchi",
+      "Grand-Morié",
+      "Guessiguié",
+      "Loviguié",
+      "Oress-Krobou",
+      "Rubino"
+     ]
+    },
+    {
+     "name": "Sikensi",
+     "sous_prefectures": [
+      "Gomon",
+      "Sikensi"
+     ]
+    },
+    {
+     "name": "Taabo",
+     "sous_prefectures": [
+      "Pacobo",
+      "Taabo"
+     ]
+    },
+    {
+     "name": "Tiassalé",
+     "sous_prefectures": [
+      "Gbolouville",
+      "Morokro",
+      "N'Douci",
+      "Tiassalé"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Bafing",
+   "departements": [
+    {
+     "name": "Koro",
+     "sous_prefectures": [
+      "Booko",
+      "Borotou",
+      "Koro",
+      "Mahandougou",
+      "Niokosso"
+     ]
+    },
+    {
+     "name": "Ouaninou",
+     "sous_prefectures": [
+      "Gbélo",
+      "Gouékan",
+      "Koonan",
+      "Ouaninou",
+      "Saboudougou",
+      "Santa"
+     ]
+    },
+    {
+     "name": "Touba",
+     "sous_prefectures": [
+      "Dioman",
+      "Foungbesso",
+      "Guintéguéla",
+      "Touba"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Bagoué",
+   "departements": [
+    {
+     "name": "Boundiali",
+     "sous_prefectures": [
+      "Baya",
+      "Boundiali",
+      "Ganaoni",
+      "Kasséré",
+      "Siempurgo"
+     ]
+    },
+    {
+     "name": "Kouto",
+     "sous_prefectures": [
+      "Blességué",
+      "Gbon",
+      "Kolia",
+      "Kouto",
+      "Sianhala"
+     ]
+    },
+    {
+     "name": "Tengréla",
+     "sous_prefectures": [
+      "Débété",
+      "Kanakono",
+      "Papara",
+      "Tengréla"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Bounkani",
+   "departements": [
+    {
+     "name": "Bouna",
+     "sous_prefectures": [
+      "Bouko",
+      "Bouna",
+      "Ondéfidouo",
+      "Youndouo"
+     ]
+    },
+    {
+     "name": "Doropo",
+     "sous_prefectures": [
+      "Danoa",
+      "Doropo",
+      "Kalamon",
+      "Niamoué"
+     ]
+    },
+    {
+     "name": "Nassian",
+     "sous_prefectures": [
+      "Bogofa",
+      "Kakpin",
+      "Koutouba",
+      "Nassian",
+      "Sominassé"
+     ]
+    },
+    {
+     "name": "Téhini",
+     "sous_prefectures": [
+      "Gogo",
+      "Tougbo",
+      "Téhini"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Bélier",
+   "departements": [
+    {
+     "name": "Didiévi",
+     "sous_prefectures": [
+      "Boli",
+      "Didiévi",
+      "Molonou-Blé",
+      "Raviart",
+      "Tié-N'Diékro"
+     ]
+    },
+    {
+     "name": "Djékanou",
+     "sous_prefectures": [
+      "Bonikro",
+      "Djékanou"
+     ]
+    },
+    {
+     "name": "Tiébissou",
+     "sous_prefectures": [
+      "Lomokankro",
+      "Molonou",
+      "Tiébissou",
+      "Yakpabo-Sakassou"
+     ]
+    },
+    {
+     "name": "Toumodi",
+     "sous_prefectures": [
+      "Angoda",
+      "Kokumbo",
+      "Kpouèbo",
+      "Toumodi"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Béré",
+   "departements": [
+    {
+     "name": "Dianra",
+     "sous_prefectures": [
+      "Dianra",
+      "Dianra-Village"
+     ]
+    },
+    {
+     "name": "Kounahiri",
+     "sous_prefectures": [
+      "Kongasso",
+      "Kounahiri"
+     ]
+    },
+    {
+     "name": "Mankono",
+     "sous_prefectures": [
+      "Bouandougou",
+      "Mankono",
+      "Marandallah",
+      "Sarhala",
+      "Tiéningboué"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Cavally",
+   "departements": [
+    {
+     "name": "Bloléquin",
+     "sous_prefectures": [
+      "Bloléquin",
+      "Diboké",
+      "Doké",
+      "Tinhou",
+      "Zéaglo"
+     ]
+    },
+    {
+     "name": "Guiglo",
+     "sous_prefectures": [
+      "Bédy-Goazon",
+      "Guiglo",
+      "Kaadé",
+      "Nizahon"
+     ]
+    },
+    {
+     "name": "Taï",
+     "sous_prefectures": [
+      "Taï",
+      "Zagné"
+     ]
+    },
+    {
+     "name": "Toulépleu",
+     "sous_prefectures": [
+      "Bakoubli",
+      "Méo",
+      "Nézobly",
+      "Péhé",
+      "Tiobly",
+      "Toulépleu"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Folon",
+   "departements": [
+    {
+     "name": "Kaniasso",
+     "sous_prefectures": [
+      "Goulia",
+      "Kaniasso",
+      "Mahandiana-Sokourani"
+     ]
+    },
+    {
+     "name": "Minignan",
+     "sous_prefectures": [
+      "Kimbirila-Nord",
+      "Minignan",
+      "Sokoro",
+      "Tienko"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Gbêkê",
+   "departements": [
+    {
+     "name": "Botro",
+     "sous_prefectures": [
+      "Botro",
+      "Diabo",
+      "Krofoinsou",
+      "Languibonou"
+     ]
+    },
+    {
+     "name": "Bouaké",
+     "sous_prefectures": [
+      "Bouaké-SP",
+      "Bouaké-Ville",
+      "Bounda",
+      "Brobo",
+      "Mamini",
+      "N'Djébonouan"
+     ]
+    },
+    {
+     "name": "Béoumi",
+     "sous_prefectures": [
+      "Ando-Kékrénou",
+      "Bodokro",
+      "Béoumi",
+      "Kondrobo",
+      "Lolobo",
+      "Marabadiassa",
+      "N'Guessankro"
+     ]
+    },
+    {
+     "name": "Sakassou",
+     "sous_prefectures": [
+      "Ayaou-Sran",
+      "Dibri-Assirikro",
+      "Sakassou",
+      "Toumodi-Sakassou"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Gbôklé",
+   "departements": [
+    {
+     "name": "Fresco",
+     "sous_prefectures": [
+      "Dahiri",
+      "Fresco",
+      "Gbagbam"
+     ]
+    },
+    {
+     "name": "Sassandra",
+     "sous_prefectures": [
+      "Dakpadou",
+      "Grihiri",
+      "Lobakuya",
+      "Médon",
+      "Sago",
+      "Sassandra"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Gontougo",
+   "departements": [
+    {
+     "name": "Bondoukou",
+     "sous_prefectures": [
+      "Appimandoum",
+      "Bondo",
+      "Bondoukou",
+      "Gouméré",
+      "Laoudi-Ba",
+      "Pinda-Boroko",
+      "Sapli-Sépingo",
+      "Sorobango",
+      "Tabagne",
+      "Tagadi",
+      "Taoudi",
+      "Yézimala"
+     ]
+    },
+    {
+     "name": "Koun-Fao",
+     "sous_prefectures": [
+      "Boahia",
+      "Kokomian",
+      "Kouassi-Datékro",
+      "Koun-Fao",
+      "Tankessé",
+      "Tienkoikro"
+     ]
+    },
+    {
+     "name": "Sandégué",
+     "sous_prefectures": [
+      "Bandakagni-Tomora",
+      "Dimandougou",
+      "Sandégué",
+      "Yorobodi"
+     ]
+    },
+    {
+     "name": "Tanda",
+     "sous_prefectures": [
+      "Amanvi",
+      "Diamba",
+      "Tanda",
+      "Tchédio"
+     ]
+    },
+    {
+     "name": "Transua",
+     "sous_prefectures": [
+      "Assuéfry",
+      "Kouassia-Niaguini",
+      "Transua"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Grands-Ponts",
+   "departements": [
+    {
+     "name": "Dabou",
+     "sous_prefectures": [
+      "Dabou",
+      "Lopou",
+      "Toupah"
+     ]
+    },
+    {
+     "name": "Grand-Lahou",
+     "sous_prefectures": [
+      "Ahouanou",
+      "Bacanda",
+      "Ebonou",
+      "Grand-Lahou",
+      "Toukouzou"
+     ]
+    },
+    {
+     "name": "Jacqueville",
+     "sous_prefectures": [
+      "Attoutou",
+      "Jacqueville"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Guémon",
+   "departements": [
+    {
+     "name": "Bangolo",
+     "sous_prefectures": [
+      "Bangolo",
+      "Bléniméouin",
+      "Béoué-Zibiao",
+      "Diéouzon",
+      "Gohouo-Zagna",
+      "Guinglo-Tahouaké",
+      "Kahin-Zarabaon",
+      "Zou",
+      "Zéo"
+     ]
+    },
+    {
+     "name": "Duékoué",
+     "sous_prefectures": [
+      "Bagohouo",
+      "Duékoué",
+      "Gbapleu",
+      "Guéhiébly",
+      "Guézon"
+     ]
+    },
+    {
+     "name": "Facobly",
+     "sous_prefectures": [
+      "Facobly",
+      "Guézon",
+      "Koua",
+      "Sémien",
+      "Tiény-Séably"
+     ]
+    },
+    {
+     "name": "Kouibly",
+     "sous_prefectures": [
+      "Kouibly",
+      "Nidrou",
+      "Ouyably-Gnondrou",
+      "Totrodrou"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Gôh",
+   "departements": [
+    {
+     "name": "Gagnoa",
+     "sous_prefectures": [
+      "Bayota",
+      "Dahiépa-Kéhi",
+      "Dignago",
+      "Dougroupalégnaoa",
+      "Doukouyo",
+      "Gagnoa",
+      "Galebre-Galébouo",
+      "Gnagbodougnoa",
+      "Guibéroua",
+      "Ouragahio",
+      "Sérihio",
+      "Yopohué"
+     ]
+    },
+    {
+     "name": "Oumé",
+     "sous_prefectures": [
+      "Diégonéfla",
+      "Guépahouo",
+      "Oumé",
+      "Tonla"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Hambol",
+   "departements": [
+    {
+     "name": "Dabakala",
+     "sous_prefectures": [
+      "Bassawa",
+      "Boniérédougou",
+      "Dabakala",
+      "Foumbolo",
+      "Niéméné",
+      "Satama-Sokoro",
+      "Satama-Sokoura",
+      "Sokala-Sobara",
+      "Tendéné-Bambarasso",
+      "Yaossédougou"
+     ]
+    },
+    {
+     "name": "Katiola",
+     "sous_prefectures": [
+      "Fronan",
+      "Katiola",
+      "Timbé"
+     ]
+    },
+    {
+     "name": "Niakaramandougou",
+     "sous_prefectures": [
+      "Arikokaha",
+      "Badikaha",
+      "Niakaramandougou",
+      "Niédiékaha",
+      "Tafiré",
+      "Tortiya"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Haut-Sassandra",
+   "departements": [
+    {
+     "name": "Daloa",
+     "sous_prefectures": [
+      "Bédiala",
+      "Daloa",
+      "Gadouan",
+      "Gboguhé",
+      "Gonaté",
+      "Zaïbo"
+     ]
+    },
+    {
+     "name": "Issia",
+     "sous_prefectures": [
+      "Boguédia",
+      "Iboguhé",
+      "Issia",
+      "Nahio",
+      "Namané",
+      "Saïoua",
+      "Tapéguia"
+     ]
+    },
+    {
+     "name": "Vavoua",
+     "sous_prefectures": [
+      "Bazra-Nattis",
+      "Dananon",
+      "Dania",
+      "Kétro-Bassam",
+      "Séitifla",
+      "Vavoua"
+     ]
+    },
+    {
+     "name": "Zoukougbeu",
+     "sous_prefectures": [
+      "Domangbeu",
+      "Grégbeu",
+      "Guessabo",
+      "Zoukougbeu"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Iffou",
+   "departements": [
+    {
+     "name": "Daoukro",
+     "sous_prefectures": [
+      "Akpassanou",
+      "Ananda",
+      "Daoukro",
+      "Ettrokro",
+      "N'Gattakro",
+      "Ouellé",
+      "Samanza"
+     ]
+    },
+    {
+     "name": "M'Bahiakro",
+     "sous_prefectures": [
+      "Bonguéra",
+      "Kondossou",
+      "M'Bahiakro"
+     ]
+    },
+    {
+     "name": "Prikro",
+     "sous_prefectures": [
+      "Anianou",
+      "Famienkro",
+      "Koffi-Amonkro",
+      "Nafana",
+      "Prikro"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Indénié-Djuablin",
+   "departements": [
+    {
+     "name": "Abengourou",
+     "sous_prefectures": [
+      "Abengourou",
+      "Amélékia",
+      "Aniassué",
+      "Ebilassokro",
+      "Niablé",
+      "Yakassé-Féyassé",
+      "Zaranou"
+     ]
+    },
+    {
+     "name": "Agnibilékrou",
+     "sous_prefectures": [
+      "Agnibilékrou",
+      "Akoboissué",
+      "Damé",
+      "Duffrébo",
+      "Tanguélan"
+     ]
+    },
+    {
+     "name": "Bettié",
+     "sous_prefectures": [
+      "Bettié",
+      "Diamarakro"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Kabadougou",
+   "departements": [
+    {
+     "name": "Gbéléban",
+     "sous_prefectures": [
+      "Gbéléban",
+      "Samango",
+      "Seydougou"
+     ]
+    },
+    {
+     "name": "Madinani",
+     "sous_prefectures": [
+      "Fengolo",
+      "Madinani",
+      "N'Goloblasso"
+     ]
+    },
+    {
+     "name": "Odienné",
+     "sous_prefectures": [
+      "Bako",
+      "Bougousso",
+      "Dioulatièdougou",
+      "Odienné",
+      "Tiémé"
+     ]
+    },
+    {
+     "name": "Samatiguila",
+     "sous_prefectures": [
+      "Kimbirila-Sud",
+      "Samatiguila"
+     ]
+    },
+    {
+     "name": "Séguélon",
+     "sous_prefectures": [
+      "Gbongaha",
+      "Séguélon"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "La Mé",
+   "departements": [
+    {
+     "name": "Adzopé",
+     "sous_prefectures": [
+      "Adzopé",
+      "Agou",
+      "Annépé",
+      "Assikoi",
+      "Bécédi-Brignan",
+      "Yakassé-Mé"
+     ]
+    },
+    {
+     "name": "Akoupé",
+     "sous_prefectures": [
+      "Afféry",
+      "Akoupé",
+      "Bécouéfin"
+     ]
+    },
+    {
+     "name": "Alépé",
+     "sous_prefectures": [
+      "Aboisso-Comoé",
+      "Allosso",
+      "Alépé",
+      "Danguira",
+      "Oghlwapo"
+     ]
+    },
+    {
+     "name": "Yakassé-Attobrou",
+     "sous_prefectures": [
+      "Abongoua",
+      "Biéby",
+      "Yakassé-Attobrou"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Lôh-Djiboua",
+   "departements": [
+    {
+     "name": "Divo",
+     "sous_prefectures": [
+      "Chiépo",
+      "Didoko",
+      "Divo",
+      "Hiré",
+      "Nébo",
+      "Ogoudou",
+      "Zégo"
+     ]
+    },
+    {
+     "name": "Guitry",
+     "sous_prefectures": [
+      "Dairo-Didizo",
+      "Guitry",
+      "Lauzoua",
+      "Yocoboué"
+     ]
+    },
+    {
+     "name": "Lakota",
+     "sous_prefectures": [
+      "Djidji",
+      "Gagoré",
+      "Goudouko",
+      "Lakota",
+      "Niambézaaria",
+      "Zikisso"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Marahoué",
+   "departements": [
+    {
+     "name": "Bouaflé",
+     "sous_prefectures": [
+      "Bonon",
+      "Bouaflé",
+      "Bégbessou",
+      "N'Douffoukankro",
+      "Pakouabo",
+      "Tibéita",
+      "Zaguiéta"
+     ]
+    },
+    {
+     "name": "Gohitafla",
+     "sous_prefectures": [
+      "Gohitafla",
+      "Iriéfla",
+      "Maminigui"
+     ]
+    },
+    {
+     "name": "Sinfra",
+     "sous_prefectures": [
+      "Bazré",
+      "Kononfla",
+      "Kouétinfla",
+      "Sinfra"
+     ]
+    },
+    {
+     "name": "Zuénoula",
+     "sous_prefectures": [
+      "Kanzra",
+      "Vouéboufla",
+      "Zanzra",
+      "Zuénoula"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Moronou",
+   "departements": [
+    {
+     "name": "Arrah",
+     "sous_prefectures": [
+      "Arrah",
+      "Kotobi",
+      "Krégbé"
+     ]
+    },
+    {
+     "name": "Bongouanou",
+     "sous_prefectures": [
+      "Andé",
+      "Assié-Koumassi",
+      "Bongouanou",
+      "N'Guessankro"
+     ]
+    },
+    {
+     "name": "M'Batto",
+     "sous_prefectures": [
+      "Anoumaba",
+      "Assahara",
+      "M'Batto",
+      "Tiémélékro"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "N'Zi",
+   "departements": [
+    {
+     "name": "Bocanda",
+     "sous_prefectures": [
+      "Bengassou",
+      "Bocanda",
+      "Kouadioblékro",
+      "N'Zécrézessou"
+     ]
+    },
+    {
+     "name": "Dimbokro",
+     "sous_prefectures": [
+      "Abigui",
+      "Diangokro",
+      "Dimbokro",
+      "Nofou"
+     ]
+    },
+    {
+     "name": "Kouassi-Kouassikro",
+     "sous_prefectures": [
+      "Kouassi-Kouassikro",
+      "Mékro"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Nawa",
+   "departements": [
+    {
+     "name": "Buyo",
+     "sous_prefectures": [
+      "Buyo",
+      "Dapéoua"
+     ]
+    },
+    {
+     "name": "Guéyo",
+     "sous_prefectures": [
+      "Dabouyo",
+      "Guéyo"
+     ]
+    },
+    {
+     "name": "Méagui",
+     "sous_prefectures": [
+      "Gnanmangui",
+      "Méagui",
+      "Oupoyo"
+     ]
+    },
+    {
+     "name": "Soubré",
+     "sous_prefectures": [
+      "Grand-Zattry",
+      "Liliyo",
+      "Okrouyo",
+      "Soubré"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Poro",
+   "departements": [
+    {
+     "name": "Dikodougou",
+     "sous_prefectures": [
+      "Boron",
+      "Dikodougou",
+      "Guiembé"
+     ]
+    },
+    {
+     "name": "Korhogo",
+     "sous_prefectures": [
+      "Dassoungboho",
+      "Kanoroba",
+      "Karakoro",
+      "Kiémou",
+      "Kombolokoura",
+      "Komborodougou",
+      "Koni",
+      "Korhogo",
+      "Lataha",
+      "N'Ganon",
+      "Nafoun",
+      "Napiéolédougou",
+      "Niofoin",
+      "Sirasso",
+      "Sohouo",
+      "Tioroniaradougou"
+     ]
+    },
+    {
+     "name": "M'Bengué",
+     "sous_prefectures": [
+      "Bougou",
+      "Katiali",
+      "Katogo",
+      "M'Bengué"
+     ]
+    },
+    {
+     "name": "Sinématiali",
+     "sous_prefectures": [
+      "Bouakaha",
+      "Kagbolodougou",
+      "Sinématiali",
+      "Sédiego"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "San-Pédro",
+   "departements": [
+    {
+     "name": "San-Pédro",
+     "sous_prefectures": [
+      "Doba",
+      "Dogbo",
+      "Gabiadji",
+      "Grand-Béréby",
+      "San-Pédro"
+     ]
+    },
+    {
+     "name": "Tabou",
+     "sous_prefectures": [
+      "Dapo-Iboké",
+      "Djamandioké",
+      "Djouroutou",
+      "Grabo",
+      "Olodio",
+      "Tabou"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Sud-Comoé",
+   "departements": [
+    {
+     "name": "Aboisso",
+     "sous_prefectures": [
+      "Aboisso",
+      "Adaou",
+      "Adjouan",
+      "Ayamé",
+      "Bianouan",
+      "Kouakro",
+      "Maféré",
+      "Yaou"
+     ]
+    },
+    {
+     "name": "Adiaké",
+     "sous_prefectures": [
+      "Adiaké",
+      "Assinie-Mafia",
+      "Etuéboué"
+     ]
+    },
+    {
+     "name": "Grand-Bassam",
+     "sous_prefectures": [
+      "Bongo",
+      "Bonoua",
+      "Grand-Bassam"
+     ]
+    },
+    {
+     "name": "Tiapoum",
+     "sous_prefectures": [
+      "Nouamou",
+      "Noé",
+      "Tiapoum"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Tchologo",
+   "departements": [
+    {
+     "name": "Ferkessédougou",
+     "sous_prefectures": [
+      "Ferkessédougou",
+      "Koumbala",
+      "Togoniéré"
+     ]
+    },
+    {
+     "name": "Kong",
+     "sous_prefectures": [
+      "Bilimono",
+      "Kong",
+      "Nafana",
+      "Sikolo"
+     ]
+    },
+    {
+     "name": "Ouangolodougou",
+     "sous_prefectures": [
+      "Diawala",
+      "Kaouara",
+      "Niellé",
+      "Ouangolodougou",
+      "Toumoukoro"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Tonkpi",
+   "departements": [
+    {
+     "name": "Biankouma",
+     "sous_prefectures": [
+      "Biankouma",
+      "Blapleu",
+      "Gbangbégouiné",
+      "Gbonné",
+      "Gouiné",
+      "Kpata",
+      "Santa"
+     ]
+    },
+    {
+     "name": "Danané",
+     "sous_prefectures": [
+      "Daleu",
+      "Danané",
+      "Gbon-Houyé",
+      "Kouan-Houlé",
+      "Mahapleu",
+      "Séileu",
+      "Zonneu"
+     ]
+    },
+    {
+     "name": "Man",
+     "sous_prefectures": [
+      "Bogouiné",
+      "Fagnampleu",
+      "Gbangbégouiné-Yati",
+      "Logoualé",
+      "Man",
+      "Podiagouiné",
+      "Sandougou-Soba",
+      "Sangouiné",
+      "Yapleu",
+      "Zagoué",
+      "Ziogouiné"
+     ]
+    },
+    {
+     "name": "Sipilou",
+     "sous_prefectures": [
+      "Sipilou",
+      "Yorodougou"
+     ]
+    },
+    {
+     "name": "Zouan-Hounien",
+     "sous_prefectures": [
+      "Banneu",
+      "Bin-Houyé",
+      "Goulaleu",
+      "Téapleu",
+      "Yelleu",
+      "Zouan-Hounien"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Worodougou",
+   "departements": [
+    {
+     "name": "Kani",
+     "sous_prefectures": [
+      "Djibrosso",
+      "Fadiadougou",
+      "Kani",
+      "Morondo"
+     ]
+    },
+    {
+     "name": "Séguéla",
+     "sous_prefectures": [
+      "Bobi-Diarabana",
+      "Dualla",
+      "Kamalo",
+      "Massala",
+      "Sifié",
+      "Séguéla",
+      "Worofla"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Yamoussoukro",
+   "departements": [
+    {
+     "name": "Yamoussoukro",
+     "sous_prefectures": [
+      "Attiégouakro",
+      "Kossou",
+      "Lolobo",
+      "Yamoussoukro"
+     ]
+    }
+   ]
+  }
+ ]
+}
