@@ -8,13 +8,51 @@
    "kind": "title",
    "title": "AgriTrace",
    "subtitle": "Du terrain à l'exportateur",
-   "note": "Le parcours complet d'un lot"
+   "note": "Le parcours complet d'un lot",
+   "contact": [
+    [
+     "Créateur : Dominique N'Guessan",
+     [
+      40,
+      "Bold"
+     ],
+     [
+      34,
+      61,
+      48
+     ]
+    ],
+    [
+     "Téléphone : 05 05 05 45 63",
+     [
+      36,
+      "Medium"
+     ],
+     [
+      40,
+      52,
+      46
+     ]
+    ],
+    [
+     "E-mail : dominiquenguessan414@gmail.com",
+     [
+      36,
+      "Medium"
+     ],
+     [
+      40,
+      52,
+      46
+     ]
+    ]
+   ]
   }
  },
  {
   "id": "parcours",
   "title": "Le parcours en un coup d'œil",
-  "narration": "Voici le parcours. Sur le terrain, le coach suit les producteurs et le délégué leur achète le cacao, puis déclare son connaissement. L'Administrateur de groupe organise les missions. La traçabilité vérifie. Le magasinier pèse et réceptionne. Le caissier règle et met en compte. Le comptable passe les écritures. Le stock est vendu, et l'exportateur reçoit le lot. L'exportateur pèse, analyse et règle la livraison. Puis les formations qu'il propose redescendent vers les coachs, et les résultats remontent jusqu'à lui.",
+  "narration": "Voici le parcours. Sur le terrain, le coach suit les producteurs et le délégué leur achète le cacao, puis déclare son connaissement. L'Administrateur de groupe organise les tâches des coachs. La traçabilité vérifie. Le magasinier pèse et réceptionne. Le caissier règle et met en compte. Le comptable passe les écritures. Le stock est vendu, et l'exportateur reçoit le lot. L'exportateur pèse, analyse et règle la livraison. Puis les formations qu'il propose redescendent vers les coachs, et les résultats remontent jusqu'à lui.",
   "visual": {
    "type": "card",
    "kind": "flow",
@@ -87,15 +125,15 @@
   }
  },
  {
-  "id": "groupe-missions",
-  "title": "L'Administrateur de groupe et les missions",
-  "narration": "Au bureau, l'Administrateur de groupe organise le travail des coachs. Il crée les missions : titre, priorité, échéance, producteur concerné et consignes. Le coach les exécute et joint ses preuves, puis l'Administrateur de groupe les valide ou demande une correction. Une tâche validée est grisée, puis disparaît de la liste.",
+  "id": "groupe-taches",
+  "title": "L'Administrateur de groupe et les tâches",
+  "narration": "Au bureau, l'Administrateur de groupe organise le travail des coachs. Il ajoute aux profils des producteurs des formations, des distributions et des tâches, avec une consigne et une échéance. Le coach les exécute sur son téléphone, puis l'élément est grisé et disparaît de la liste une fois réalisé.",
   "visual": {
    "type": "live",
    "role": "adg",
    "steps": [
     {
-     "goto": "/missions",
+     "goto": "/modules-formation",
      "w": 3
     },
     {
@@ -106,6 +144,24 @@
      "scroll": -350,
      "w": 1
     }
+   ]
+  }
+ },
+ {
+  "id": "nouveautes",
+  "title": "Les dernières évolutions",
+  "narration": "Voici les dernières évolutions. Sur le téléphone, la synchronisation est manuelle : une boîte de dialogue affiche chaque étape, avec le nom de chaque élément envoyé ou reçu. À la connexion elle est complète, ensuite sélective : seules les nouveautés du profil sont échangées. Les poids et les nombres de sacs sont des nombres entiers. Sur le portail, un délégué peut être payé en espèces ou par chèque, en choisissant la banque. Sur les cartes, une croix de visée affiche la latitude et la longitude. Et le profil d'un producteur liste toutes ses parcelles, y compris celles importées.",
+  "visual": {
+   "type": "card",
+   "kind": "bullets",
+   "title": "Dernières évolutions",
+   "items": [
+    "Synchronisation manuelle, avec le nom de chaque élément",
+    "Complète à la connexion, puis seulement les nouveautés du profil",
+    "Poids et sacs en nombres entiers",
+    "Paiement d'un délégué en espèces ou par chèque (banque au choix)",
+    "Cartes : croix de visée, latitude et longitude",
+    "Profil producteur : toutes ses parcelles, importées comprises"
    ]
   }
  },
@@ -672,7 +728,7 @@
  {
   "id": "fin",
   "title": "Merci",
-  "narration": "Voilà le parcours complet : du village à l'exportateur, de la parcelle à la comptabilité, sur ordinateur et sur téléphone, avec une traçabilité sans trou, et des formations qui reviennent au village. Agri Trace a été conçu par Dominique N'Guessan. Ses coordonnées sont à l'écran. Merci de votre attention.",
+  "narration": "Voilà le parcours complet : du village à l'exportateur, de la parcelle à la comptabilité, sur ordinateur et sur téléphone, avec une traçabilité sans trou, et des formations qui reviennent au village. Agri Trace a été conçu par Dominique N'Guessan. Pour toute question, contactez-le : téléphone, zéro cinq, zéro cinq, zéro cinq, quarante-cinq, soixante-trois ; adresse électronique, dominique n guessan quatre cent quatorze, arobase gmail point com. Merci de votre attention.",
   "visual": {
    "type": "card",
    "kind": "title",
@@ -681,7 +737,7 @@
    "note": "Merci de votre attention",
    "contact": [
     [
-     "Concepteur : Dominique N'Guessan",
+     "Créateur : Dominique N'Guessan",
      [
       40,
       "Bold"
@@ -693,7 +749,7 @@
      ]
     ],
     [
-     "Téléphone : 0505054563 / 0788170404",
+     "Téléphone : 05 05 05 45 63",
      [
       36,
       "Medium"

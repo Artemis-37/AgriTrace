@@ -18,10 +18,10 @@ def stills(*imgs): return {'type': 'stills', 'images': [f'{CAP}/{i}' for i in im
 scene('intro', 'Du terrain à l\'exportateur', """
 Cette présentation suit le chemin d'un lot de cacao, du village jusqu'à l'exportateur, et passe par chaque utilisateur. Sur le terrain, le délégué et le coach, tous deux sur téléphone. Puis, au bureau, l'Administrateur de groupe, la traçabilité, le magasin, la caisse,
 la comptabilité et la vente, pour finir chez l'exportateur, et revenir au village avec les formations qu'il propose. À chaque étape, nous voyons qui fait quoi, et ce qui est tracé.""",
-  card('title', title='AgriTrace', subtitle='Du terrain à l\'exportateur', note='Le parcours complet d\'un lot'))
+  card('title', title='AgriTrace', subtitle='Du terrain à l\'exportateur', note='Le parcours complet d\'un lot', contact=[('Créateur : Dominique N\'Guessan', (40, 'Bold'), (34, 61, 48)), ('Téléphone : 05 05 05 45 63', (36, 'Medium'), (40, 52, 46)), ('E-mail : dominiquenguessan414@gmail.com', (36, 'Medium'), (40, 52, 46))]))
 
 scene('parcours', 'Le parcours en un coup d\'œil', """
-Voici le parcours. Sur le terrain, le coach suit les producteurs et le délégué leur achète le cacao, puis déclare son connaissement. L'Administrateur de groupe organise les missions. La traçabilité vérifie. Le magasinier pèse et réceptionne. Le caissier règle et met en compte.
+Voici le parcours. Sur le terrain, le coach suit les producteurs et le délégué leur achète le cacao, puis déclare son connaissement. L'Administrateur de groupe organise les tâches des coachs. La traçabilité vérifie. Le magasinier pèse et réceptionne. Le caissier règle et met en compte.
 Le comptable passe les écritures. Le stock est vendu, et l'exportateur reçoit le lot. L'exportateur pèse, analyse et règle la livraison. Puis les formations qu'il propose redescendent vers les coachs, et les résultats remontent jusqu'à lui.""",
   card('flow', title='Du village à l\'exportateur', nodes=['Terrain\ncoach + délégué', 'Traçabilité\nvérification', 'Magasinier\npesée + stock', 'Caissier\nrèglement + compte', 'Comptable\nécritures', 'Exportateur\nlot + formations'],
        foot='Chaque étape notifie la suivante · rien n\'est jamais supprimé, tout s\'annule par écriture inverse'))
@@ -42,10 +42,16 @@ Le coach est l'autre utilisateur du terrain. Sur son téléphone, il retrouve le
 Il enregistre un nouveau producteur, relève une parcelle, dispense les formations, et saisit ses relevés. Tout reste sur le téléphone, puis part à la synchronisation.""",
   phones('coach-accueil', 'coach-producteurs', 'coach-producteur-taches', 'coach-formation', captions=['Accueil du coach', 'Producteurs par section', 'Tâches du producteur', 'Séance de formation']))
 
-scene('groupe-missions', 'L\'Administrateur de groupe et les missions', """
-Au bureau, l'Administrateur de groupe organise le travail des coachs. Il crée les missions : titre, priorité, échéance, producteur concerné et consignes.
-Le coach les exécute et joint ses preuves, puis l'Administrateur de groupe les valide ou demande une correction. Une tâche validée est grisée, puis disparaît de la liste.""",
-  live('adg', [{'goto': '/missions', 'w': 3}, {'scroll': 350, 'w': 3}, {'scroll': -350, 'w': 1}]))
+scene('groupe-taches', 'L\'Administrateur de groupe et les tâches', """
+Au bureau, l'Administrateur de groupe organise le travail des coachs. Il ajoute aux profils des producteurs des formations, des distributions et des tâches, avec une consigne et une échéance.
+Le coach les exécute sur son téléphone, puis l'élément est grisé et disparaît de la liste une fois réalisé.""",
+  live('adg', [{'goto': '/modules-formation', 'w': 3}, {'scroll': 350, 'w': 3}, {'scroll': -350, 'w': 1}]))
+
+scene('nouveautes', 'Les dernières évolutions', """
+Voici les dernières évolutions. Sur le téléphone, la synchronisation est manuelle : une boîte de dialogue affiche chaque étape, avec le nom de chaque élément envoyé ou reçu.
+À la connexion elle est complète, ensuite sélective : seules les nouveautés du profil sont échangées. Les poids et les nombres de sacs sont des nombres entiers.
+Sur le portail, un délégué peut être payé en espèces ou par chèque, en choisissant la banque. Sur les cartes, une croix de visée affiche la latitude et la longitude. Et le profil d'un producteur liste toutes ses parcelles, y compris celles importées.""",
+  card('bullets', title='Dernières évolutions', items=['Synchronisation manuelle, avec le nom de chaque élément', 'Complète à la connexion, puis seulement les nouveautés du profil', 'Poids et sacs en nombres entiers', 'Paiement d\'un délégué en espèces ou par chèque (banque au choix)', 'Cartes : croix de visée, latitude et longitude', 'Profil producteur : toutes ses parcelles, importées comprises']))
 
 scene('tracabilite', 'La traçabilité vérifie les achats', """
 Au bureau, le responsable de traçabilité reçoit les déclarations d'achat. Chaque ligne affiche la fiche du producteur importée par la coopérative : code, nom et prénoms, section, village, téléphone, superficie et estimation.
@@ -169,9 +175,9 @@ L'exportateur est notifié, par la cloche en haut à droite, et voit les résult
 
 scene('fin', 'Merci', """
 Voilà le parcours complet : du village à l\'exportateur, de la parcelle à la comptabilité, sur ordinateur et sur téléphone, avec une traçabilité sans trou, et des formations qui reviennent au village.
-Agri Trace a été conçu par Dominique N\'Guessan. Ses coordonnées sont à l\'écran. Merci de votre attention.""",
+Agri Trace a été conçu par Dominique N\'Guessan. Pour toute question, contactez-le : téléphone, zéro cinq, zéro cinq, zéro cinq, quarante-cinq, soixante-trois ; adresse électronique, dominique n guessan quatre cent quatorze, arobase gmail point com. Merci de votre attention.""",
   card('title', title='AgriTrace', subtitle='Du terrain à l\'exportateur', note='Merci de votre attention',
-       contact=[('Concepteur : Dominique N\'Guessan', (40, 'Bold'), (34, 61, 48)), ('Téléphone : 0505054563 / 0788170404', (36, 'Medium'), (40, 52, 46)), ('E-mail : dominiquenguessan414@gmail.com', (36, 'Medium'), (40, 52, 46))]))
+       contact=[('Créateur : Dominique N\'Guessan', (40, 'Bold'), (34, 61, 48)), ('Téléphone : 05 05 05 45 63', (36, 'Medium'), (40, 52, 46)), ('E-mail : dominiquenguessan414@gmail.com', (36, 'Medium'), (40, 52, 46))]))
 
 json.dump(S, open('scenario-terrain.json', 'w'), ensure_ascii=False, indent=1)
 print(len(S), 'scènes ;', sum(len(s['narration'].split()) for s in S), 'mots')
