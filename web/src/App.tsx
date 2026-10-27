@@ -76,7 +76,7 @@ const NAV: { to: string; label: string; icon: string; perm: string[]; any?: bool
   { to: '/terrain', label: 'Données de terrain', icon: '❖', perm: ['field_records:read', 'field_records:manage', 'field_templates:manage'], any: true },
   { to: '/modules-formation', label: 'Modules de formation', icon: '🎓', perm: ['training:read'] },
   { to: '/questionnaires', label: 'Questionnaires (tâches)', icon: '📝', perm: ['questionnaires:manage', 'training:assign', 'training:report'], any: true },
-  { to: '/modules-exportateurs', label: 'Modules des exportateurs', icon: '🚢', perm: ['training:forward', 'training:propose'], any: true },
+  { to: '/modules-exportateurs', label: 'Modules des exportateurs', icon: '🚢', perm: ['training:forward', 'training:propose', 'tasks:propose'], any: true },
   { to: '/stocks', label: 'Stocks et lots', icon: '▤', perm: ['warehouses:read'] },
   { to: '/rapports', label: 'Rapports', icon: '▥', perm: ['reports:read'] },
   { to: '/finances', label: 'Finances', icon: '₣', perm: ['finance:read'] },

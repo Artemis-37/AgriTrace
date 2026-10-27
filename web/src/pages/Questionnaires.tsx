@@ -56,7 +56,7 @@ export default function Questionnaires() {
   );
 }
 
-function QuestionnaireEditor({ onClose, onDone, edit }: { onClose: () => void; onDone: () => void; edit?: Q }) {
+export function QuestionnaireEditor({ onClose, onDone, edit, saveUrl, heading }: { onClose: () => void; onDone: () => void; edit?: Q; saveUrl?: string; heading?: string }) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [qs, setQs] = useState<{ label: string; type: QType; options: string; required: boolean }[]>([{ label: '', type: 'text', options: '', required: false }]);
@@ -72,7 +72,7 @@ function QuestionnaireEditor({ onClose, onDone, edit }: { onClose: () => void; o
   const move = (i: number, dir: -1 | 1) => setQs((l) => { const n = [...l]; const j = i + dir; if (j < 0 || j >= n.length) return l; [n[i], n[j]] = [n[j], n[i]]; return n; });
   const ok = title.trim().length >= 3 && qs.length > 0 && qs.every((q) => q.label.trim().length >= 2 && (!['choice', 'multi'].includes(q.type) || q.options.split(/[;\n]/).filter((o) => o.trim()).length >= 2));
   return (
-    <Modal title={edit ? 'Modifier le questionnaire' : 'Créer un questionnaire'} onClose={onClose}>
+    <Modal title={heading ?? (edit ? 'Modifier le questionnaire' : 'Créer un questionnaire')} onClose={onClose}>
       {edit && full.loading && <Loading />}
       {edit && (full.data?.assignments ?? 0) > 0 && <p className="notice">Ce questionnaire a déjà été envoyé : seuls le titre et la description peuvent changer. Pour modifier les questions, dupliquez-le.</p>}
       <Field label="Titre"><input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex. Suivi des plantations" /></Field>
@@ -95,7 +95,7 @@ function QuestionnaireEditor({ onClose, onDone, edit }: { onClose: () => void; o
       <button type="button" className="btn btn-secondary" onClick={() => setQs((l) => [...l, { label: '', type: 'text', options: '', required: false }])}>Ajouter une question</button>
       {error && <ErrorBox message={error} />}
       <div className="modal-foot"><button className="btn btn-secondary" onClick={onClose}>Annuler</button>
-        <button className="btn" disabled={busy || !ok} onClick={() => run(async () => { await post(edit ? `/questionnaires/${edit.id}/update` : '/questionnaires', { title: title.trim(), description: description.trim(), questions: qs.map((q) => ({ label: q.label.trim(), type: q.type, options: q.options, required: q.required })) }); onDone(); })}>Enregistrer le questionnaire</button></div>
+        <button className="btn" disabled={busy || !ok} onClick={() => run(async () => { await post(saveUrl ?? (edit ? `/questionnaires/${edit.id}/update` : '/questionnaires'), { title: title.trim(), description: description.trim(), questions: qs.map((q) => ({ label: q.label.trim(), type: q.type, options: q.options, required: q.required })) }); onDone(); })}>Enregistrer le questionnaire</button></div>
     </Modal>
   );
 }

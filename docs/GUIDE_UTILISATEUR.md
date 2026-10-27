@@ -250,3 +250,7 @@ Tant qu'aucun modèle n'est déployé, l'application utilise ses modèles intég
 ## Distribution et services : catalogue
 
 Chaque coopérative reçoit un catalogue de départ (catégories Finance, Intrants et Outils, Services et Dépistages, avec leurs groupes et articles). Sur le téléphone : Distribution et services › catégorie › groupe › cases à cocher. L'administrateur ajoute, renomme ou retire des groupes et des articles depuis l'application.
+
+## Tâches de l'exportateur
+
+Comme pour ses modules de formation, l'exportateur peut créer une tâche (un questionnaire) : menu « Modules des exportateurs » › onglet « Tâches » › « Créer une tâche ». L'ADG la transmet aux coachs en un clic en choisissant les producteurs et l'échéance (elle s'ajoute au profil des producteurs). Les coachs répondent sur le téléphone ; l'ADG transmet ensuite les réponses à l'exportateur, qui peut les consulter et les exporter en CSV. L'ADG ne modifie ni les questions ni les réponses.

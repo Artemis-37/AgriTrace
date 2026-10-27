@@ -25,7 +25,7 @@ export function MessageButton({ unread }: { unread: number }) {
   const ring = useRingOnIncrease(unread);
   return (
     <Link className={`bell-btn bell-link${ring ? ' is-ringing' : ''}`} to="/messages" aria-label={unread > 0 ? `Messages : ${unread} non lu(s)` : 'Messages'}>
-      <span aria-hidden="true" className="bell-icon">✉</span>{unread > 0 && <span className="bell-count" aria-hidden="true">{unread > 99 ? '99+' : unread}</span>}
+      <svg aria-hidden="true" className="bell-icon mail-svg" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.5" fill="#fff" /><path d="M3.5 7.5 12 13.5l8.5-6" /></svg>{unread > 0 && <span className="bell-count" aria-hidden="true">{unread > 99 ? '99+' : unread}</span>}
     </Link>
   );
 }

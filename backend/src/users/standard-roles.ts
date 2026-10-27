@@ -106,9 +106,9 @@ export const STANDARD_ROLES: Record<string, { name: string; description: string;
   },
   exportateur: {
     name: 'Exportateur (partenaire)',
-    description: 'Partenaire exportateur : propose des modules de formation à l\'ADG reçoit, par l\'ADG, les résultats obtenus par les coachs sur ces modules, et consulte les fiches d\'accompagnement que le responsable de traçabilité lui transmet.',
-    permissions: ['training:propose', 'dispatch:read', 'messages:use'],
-    hidden: ['Tout sauf ses propositions de modules et les résultats que l\'ADG lui a transmis'],
+    description: 'Partenaire exportateur : propose des modules de formation et des tâches (questionnaires) à l\'ADG, reçoit, par l\'ADG, les résultats obtenus par les coachs sur ces modules et les réponses aux tâches, et consulte les fiches d\'accompagnement que le responsable de traçabilité lui transmet.',
+    permissions: ['training:propose', 'tasks:propose', 'dispatch:read', 'messages:use'],
+    hidden: ['Tout sauf ses propositions de modules et de tâches et les résultats que l\'ADG lui a transmis'],
   },
   collecteur: {
     mobileOnly: true,
