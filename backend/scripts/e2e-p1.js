@@ -47,7 +47,7 @@ const login = async (email, password) => (await call('POST', '/auth/login', { bo
 
   console.log('Producteurs');
   const p = (await call('POST', '/producers', { token: ta, org: A.id, body: { last_name: 'KONE', first_names: 'Awa', phone: '+2250701020304', village: 'Hiré', value_chain_ids: [vc.id] } })).body;
-  check('producteur créé avec code généré', /^P\d{5}$/.test(p.producer?.internal_code), p);
+  check('producteur créé sans code automatique (format non défini)', p.producer?.id && p.producer.internal_code === '', p);
   const dup = (await call('POST', '/producers', { token: ta, org: A.id, body: { last_name: 'KONE', first_names: 'Awa', phone: '+2250701020304', village: 'Hiré' } })).body;
   check('doublon signalé sans fusion', dup.potential_duplicates?.length >= 1 && dup.producer?.id !== p.producer.id, dup);
   const seen = await call('GET', '/producers', { token: tb, org: B.id });

@@ -262,3 +262,7 @@ Le modèle Excel téléchargeable (Producteurs → Importer) suit la fiche « Aj
 ## Localités de Côte d'Ivoire préchargées (téléphone)
 
 L'application contient la liste des 31 régions, des districts d'Abidjan et de Yamoussoukro, de leurs départements et de leurs sous-préfectures (fichier `mobile/assets/ci-geo.json`). Elle est disponible sans connexion ; les localités déjà enregistrées par la coopérative s'y ajoutent. Le village se saisit à la main (liste officielle des villages non préchargée).
+
+## Code producteur : défini par la coopérative
+
+Le serveur n'attribue plus de code producteur de sa propre initiative. Dans **Paramètres → Société → Codes des producteurs**, la coopérative choisit son format (préfixe, nombre de chiffres, premier numéro ; exemple `SOC-0100`). Si le format est activé, le code est attribué automatiquement à chaque nouveau producteur (téléphone, portail, import Excel). Sinon le code reste **vide** et se saisit à la main : à la création (champ « Code du producteur » sur le téléphone et le portail), ou plus tard sur un producteur qui n'a pas encore de code. Un code déjà attribué ne se modifie pas et reste unique dans la coopérative. Les coopératives qui utilisaient déjà les codes `P00001` gardent ce format (activé par la migration 085). Test : `backend/scripts/e2e-code-producteur.js`.

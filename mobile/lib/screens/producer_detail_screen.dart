@@ -185,7 +185,7 @@ class _ProducerDetailScreenState extends State<ProducerDetailScreen> {
       onRefresh: _loadTasks,
       child: ListView(padding: const EdgeInsets.fromLTRB(12, 0, 12, 24), children: [
         Container(color: const Color(0xFFEDEDED), margin: const EdgeInsets.only(bottom: 8), padding: const EdgeInsets.all(12),
-            child: const Row(children: [Icon(Icons.checklist_rtl, size: 18), SizedBox(width: 10), Text('Liste des tâches', style: TextStyle(fontSize: 18))])),
+            child: const Row(children: [Icon(Icons.checklist_rtl, size: 18), SizedBox(width: 10), Flexible(child: Text('Liste des tâches', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 18)))])),
         if (_msg != null) Padding(padding: const EdgeInsets.only(bottom: 8), child: Text(_msg!)),
         if (_taskError != null) Padding(padding: const EdgeInsets.all(16), child: Text(_taskError!)),
         if (rows == null && _taskError == null) const Padding(padding: EdgeInsets.all(32), child: Center(child: CircularProgressIndicator())),

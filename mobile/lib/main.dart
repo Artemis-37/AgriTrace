@@ -69,6 +69,16 @@ class AgriTraceApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(colorScheme: scheme, useMaterial3: true, scaffoldBackgroundColor: const Color(0xFFF7FAF2), appBarTheme: AppBarTheme(backgroundColor: scheme.primary, foregroundColor: Colors.white), filledButtonTheme: FilledButtonThemeData(style: FilledButton.styleFrom(backgroundColor: const Color(Brand.forest), foregroundColor: Colors.white)), progressIndicatorTheme: const ProgressIndicatorThemeData(color: Color(Brand.forest))),
       home: loggedIn ? const SyncShell(child: HomeScreen()) : const LoginScreen(),
+      // Ajustement de tous les écrans : la taille de texte du téléphone est plafonnée (pas de débordement) et le contenu
+      // s'arrête au-dessus de la barre de navigation Android (les boutons du bas ne sont plus recouverts).
+      builder: (context, child) {
+        final mq = MediaQuery.of(context);
+        final nav = (mq.viewPadding.bottom - mq.viewInsets.bottom).clamp(0.0, 200.0);
+        return MediaQuery(
+          data: mq.copyWith(textScaler: mq.textScaler.clamp(minScaleFactor: 0.9, maxScaleFactor: 1.15), padding: mq.padding.copyWith(bottom: 0), viewPadding: mq.viewPadding.copyWith(bottom: 0)),
+          child: ColoredBox(color: const Color(0xFFF7FAF2), child: Padding(padding: EdgeInsets.only(bottom: nav), child: child)),
+        );
+      },
     );
   }
 }

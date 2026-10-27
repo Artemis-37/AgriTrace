@@ -149,13 +149,13 @@ function NewProducer({ onClose, onDone }: { onClose: () => void; onDone: () => v
   const [photo, setPhoto] = useState<File | null>(null);
   const { busy, error, run } = useAction();
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF({ ...f, [k]: e.target.value });
-  const codeOk = /^[A-Za-z0-9_-]{1,30}$/.test(f.code.trim());
+  const codeOk = f.code.trim() === '' || /^[A-Za-z0-9_-]{1,30}$/.test(f.code.trim());
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
     run(async () => {
       const r = await post<any>('/producers', {
-        internal_code: f.code.trim(), last_name: f.last_name.trim(), first_names: f.first_names.trim(), ...(f.gender && { gender: f.gender }),
+        ...(f.code.trim() && { internal_code: f.code.trim() }), last_name: f.last_name.trim(), first_names: f.first_names.trim(), ...(f.gender && { gender: f.gender }),
         ...(f.phone.trim() && { phone: f.phone.trim() }), ...(f.village.trim() && { village: f.village.trim() }), ...(f.section.trim() && { section: f.section.trim() }), ...(/^\d+(\.\d{1,4})?$/.test(f.area.trim()) && { area_ha: f.area.trim() }), ...(/^\d+(\.\d{1,2})?$/.test(f.est.trim()) && { estimated_kg: f.est.trim() }),
         ...(f.chain && { value_chain_ids: [f.chain] }),
       });
@@ -170,7 +170,7 @@ function NewProducer({ onClose, onDone }: { onClose: () => void; onDone: () => v
           <div style={{ flex: 1, minWidth: 0 }}>
             <Field label="Nom *"><input required value={f.last_name} onChange={set('last_name')} /></Field>
             <Field label="Prénoms *"><input required value={f.first_names} onChange={set('first_names')} /></Field>
-            <Field label="Code *" hint="Lettres, chiffres, tiret ; 30 caractères au maximum."><input required value={f.code} onChange={(e) => setF({ ...f, code: e.target.value.toUpperCase() })} maxLength={30} /></Field>
+            <Field label="Code" hint="Facultatif : laissé vide, le code est attribué selon le format défini par la coopérative (Paramètres), sinon il reste vide. Lettres, chiffres, tiret ; 30 caractères au maximum."><input value={f.code} onChange={(e) => setF({ ...f, code: e.target.value.toUpperCase() })} maxLength={30} /></Field>
           </div></div>
         <p className="muted" style={{ margin: '.2rem 0 .6rem' }}>Les autres informations sont facultatives.</p>
         <Field label="Sexe"><select value={f.gender} onChange={set('gender')}><option value="">—</option><option value="male">Masculin</option><option value="female">Féminin</option></select></Field>

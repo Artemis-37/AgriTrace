@@ -161,7 +161,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: InkWell(
                     onTap: () => _pending + _problems > 0 ? syncWithDialog(context, submit: true) : syncWithDialog(context),
                     child: Padding(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14), child: Row(children: [
-                      const Text('Achats récents', style: TextStyle(fontSize: 18)),
+                      const Flexible(child: Text('Achats récents', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 18))),
                       const SizedBox(width: 10),
                       CircleAvatar(radius: 16, backgroundColor: _pending + _problems > 0 ? const Color(0xFF6B73C1) : const Color(0xFF3F9B2E), child: Text('${_pending + _problems}', style: const TextStyle(color: Colors.white))),
                       const Spacer(),
@@ -224,7 +224,7 @@ class _HomeScreenState extends State<HomeScreen> {
           child: InkWell(
             onTap: () => syncWithDialog(context, submit: true),
             child: Padding(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14), child: Row(children: [
-              const Text('Éléments à soumettre', style: TextStyle(fontSize: 18)),
+              const Flexible(child: Text('Éléments à soumettre', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 18))),
               const SizedBox(width: 10),
               CircleAvatar(radius: 16, backgroundColor: const Color(0xFF6B73C1), child: Text('$_pending', style: const TextStyle(color: Colors.white))),
               const Spacer(),
@@ -309,7 +309,7 @@ class _HomeHeader extends StatelessWidget {
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          const Text('AgriTrace', style: TextStyle(color: white, fontSize: 22, fontWeight: FontWeight.w800)),
+          const Flexible(child: Text('AgriTrace', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: white, fontSize: 22, fontWeight: FontWeight.w800))),
           const SizedBox(width: 8),
           const Text('V ${Config.appVersion}', style: TextStyle(color: white, fontSize: 13)),
           const Spacer(),

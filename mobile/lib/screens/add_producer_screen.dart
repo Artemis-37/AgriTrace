@@ -246,7 +246,7 @@ class _AddProducerScreenState extends State<AddProducerScreen> {
             fieldLabel("Rôle de l'agriculteur"),
             InputDecorator(decoration: fieldDeco('').copyWith(filled: true, fillColor: const Color(0xFFEEEEEE)), child: const Text('Agriculteur principal')),
             fieldLabel('Code du producteur'),
-            TextField(controller: _code, textCapitalization: TextCapitalization.characters, decoration: fieldDeco('Code du producteur (laissé vide : attribué automatiquement)')),
+            TextField(controller: _code, textCapitalization: TextCapitalization.characters, decoration: fieldDeco('Code du producteur (facultatif)')),
           ])),
           FieldCard(title: 'Village', child: TextField(controller: _village, textCapitalization: TextCapitalization.words, decoration: fieldDeco('Village ou campement (facultatif)'))),
           FieldCard(title: 'Coopérative', child: Column(children: [

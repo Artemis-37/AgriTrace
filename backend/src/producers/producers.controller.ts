@@ -4,7 +4,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiHeader, ApiTags } from '@nestjs/swagger';
-import { IsArray, IsBoolean, IsDateString, IsIn, IsOptional, IsString, IsUUID, Length, Matches } from 'class-validator';
+import { IsArray, IsBoolean, IsDateString, IsIn, IsInt, IsOptional, Max, Min, IsString, IsUUID, Length, Matches } from 'class-validator';
 import * as ExcelJS from 'exceljs';
 import { PoolClient } from 'pg';
 import { RequirePermissions } from '../access/decorators';
@@ -49,11 +49,19 @@ const MAX_IMPORT_ROWS = 5000;
 @ApiTags('producteurs')
 @ApiBearerAuth()
 @ApiHeader({ name: 'X-Organization-Id', required: true })
+export class CodeFormatDto {
+  @IsBoolean() enabled: boolean;
+  @IsOptional() @Matches(/^[A-Za-z0-9_-]{0,12}$/, { message: 'Préfixe : lettres, chiffres, tiret ou souligné (12 caractères au plus)' }) prefix?: string;
+  @IsOptional() @IsInt() @Min(1) @Max(9) digits?: number;
+  @IsOptional() @IsInt() @Min(1) start?: number;
+}
+
 export class UpdateProducerDto {
   @IsOptional() @IsIn(['male', 'female']) gender?: string;
   @IsOptional() @IsString() @Length(1, 100) last_name?: string;
   @IsOptional() @IsString() @Length(1, 150) first_names?: string;
   @IsOptional() @IsString() @Length(0, 20) phone?: string;
+  @IsOptional() @Matches(/^([A-Za-z0-9_-]{1,30})?$/) internal_code?: string;
   @IsOptional() @IsString() @Length(0, 100) region?: string;
   @IsOptional() @IsString() @Length(0, 100) department?: string;
   @IsOptional() @IsString() @Length(0, 100) sub_prefecture?: string;
@@ -71,11 +79,46 @@ export class UpdateProducerDto {
 export class ProducersController {
   constructor(private readonly db: DbService, private readonly audit: AuditService) {}
 
+  /**
+   * Prochain code selon le format défini par la coopérative (Paramètres > Codes des producteurs).
+   * Sans format défini, renvoie '' : le serveur n'invente jamais de code.
+   */
   private async nextCode(c: PoolClient, orgId: string): Promise<string> {
+    const st = (await c.query(`SELECT producer_code_enabled AS on, producer_code_prefix AS prefix, producer_code_digits AS digits, producer_code_start AS start FROM org_settings`)).rows[0];
+    if (!st?.on) return '';
     await c.query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [`producer-code:${orgId}`]);
     const r = await c.query(
-      `SELECT coalesce(max(substring(internal_code from '^P(\\d+)$')::int), 0) + 1 AS n FROM producers`);
-    return `P${String(r.rows[0].n).padStart(5, '0')}`;
+      `SELECT coalesce(max(substr(internal_code, length($1) + 1)::bigint), 0) AS n FROM producers
+        WHERE left(internal_code, length($1)) = $1 AND substr(internal_code, length($1) + 1) ~ '^[0-9]{1,15}$'`, [st.prefix]);
+    const n = Math.max(Number(r.rows[0].n) + 1, st.start);
+    return `${st.prefix}${String(n).padStart(st.digits, '0')}`;
+  }
+
+  /** Format des codes producteurs de la coopérative et prochain code qui serait attribué. */
+  @Get('code-format')
+  @RequirePermissions('producers:read')
+  codeFormat(@Req() req: any) {
+    return this.db.tx(req.org.id, async (c) => {
+      const st = (await c.query(`SELECT producer_code_enabled AS enabled, producer_code_prefix AS prefix, producer_code_digits AS digits, producer_code_start AS start FROM org_settings`)).rows[0]
+        ?? { enabled: false, prefix: '', digits: 5, start: 1 };
+      return { ...st, next: st.enabled ? await this.nextCode(c, req.org.id) : '' };
+    });
+  }
+
+  @Put('code-format')
+  @RequirePermissions('org:branding')
+  async setCodeFormat(@Body() b: CodeFormatDto, @Req() req: any) {
+    const out = await this.db.tx(req.org.id, async (c) => {
+      await c.query(
+        `INSERT INTO org_settings(organization_id, producer_code_enabled, producer_code_prefix, producer_code_digits, producer_code_start, updated_by)
+         VALUES ($1,$2,$3,$4,$5,$6)
+         ON CONFLICT (organization_id) DO UPDATE SET producer_code_enabled = EXCLUDED.producer_code_enabled, producer_code_prefix = EXCLUDED.producer_code_prefix,
+           producer_code_digits = EXCLUDED.producer_code_digits, producer_code_start = EXCLUDED.producer_code_start, updated_at = now(), updated_by = EXCLUDED.updated_by`,
+        [req.org.id, b.enabled, b.prefix ?? '', b.digits ?? 5, b.start ?? 1, req.user.id]);
+      return { enabled: b.enabled, prefix: b.prefix ?? '', digits: b.digits ?? 5, start: b.start ?? 1, next: b.enabled ? await this.nextCode(c, req.org.id) : '' };
+    });
+    await this.audit.log({ organizationId: req.org.id, actorUserId: req.user.id, action: 'settings.producer_code', entityType: 'org_settings', entityId: req.org.id, details: out });
+    return out;
   }
 
   private async findDuplicates(c: PoolClient, d: { phone?: string; last_name?: string; first_names?: string; village?: string }) {
@@ -264,9 +307,11 @@ export class ProducersController {
   async create(@Body() b: CreateProducerDto, @Req() req: any) {
     const out = await this.db.tx(req.org.id, async (c) => {
       const duplicates = await this.findDuplicates(c, b);
-      const code = b.internal_code ?? (await this.nextCode(c, req.org.id));
-      const exists = await c.query(`SELECT 1 FROM producers WHERE internal_code = $1`, [code]);
-      if (exists.rowCount) throw new ConflictException('Code producteur déjà utilisé');
+      const code = b.internal_code?.trim() || (await this.nextCode(c, req.org.id));
+      if (code) {
+        const exists = await c.query(`SELECT 1 FROM producers WHERE internal_code = $1`, [code]);
+        if (exists.rowCount) throw new ConflictException('Code producteur déjà utilisé');
+      }
       const ins = await c.query(
         `INSERT INTO producers(id, organization_id, internal_code, last_name, first_names, phone, region, department, section, village, joined_on, created_by,
                                gender, birth_date, id_doc_type, id_doc_number, consent_at, area_ha, estimated_kg, sub_prefecture)
@@ -287,18 +332,24 @@ export class ProducersController {
     return out; // les doublons potentiels sont signalés, jamais fusionnés automatiquement
   }
 
-  /** Modification de la fiche d'un producteur (identité, localisation, pièce, superficie, filières). Le code et le statut ne changent pas ici. */
+  /** Modification de la fiche d'un producteur (identité, localisation, pièce, superficie, filières). Le code ne peut être saisi que s'il est vide ; le statut ne change pas ici. */
   @Put(':id')
   @RequirePermissions('producers:update')
   async update(@Param('id', ParseUUIDPipe) id: string, @Body() b: UpdateProducerDto, @Req() req: any) {
-    const cols = ['gender', 'last_name', 'first_names', 'phone', 'region', 'department', 'sub_prefecture', 'section', 'village', 'birth_date', 'id_doc_type', 'id_doc_number', 'area_ha', 'estimated_kg'] as const;
+    const cols = ['internal_code', 'gender', 'last_name', 'first_names', 'phone', 'region', 'department', 'sub_prefecture', 'section', 'village', 'birth_date', 'id_doc_type', 'id_doc_number', 'area_ha', 'estimated_kg'] as const;
     if (b.phone && !/^\+?\d{8,15}$/.test(b.phone)) throw new BadRequestException('Téléphone : format international, par exemple +2250701020304');
     if (b.area_ha && !/^\d+(\.\d{1,4})?$/.test(b.area_ha)) throw new BadRequestException('Superficie invalide');
     if (b.estimated_kg && !/^\d+(\.\d{1,2})?$/.test(b.estimated_kg)) throw new BadRequestException('Estimation invalide');
     if (b.birth_date && !/^\d{4}-\d{2}-\d{2}$/.test(b.birth_date)) throw new BadRequestException('Date de naissance : AAAA-MM-JJ');
     const out = await this.db.tx(req.org.id, async (c) => {
+      if (b.internal_code?.trim()) {
+        const cur = (await c.query(`SELECT internal_code FROM producers WHERE id = $1`, [id])).rows[0];
+        if (!cur) throw new NotFoundException();
+        if (cur.internal_code) throw new BadRequestException('Le code producteur déjà attribué ne se modifie pas.');
+        if ((await c.query(`SELECT 1 FROM producers WHERE internal_code = $1`, [b.internal_code.trim()])).rowCount) throw new ConflictException('Code producteur déjà utilisé');
+      }
       const sets: string[] = []; const vals: any[] = [id, req.user.id];
-      for (const k of cols) if (b[k] !== undefined) { vals.push((b[k] as string).trim?.() === '' ? null : b[k]); sets.push(`${k} = $${vals.length}`); }
+      for (const k of cols) if (b[k] !== undefined && !(k === 'internal_code' && !b.internal_code?.trim())) { vals.push((b[k] as string).trim?.() === '' ? null : b[k]); sets.push(`${k} = $${vals.length}`); }
       if (b.value_chain_ids) {
         for (const vc of b.value_chain_ids) if (!(await c.query(`SELECT 1 FROM value_chains WHERE id = $1`, [vc])).rowCount) throw new BadRequestException('Filière inconnue');
       }

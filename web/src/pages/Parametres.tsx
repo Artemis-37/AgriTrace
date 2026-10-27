@@ -15,7 +15,7 @@ export default function Parametres({ start }: { start?: string } = {}) {
   const { can } = useAuth();
   type Item = [string, string];
   const groups = ([
-    { title: 'Société', items: can('org:branding') ? [['societe', 'Informations et logo'] as Item] : [] },
+    { title: 'Société', items: can('org:branding') ? [['societe', 'Informations et logo'] as Item, ['codes', 'Codes des producteurs'] as Item] : [] },
     { title: 'Produits et prix', items: [...(can('products:read') ? [['products', 'Produits'] as Item] : []), ...(can('campaigns:read') ? [['campaigns', 'Traites (grande / petite)'] as Item] : [])] },
     { title: 'Utilisateurs et accès', items: [
       ...(can('users:create') ? [['u-new', 'Créer un utilisateur'] as Item] : []),
@@ -31,7 +31,7 @@ export default function Parametres({ start }: { start?: string } = {}) {
   const [open, setOpen] = useState(groups.find((g) => g.items.some(([k]) => k === first))?.title ?? groups[0]?.title ?? '');
   if (!groups.length) return <Card><p className="muted">Votre rôle ne donne accès à aucun paramètre.</p></Card>;
   const pick = (k: string) => { if (k === 'u-new') { setN((x) => x + 1); setCur('users-new'); } else setCur(k); };
-  const view = cur === 'societe' ? <Societe /> : cur === 'products' ? <Products /> : cur === 'campaigns' ? <Campaigns />
+  const view = cur === 'societe' ? <Societe /> : cur === 'codes' ? <ProducerCodes /> : cur === 'products' ? <Products /> : cur === 'campaigns' ? <Campaigns />
     : <Equipe embedded section={cur === 'users-new' ? 'users' : cur} openAdd={cur === 'users-new' ? n : 0} key={cur + n} />;
   return (
     <>
@@ -48,6 +48,32 @@ export default function Parametres({ start }: { start?: string } = {}) {
         <div className="caisse-main">{view}</div>
       </div>
     </>
+  );
+}
+
+/** Format des codes producteurs : défini par la coopérative. Sans format, le serveur laisse le code vide (il se saisit à la main). */
+function ProducerCodes() {
+  const { data, reload } = useAsync(() => get<any>('/producers/code-format'), []);
+  const [f, setF] = useState<any | null>(null);
+  const act = useAction();
+  const v = f ?? data;
+  const set = (k: string, val: any) => setF({ ...(f ?? data), [k]: val });
+  const preview = v ? `${v.prefix ?? ''}${String(Math.max(Number(v.start) || 1, 1)).padStart(Number(v.digits) || 5, '0')}` : '';
+  return (
+    <Card title="Codes des producteurs">
+      <p className="muted">La coopérative décide de sa numérotation. Si vous activez un format, le serveur attribue le code automatiquement à chaque nouveau producteur (téléphone, portail, import Excel). Sans format, le code reste vide et se saisit à la main, producteur par producteur.</p>
+      {!v ? <Loading /> : <>
+        <label className="check"><input type="checkbox" checked={!!v.enabled} onChange={(e) => set('enabled', e.target.checked)} /> Attribuer les codes automatiquement</label>
+        {v.enabled && <div className="form-grid">
+          <Field label="Préfixe" hint="Lettres, chiffres, tiret (12 caractères au plus). Exemple : SOC-"><input value={v.prefix ?? ''} maxLength={12} onChange={(e) => set('prefix', e.target.value)} /></Field>
+          <Field label="Nombre de chiffres"><input type="number" min={1} max={9} value={v.digits ?? 5} onChange={(e) => set('digits', Number(e.target.value))} /></Field>
+          <Field label="Premier numéro"><input type="number" min={1} value={v.start ?? 1} onChange={(e) => set('start', Number(e.target.value))} /></Field>
+        </div>}
+        {v.enabled && <p>Exemple de code : <strong>{preview}</strong>{data?.enabled && data.next ? <> · prochain code attribué : <strong>{data.next}</strong></> : null}</p>}
+        {act.error && <ErrorBox message={act.error} />}
+        <div className="toolbar"><button className="btn" disabled={act.busy || !f} onClick={async () => { if (await act.run(() => put('/producers/code-format', { enabled: !!v.enabled, prefix: v.prefix ?? '', digits: Number(v.digits) || 5, start: Number(v.start) || 1 }))) { setF(null); reload(); } }}>Enregistrer</button></div>
+      </>}
+    </Card>
   );
 }
 

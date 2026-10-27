@@ -193,7 +193,7 @@ class _ParcelSurveyScreenState extends State<ParcelSurveyScreen> {
     return Card(color: const Color(0xFFE9F3EA), elevation: 0, child: Padding(padding: const EdgeInsets.all(12), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(children: [
         Icon(_paused ? Icons.pause_circle : Icons.fiber_manual_record, color: _paused ? Colors.orange : Colors.red, size: 18), const SizedBox(width: 8),
-        Text(_paused ? 'Enregistrement en pause' : 'Enregistrement du tour en cours', style: const TextStyle(fontWeight: FontWeight.w600)),
+        Expanded(child: Text(_paused ? 'Enregistrement en pause' : 'Enregistrement du tour en cours', style: const TextStyle(fontWeight: FontWeight.w600))),
       ]),
       const SizedBox(height: 8),
       Text('${_rec.points.length} point(s) · ${_rec.walkedM.toStringAsFixed(0)} m parcourus${_rec.points.length >= 3 ? ' · ${_rec.areaHaNow.toStringAsFixed(2)} ha estimés' : ''}'),
