@@ -119,6 +119,7 @@ export class OrganizationsController {
         [r.rows[0].id],
       );
       await ensureStandardRoles(c, org.id, org.kind);
+      await c.query('SELECT ensure_distribution_catalog($1)', [org.id]);
     });
     await this.audit.log({
       organizationId: org.id,

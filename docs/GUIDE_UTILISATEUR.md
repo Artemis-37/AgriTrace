@@ -246,3 +246,7 @@ Tant qu'aucun modèle n'est déployé, l'application utilise ses modèles intég
 - **Alerte** : l'administrateur reçoit une notification chaque jour dans les 15 derniers jours de la traite (réglable par `CAMPAIGN_ALERT_DAYS`), puis lors de l'ouverture et de la clôture.
 - **Reprendre les prix** : à la création d'une traite, le champ « Reprendre les produits et les prix de » copie ceux de la traite choisie ; ils restent modifiables.
 - **Bilan** : le bouton « Bilan » affiche, par produit, les poids, sacs et montants réglés, les achats acceptés et les prix de fin de traite (provisoire tant que la traite est en cours).
+
+## Distribution et services : catalogue
+
+Chaque coopérative reçoit un catalogue de départ (catégories Finance, Intrants et Outils, Services et Dépistages, avec leurs groupes et articles). Sur le téléphone : Distribution et services › catégorie › groupe › cases à cocher. L'administrateur ajoute, renomme ou retire des groupes et des articles depuis l'application.
