@@ -98,7 +98,7 @@ export function traceabilityPdf(t: any): Promise<Buffer> {
 export function inspectionPdf(f: {
   certification: string | null; certLogo: Buffer | null; orgLogo: Buffer | null; orgName: string; title: string;
   producer: string; code: string; village?: string | null; answeredAt: any; answeredBy?: string | null;
-  items: { label: string; answer: string }[];
+  items: { label: string; answer: string; obs?: string }[];
   sketch?: { parcels: { code: string; ha: number | null; ring: number[][] }[] } | null;
 }): Promise<Buffer> {
   return render((doc) => {
@@ -127,6 +127,7 @@ export function inspectionPdf(f: {
       doc.font('Helvetica').fontSize(9).fillColor('#000').text(it.label, 50, doc.y, { width: 360, continued: false });
       const y = doc.y;
       doc.font('Helvetica-Bold').fillColor(colour).text(it.answer, 50, y, { width: 495 });
+      if (it.obs) doc.font('Helvetica-Oblique').fontSize(8.5).fillColor('#444').text(`Observation : ${it.obs}`, 50, doc.y, { width: 495 });
       doc.moveDown(0.4);
     }
     if (f.sketch && f.sketch.parcels.length) drawSketch(doc, f.sketch.parcels);

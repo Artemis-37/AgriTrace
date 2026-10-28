@@ -284,4 +284,6 @@ La fiche d'inspection Rainforest Alliance s'exporte aussi en **Word (.docx)**, a
 
 ## Observations proposées par exigence (fiche Rainforest Alliance)
 
-Sous chaque exigence évaluée (Conforme / Non conforme / Non applicable), le coach choisit une **observation** dans une liste déroulante adaptée à l'exigence et au résultat (65 exigences, plusieurs choix chacune), ou saisit la sienne avec « Autre (saisir)… ». L'observation choisie apparaît dans la colonne Observations du PDF et du Word, et sert de constat dans « Non-conformités relevées ». Changer le résultat d'une exigence efface l'observation choisie.
+Sous chaque point évalué (Conforme / Non conforme / Non applicable), le coach choisit une **observation** dans une liste déroulante adaptée à l'exigence et au résultat (65 exigences, plusieurs choix chacune), ou saisit la sienne avec « Autre (saisir)… ». L'observation choisie apparaît dans la colonne Observations du PDF et du Word, et sert de constat dans « Non-conformités relevées ». Changer le résultat d'une exigence efface l'observation choisie.
+
+Les mêmes listes d'observations existent pour les fiches **Fairtrade**, **Fairtrade USA** et la **fiche unique** : pour un point répondu « Oui » (ou Conforme), l'observation proposée est de conformité ; pour « Non » (ou Partiel), elle décrit le manquement. Elles figurent aussi dans le PDF de ces fiches.

@@ -77,7 +77,9 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
   Widget _obsField(Map<String, dynamic> q) {
     final id = '${q['id']}';
     final obs = q['observations'];
-    final key = _ans[id] == 'Conforme' ? 'C' : _ans[id] == 'Non conforme' ? 'NC' : _ans[id] == 'Non applicable' ? 'NA' : null;
+    const pos = {'Conforme', 'Conformes', 'oui', 'Oui'}, neg = {'Non conforme', 'Non conformes', 'non', 'Non', 'Partiels', 'Partielle', 'Insuffisant'};
+    final a = _ans[id];
+    final key = pos.contains(a) ? 'C' : neg.contains(a) ? 'NC' : a == 'Non applicable' ? 'NA' : null;
     if (obs is! Map || key == null) return const SizedBox.shrink();
     final options = ((obs[key] as List?) ?? const []).map((e) => '$e').toList();
     const other = 'Autre (saisir)…';

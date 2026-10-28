@@ -70,5 +70,20 @@ const login = async (e, p) => (await call('POST', '/auth/login', { body: { email
   check('reprise acceptée et approuvée', r3.body?.status === 'done' && r3.body.score === 100, r3.body);
   const l3 = (await call('GET', '/producer-assignments?mine=1&compact=1', J)).body.assignments.find((a) => a.target_id === t2);
   check('indicateur de reprise retiré', l3.status === 'done' && l3.needs_redo === false, l3);
+  // Autres fiches : Fairtrade
+  const ftq = (await call('GET', `/questionnaires/${qs.find((x) => x.template_code === 'ii-ft').id}`, J)).body;
+  const asg2 = await call('POST', '/producer-assignments', { ...J, body: { kind: 'inspection', scope: 'selected', producer_ids: [p1.id], questionnaire_id: ftq.id } });
+  const tf = (await call('GET', '/producer-assignments?mine=1&compact=1', J)).body.assignments.find((a) => a.id === asg2.body.id).target_id;
+  const tg = (await call('GET', `/questionnaires/targets/${tf}`, J)).body;
+  const withObs = tg.questions.filter((x) => x.observations);
+  check('fiche Fairtrade : listes d\'observations fournies', withObs.length >= 12 && withObs.every((x) => x.observations.C.length && x.observations.NC.length && x.observations.NA.length), withObs.length);
+  const fa = {};
+  for (const x of tg.questions) { if (x.type === 'date') fa[x.id] = '2026-10-01'; else if (x.type === 'yesno') fa[x.id] = 'oui'; else if (x.type === 'choice') fa[x.id] = x.options[0]; else if (x.type === 'multi') fa[x.id] = [x.options[0]]; else if (x.required) fa[x.id] = 'x'; }
+  const nq = withObs.find((x) => x.type === 'yesno'); fa[nq.id] = 'non'; fa['obs.' + nq.id] = nq.observations.NC[0];
+  const rf = await call('POST', `/questionnaires/targets/${tf}/answers`, { ...J, body: { answers: fa } });
+  const sf = (await call('GET', `/questionnaires/targets/${tf}`, J)).body;
+  check('fiche Fairtrade : observation enregistrée', rf.status === 201 && sf.answers['obs.' + nq.id] === nq.observations.NC[0], rf.body);
+  const pf = await call('GET', `/questionnaires/targets/${tf}/export`, J);
+  check('fiche Fairtrade : export PDF', pf.status === 200 && pf.buf.slice(0, 4).toString() === '%PDF', pf.status);
   console.log(`\n${ok} réussis, ${ko} échecs`); process.exit(ko ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(1); });

@@ -145,8 +145,54 @@ const R: Record<string, Row> = {
 export const OBSERVATIONS: Record<string, ObsList> = Object.fromEntries(
   Object.entries(R).map(([k, [C, NC, NA]]) => [k, { C, NC, NA: [...(NA ?? []), ...((NA ?? []).includes(GEN_NA) ? [] : [GEN_NA])] }]));
 
+// ── Autres fiches d'inspection interne (Fairtrade, Fairtrade USA, fiche unique) : une liste par point de contrôle, repéré par le début de son intitulé ──
+const norm = (s: string) => s.replace(/^\[[^\]]*\]\s*/, '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/['’]/g, "'").toLowerCase().replace(/\s+/g, ' ').trim();
+const GEN_NA2 = 'Point de contrôle non applicable à cette exploitation';
+const T: [string, string[], string[], string[]?][] = [
+  ['le producteur est membre en regle', ['Membre en règle, cotisation à jour', 'Carte ou reçu de cotisation présenté'], ['Cotisation non à jour', 'Producteur absent de la liste des membres', 'Reçus de cotisation non retrouvés']],
+  ['le producteur est inscrit au registre', ['Inscrit au registre des membres et à jour', 'Inscription et cotisation vérifiées'], ['Non inscrit au registre des membres', 'Cotisation non à jour', 'Informations du registre incomplètes']],
+  ['le producteur figure sur la liste', ['Figure sur la liste des membres certifiés à jour', 'Inscription vérifiée auprès de la coopérative'], ['Absent de la liste des membres certifiés', 'Liste des membres non à jour pour ce producteur']],
+  ["il a participe a l'assemblee", ["A participé à l'assemblée générale de l'année", 'Convocation et présence vérifiées'], ["N'a pas participé à l'assemblée générale", "Non informé de la tenue de l'assemblée générale"]],
+  ['participation a l\'assemblee', ["A participé à l'assemblée générale de l'année", 'Convocation et présence vérifiées'], ["N'a pas participé à l'assemblée générale", "Non informé de la tenue de l'assemblée générale"]],
+  ['il connait le prix', ['Connaît le prix minimum et la prime', 'Explication reçue lors de la sensibilisation'], ['Ne connaît pas le prix minimum', 'Ne connaît pas la prime Fairtrade', 'Sensibilisation à refaire']],
+  ['le producteur connait les regles', ['Connaît les règles, le prix minimum et la prime', 'Sensibilisé par la coopérative'], ['Ne connaît pas les règles de la certification', 'Sensibilisation à refaire par le coach']],
+  ['le producteur a recu et compris', ['A reçu et compris les règles de la certification', 'Règles expliquées par le coach'], ['N\'a pas reçu les règles de la certification', 'A reçu les règles mais ne les a pas comprises']],
+  ['les quantites vendues', ['Quantités vendues enregistrées, reçus délivrés', 'Reçus conservés par le producteur'], ['Quantités vendues non enregistrées', 'Reçus non délivrés', 'Reçus incomplets']],
+  ['les livraisons sont enregistrees', ['Livraisons enregistrées avec reçu, rattachées à un lot', 'Traçabilité jusqu\'à l\'exploitation assurée'], ['Livraisons non enregistrées', 'Livraison non rattachable à un lot', 'Traçabilité interrompue']],
+  ['aucune livraison hors organisation', ['Aucune livraison hors organisation constatée', 'Toute la production certifiée livrée à la coopérative'], ['Livraison hors organisation sous couvert de la certification', 'Vente à un acheteur extérieur constatée']],
+  ['aucun melange', ['Aucun mélange avec du cacao non certifié', 'Cacao certifié stocké séparément'], ['Mélange avec du cacao non certifié constaté', 'Stockage commun avec du cacao non certifié']],
+  ['aucun travail des enfants', ['Aucun travail des enfants dangereux ni travail forcé constaté', 'Enfants scolarisés, travailleurs libres'], ['Enfant sur un travail dangereux constaté', 'Travail forcé ou rétention de documents constaté', 'Cas à signaler et à suivre par la coopérative']],
+  ['aucun enfant', ['Aucun enfant sur des travaux dangereux', 'Enfants scolarisés, aucune tâche dangereuse constatée'], ['Enfant de moins de 15 ans sur un travail dangereux', 'Enfant utilisant des outils tranchants ou des pesticides', 'Cas à signaler et à suivre par la coopérative']],
+  ['pas de travail force', ['Aucun travail forcé ni discrimination constaté', 'Travailleurs libres de quitter leur emploi'], ['Rétention de documents ou de salaires constatée', 'Discrimination constatée', 'Travail imposé constaté']],
+  ['travailleurs embauches', ['Conditions écrites et paiement régulier', 'Travailleurs payés à la date convenue'], ['Aucune condition écrite', 'Paiement irrégulier', 'Paiement inférieur au minimum légal'], ["Le producteur n'a aucun travailleur", "Le producteur n'emploie que des membres de sa famille"]],
+  ['travailleurs : conditions', ['Conditions claires, paiement régulier et conforme au salaire minimum', 'Travailleurs payés à la date convenue'], ['Conditions non claires', 'Paiement irrégulier', 'Salaire inférieur au minimum légal'], ["Le producteur n'a aucun travailleur", "Le producteur n'emploie que des membres de sa famille"]],
+  ['produits interdits', ['Aucun produit interdit présent', 'Produits vérifiés dans le magasin'], ['Produit de la liste rouge trouvé', 'Produit non homologué trouvé', 'Produit sans étiquette trouvé']],
+  ['produits phytosanitaires autorises', ['Seuls des produits autorisés utilisés', 'Aucun produit de la liste rouge ou interdit'], ['Produit non autorisé trouvé', 'Produit de la liste rouge ou interdit trouvé'], ["Le producteur n'utilise aucun produit phytosanitaire"]],
+  ['stockage des produits securise', ['Stockage sécurisé, séparé des aliments, hors de portée des enfants', 'Magasin fermé à clé'], ['Produits stockés avec des aliments', 'Produits accessibles aux enfants', 'Pas de magasin ni de local fermé'], ["Le producteur n'utilise aucun produit phytosanitaire"]],
+  ['equipements de protection', ['Équipements de protection portés et en bon état', 'Producteur formé à l\'usage des produits'], ['Équipements de protection absents', 'Équipements incomplets ou en mauvais état', 'Producteur non formé à l\'usage des produits', 'Stockage des produits à améliorer'], ["Le producteur n'utilise aucun produit phytosanitaire"]],
+  ['securite : equipements', ['Équipements de protection portés et formation reçue', 'Équipements en bon état'], ['Équipements de protection absents ou incomplets', 'Producteur non formé aux produits'], ["Le producteur n'utilise aucun produit phytosanitaire"]],
+  ['pas de deforestation', ['Aucune déforestation ni extension en forêt protégée', 'Limites de la parcelle inchangées depuis la date de référence'], ['Extension récente en forêt constatée', 'Défrichement après la date de référence', 'Chevauchement avec une aire protégée signalé']],
+  ['parcelle hors foret', ['Parcelle hors forêt classée et aire protégée, sans extension', 'Vérifié avec le polygone de la parcelle'], ['Extension ou défrichement récent constaté', 'Chevauchement avec une forêt classée ou aire protégée', 'Vérification à compléter sur le terrain']],
+  ['gestion des dechets', ['Cabosses et emballages gérés correctement', 'Emballages vides collectés, rien brûlé'], ['Déchets jetés dans la parcelle ou dans l\'eau', 'Emballages vides brûlés ou réutilisés', 'Cabosses malades non évacuées'], ["Aucun déchet à gérer sur l'exploitation"]],
+  ['benefice de projets', ['Bénéficie de projets financés par la prime', 'Projet de la prime connu du producteur'], ['Ne connaît aucun projet financé par la prime', 'N\'a pas bénéficié des projets de la prime']],
+  ['prime communautaire', ['Projet de prime connu et suivi', 'Producteur informé de l\'utilisation de la prime'], ['Projet de prime inconnu du producteur', 'Aucun suivi de l\'utilisation de la prime']],
+  ['prime ou differentiel', ['Prime ou différentiel reçu, projet connu et suivi', 'Preuve de paiement présentée'], ['Prime ou différentiel non reçu', 'Projet communautaire inconnu du producteur', 'Aucune preuve de paiement']],
+  ['sa parcelle est cartographiee', ['Parcelle cartographiée (polygone), limites connues', 'Hors aire protégée confirmé'], ['Parcelle non cartographiée', 'Limites de la parcelle mal connues', 'Polygone à refaire']],
+  ['suivi et remediation', ['Suivi et remédiation du travail des enfants appliqués', 'Cas suivis par la coopérative'], ['Aucun suivi ni remédiation appliqué', 'Cas non traité signalé'], ['Aucun cas de travail des enfants constaté']],
+  ['registre des incidents', ['Registre des incidents et plaintes tenu et consulté', 'Aucune plainte non traitée'], ['Aucun registre des incidents', 'Plaintes non traitées', 'Registre non consulté']],
+  ['mecanisme de plainte', ['Mécanisme de plainte connu et registre consulté', 'Aucune plainte non traitée'], ['Mécanisme de plainte inconnu du producteur', 'Aucun registre des incidents', 'Plaintes non traitées']],
+  ['carnet de ventes', ['Carnet de ventes et de récoltes tenu à jour', 'Carnet présenté'], ['Aucun carnet tenu', 'Carnet incomplet ou non à jour']],
+  ['plan de gestion', ["Plan de gestion de l'exploitation existant et appliqué", 'Actions du plan en cours'], ["Aucun plan de gestion", 'Plan existant mais non appliqué']],
+  ["arbres d'ombrage", ["Arbres d'ombrage en nombre suffisant et diversifiés", 'Ombrage adapté à la parcelle'], ["Arbres d'ombrage insuffisants", 'Peu de diversité des arbres d\'ombrage', "Aucun arbre d'ombrage"]],
+];
+export function observationsForLabel(label: string): ObsList | undefined {
+  const n = norm(label);
+  const t = T.find((x) => x[1].length && n.startsWith(x[0]));
+  return t ? { C: t[1], NC: t[2], NA: [...(t[3] ?? []), GEN_NA2] } : undefined;
+}
+
 const NUM = /^(\d+\.\d+\.\d+)\s*(?:EF|ES|EAC)\s*[—–-]/;
 /** Ajoute à chaque exigence connue sa liste d'observations (champ `observations`). Les autres questions sont inchangées. */
 export function attachObservations<T extends { label: string }>(questions: T[]): (T & { observations?: ObsList })[] {
-  return (questions ?? []).map((q) => { const m = NUM.exec(String(q.label ?? '').trim()); const o = m ? OBSERVATIONS[m[1]] : undefined; return o ? { ...q, observations: o } : q; });
+  return (questions ?? []).map((q) => { const m = NUM.exec(String(q.label ?? '').trim()); const o = m ? OBSERVATIONS[m[1]] : /^(Normes|Type de visite|Date|Inspecteur|Résultat|Observations|Actions|Non-conf)/i.test(String(q.label)) ? undefined : observationsForLabel(String(q.label ?? '')); return o ? { ...q, observations: o } : q; });
 }

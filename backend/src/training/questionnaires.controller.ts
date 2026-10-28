@@ -321,7 +321,7 @@ export class QuestionnairesController {
       certification: d.scheme ? CERT_SCHEMES[d.scheme] : d.t.template_code === 'ii-fusion' ? 'Rainforest Alliance, Fairtrade, Fairtrade USA' : null,
       certLogo: d.certLogo, orgLogo: d.orgLogo, orgName: o?.name ?? '', title: d.t.q_title,
       producer: `${d.t.last_name} ${d.t.first_names}`, code: d.t.internal_code, village: d.t.village, answeredAt: d.t.answered_at, answeredBy: d.t.answered_by,
-      items: (d.t.questions as Question[]).map((q, i) => ({ label: `${i + 1}. ${q.label}`, answer: val(shown?.[q.id]) })),
+      items: (d.t.questions as Question[]).map((q, i) => ({ label: `${i + 1}. ${q.label}`, answer: val(shown?.[q.id]), obs: shown?.[`obs.${q.id}`] ? String(shown[`obs.${q.id}`]) : undefined })),
       sketch: insp ? { parcels: d.parcels } : null,
     });
     await this.audit.log({ organizationId: req.org.id, actorUserId: req.user.id, action: 'questionnaire.export', entityType: 'producer_assignment_target', entityId: targetId, details: { certification: d.scheme } });

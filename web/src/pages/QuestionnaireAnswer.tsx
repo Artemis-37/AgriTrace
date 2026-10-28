@@ -21,7 +21,7 @@ export function AnswerForm({ targetId, onClose, onDone }: { targetId: string; on
   const qs: Question[] = t.data?.questions ?? [];
   const scored = qs.some((q) => q.options?.includes('Conforme') && q.options?.includes('Non conforme'));
   const auto = (q: Question) => scored && /^(Non-conformités relevées|Recommandation de l.inspecteur|Croquis de l.exploitation)/i.test(q.label);
-  const OBS = { 'Conforme': 'C', 'Non conforme': 'NC', 'Non applicable': 'NA' } as const;
+  const OBS: Record<string, 'C' | 'NC' | 'NA'> = { Conforme: 'C', Conformes: 'C', oui: 'C', Oui: 'C', 'Non conforme': 'NC', 'Non conformes': 'NC', non: 'NC', Non: 'NC', Partiels: 'NC', Partielle: 'NC', Insuffisant: 'NC', 'Non applicable': 'NA' };
   const missing = qs.some((q) => q.required && !auto(q) && (ans[q.id] === undefined || ans[q.id] === '' || (Array.isArray(ans[q.id]) && !ans[q.id].length)));
   return (
     <Modal title={t.data ? `${t.data.title} · ${t.data.last_name} ${t.data.first_names}` : 'Questionnaire'} onClose={onClose}>
@@ -39,7 +39,7 @@ export function AnswerForm({ targetId, onClose, onDone }: { targetId: string; on
                 : q.type === 'choice' ? <select value={ans[q.id] ?? ''} onChange={(e) => set(q.id, e.target.value)}><option value="">—</option>{q.options!.map((o) => <option key={o} value={o}>{o}</option>)}</select>
                 : <span style={{ display: 'grid', gap: '.25rem' }}>{q.options!.map((o) => <label key={o}><input type="checkbox" checked={(ans[q.id] ?? []).includes(o)} onChange={(e) => set(q.id, e.target.checked ? [...(ans[q.id] ?? []), o] : (ans[q.id] ?? []).filter((x: string) => x !== o))} /> {o}</label>)}</span>}
               {q.observations && (() => {
-                const k = OBS[(done ? t.data.answers?.[q.id] : ans[q.id]) as keyof typeof OBS];
+                const k = OBS[String(done ? t.data.answers?.[q.id] : ans[q.id])];
                 if (!k) return null;
                 if (done) { const o = t.data.answers?.[`obs.${q.id}`]; return o ? <p className="muted" style={{ margin: '.3rem 0 0' }}>Observation : {o}</p> : null; }
                 const list = q.observations[k], cur = ans[`obs.${q.id}`] as string | undefined, custom = cur !== undefined && !list.includes(cur);
