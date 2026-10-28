@@ -47,7 +47,7 @@ export default function Producers() {
       <Registre title="Producteurs" subtitle="Registre des producteurs de la coopérative" rows={rows} selectedId={cur?.id ?? null} onSelect={(p) => setSel(p.id)} empty="Aucun producteur trouvé."
         count={rows.length}
         toolbar={<>
-          <select aria-label="Filtrer par filière" value={chain} onChange={(e) => { setChain(e.target.value); setLimit(100); }}><option value="">Toutes les filières</option>{(chains.data ?? []).map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
+          <select aria-label="Filtrer par produit" value={chain} onChange={(e) => { setChain(e.target.value); setLimit(100); }}><option value="">Tous les produits</option>{(chains.data ?? []).map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
           <input type="search" aria-label="Rechercher" placeholder="Rechercher (nom, code, téléphone)" value={q} onChange={(e) => setQ(e.target.value)} />
           <select aria-label="Filtrer par section" value={section} onChange={(e) => { setSection(e.target.value); setLimit(100); }}>
             <option value="">Toutes les sections</option>
@@ -82,7 +82,7 @@ export default function Producers() {
                 <FicheRow label="Sexe">{cur.gender === 'female' ? 'Féminin' : cur.gender === 'male' ? 'Masculin' : '—'}</FicheRow><FicheRow label="Contact">{cur.phone ?? '—'}</FicheRow>
                 <FicheRow label="Sous-préfecture">{cur.sub_prefecture ?? '—'}</FicheRow><FicheRow label="Village">{cur.village ?? '—'}</FicheRow><FicheRow label="Section">{cur.section ?? '—'}</FicheRow>
                 <FicheRow label="Superficie (ha)">{num(cur.area_ha)}</FicheRow><FicheRow label="Estimation (kg)">{num(cur.estimated_kg, 0)}</FicheRow>
-                <FicheRow label="Filières">{(cur.value_chain_ids ?? []).length ? (cur.value_chain_ids as string[]).map((id) => <span key={id} className="chip">{chainName(id)}</span>) : '—'}</FicheRow>
+                <FicheRow label="Produits">{(cur.value_chain_ids ?? []).length ? (cur.value_chain_ids as string[]).map((id) => <span key={id} className="chip">{chainName(id)}</span>) : '—'}</FicheRow>
               </div></div>
             )}
             {tab === 'id' && (
@@ -135,7 +135,7 @@ function EditProducer({ p, detail, onClose, onDone }: { p: any; detail: any; onC
       <div className="grid-2"><Field label="Type de pièce"><select value={f.id_doc_type} onChange={set('id_doc_type')}><option value="">—</option>{Object.entries(ID_DOC).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></Field>
         <Field label="N° de la pièce"><input value={f.id_doc_number} onChange={set('id_doc_number')} maxLength={60} /></Field></div>
       <Field label="Date de naissance"><input type="date" value={f.birth_date} onChange={set('birth_date')} /></Field>
-      <Field label="Filières"><div className="role-pick">{(chains.data ?? []).map((v: any) => <label key={v.id} className="check"><input type="checkbox" checked={picked.includes(v.id)} onChange={() => setPicked((x) => (x.includes(v.id) ? x.filter((y) => y !== v.id) : [...x, v.id]))} /> {v.name}</label>)}</div></Field>
+      <Field label="Produits"><div className="role-pick">{(chains.data ?? []).map((v: any) => <label key={v.id} className="check"><input type="checkbox" checked={picked.includes(v.id)} onChange={() => setPicked((x) => (x.includes(v.id) ? x.filter((y) => y !== v.id) : [...x, v.id]))} /> {v.name}</label>)}</div></Field>
       {error && <ErrorBox message={error} />}
       <div className="modal-foot"><button className="btn btn-secondary" onClick={onClose}>Annuler</button>
         <button className="btn" disabled={busy || !ok} onClick={() => run(async () => { await put(`/producers/${p.id}`, { ...f, value_chain_ids: picked }); onDone(); })}>Enregistrer</button></div>
@@ -179,10 +179,10 @@ function NewProducer({ onClose, onDone }: { onClose: () => void; onDone: () => v
         <Field label="Superficie (ha)"><input inputMode="decimal" value={f.area} onChange={set('area')} /></Field>
         <Field label="Estimation de production (kg)"><input inputMode="decimal" value={f.est} onChange={set('est')} /></Field>
         <Field label="Section"><input value={f.section} onChange={set('section')} /></Field>
-        <Field label="Filière">
+        <Field label="Produit">
           <select value={f.chain} onChange={set('chain')}><option value="">— Aucune —</option>{(chains.data ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
         </Field>
-        {chains.data && !chains.data.length && <Empty>Aucune filière définie.</Empty>}
+        {chains.data && !chains.data.length && <Empty>Aucun produit défini.</Empty>}
         {error && <ErrorBox message={error} />}
         <div className="modal-foot"><button type="button" className="btn btn-secondary" onClick={onClose}>Annuler</button><button className="btn" disabled={busy || !codeOk}>{busy ? 'Enregistrement…' : 'Enregistrer'}</button></div>
       </form>
@@ -249,7 +249,7 @@ function ChangeStatus({ p, onClose, onDone }: { p: any; onClose: () => void; onD
 
 const IMPORT_FIELDS: [string, string][] = [
   ['last_name', 'Nom *'], ['first_names', 'Prénoms *'], ['internal_code', 'Code'], ['gender', 'Sexe'], ['phone', 'Téléphone'], ['region', 'Région'], ['department', 'Département'], ['sub_prefecture', 'Sous-préfecture'],
-  ['section', 'Section'], ['village', 'Village'], ['area_ha', 'Superficie (ha)'], ['estimated_kg', 'Estimation (kg)'], ['value_chains', 'Filières'], ['joined_on', "Date d'adhésion"], ['birth_date', 'Date de naissance'], ['id_doc_type', "Type de pièce d'identité"], ['id_doc_number', "Numéro de la pièce d'identité"],
+  ['section', 'Section'], ['village', 'Village'], ['area_ha', 'Superficie (ha)'], ['estimated_kg', 'Estimation (kg)'], ['value_chains', 'Produits'], ['joined_on', "Date d'adhésion"], ['birth_date', 'Date de naissance'], ['id_doc_type', "Type de pièce d'identité"], ['id_doc_number', "Numéro de la pièce d'identité"],
 ];
 
 /** Import d'une liste de producteurs depuis un classeur Excel : simulation (rapport), correspondance des colonnes si besoin, puis confirmation. */

@@ -6,7 +6,7 @@ import { kg, money } from '../format';
 import RapportsProgrammes from './RapportsProgrammes';
 import { Card, ErrorBox, Field, Loading, PageHeader, Stat, Table, useAsync } from '../ui';
 
-const GROUPS: [string, string][] = [['section', 'Section'], ['village', 'Village'], ['collector', 'Délégué'], ['chain', 'Filière'], ['day', 'Jour']];
+const GROUPS: [string, string][] = [['section', 'Section'], ['village', 'Village'], ['collector', 'Délégué'], ['chain', 'Produit'], ['day', 'Jour']];
 
 /** Rapports d'achats filtrables par période, section, délégué et filière (CDC §26), exportables vers Excel. */
 const OUTCOME: Record<string, string> = { compliant: 'Conforme', to_review: 'À revoir', non_compliant: 'Non conforme', pending: 'En cours' };
@@ -45,7 +45,7 @@ function Unified({ kind }: { kind: 'finance' | 'stock' | 'quality' | 'supply' })
       {!loading && !error && d && kind === 'stock' && (
         <>
           <div className="stats"><Stat label="Stock total" value={kg(d.totals.kg)} tone="ok" /><Stat label="Pertes de la période" value={kg(d.totals.loss_kg)} tone={d.totals.loss_kg > 0 ? 'warn' : 'neutral'} /></div>
-          <Card><Table rows={d.balances} empty="Aucun stock." columns={[{ header: 'Entrepôt', render: (r: any) => <strong>{r.warehouse}</strong> }, { header: 'Filière', render: (r: any) => r.chain },
+          <Card><Table rows={d.balances} empty="Aucun stock." columns={[{ header: 'Entrepôt', render: (r: any) => <strong>{r.warehouse}</strong> }, { header: 'Produit', render: (r: any) => r.chain },
             { header: 'Lots', align: 'right', render: (r: any) => r.lots }, { header: 'Stock', align: 'right', render: (r: any) => kg(r.kg) }]} /></Card>
           <Card><Table rows={d.flows} empty="Aucun mouvement sur la période." columns={[{ header: 'Mouvement', render: (r: any) => MOVE[r.type] ?? r.type }, { header: 'Sens', render: (r: any) => (r.direction === 'in' ? 'Entrée' : 'Sortie') },
             { header: 'Nombre', align: 'right', render: (r: any) => r.movements }, { header: 'Quantité', align: 'right', render: (r: any) => kg(r.kg) }]} /></Card>
@@ -106,7 +106,7 @@ function Achats() {
           <Field label="Au"><input type="date" value={f.to} onChange={set('to')} /></Field>
           <Field label="Section"><select value={f.section} onChange={set('section')}><option value="">Toutes</option>{fl?.sections.map((s: string) => <option key={s}>{s}</option>)}</select></Field>
           <Field label="Délégué"><select value={f.collector_id} onChange={set('collector_id')}><option value="">Tous</option>{fl?.collectors.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></Field>
-          <Field label="Filière"><select value={f.chain_id} onChange={set('chain_id')}><option value="">Toutes</option>{fl?.chains.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></Field>
+          <Field label="Produit"><select value={f.chain_id} onChange={set('chain_id')}><option value="">Tous</option>{fl?.chains.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></Field>
         </div>
       </Card>
       {rep.loading ? <Loading /> : rep.error ? <ErrorBox message={rep.error} onRetry={rep.reload} /> : rep.data && (

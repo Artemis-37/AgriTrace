@@ -133,8 +133,8 @@ function ProductForm({ p, onClose, onDone }: { p: any | null; onClose: () => voi
     <Modal title={p ? 'Modifier le produit' : 'Nouveau produit'} onClose={onClose}>
       <Field label="Désignation"><input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} maxLength={80} /></Field>
       <p className="hint">Le prix d'achat et de vente de ce produit se fixe pour chaque traite (rubrique « Traites »).</p>
-      <Field label="Filière (déclarations d'achat)" hint="Si une filière est choisie, les déclarations d'achat de cette filière utilisent le prix d'achat de la traite en cours pour ce produit."><select value={f.chain} onChange={(e) => setF({ ...f, chain: e.target.value })}><option value="">— Aucune —</option>{(chains.data ?? []).map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}</select></Field>
-      {(chains.data ?? []).length === 0 && <p className="hint">Aucune filière disponible : demandez à l'administrateur de la coopérative de les activer.</p>}
+      <Field label="Famille de produit (déclarations d'achat)" hint="Si une famille est choisie, les déclarations d'achat de cette famille utilisent le prix d'achat de la traite en cours pour ce produit."><select value={f.chain} onChange={(e) => setF({ ...f, chain: e.target.value })}><option value="">— Aucune —</option>{(chains.data ?? []).map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}</select></Field>
+      {(chains.data ?? []).length === 0 && <p className="hint">Aucune famille de produit disponible : demandez à l'administrateur de la coopérative de les activer.</p>}
       <label><input type="checkbox" checked={f.active} onChange={(e) => setF({ ...f, active: e.target.checked })} /> Actif</label>
       {act.error && <ErrorBox message={act.error} />}
       <div className="modal-actions"><button className="btn" disabled={act.busy || !ok} onClick={() => act.run(async () => {
@@ -160,11 +160,11 @@ function Campaigns() {
   return (
     <Card>
       {can('campaigns:manage') && <div className="toolbar"><button className="btn" onClick={() => setAdding(true)}>Nouvelle traite</button></div>}
-      <p className="muted">Grande traite : en général d'octobre à mars. Petite traite : d'avril à septembre. Les dates sont libres ; à une date donnée, une seule traite par filière fixe le prix.</p>
+      <p className="muted">Grande traite : en général d'octobre à mars. Petite traite : d'avril à septembre. Les dates sont libres ; à une date donnée, une seule traite par produit fixe le prix.</p>
       {error && <ErrorBox message={error} onRetry={reload} />}
       {loading || !data ? <Loading /> : <Table rows={data.list} empty="Aucune traite." columns={[
         { header: 'Traite', render: (c) => <strong>{TRAITE[c.traite] ?? 'Campagne'}</strong> }, { header: 'Nom', render: (c) => <>{c.name} <code>{c.code}</code></> },
-        { header: 'Filière', render: (c) => data.chains.find((v) => v.id === c.value_chain_id)?.name ?? '' },
+        { header: 'Produit', render: (c) => data.chains.find((v) => v.id === c.value_chain_id)?.name ?? '' },
         { header: 'Produits et prix (achat / vente au kg)', render: (c) => (c.products ?? []).length ? <div>{c.products.map((p: any) => <div key={p.id}><strong>{p.name}</strong> : {FR(p.buy_price_per_kg) || '—'} / {FR(p.sell_price_per_kg) || '—'}</div>)}</div> : <span className="muted">Aucun produit : cliquez sur « Prix »</span> },
         { header: 'Début', render: (c) => date(c.starts_on) }, { header: 'Fin', render: (c) => date(c.ends_on) },
         { header: 'État', render: (c) => <Badge tone={current(c) ? 'ok' : 'neutral'}>{current(c) ? 'En cours' : CSTATUS[c.status] ?? c.status}</Badge> },
@@ -212,7 +212,7 @@ function CampaignForm({ chains, previous, onClose, onDone }: { chains: any[]; pr
   return (
     <Modal title="Nouvelle traite" onClose={onClose}>
       <div className="grid-2"><Field label="Type de traite"><select value={kind} onChange={(e) => pick(e.target.value as any)}><option value="grande">Grande traite</option><option value="petite">Petite traite</option></select></Field>
-        <Field label="Filière"><select value={f.chain} onChange={set('chain')}>{chains.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></Field></div>
+        <Field label="Produit"><select value={f.chain} onChange={set('chain')}>{chains.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></Field></div>
       <div className="grid-2"><Field label="Début de la traite"><input type="date" value={f.starts_on} onChange={set('starts_on')} /></Field><Field label="Fin de la traite"><input type="date" value={f.ends_on} onChange={set('ends_on')} /></Field>
         <Field label="Nom"><input value={f.name} onChange={set('name')} /></Field><Field label="Code" hint="Majuscules, chiffres, tirets"><input value={f.code} onChange={set('code')} /></Field></div>
       {olds.length > 0 && <Field label="Reprendre les produits et les prix de" hint="Les prix copiés restent modifiables ensuite"><select value={olds.some((o) => o.id === copyFrom) ? copyFrom : ''} onChange={(e) => setCopyFrom(e.target.value)}><option value="">Ne rien reprendre</option>{olds.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}</select></Field>}

@@ -143,10 +143,10 @@ function Imports() {
           <label title="Si le fichier ne contient pas de superficie déclarée"><input type="checkbox" checked={useMeasured} onChange={(e) => setUseMeasured(e.target.checked)} /> Surface mesurée si non déclarée</label>
           <label title="Pour réimporter un export d'une autre coopérative"><input type="checkbox" checked={ignoreCode} onChange={(e) => setIgnoreCode(e.target.checked)} /> Ignorer les codes de parcelle</label>
           {columns && <select aria-label="Colonne du code producteur" value={prodCol} onChange={(e) => setProdCol(e.target.value)}>{columns.map((c) => <option key={c} value={c}>Code producteur : {c}</option>)}</select>}
-          <select aria-label="Filière par défaut" value={chainId} onChange={(e) => setChainId(e.target.value)}><option value="">Filière : celle du producteur (cacao à défaut)</option>{(chains.data ?? []).map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
+          <select aria-label="Produit par défaut" value={chainId} onChange={(e) => setChainId(e.target.value)}><option value="">Produit : celui du producteur (cacao à défaut)</option>{(chains.data ?? []).map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
           <button className="btn" disabled={busy} onClick={() => send(mode)}>{busy ? 'Analyse…' : mode === 'simulate' ? 'Analyser' : 'Importer'}</button>
         </div>
-        <p className="muted">Chaque parcelle est rattachée au producteur dont le code figure dans la colonne « code producteur » (majuscules ou minuscules indifférentes) ; si le code est inconnu, le nom complet du producteur (colonne « Nom du producteur ») sert de repli quand il désigne un seul producteur. Colonnes reconnues automatiquement : code producteur, filière, superficie déclarée, identifiant externe. Seul le système WGS84 est accepté.</p>
+        <p className="muted">Chaque parcelle est rattachée au producteur dont le code figure dans la colonne « code producteur » (majuscules ou minuscules indifférentes) ; si le code est inconnu, le nom complet du producteur (colonne « Nom du producteur ») sert de repli quand il désigne un seul producteur. Colonnes reconnues automatiquement : code producteur, produit, superficie déclarée, identifiant externe. Seul le système WGS84 est accepté.</p>
         {error && <ErrorBox message={error} />}
         {r && (
           <>
@@ -195,7 +195,7 @@ function Export() {
         {can('geo:export_names') && <label><input type="checkbox" checked={names} onChange={(e) => setNames(e.target.checked)} /> Inclure le nom des producteurs</label>}
         <button className="btn" disabled={busy} onClick={() => run(() => download(`/geo/export?format=${format}${names ? '&include_names=true' : ''}`, `parcelles.${ext}`))}>{busy ? 'Préparation…' : 'Télécharger'}</button>
       </div>
-      <p className="muted">L'export contient le code de la parcelle, le code producteur, la filière, les superficies déclarée et mesurée, le statut et la date de relevé. Les données personnelles (téléphone) ne sont jamais exportées. Chaque export est tracé.</p>
+      <p className="muted">L'export contient le code de la parcelle, le code producteur, le produit, les superficies déclarée et mesurée, le statut et la date de relevé. Les données personnelles (téléphone) ne sont jamais exportées. Chaque export est tracé.</p>
       {error && <ErrorBox message={error} />}
     </Card>
   );

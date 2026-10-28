@@ -83,7 +83,7 @@ export function CreateContract({ onClose, onDone }: { onClose: () => void; onDon
     <Modal title="Contrat de vente" onClose={onClose}>
       <Field label="N° de contrat"><input value={f.number} onChange={set('number')} /></Field>
       <Field label="Acheteur"><select value={f.buyer_id} onChange={set('buyer_id')}><option value="">—</option>{(buyers.data ?? []).filter((b) => b.status === 'active').map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}</select></Field>
-      <Field label="Filière"><select value={f.value_chain_id} onChange={set('value_chain_id')}><option value="">Toutes</option>{(chains.data ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></Field>
+      <Field label="Produit"><select value={f.value_chain_id} onChange={set('value_chain_id')}><option value="">Tous</option>{(chains.data ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></Field>
       <Field label="Début"><input type="date" value={f.starts_on} onChange={set('starts_on')} /></Field><Field label="Fin"><input type="date" value={f.ends_on} onChange={set('ends_on')} /></Field>
       <Field label="Quantité totale (kg)" hint="Optionnel : plafonne les commandes rattachées"><input inputMode="decimal" value={f.quantity_kg} onChange={set('quantity_kg')} /></Field>
       <Field label="Prix unitaire"><input inputMode="decimal" value={f.unit_price} onChange={set('unit_price')} /></Field>

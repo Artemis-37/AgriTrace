@@ -77,7 +77,7 @@ function CreateOrder({ buyers, onClose, onDone }: { buyers: any[]; onClose: () =
   return (
     <Modal title="Nouvelle commande" onClose={onClose}>
       <Field label="Acheteur"><select value={f.buyer_id} onChange={set('buyer_id')}><option value="">—</option>{buyers.map((b) => <option key={b.id} value={b.id}>{b.code} — {b.name}</option>)}</select></Field>
-      <Field label="Filière"><select value={f.value_chain_id} onChange={set('value_chain_id')}><option value="">—</option>{(chains.data ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></Field>
+      <Field label="Produit"><select value={f.value_chain_id} onChange={set('value_chain_id')}><option value="">—</option>{(chains.data ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></Field>
       <Field label="Désignation"><input value={f.description} onChange={set('description')} /></Field>
       <Field label="Quantité (kg)"><input inputMode="decimal" value={f.quantity_kg} onChange={set('quantity_kg')} /></Field>
       <Field label="Produit" hint="Le prix de vente au kilo est celui fixé par l'administrateur de la coopérative."><select value={f.product_id} onChange={(e) => pickProduct(e.target.value)}><option value="">—</option>{(prods.data ?? []).filter((p) => p.active).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></Field>
