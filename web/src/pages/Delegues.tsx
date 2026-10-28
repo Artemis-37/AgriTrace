@@ -169,8 +169,7 @@ function Rates({ c, kind, onDone }: { c: any; kind: 'transport' | 'retenues'; on
   const field = kind === 'transport' ? 'transport_per_kg' : 'retention_per_kg';
   const cfg = useAsync(() => get<any>('/convoys/settings').catch(() => null), []);
   const chains = useAsync(() => getChains().catch(() => [] as any[]), []); // filières définies par la coopérative (Produits)
-  const [chain, setChain] = useState('');
-  const [val, setVal] = useState<string | null>(null);
+  const [edits, setEdits] = useState<Record<string, string>>({}); // valeurs modifiées, par filière, pas encore enregistrées
   const [ty, setTy] = useState<string | null>(null);
   const { busy, error, run } = useAction();
   const def = kind === 'transport' ? cfg.data?.transport_unit : cfg.data?.retention_per_kg;
@@ -178,36 +177,40 @@ function Rates({ c, kind, onDone }: { c: any; kind: 'transport' | 'retenues'; on
   const num = (x: string) => x === '' || /^\d+(\.\d{1,4})?$/.test(x);
   const list: any[] = chains.data ?? [];
   const saved = (id: string) => { const r = (c.rates ?? []).find((x: any) => x.value_chain_id === id); return r?.[field] != null ? String(Number(r[field])) : ''; };
-  const shown = val ?? (chain ? saved(chain) : '');
-  const label = kind === 'transport' ? 'Coût de transport au kilo (FCFA)' : 'Retenue au kilo — mise en compte (FCFA)';
-  const withRate = list.filter((x) => saved(x.id) !== '');
   const assigned: any[] = c.assignments ?? [];
   const covered = (id: string) => assigned.length === 0 || assigned.some((a) => !a.value_chain_id || a.value_chain_id === id);
+  const label = kind === 'transport' ? 'Coût de transport au kilo (FCFA)' : 'Retenue au kilo — mise en compte (FCFA)';
+  const save = (id: string) => run(async () => {
+    // La filière rejoint celles du délégué si elle n'y figure pas encore.
+    if (!covered(id)) await post(`/collectors/${c.id}/assignments`, { value_chain_id: id });
+    await put(`/collectors/${c.id}/rates`, { value_chain_id: id, [field]: edits[id] === '' ? null : edits[id] });
+    setEdits((e) => { const { [id]: _drop, ...rest } = e; return rest; }); onDone();
+  });
   return (
     <div>
       <p className="muted">{kind === 'transport'
-        ? 'Choisissez une filière, puis fixez le coût de transport au kilo de ce délégué pour cette filière : la caisse le reprend à chaque règlement, sans pouvoir le modifier.'
-        : 'Choisissez une filière, puis fixez la retenue au kilo de ce délégué pour cette filière : elle s\'accumule en mise en compte et est reversée à la clôture de son compte, après approbation de l\'administrateur.'}</p>
-      <Field label="Filière" hint="Les filières sont celles définies par la coopérative dans Produits.">
-        <select value={chain} onChange={(e) => { setChain(e.target.value); setVal(null); }}><option value="">— Choisir une filière —</option>{list.map((x: any) => <option key={x.id} value={x.id}>{x.name}{saved(x.id) !== '' ? ` (${Number(saved(x.id)).toLocaleString('fr-FR')})` : ''}</option>)}</select></Field>
-      {chain && <Field label={label} hint={saved(chain) === '' ? `Non renseigné : tarif par défaut de la coopérative (${Number(def ?? 0).toLocaleString('fr-FR')})` : undefined}>
-        <input inputMode="decimal" value={shown} readOnly={!may} disabled={!may} onChange={(e) => setVal(e.target.value)} /></Field>}
+        ? 'Modifiez ci-dessous le coût de transport au kilo de ce délégué, filière par filière : la caisse le reprend à chaque règlement, sans pouvoir le modifier. Une case vide = tarif par défaut de la coopérative.'
+        : 'Modifiez ci-dessous la retenue au kilo de ce délégué, filière par filière : elle s\'accumule en mise en compte et est reversée à la clôture de son compte, après approbation de l\'administrateur. Une case vide = tarif par défaut de la coopérative.'}</p>
       {list.length === 0 && !chains.loading && <p className="muted">Aucune filière : définissez-les d'abord dans Produits.</p>}
-      {withRate.length > 0 && <>
-        <h4>Tarifs enregistrés</h4>
-        <ul className="rate-list">{withRate.map((x: any) => <li key={x.id}><button type="button" className="link-btn" onClick={() => { setChain(x.id); setVal(null); }}>{x.name}</button> {Number(saved(x.id)).toLocaleString('fr-FR')} FCFA/kg</li>)}</ul></>}
+      {list.length > 0 && (
+        <div className="table-wrap"><table>
+          <thead><tr><th>Filière</th><th className="num">{label}</th><th></th></tr></thead>
+          <tbody>{list.map((x: any) => {
+            const val = edits[x.id] ?? saved(x.id), dirty = edits[x.id] !== undefined && edits[x.id] !== saved(x.id);
+            return (
+              <tr key={x.id}>
+                <td><strong>{x.name}</strong></td>
+                <td className="num"><input aria-label={`${label} — ${x.name}`} inputMode="decimal" style={{ width: '9rem', textAlign: 'right' }} value={val} placeholder={`défaut : ${Number(def ?? 0).toLocaleString('fr-FR')}`} readOnly={!may} disabled={!may} onChange={(e) => setEdits((p) => ({ ...p, [x.id]: e.target.value }))} /></td>
+                <td>{may && <button className="btn btn-small" disabled={busy || !dirty || !num(val)} onClick={() => save(x.id)}>Enregistrer</button>}</td>
+              </tr>
+            );
+          })}</tbody>
+        </table></div>
+      )}
       {kind === 'retenues' && <Field label="Type de prélèvement" hint="Nature de la retenue au kilo ; reprise sur chaque règlement et dans le journal d'approvisionnement."><select value={ty ?? c.retention_type ?? 'mise_en_compte'} disabled={!may} onChange={(e) => setTy(e.target.value)}>{Object.entries(RTYPE).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></Field>}
       {error && <ErrorBox message={error} />}
-      {may ? <p><button className="btn" disabled={busy || !num(shown) || (val === null && ty === null) || (val !== null && !chain)} onClick={() => run(async () => {
-        if (val !== null && chain) {
-          // La filière choisie rejoint celles du délégué si elle n'y figure pas encore.
-          if (!covered(chain)) await post(`/collectors/${c.id}/assignments`, { value_chain_id: chain });
-          await put(`/collectors/${c.id}/rates`, { value_chain_id: chain, [field]: val === '' ? null : val });
-        }
-        if (ty !== null) await put(`/collectors/${c.id}/rates`, { retention_type: ty });
-        setVal(null); setTy(null); onDone();
-      })}>Enregistrer</button></p>
-        : <p className="muted">Seul l'administrateur de la coopérative saisit ces tarifs.</p>}
+      {may && kind === 'retenues' && <p><button className="btn" disabled={busy || ty === null} onClick={() => run(async () => { await put(`/collectors/${c.id}/rates`, { retention_type: ty }); setTy(null); onDone(); })}>Enregistrer le type de prélèvement</button></p>}
+      {!may && <p className="muted">Seul l'administrateur de la coopérative saisit ces tarifs.</p>}
     </div>
   );
 }
