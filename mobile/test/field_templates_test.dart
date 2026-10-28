@@ -4,7 +4,7 @@ import 'package:agritrace_mobile/data/field_templates.dart';
 void main() {
   test('sans modèle déployé : modèles intégrés (École, thèmes)', () {
     final t = FieldTemplates.parse(const [], fromServer: false);
-    expect(t.infrastructures.single.category, 'École');
+    expect(t.infrastructures.single.category, 'École primaire');
     expect(t.themes.containsKey('Agriculture régénératrice'), isTrue);
   });
 

@@ -29,7 +29,7 @@ class FieldTemplateSet {
 const _yn = ['Oui', 'Non'];
 const _builtinSchool = <TemplateQuestion>[
   TemplateQuestion('nom', "Nom de l'école", 'text'),
-  TemplateQuestion('niveau', 'Niveau académique', 'select', options: ['Maternelle', 'Primaire', 'Collège', 'Lycée']),
+  TemplateQuestion('niveau', 'Niveau académique', 'select', options: ['Maternelle', 'Primaire']),
   TemplateQuestion('type', "Type d'école", 'select', options: ['Publique', 'Privée', 'Communautaire']),
   TemplateQuestion('capacite', 'Capacité totale', 'number'),
   TemplateQuestion('genre', 'Genre', 'select', options: ['Mixte', 'Filles', 'Garçons']),
@@ -73,7 +73,7 @@ class FieldTemplates {
         themes['${r['category']}'] = [for (final m in (def['modules'] as List? ?? const [])) '$m'];
       }
     }
-    return FieldTemplateSet(infra.isEmpty ? const [InfraTemplate('École', _builtinSchool)] : infra, themes.isEmpty ? _builtinThemes : themes, fromServer: fromServer);
+    return FieldTemplateSet(infra.isEmpty ? const [InfraTemplate('École primaire', _builtinSchool)] : infra, themes.isEmpty ? _builtinThemes : themes, fromServer: fromServer);
   }
 
   static Future<FieldTemplateSet> load() async {

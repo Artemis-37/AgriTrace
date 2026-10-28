@@ -5,8 +5,8 @@ const q = (key: string, label: string, type: Question['type'] = 'text', required
 
 /** Modèles proposés au départ : l'ADG les charge, les adapte à sa coopérative puis les déploie. */
 export const DEFAULT_INFRASTRUCTURES: Record<string, Question[]> = {
-  École: [
-    q('nom', "Nom de l'école"), q('niveau', 'Niveau académique', 'select', true, ['Maternelle', 'Primaire', 'Collège', 'Lycée']),
+  'École primaire': [
+    q('nom', "Nom de l'école"), q('niveau', 'Niveau académique', 'select', true, ['Maternelle', 'Primaire']),
     q('type', "Type d'école", 'select', true, ['Publique', 'Privée', 'Communautaire']), q('capacite', 'Capacité totale', 'number'),
     q('genre', 'Genre', 'select', true, ['Mixte', 'Filles', 'Garçons']), q('classes', 'Nombre de classes', 'number'),
     q('inscrits_garcons', "Nombre d'étudiants inscrits", 'number'), q('inscrites_filles', "Nombre d'étudiantes inscrites", 'number'),
@@ -15,6 +15,34 @@ export const DEFAULT_INFRASTRUCTURES: Record<string, Question[]> = {
     q('pct_classe_suivante', "Pourcentage d'élèves ayant passé à la classe suivante (au cours de la dernière année scolaire)", 'number'),
     q('pct_examen', "Pourcentage d'élèves ayant passé l'examen CM2 ou ayant passé au lycée (au cours de la dernière année scolaire)", 'number'),
     q('finance_partenaire', 'Financé par un partenaire ?', 'select', false, yn), q('annee_ouverture', "Année d'ouverture", 'number'), q('finance_prime', 'Financé par la prime au cacao ?', 'select', false, yn),
+  ],
+  Collège: [
+    q('nom', 'Nom du collège'), q('type', 'Type de collège', 'select', true, ['Public', 'Privé', 'Communautaire']), q('genre', 'Genre', 'select', true, ['Mixte', 'Filles', 'Garçons']),
+    q('capacite', 'Capacité totale', 'number'), q('classes', 'Nombre de classes', 'number'), q('inscrits_garcons', 'Nombre de garçons inscrits', 'number'), q('inscrites_filles', 'Nombre de filles inscrites', 'number'),
+    q('enseignants', "Nombre d'enseignants", 'number'), q('frais', 'Frais de scolarité par an', 'number', false), q('internat', 'Le collège dispose-t-il d\'un internat ?', 'select', true, yn),
+    q('cantine', 'Le collège dispose-t-il d\'une cantine opérationnelle ?', 'select', true, yn), q('latrines', 'Le collège dispose-t-il de latrines fonctionnelles ?', 'select', true, yn),
+    q('eau', "Le collège dispose-t-il d'un point d'eau potable ?", 'select', true, yn), q('distance', 'Distance moyenne parcourue par les élèves (km)', 'number', false),
+    q('pct_classe_suivante', "Pourcentage d'élèves ayant passé à la classe suivante (dernière année scolaire)", 'number'), q('pct_bepc', "Pourcentage de réussite au BEPC (dernière année scolaire)", 'number', false),
+    q('annee_ouverture', "Année d'ouverture", 'number', false), q('finance_partenaire', 'Financé par un partenaire ?', 'select', false, yn), q('finance_prime', 'Financé par la prime au cacao ?', 'select', false, yn),
+  ],
+  Lycée: [
+    q('nom', 'Nom du lycée'), q('type', 'Type de lycée', 'select', true, ['Public', 'Privé', 'Communautaire']), q('filiere', 'Filières enseignées', 'select', true, ['Enseignement général', 'Enseignement technique', 'Enseignement professionnel', 'Général et technique']),
+    q('genre', 'Genre', 'select', true, ['Mixte', 'Filles', 'Garçons']), q('capacite', 'Capacité totale', 'number'), q('classes', 'Nombre de classes', 'number'),
+    q('inscrits_garcons', 'Nombre de garçons inscrits', 'number'), q('inscrites_filles', 'Nombre de filles inscrites', 'number'), q('enseignants', "Nombre d'enseignants", 'number'),
+    q('frais', 'Frais de scolarité par an', 'number', false), q('internat', "Le lycée dispose-t-il d'un internat ?", 'select', true, yn), q('laboratoire', "Le lycée dispose-t-il d'un laboratoire ?", 'select', false, yn),
+    q('bibliotheque', "Le lycée dispose-t-il d'une bibliothèque ou d'une salle informatique ?", 'select', false, yn), q('latrines', 'Latrines fonctionnelles ?', 'select', true, yn), q('eau', "Point d'eau potable ?", 'select', true, yn),
+    q('pct_classe_suivante', "Pourcentage d'élèves ayant passé à la classe suivante (dernière année scolaire)", 'number'), q('pct_bac', 'Pourcentage de réussite au baccalauréat (dernière année scolaire)', 'number', false),
+    q('annee_ouverture', "Année d'ouverture", 'number', false), q('finance_partenaire', 'Financé par un partenaire ?', 'select', false, yn), q('finance_prime', 'Financé par la prime au cacao ?', 'select', false, yn),
+  ],
+  Église: [
+    q('nom', "Nom de l'église"), q('confession', 'Confession', 'select', true, ['Catholique', 'Méthodiste', 'Assemblées de Dieu', 'Harriste', 'Évangélique', 'Autre']), q('capacite', 'Capacité (fidèles)', 'number'),
+    q('electricite', "L'église dispose-t-elle de l'électricité ?", 'select', true, yn), q('eau', "Point d'eau sur place ?", 'select', true, yn), q('latrines', 'Latrines sur place ?', 'select', true, yn),
+    q('etat', 'État du bâtiment', 'select', true, ['Bon', 'Moyen', 'À réhabiliter']), q('annee', 'Année de construction', 'number', false), q('finance_prime', 'Financé par la prime au cacao ?', 'select', false, yn), q('finance_partenaire', 'Financé par un partenaire ?', 'select', false, yn),
+  ],
+  Mosquée: [
+    q('nom', 'Nom de la mosquée'), q('capacite', 'Capacité (fidèles)', 'number'), q('ablutions', "Point d'eau pour les ablutions ?", 'select', true, yn), q('latrines', 'Latrines sur place ?', 'select', true, yn),
+    q('electricite', 'Électricité ?', 'select', true, yn), q('ecole_coranique', 'École coranique rattachée ?', 'select', false, yn), q('etat', 'État du bâtiment', 'select', true, ['Bon', 'Moyen', 'À réhabiliter']),
+    q('annee', 'Année de construction', 'number', false), q('finance_prime', 'Financé par la prime au cacao ?', 'select', false, yn), q('finance_partenaire', 'Financé par un partenaire ?', 'select', false, yn),
   ],
   'Centre de santé': [
     q('nom', 'Nom du centre de santé'), q('type', 'Type de structure', 'select', true, ['Dispensaire rural', 'Centre de santé communautaire', 'Maternité', 'Pharmacie villageoise', 'Case de santé']),
@@ -31,7 +59,7 @@ export const DEFAULT_INFRASTRUCTURES: Record<string, Question[]> = {
     q('finance_prime', 'Financé par la prime au cacao ?', 'select', false, yn), q('finance_partenaire', 'Financé par un partenaire ?', 'select', false, yn),
   ],
   'Latrines et assainissement': [
-    q('nom', "Nom ou emplacement de l'ouvrage"), q('lieu', 'Lieu', 'select', true, ['École', 'Centre de santé', 'Marché', 'Village', 'Lieu de culte', 'Magasin de la coopérative']),
+    q('nom', "Nom ou emplacement de l'ouvrage"), q('lieu', 'Lieu', 'select', true, ['École primaire', 'Collège', 'Lycée', 'Centre de santé', 'Marché', 'Village', 'Église', 'Mosquée', 'Magasin de la coopérative']),
     q('type', 'Type de latrines', 'select', true, ['Latrines à fosse ventilée (VIP)', 'Latrines à chasse', 'Latrines écologiques (ECOSAN)', 'Fosse simple']), q('cabines', 'Nombre de cabines', 'number'),
     q('separees', 'Cabines séparées filles / garçons ?', 'select', true, yn), q('lave_mains', 'Dispositif de lavage des mains présent ?', 'select', true, yn),
     q('fonctionnelles', 'Les latrines sont-elles fonctionnelles ?', 'select', true, yn), q('annee', 'Année de construction', 'number', false), q('finance_prime', 'Financé par la prime au cacao ?', 'select', false, yn),
