@@ -11,6 +11,7 @@
     "test:ui": "node e2e/parcours-vente.mjs && node e2e/parcours-terrain.mjs && node e2e/parcours-central.mjs && node e2e/parcours-hors-ligne.mjs && node e2e/parcours-convois.mjs && node e2e/parcours-postes.mjs && node e2e/parcours-rapports.mjs && node e2e/parcours-messages-icone.mjs"
   },
   "dependencies": {
+    "motion": "^14.7.1",
     "qrcode": "^1.5.4",
     "react": "18.3.1",
     "react-dom": "18.3.1",
