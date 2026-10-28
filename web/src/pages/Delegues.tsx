@@ -175,10 +175,10 @@ function Rates({ c, kind, onDone }: { c: any; kind: 'transport' | 'retenues'; on
   const def = kind === 'transport' ? cfg.data?.transport_unit : cfg.data?.retention_per_kg;
   const may = can('collectors:rates');
   const num = (x: string) => x === '' || /^\d+(\.\d{1,4})?$/.test(x);
-  const list: any[] = chains.data ?? [];
-  const saved = (id: string) => { const r = (c.rates ?? []).find((x: any) => x.value_chain_id === id); return r?.[field] != null ? String(Number(r[field])) : ''; };
   const assigned: any[] = c.assignments ?? [];
   const covered = (id: string) => assigned.length === 0 || assigned.some((a) => !a.value_chain_id || a.value_chain_id === id);
+  const list: any[] = (chains.data ?? []).filter((x: any) => covered(x.id)); // seuls les produits ajoutés au profil du délégué (aucun ajouté = tous)
+  const saved = (id: string) => { const r = (c.rates ?? []).find((x: any) => x.value_chain_id === id); return r?.[field] != null ? String(Number(r[field])) : ''; };
   const label = kind === 'transport' ? 'Coût de transport au kilo (FCFA)' : 'Retenue au kilo — mise en compte (FCFA)';
   const save = (id: string) => run(async () => {
     // Le produit rejoint ceux du délégué si elle n'y figure pas encore.
@@ -191,7 +191,8 @@ function Rates({ c, kind, onDone }: { c: any; kind: 'transport' | 'retenues'; on
       <p className="muted">{kind === 'transport'
         ? 'Modifiez ci-dessous le coût de transport au kilo de ce délégué, produit par produit : la caisse le reprend à chaque règlement, sans pouvoir le modifier. Une case vide = tarif par défaut de la coopérative.'
         : 'Modifiez ci-dessous la retenue au kilo de ce délégué, produit par produit : elle s\'accumule en mise en compte et est reversée à la clôture de son compte, après approbation de l\'administrateur. Une case vide = tarif par défaut de la coopérative.'}</p>
-      {list.length === 0 && !chains.loading && <p className="muted">Aucun produit : définissez-les d'abord dans Produits.</p>}
+      {list.length === 0 && !chains.loading && <p className="muted">Aucun produit : définissez-les d'abord dans Produits, puis ajoutez-les au profil du délégué (Infos personnelles).</p>}
+      {list.length > 0 && assigned.length > 0 && <p className="muted">Seuls les produits ajoutés au profil du délégué figurent ici (Infos personnelles › Produits).</p>}
       {list.length > 0 && (
         <div className="table-wrap"><table>
           <thead><tr><th>Produit</th><th className="num">{label}</th><th></th></tr></thead>
