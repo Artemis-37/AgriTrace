@@ -15,3 +15,4 @@ mobile/android/build/
 # Clé privée de signature des versions : ne jamais la déposer dans le dépôt
 release-private*.pem
 *.pem.private
+.claude/skills/impeccable/scripts/bin/
