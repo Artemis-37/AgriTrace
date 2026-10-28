@@ -270,10 +270,9 @@ Le serveur n'attribue plus de code producteur de sa propre initiative. Dans **Pa
 ## Inspections internes : calcul automatique, approbation et reprise
 
 - **Non-conformités relevées** : renseignées automatiquement d'après les réponses « Non conforme » (numéro de l'exigence et constat). Le coach n'a rien à saisir.
-- **Approbation** : le score de conformité = conformes ÷ (conformes + non conformes), les « Non applicable » étant exclus. À **75 % ou plus**, la décision passe automatiquement à « Approuvé ».
-- **Moins de 75 %** : le questionnaire reste à faire, marqué « À reprendre » dans le profil du producteur avec le motif, et le coach qui l'a saisi reçoit une notification pour le reprendre (ses réponses sont conservées).
+- **Approbation** : le score de conformité = conformes ÷ (conformes + non conformes), les « Non applicable » étant exclus. À **100 %**, l'inspection est approuvée automatiquement (décision « Approuvé » quand la fiche en comporte une). Cela s'applique à **toutes** les fiches d'inspection interne : Rainforest Alliance, Fairtrade, Fairtrade USA et fiche unique (les points « oui / non » et « conforme / partiel » comptent comme conformes / non conformes).
+- **Moins de 100 %** : le questionnaire reste à faire, marqué « À reprendre » dans le profil du producteur avec le motif, et le coach qui l'a saisi reçoit une notification pour le reprendre (ses réponses sont conservées). La fiche en reprise peut être exportée en PDF / Word avec ses non-conformités et mesures correctives.
 - **Croquis de l'exploitation** : à l'export PDF, il est généré automatiquement avec les polygones des parcelles du producteur (surfaces, périmètres, échelle). Les voisins, cours d'eau, magasin phytosanitaire et habitations ne sont pas connus du logiciel : à noter dans « Remarques additionnelles ».
-- Le score automatique s'applique aux fiches dont les exigences se répondent par Conforme / Non conforme (fiche Rainforest Alliance détaillée). Les fiches Fairtrade, Fairtrade USA et la fiche unique ne sont pas notées automatiquement.
 
 ## Export et import de toutes les tâches
 

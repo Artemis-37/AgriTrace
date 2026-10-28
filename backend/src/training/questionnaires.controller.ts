@@ -263,7 +263,7 @@ export class QuestionnairesController {
            FROM producer_assignment_targets t JOIN producer_assignments a ON a.id = t.assignment_id JOIN questionnaires q ON q.id = a.questionnaire_id
            JOIN producers p ON p.id = t.producer_id LEFT JOIN questionnaire_answers an ON an.target_id = t.id LEFT JOIN users u ON u.id = an.answered_by WHERE t.id = $1`, [targetId])).rows[0];
       if (!t) throw new NotFoundException('Fiche introuvable');
-      if (t.status !== 'done') throw new BadRequestException('La fiche n\'est pas encore renseignée');
+      if (t.status !== 'done' && !t.answers) throw new BadRequestException('La fiche n\'est pas encore renseignée');
       const logo = async (scheme: string | null) => (scheme ? (await c.query(`SELECT data FROM certification_logos WHERE scheme = $1`, [scheme])).rows[0]?.data ?? null : null);
       const byCode: Record<string, string> = { 'ii-ra': 'rainforest_alliance', 'ii-ft': 'fairtrade', 'ii-ft-usa': 'fairtrade_usa' };
       const scheme = cert ?? byCode[t.template_code] ?? null;

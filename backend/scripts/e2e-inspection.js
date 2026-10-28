@@ -1,4 +1,4 @@
-// Test de bout en bout : inspection interne — non-conformités automatiques, approbation à 75 %, reprise notifiée, croquis PDF.
+// Test de bout en bout : inspection interne — non-conformités automatiques, approbation à 100 % (toutes les fiches), reprise notifiée, croquis PDF.
 const API = process.env.API || 'http://localhost:3000/v1';
 let ok = 0, ko = 0;
 const check = (n, c, x) => { if (c) { ok++; console.log('  ✓', n); } else { ko++; console.log('  ✗', n, x !== undefined ? JSON.stringify(x).slice(0, 400) : ''); } };
@@ -46,25 +46,29 @@ const login = async (e, p) => (await call('POST', '/auth/login', { body: { email
   const qq = Object.values(pre.questionnaires).find((x) => x.some((y) => y.observations));
   check('listes d\'observations fournies avec les exigences (C / NC / N/A)', !!qq && qq.filter((y) => y.observations).length === 65 && qq.every((y) => !y.observations || (y.observations.C.length && y.observations.NC.length && y.observations.NA.length)), qq && qq.filter((y) => y.observations).length);
   const r1 = await call('POST', `/questionnaires/targets/${t1}/answers`, { ...J, body: { answers: a1 } });
-  check('score ≥ 75 % : terminé et approuvé automatiquement', r1.body?.status === 'done' && r1.body.score >= 75, r1.body);
+  check('1 non-conformité (< 100 %) : à reprendre', r1.body?.status === 'to_redo' && r1.body.score < 100, r1.body);
   const saved = (await call('GET', `/questionnaires/targets/${t1}`, J)).body;
-  check('décision forcée à « Approuvé »', saved.answers[dec.id] === 'Approuvé', saved.answers[dec.id]);
-  check('non-conformités renseignées avec le numéro de l\'exigence', /^1\.2\.7 EF — /.test(saved.answers[nc.id]) || /^\d+\.\d+\.\d+/.test(saved.answers[nc.id]), saved.answers[nc.id]);
+  check('décision non approuvée (choix de l\'inspecteur conservé)', saved.answers[dec.id] !== 'Approuvé', saved.answers[dec.id]);
+  check('non-conformités renseignées avec le numéro de l\'exigence', /^\d+\.\d+\.\d+/.test(saved.answers[nc.id]), saved.answers[nc.id]);
   check('observation enregistrée et reprise comme constat', saved.answers['obs.' + ev[2].id] === 'Le producteur ne retrouve pas son exemplaire du contrat' && /exemplaire du contrat/.test(saved.answers[nc.id]), saved.answers[nc.id]);
   const cor = questions.find((x) => /^Mesures correctives/.test(x.label));
-  check('mesures correctives composées d\'après les non-conformités (mesure choisie reprise)', /^1\.2\.7 EF — Expliquer le contenu du contrat/.test(saved.answers[cor.id]), saved.answers[cor.id]);
+  check('mesures correctives composées d\'après les non-conformités (mesure choisie reprise)', /Expliquer le contenu du contrat/.test(saved.answers[cor.id]), saved.answers[cor.id]);
   const pdf = await call('GET', `/questionnaires/targets/${t1}/export`, J);
-  check('export PDF avec croquis', pdf.status === 200 && pdf.buf.slice(0, 4).toString() === '%PDF' && pdf.buf.length > 3000, pdf.status);
+  check('export PDF d\'une fiche en reprise (avec non-conformités et croquis)', pdf.status === 200 && pdf.buf.slice(0, 4).toString() === '%PDF' && pdf.buf.length > 3000, pdf.status);
   require('fs').writeFileSync('/tmp/inspection-test.pdf', pdf.buf);
   const wd = await call('GET', `/questionnaires/targets/${t1}/export?format=docx`, J);
   check('export Word (.docx valide)', wd.status === 200 && wd.buf.slice(0, 2).toString() === 'PK' && wd.buf.length > 5000, wd.status);
   require('fs').writeFileSync('/tmp/inspection-test.docx', wd.buf);
+  const r1b = await call('POST', `/questionnaires/targets/${t1}/answers`, { ...J, body: { answers: { ...base } } });
+  check('reprise corrigée : 100 % terminé et approuvé', r1b.body?.status === 'done' && r1b.body.score === 100, r1b.body);
+  const sv2 = (await call('GET', `/questionnaires/targets/${t1}`, J)).body;
+  check('décision « Approuvé »', sv2.answers[dec.id] === 'Approuvé', sv2.answers[dec.id]);
   // beaucoup de non-conformités → reprise
   const a2 = { ...base }; ev.slice(0, Math.ceil(ev.length / 2)).forEach((x) => { a2[x.id] = 'Non conforme'; });
   const r2 = await call('POST', `/questionnaires/targets/${t2}/answers`, { ...J, body: { answers: a2 } });
-  check('score < 75 % : à reprendre', r2.body?.status === 'to_redo' && r2.body.score < 75, r2.body);
+  check('score < 100 % : à reprendre', r2.body?.status === 'to_redo' && r2.body.score < 100, r2.body);
   const list = (await call('GET', '/producer-assignments?mine=1&compact=1', J)).body.assignments.find((a) => a.target_id === t2);
-  check('élément resté à faire, marqué à reprendre, réponses conservées', list.status === 'pending' && list.needs_redo === true && !!list.answers && /75/.test(list.redo_reason), list);
+  check('élément resté à faire, marqué à reprendre, réponses conservées', list.status === 'pending' && list.needs_redo === true && !!list.answers && /100/.test(list.redo_reason), list);
   const notes = (await call('GET', '/notifications', J)).body;
   check('coach notifié', JSON.stringify(notes).includes('Inspection à reprendre'), notes);
   const a3 = { ...base };
@@ -84,11 +88,21 @@ const login = async (e, p) => (await call('POST', '/auth/login', { body: { email
   const nq = withObs.find((x) => x.type === 'yesno'); fa[nq.id] = 'non'; fa['obs.' + nq.id] = nq.observations.NC[0];
   check('fiche Fairtrade : mesures proposées pour les points non conformes', withObs.filter((x) => x.measures?.length >= 2).length >= 12, withObs.filter((x) => x.measures?.length).length);
   const rf = await call('POST', `/questionnaires/targets/${tf}/answers`, { ...J, body: { answers: fa } });
+  check('fiche Fairtrade avec un « non » : à reprendre, score < 100 %', rf.body?.status === 'to_redo' && rf.body.score < 100, rf.body);
   const sf = (await call('GET', `/questionnaires/targets/${tf}`, J)).body;
-  check('fiche Fairtrade : observation enregistrée', rf.status === 201 && sf.answers['obs.' + nq.id] === nq.observations.NC[0], rf.body);
-  const pf = await call('GET', `/questionnaires/targets/${tf}/export`, J);
+  check('fiche Fairtrade : observation enregistrée', sf.answers['obs.' + nq.id] === nq.observations.NC[0], sf.answers['obs.' + nq.id]);
   const fcor = tg.questions.find((x) => /^Actions correctives demandées/.test(x.label));
   check('fiche Fairtrade : actions correctives composées', sf.answers[fcor.id].includes(nq.measures[0]), sf.answers[fcor.id]);
+  const fnc = tg.questions.find((x) => /^Non-conformités relevées/.test(x.label));
+  if (fnc) check('fiche Fairtrade : non-conformités renseignées', /\S/.test(sf.answers[fnc.id]) && !/Aucune/.test(sf.answers[fnc.id]), sf.answers[fnc.id]);
+  const lf = (await call('GET', '/producer-assignments?mine=1&compact=1', J)).body.assignments.find((a) => a.target_id === tf);
+  check('fiche Fairtrade : marquée à reprendre', lf.needs_redo === true && lf.status === 'pending', lf);
+  const notes2 = JSON.stringify((await call('GET', '/notifications', J)).body);
+  check('coach notifié pour la fiche Fairtrade', notes2.includes('Inspection à reprendre'), 1);
+  const pf = await call('GET', `/questionnaires/targets/${tf}/export`, J);
   check('fiche Fairtrade : export PDF', pf.status === 200 && pf.buf.slice(0, 4).toString() === '%PDF', pf.status);
+  fa[nq.id] = 'oui'; delete fa['obs.' + nq.id];
+  const rf2 = await call('POST', `/questionnaires/targets/${tf}/answers`, { ...J, body: { answers: fa } });
+  check('fiche Fairtrade reprise corrigée : 100 % terminé', rf2.body?.status === 'done' && rf2.body.score === 100, rf2.body);
   console.log(`\n${ok} réussis, ${ko} échecs`); process.exit(ko ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(1); });

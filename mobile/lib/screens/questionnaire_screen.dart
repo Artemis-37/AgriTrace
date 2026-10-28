@@ -27,12 +27,13 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
   // ---- Inspection interne : champs renseignés automatiquement (comme le serveur) ----
   static final _req = RegExp(r'^(\d+(?:\.\d+)+)\s*(EF|ES|EAC)?\s*[—–-]\s*([\s\S]*)$');
   bool _isEval(Map<String, dynamic> q) {
-    final o = ((q['options'] as List?) ?? const []).map((e) => '$e').toList();
-    return q['type'] == 'choice' && o.contains('Conforme') && o.contains('Non conforme');
+    return q['observations'] != null; // point de contrôle noté (toutes les fiches d'inspection interne)
   }
+  static const _pos = {'Conforme', 'Conformes', 'oui', 'Oui'};
+  static const _approval = 100; // % de conformité exigé
   bool get _hasScore => _questions.any(_isEval);
   bool _isNcQ(Map<String, dynamic> q) => RegExp(r'^Non-conformités relevées', caseSensitive: false).hasMatch('${q['label']}');
-  bool _isDecisionQ(Map<String, dynamic> q) => RegExp(r'^Recommandation de l.inspecteur', caseSensitive: false).hasMatch('${q['label']}');
+  bool _isDecisionQ(Map<String, dynamic> q) => RegExp(r'^(Recommandation de l.inspecteur|Résultat de l.inspection)', caseSensitive: false).hasMatch('${q['label']}');
   bool _isSketchQ(Map<String, dynamic> q) => RegExp(r'^Croquis de l.exploitation', caseSensitive: false).hasMatch('${q['label']}');
   bool _auto(Map<String, dynamic> q) => (_hasScore && (_isNcQ(q) || _isDecisionQ(q) || _isSketchQ(q))) || (_isInspection && _isCorrQ(q));
 
@@ -43,21 +44,22 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
       final q = _questions[i];
       if (!_isEval(q)) continue;
       final a = ans['${q['id']}'];
-      if (a == 'Conforme') { c++; }
-      else if (a == 'Non conforme') {
+      if (_pos.contains(a)) { c++; }
+      else if (_neg.contains(a)) {
         nc++;
         final label = '${q['label']}'.trim();
         final m = _req.firstMatch(label);
         final o = '${ans['obs.${q['id']}'] ?? ''}'.trim();
         var text = (o.isNotEmpty ? o : (m != null ? m.group(3)! : label)).replaceAll(RegExp(r'\s+'), ' ').replaceAll('*', '').trim();
         if (text.length > 200) text = '${text.substring(0, 197)}…';
-        lines.add('${m != null ? '${m.group(1)}${m.group(2) != null ? ' ${m.group(2)}' : ''}' : 'Q${i + 1}'} — $text');
+        if (m != null) { lines.add('${m.group(1)}${m.group(2) != null ? ' ${m.group(2)}' : ''} — $text'); }
+        else { final base = label.replaceFirst(RegExp(r'^\[[^\]]*\]\s*'), '').replaceAll(RegExp(r'\s+'), ' ').replaceAll('*', '').trim(); lines.add(o.isNotEmpty ? '$base — $o' : base); }
       }
     }
     return (c: c, nc: nc, score: c + nc == 0 ? null : (c / (c + nc) * 1000).round() / 10, lines: lines);
   }
 
-  /// Renseigne « Non-conformités relevées » et la décision d'après les réponses (≥ 75 % : approuvé).
+  /// Renseigne « Non-conformités relevées » et la décision d'après les réponses (100 % : approuvé).
   void _applyAuto() {
     if (_isInspection) {
       final lines = _corrLines(_ans);
@@ -71,8 +73,10 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
       if (_isNcQ(q)) { _ans[id] = e.lines.isEmpty ? 'Aucune non-conformité relevée.' : e.lines.join('\n'); }
       if (_isDecisionQ(q)) {
         final o = ((q['options'] as List?) ?? const []).map((x) => '$x').toList();
-        if (e.score! >= 75 && o.contains('Approuvé')) { _ans[id] = 'Approuvé'; }
-        else if (e.score! < 75) { final s = o.where((x) => x.startsWith('Sanctionn')); if (s.isNotEmpty && (_ans[id] == null || _ans[id] == 'Approuvé')) _ans[id] = s.first; }
+        final yes = o.contains('Approuvé') ? 'Approuvé' : o.where((x) => x.startsWith('Conforme') && !x.contains('avec')).firstOrNull;
+        final no = o.where((x) => x.startsWith('Sanctionn')).firstOrNull ?? o.where((x) => x.startsWith('Non')).firstOrNull;
+        if (e.score! >= _approval && yes != null) { _ans[id] = yes; }
+        else if (e.score! < _approval && no != null && (_ans[id] == null || _ans[id] == yes)) { _ans[id] = no; }
       }
     }
   }
@@ -108,7 +112,7 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
   Widget _obsField(Map<String, dynamic> q) {
     final id = '${q['id']}';
     final obs = q['observations'];
-    const pos = {'Conforme', 'Conformes', 'oui', 'Oui'};
+    const pos = _pos;
     final a = _ans[id];
     final key = pos.contains(a) ? 'C' : _neg.contains(a) ? 'NC' : a == 'Non applicable' ? 'NA' : null;
     if (obs is! Map || key == null) return const SizedBox.shrink();
@@ -136,14 +140,14 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
 
   Widget _autoPanel() {
     final e = _eval(_ans);
-    final ok = e.score != null && e.score! >= 75;
+    final ok = e.score != null && e.score! >= _approval;
     final colour = e.score == null ? Colors.black54 : ok ? _green : Colors.red.shade700;
     return Container(
       padding: const EdgeInsets.all(12), margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(color: colour.withAlpha(20), border: Border.all(color: colour), borderRadius: BorderRadius.circular(8)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(e.score == null ? 'Conformité : répondez aux exigences' : 'Conformité : ${e.score.toString().replaceAll('.', ',')} % (${e.c} conforme(s), ${e.nc} non conforme(s))', style: TextStyle(fontWeight: FontWeight.w800, color: colour)),
-        Text(e.score == null ? 'Le score est calculé automatiquement.' : ok ? 'Au moins 75 % : l\'inspection sera approuvée automatiquement.' : 'Moins de 75 % : le questionnaire vous sera renvoyé pour être repris avec le producteur.', style: TextStyle(color: colour)),
+        Text(e.score == null ? 'Le score est calculé automatiquement.' : ok ? '100 % : l\'inspection sera approuvée automatiquement.' : 'Moins de 100 % : le questionnaire vous sera renvoyé pour être repris avec le producteur.', style: TextStyle(color: colour)),
       ]));
   }
 
@@ -231,9 +235,9 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
     final targetId = widget.assignment['target_id'];
     await services.repo.queueOp('questionnaire.answer', {'id': targetId, 'answers': _ans});
     final e = _eval(_ans);
-    final redo = _hasScore && e.score != null && e.score! < 75;
+    final redo = _hasScore && e.score != null && e.score! < _approval;
     if (redo) {
-      await services.repo.patchCachedAssignment(targetId as Object, {'status': 'pending', 'needs_redo': true, 'redo_reason': 'Conformité de ${e.score.toString().replaceAll('.', ',')} % (minimum 75 %). Non-conformités : ${e.nc}.', 'answers': _ans});
+      await services.repo.patchCachedAssignment(targetId as Object, {'status': 'pending', 'needs_redo': true, 'redo_reason': 'Conformité de ${e.score.toString().replaceAll('.', ',')} % (minimum 100 %). Non-conformités : ${e.nc}.', 'answers': _ans});
     } else {
       await services.repo.patchCachedAssignment(targetId as Object, {'status': 'done', 'needs_redo': false, 'answers': _ans});
     }
@@ -312,7 +316,7 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
           const SizedBox(height: 6),
           if (_done) Text('${_show(saved['${_questions[i]['id']}'])}${(saved['obs.${_questions[i]['id']}'] ?? '').toString().isNotEmpty ? '\n${saved['obs.${_questions[i]['id']}']}' : ''}${(saved['mes.${_questions[i]['id']}'] ?? '').toString().isNotEmpty ? '\nMesure : ${saved['mes.${_questions[i]['id']}']}' : ''}', style: const TextStyle(fontSize: 16))
           else if (_auto(_questions[i]) && _isCorrQ(_questions[i])) Text(_corrLines(_ans).isEmpty ? 'Composées automatiquement d\'après les points non conformes.' : _corrLines(_ans).join('\n'), style: const TextStyle(fontSize: 15, color: Colors.black87))
-          else if (_auto(_questions[i])) Text(_isSketchQ(_questions[i]) ? 'Rempli automatiquement à l\'exportation avec les parcelles du producteur.' : (_isNcQ(_questions[i]) ? (_eval(_ans).lines.isEmpty ? 'Renseigné automatiquement d\'après vos réponses.' : _eval(_ans).lines.join('\n')) : (_eval(_ans).score == null ? 'Calculée automatiquement : approuvé si la conformité atteint 75 %.' : (_eval(_ans).score! >= 75 ? 'Approuvé' : 'Non approuvé : reprise demandée')) ), style: const TextStyle(fontSize: 15, color: Colors.black87))
+          else if (_auto(_questions[i])) Text(_isSketchQ(_questions[i]) ? 'Rempli automatiquement à l\'exportation avec les parcelles du producteur.' : (_isNcQ(_questions[i]) ? (_eval(_ans).lines.isEmpty ? 'Renseigné automatiquement d\'après vos réponses.' : _eval(_ans).lines.join('\n')) : (_eval(_ans).score == null ? 'Calculée automatiquement : approuvé si la conformité atteint 100 %.' : (_eval(_ans).score! >= _approval ? 'Approuvé' : 'Non approuvé : reprise demandée')) ), style: const TextStyle(fontSize: 15, color: Colors.black87))
           else ...[_field(_questions[i]), _obsField(_questions[i])],
           const SizedBox(height: 16),
         ],

@@ -19,8 +19,8 @@ export function AnswerForm({ targetId, onClose, onDone }: { targetId: string; on
   const [cert, setCert] = useState('');
   const isInspection = String(t.data?.template_code ?? '').startsWith('ii-');
   const qs: Question[] = t.data?.questions ?? [];
-  const scored = qs.some((q) => q.options?.includes('Conforme') && q.options?.includes('Non conforme'));
-  const auto = (q: Question) => (scored && /^(Non-conformités relevées|Recommandation de l.inspecteur|Croquis de l.exploitation)/i.test(q.label)) || (String(t.data?.template_code ?? '').startsWith('ii-') && /^(Mesures correctives|Actions correctives demandées)/i.test(q.label));
+  const scored = qs.some((q: any) => q.observations);
+  const auto = (q: Question) => (scored && /^(Non-conformités relevées|Recommandation de l.inspecteur|Résultat de l.inspection|Croquis de l.exploitation)/i.test(q.label)) || (String(t.data?.template_code ?? '').startsWith('ii-') && /^(Mesures correctives|Actions correctives demandées)/i.test(q.label));
   const OBS: Record<string, 'C' | 'NC' | 'NA'> = { Conforme: 'C', Conformes: 'C', oui: 'C', Oui: 'C', 'Non conforme': 'NC', 'Non conformes': 'NC', non: 'NC', Non: 'NC', Partiels: 'NC', Partielle: 'NC', Insuffisant: 'NC', 'Non applicable': 'NA' };
   const missing = qs.some((q) => q.required && !auto(q) && (ans[q.id] === undefined || ans[q.id] === '' || (Array.isArray(ans[q.id]) && !ans[q.id].length)));
   return (
@@ -29,7 +29,7 @@ export function AnswerForm({ targetId, onClose, onDone }: { targetId: string; on
         <>
           <p className="muted">Producteur <code>{t.data.internal_code}</code>{t.data.instructions ? ` · ${t.data.instructions}` : ''}{done && <> · <Badge tone="ok">Renseigné</Badge></>}</p>
           {qs.map((q, i) => (
-            auto(q) ? <Field key={q.id} label={`${i + 1}. ${q.label}`}><span className="muted">{done ? showAnswer(t.data.answers?.[q.id]) : 'Renseigné automatiquement d\'après les réponses (mesures correctives selon les points non conformes ; approbation à 75 % ; croquis à l\'export).'}</span></Field> :
+            auto(q) ? <Field key={q.id} label={`${i + 1}. ${q.label}`}><span className="muted">{done ? showAnswer(t.data.answers?.[q.id]) : 'Renseigné automatiquement d\'après les réponses (mesures correctives selon les points non conformes ; approbation à 100 % ; croquis à l\'export).'}</span></Field> :
             <Field key={q.id} label={`${i + 1}. ${q.label}${q.required ? ' *' : ''}`}>
               {done ? <strong>{showAnswer(t.data.answers?.[q.id])}</strong>
                 : q.type === 'text' ? <textarea rows={2} value={ans[q.id] ?? ''} onChange={(e) => set(q.id, e.target.value)} />
