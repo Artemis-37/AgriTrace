@@ -720,6 +720,3 @@ tbody tr:hover { background: color-mix(in srgb, var(--c-lime) 35%, transparent);
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
 }
-.home-tile > span svg, .home-group-title svg { width: 1em; height: 1em; display: block; }
-.home-group-title > span { display: inline-flex; vertical-align: -.1em; }
-.menu-drop a > span { display: inline-flex; width: 1.25em; justify-content: center; }

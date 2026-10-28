@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../auth';
 import { NavItemsContext, SETTINGS_PATHS } from '../MenuBar';
 
-import { GroupIcon, RouteIcon } from '../icons';
 const TILES: { to: string; label: string; icon: string; perm: string[]; notFor?: 'collector' }[] = [
   { to: '/delegues', label: 'Délégués', icon: '👥', perm: ['collectors:read'] },
   { to: '/producteurs', label: 'Producteurs', icon: '🌱', perm: ['producers:read'] },
@@ -51,16 +50,16 @@ export function Tiles() {
     return (
       <nav className="home-tiles-wrap" aria-label={cur.label}>
         <button type="button" className="home-back" onClick={() => setOpen(null)}>← Accueil</button>
-        <h2 className="home-group-title"><span aria-hidden="true"><GroupIcon id={cur.id} fallback={cur.icon} /></span> {cur.label}</h2>
-        <div className="home-tiles">{cur.items.map((i) => <Link key={i.to} to={i.to} className="home-tile"><span aria-hidden="true"><RouteIcon to={i.to} fallback={i.icon} /></span><strong>{i.label}</strong></Link>)}</div>
+        <h2 className="home-group-title"><span aria-hidden="true">{cur.icon}</span> {cur.label}</h2>
+        <div className="home-tiles">{cur.items.map((i) => <Link key={i.to} to={i.to} className="home-tile"><span aria-hidden="true">{i.icon}</span><strong>{i.label}</strong></Link>)}</div>
       </nav>
     );
   }
   return (
     <nav className="home-tiles home-groups" aria-label="Modules">
       {groups.map((g) => g.items.length === 1
-        ? <Link key={g.id} to={g.items[0].to} className="home-tile home-group"><span aria-hidden="true"><GroupIcon id={g.id} fallback={g.icon} /></span><strong>{g.label}</strong></Link>
-        : <button key={g.id} type="button" className="home-tile home-group" onClick={() => setOpen(g.id)}><span aria-hidden="true"><GroupIcon id={g.id} fallback={g.icon} /></span><strong>{g.label}</strong><small>{g.items.slice(0, 4).map((i) => i.label).join(', ')}{g.items.length > 4 ? '…' : ''}</small></button>)}
+        ? <Link key={g.id} to={g.items[0].to} className="home-tile home-group"><span aria-hidden="true">{g.icon}</span><strong>{g.label}</strong></Link>
+        : <button key={g.id} type="button" className="home-tile home-group" onClick={() => setOpen(g.id)}><span aria-hidden="true">{g.icon}</span><strong>{g.label}</strong><small>{g.items.slice(0, 4).map((i) => i.label).join(', ')}{g.items.length > 4 ? '…' : ''}</small></button>)}
     </nav>
   );
 }
