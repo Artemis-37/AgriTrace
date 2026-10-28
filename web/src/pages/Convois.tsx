@@ -109,7 +109,9 @@ function CreateConvoy({ onClose, onDone }: { onClose: () => void; onDone: () => 
   );
 }
 
-export function Receive({ initial }: { initial?: { collector: string; convoyNo: string; code?: string } } = {}) {
+// Dans une fenêtre contextuelle (Modal) quand `onClose` est fourni, sinon dans une carte.
+const Shell: any = (p: any) => (p.onClose ? <Modal {...p} /> : <Card title={p.title}>{p.children}</Card>);
+export function Receive({ initial, onClose }: { initial?: { collector: string; convoyNo: string; code?: string }; onClose?: () => void } = {}) {
   const { org } = useAuth();
   const act = useAction();
   const { data, loading, error, reload } = useAsync(async () => ({
@@ -156,7 +158,7 @@ export function Receive({ initial }: { initial?: { collector: string; convoyNo: 
   const valid = collector && convoyNo.trim().length >= 2 && wh && (!manual || (m.driver.trim().length >= 2 && m.truck.trim().length >= 2 && (m.kg === '' || W.test(m.kg)) && /^\d*$/.test(m.bags))) && (!blocked || notes.trim().length >= 5) && /^\d+(\.\d{1,3})?$/.test(kgEff) && Number(kgEff) > 0 && /^[1-9]\d*$/.test(bags)
     && W.test(kg) && /^\d+$/.test(d.unl) && /^\d*$/.test(d.refused);
   return (
-    <Card title="Saisie de pesée">
+    <Shell {...(onClose ? { title: 'Saisie de pesée', wide: true, onClose } : { title: 'Saisie de pesée' })}>
       <fieldset className="bloc"><legend>Infos délégué</legend>
         <div className="grid-3">
           <Field label="ID (code) du délégué" hint="Saisissez le code : le délégué est retrouvé"><input value={codeQ} onChange={(e) => { setCodeQ(e.target.value); const hit = data.people.find((v: any) => v.collector_code && v.collector_code.toLowerCase() === e.target.value.trim().toLowerCase()); if (hit) { setCollector(hit.collector_id); setConvoyNo(''); } }} /></Field>
@@ -214,7 +216,7 @@ export function Receive({ initial }: { initial?: { collector: string; convoyNo: 
         }, `Réception du convoi ${convoyNo.trim()}`);
         setDone(`Convoi ${convoyNo.trim()} enregistré : il sera transmis à la caisse dès l'envoi au serveur.`); setConvoyNo(''); setKg(''); setBags(''); setNotes(''); setD({ grade: '', trailer: '', unl: '', refused: '' }); setM({ driver: '', truck: '', bags: '', kg: '' }); reload();
       })}>Valider la réception et transmettre à la caisse</button></div>
-    </Card>
+    </Shell>
   );
 }
 

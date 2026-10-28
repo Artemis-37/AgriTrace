@@ -38,12 +38,19 @@ function List({ autoNew }: { autoNew: boolean }) {
   const [adding, setAdding] = useState(autoNew && can('convoys:receive'));
   const [receipt, setReceipt] = useState<any | null>(null);
   const [picked, setPicked] = useState<any | null>(null);
+  const [free, setFree] = useState(false);
   const act = useAction();
   const { data, loading, error, reload } = useAsync(() => get<any[]>(`/convoys/receptions?${new URLSearchParams({ state, ...(q.trim() && { q: q.trim() }), ...(from && { from }), ...(to && { to }), ...(camp && { campaign_id: camp }), ...(prod && { product_id: prod }) })}`), [state, q, from, to, camp, prod]);
   const rows = data ?? [];
   const done = rows.filter((r) => r.status === 'settled'), todo = rows.filter((r) => r.status !== 'settled');
   const STATE: [State, string][] = [['pending', 'Non traitées'], ['settled', 'Traitées'], ['all', 'Toutes']];
-  if (adding) return <><p><button className="btn btn-ghost" onClick={() => { setAdding(false); reload(); }}>← Retour à la liste des pesées</button></p><ConvoyPicker onPick={setPicked} picked={picked} /><Receive key={picked ? picked.id : 'libre'} initial={picked ? { collector: picked.collector_id, convoyNo: picked.convoy_no, code: picked.collector_code ?? '' } : undefined} /></>;
+  if (adding) return (
+    <>
+      <p><button className="btn btn-ghost" onClick={() => { setAdding(false); setFree(false); setPicked(null); reload(); }}>← Retour à la liste des pesées</button></p>
+      <ConvoyPicker onPick={setPicked} onFree={() => { setPicked(null); setFree(true); }} picked={picked} />
+      {(picked || free) && <Receive key={picked ? picked.id : 'libre'} onClose={() => { setPicked(null); setFree(false); }} initial={picked ? { collector: picked.collector_id, convoyNo: picked.convoy_no, code: picked.collector_code ?? '' } : undefined} />}
+    </>
+  );
   return (
     <Card>
       <div className="toolbar pesees-filters">
@@ -90,7 +97,7 @@ function List({ autoNew }: { autoNew: boolean }) {
 }
 
 /** Choix du convoi à peser : « Non traités » = en route, à peser ; « Traités » = déjà pesés (bulletin consultable). */
-function ConvoyPicker({ picked, onPick }: { picked: any | null; onPick: (v: any | null) => void }) {
+function ConvoyPicker({ picked, onPick, onFree }: { picked: any | null; onPick: (v: any | null) => void; onFree: () => void }) {
   const [tab, setTab] = useState<'todo' | 'done'>('todo');
   const [q, setQ] = useState('');
   const [receipt, setReceipt] = useState<any | null>(null);
@@ -109,7 +116,7 @@ function ConvoyPicker({ picked, onPick }: { picked: any | null; onPick: (v: any 
           <label className={tab === 'done' ? 'on' : ''}><input type="radio" name="pick-tab" checked={tab === 'done'} onChange={() => setTab('done')} />Traités ({done.data?.length ?? '…'})</label>
         </div>
         <input type="search" placeholder="Connaissement, délégué, camion" aria-label="Rechercher un convoi" value={q} onChange={(e) => setQ(e.target.value)} />
-        {picked && <button className="btn btn-ghost" onClick={() => onPick(null)}>Saisie libre</button>}
+        <button className="btn btn-secondary" onClick={onFree}>Saisie libre (sans convoi attendu)</button>
       </div>
       {act.error && <ErrorBox message={act.error} />}
       {tab === 'todo' ? (todo.loading ? <Loading /> : (
@@ -119,7 +126,7 @@ function ConvoyPicker({ picked, onPick }: { picked: any | null; onPick: (v: any 
           { header: 'Camion', render: (v) => v.truck_no }, { header: 'Chauffeur', render: (v) => v.driver_name },
           { header: 'Sacs', align: 'right', render: (v) => v.declared_bags ?? '—' },
           { header: 'Poids déclaré', align: 'right', render: (v) => (v.declared_kg ? num(v.declared_kg) : '—') },
-          { header: '', render: (v) => picked?.id === v.id ? <Badge tone="ok">Sélectionné</Badge> : <button className="btn btn-small" onClick={() => { onPick(v); window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }); }}>Peser ce convoi</button> },
+          { header: '', render: (v) => picked?.id === v.id ? <Badge tone="ok">Sélectionné</Badge> : <button className="btn btn-small" onClick={() => onPick(v)}>Peser ce convoi</button> },
         ]} />
       )) : (done.loading ? <Loading /> : (
         <Table rows={rowsDone} empty="Aucun convoi pesé." columns={[
