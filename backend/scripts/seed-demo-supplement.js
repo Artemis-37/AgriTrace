@@ -2,6 +2,7 @@
 // convois pesés par traite, règlements, expéditions vers l'exportateur, livraisons à différents stades. Données FICTIVES.
 // Lancé à la fin de seed-demo-enrichi.js (ou seul : API=… DEMO_JSON=/tmp/demo-accounts.json node scripts/seed-demo-supplement.js).
 const crypto = require('crypto');
+const { REAL, producerBody } = require('./lib-socahi');
 const fs = require('fs');
 
 const API = process.env.API || 'http://localhost:3000/v1';
@@ -70,15 +71,12 @@ async function soft(label, fn) {
 
   // ── Producteurs supplémentaires
   await soft('24 producteurs supplémentaires', async () => {
-    const villages = ['Hiré', 'Bamoro', 'Kouassidjo', 'Zikisso', 'Ahouanou', 'Dougroupalégnoa'];
-    const noms = ['Kouadio', 'Yao', 'Konan', 'Traoré', 'Coulibaly', 'Bamba', 'Gnagne', 'Ouattara'];
-    const prenoms = ['Adjoua', 'Kouamé', 'Aya', 'Moussa', 'Aminata', 'Yves', 'Fatou', 'Jean'];
     let n = 0;
     const have = await call('GET', '/producers', as('adm')).then((r) => (Array.isArray(r) ? r : r.items ?? r.rows ?? []).length);
     if (have >= 30) return;
-    for (let i = 0; i < 24; i++) {
+    for (const rp of REAL.slice(15, 39)) {
       try {
-        await call('POST', '/producers', { ...as('adm'), body: { last_name: noms[i % 8], first_names: prenoms[(i * 3) % 8] + ' ' + (i + 1), gender: i % 3 ? 'male' : 'female', village: villages[i % 6], region: 'Gôh', department: 'Divo', area_ha: String(1 + (i % 7) * 0.8), estimated_kg: String(800 + i * 120), phone: '+22507' + String(10000000 + i * 137).slice(0, 8), consent: true, value_chain_ids: [cacao.id] } });
+        await call('POST', '/producers', { ...as('adm'), body: producerBody(rp, { estimated_kg: String(800 + n * 120), value_chain_ids: [cacao.id] }) });
         n++;
       } catch (e) { if (!n) throw e; }
     }

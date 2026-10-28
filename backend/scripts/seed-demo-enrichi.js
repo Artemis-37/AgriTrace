@@ -3,6 +3,7 @@
 // Lancé à la fin de seed-demo-complet.js (ou seul : API=… DEMO_JSON=/tmp/demo-accounts.json node scripts/seed-demo-enrichi.js).
 // Chaque étape est facultative : un échec est signalé sans interrompre les autres.
 const crypto = require('crypto');
+const { REAL } = require('./lib-socahi');
 const fs = require('fs');
 
 const API = process.env.API || 'http://localhost:3000/v1';
@@ -177,12 +178,14 @@ async function soft(label, fn) {
   // ── Cartographie : zone protégée fictive + parcelle chevauchante + contrôle
   await soft('cartographie (couche, chevauchement, contrôle)', async () => {
     const cart = ['responsable_cartographie', 'cartographe', ADM];
+    // Zone protégée d'exemple (fictive) posée sur un coin de la première parcelle réelle ; parcelle chevauchante = copie décalée de cette parcelle.
     const sq = (lon, lat, s) => ({ type: 'Polygon', coordinates: [[[lon, lat], [lon + s, lat], [lon + s, lat + s], [lon, lat + s], [lon, lat]]] });
-    const fc = { type: 'FeatureCollection', features: [{ type: 'Feature', properties: { name: 'Forêt classée exemple (fictive)' }, geometry: sq(-5.9, 7.0, 0.0006) }] };
+    const ring0 = REAL[0].parcels[0].ring;
+    const fc = { type: 'FeatureCollection', features: [{ type: 'Feature', properties: { name: 'Forêt classée exemple (fictive)' }, geometry: sq(ring0[0][0] - 0.0003, ring0[0][1] - 0.0003, 0.0006) }] };
     const f = new FormData(); f.append('file', new Blob([JSON.stringify(fc)]), 'zone.geojson');
     for (const [k, v] of Object.entries({ name: 'Aires protégées (exemple fictif)', source: 'Démonstration', license: 'Libre', attribution: 'Données inventées' })) f.append(k, v);
     await soft('couche de référence', () => any(cart, 'POST', '/geo/layers', undefined, f));
-    await soft('parcelle chevauchante', () => any(['cartographe', 'agent_terrain', ADM], 'POST', '/parcels', { idempotency_key: key('parcel'), producer_id: producers[11].id, value_chain_id: vc.id, declared_area_ha: '1.5', geometry: sq(-5.8903, 7.0003, 0.0009) }));
+    await soft('parcelle chevauchante', () => any(['cartographe', 'agent_terrain', ADM], 'POST', '/parcels', { idempotency_key: key('parcel'), producer_id: producers[11].id, value_chain_id: vc.id, declared_area_ha: '1.5', geometry: { type: 'Polygon', coordinates: [ring0.map(([x, y]) => [Number((x + 0.0003).toFixed(6)), Number((y + 0.0002).toFixed(6))])] }, confirm_not_duplicate: true }));
     await any(cart, 'POST', '/geo/checks/run', {});
   });
 

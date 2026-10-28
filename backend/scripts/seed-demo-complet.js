@@ -10,6 +10,7 @@ const fs = require('fs');
 const path = require('path');
 
 const API = process.env.API || 'http://localhost:3000/v1';
+const { REAL, producerBody, parcelBody } = require('./lib-socahi');
 const PASSWORD = process.env.DEMO_PASSWORD || 'Demo-AgriTrace-2026!';
 const DOMAIN = process.env.DEMO_DOMAIN || 'demo.agritrace.test';
 const CODE = process.env.DEMO_CODE || 'DEMO';
@@ -136,23 +137,18 @@ const PROFILS = [
   const delegate2 = { name: 'Yao Kouassi', email: email2, collector_id: col2.id };
 
   // ── Producteurs et parcelles (coordonnées fictives)
-  const noms = [['KONE', 'Awa', 'Hiré'], ['TRAORE', 'Moussa', 'Zoukougbeu'], ['YAO', 'Kouadio', 'Hiré'], ['KOUASSI', 'Adjoua', 'Tiassalé'], ['BAMBA', 'Seydou', 'Hiré'],
-    ['DIALLO', 'Fatoumata', 'Zoukougbeu'], ['N\'GUESSAN', 'Affoué', 'Hiré'], ['OUATTARA', 'Ibrahim', 'Tiassalé'], ['KOFFI', 'Yves', 'Hiré'], ['SANGARE', 'Mariam', 'Zoukougbeu'],
-    ['ADJE', 'Sylvain', 'Hiré'], ['TAPE', 'Joséphine', 'Tiassalé'], ['GOUE', 'Arsène', 'Zoukougbeu'], ['BEUGRE', 'Colette', 'Hiré'], ['DJEDJE', 'Anselme', 'Tiassalé']];
+  // Producteurs réels de la coopérative (noms inventés) : les 15 premiers, dont 10 avec leur tracé réel (le 15e est sans tracé).
   const producers = [];
   let n = 0;
-  for (const [l, f, v] of noms) {
+  for (const rp of REAL.slice(0, 15)) {
     n++;
-    producers.push((await call('POST', '/producers', { ...U('agent_terrain'), body: { gender: n % 3 === 0 ? 'female' : 'male', last_name: l, first_names: f, village: v, section: v === 'Hiré' ? 'S1' : v === 'Tiassalé' ? 'S3' : 'S2', phone: '+2250700' + String(10000 + n * 137).slice(0, 5) + String(n).padStart(1, '0'), area_ha: String(2 + (n % 7) + 0.5), estimated_kg: String(1500 + n * 250), value_chain_ids: [vc.id] } })).producer);
+    producers.push((await call('POST', '/producers', { ...U('agent_terrain'), body: producerBody(rp, { phone: '+2250700' + String(10000 + n * 137).slice(0, 5) + String(n), estimated_kg: String(1500 + n * 250), value_chain_ids: [vc.id] }) })).producer);
   }
-  const centres = [[-5.9, 7.0], [-5.89, 7.01], [-5.91, 7.02], [-5.88, 7.0], [-5.92, 7.03], [-5.87, 7.02], [-5.93, 7.01], [-5.86, 7.03], [-5.9, 7.04], [-5.88, 7.05]];
   const parcels = [];
-  for (let i = 0; i < centres.length; i++) {
-    const [lon, lat] = centres[i], s = 0.0009 + (i % 3) * 0.0002;
-    parcels.push(await call('POST', '/parcels', { ...U('cartographe'), body: { idempotency_key: key('parcel'), producer_id: producers[i].id, value_chain_id: vc.id, declared_area_ha: String(1 + (i % 4) * 0.5),
-      geometry: { type: 'Polygon', coordinates: [[[lon, lat], [lon + s, lat], [lon + s, lat + s], [lon, lat + s], [lon, lat]]] } } }));
+  for (let i = 0; i < 10; i++) {
+    parcels.push(await call('POST', '/parcels', { ...U('cartographe'), body: { idempotency_key: key('parcel'), producer_id: producers[i].id, ...parcelBody(REAL[i].parcels[0], vc.id) } }));
   }
-  await soft('parcelle sans tracé', () => call('POST', '/parcels', { ...U('agent_terrain'), body: { idempotency_key: key('parcel'), producer_id: producers[10].id, value_chain_id: vc.id, declared_area_ha: '2.5' } }));
+  await soft('parcelle sans tracé', () => call('POST', '/parcels', { ...U('agent_terrain'), body: { idempotency_key: key('parcel'), producer_id: producers[14].id, value_chain_id: vc.id, declared_area_ha: '2.5' } }));
   await soft('contrôle parcelle', () => call('POST', `/parcels/${parcels[0].id}/control`, { ...U('responsable_cartographie'), body: {} }));
 
   // ── Achats : déclarations (collecteur) → validation → pesées (admin) → reçus (magasinier)
@@ -297,7 +293,7 @@ const PROFILS = [
     try { require('child_process').execFileSync(process.execPath, [path.join(__dirname, 'seed-demo-supplement.js')], { stdio: 'inherit', env: { ...process.env, DEMO_JSON: process.env.DEMO_JSON || '/tmp/demo-accounts.json' } }); }
     catch { warnings.push('compléments de démonstration : voir les messages ci-dessus'); }
     // Chaîne complète (champ → exportateur, banques, caisse, trésorerie) puis activité de chaque profil (plus de 20 opérations chacun)
-    for (const [f, label] of [['seed-demo-volume.js', '70 producteurs et leurs parcelles'], ['seed-demo-chaine.js', 'chaîne complète'], ['seed-demo-activite.js', 'activité des profils'], ['seed-demo-historique.js', 'campagnes antérieures et report'], ['seed-demo-modules.js', 'modules de distribution et de services']]) {
+    for (const [f, label] of [['seed-demo-volume.js', 'producteurs réels et leurs parcelles'], ['seed-demo-chaine.js', 'chaîne complète'], ['seed-demo-activite.js', 'activité des profils'], ['seed-demo-historique.js', 'campagnes antérieures et report'], ['seed-demo-certifications.js', 'certifications, exportateurs liés et audits'], ['seed-demo-modules.js', 'modules de distribution et de services']]) {
       try { require('child_process').execFileSync(process.execPath, [path.join(__dirname, f)], { stdio: 'inherit', env: { ...process.env, DEMO_JSON: process.env.DEMO_JSON || '/tmp/demo-accounts.json' } }); }
       catch { warnings.push(label + ' de démonstration : voir les messages ci-dessus'); }
     }
