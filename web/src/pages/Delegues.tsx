@@ -54,7 +54,7 @@ export default function Delegues() {
                   <FicheRow label="Localité">{cur.origin ?? '—'}</FicheRow><FicheRow label="Contact">{cur.phone ?? '—'}</FicheRow>
                   <FicheRow label="E-mail">{!cur.email || cur.email.endsWith('@agritrace.invalid') ? 'Sans accès à l\'application' : cur.email}</FicheRow><FicheRow label="Statut">{cur.status === 'active' ? 'Actif' : 'Désactivé'}</FicheRow>
                   <FicheRow label="Banque">{cur.bank_name ?? '—'}</FicheRow><FicheRow label="N° de compte">{cur.bank_account ?? '—'}</FicheRow>
-                  <FicheRow label="Filières"><ChainsOf c={cur} onDone={reload} /></FicheRow>
+                  <FicheRow label="Produits"><ChainsOf c={cur} onDone={reload} /></FicheRow>
                 </div></div>
               )}
               {tab === 'id' && <div className="fiche-form"><FicheRow label="Type de pièce">{DOC[cur.id_doc_type] ?? '—'}</FicheRow><FicheRow label="N° de la pièce">{cur.id_doc_no ?? '—'}</FicheRow></div>}
@@ -70,22 +70,22 @@ export default function Delegues() {
   );
 }
 
-/** Filières achetées par le délégué : ajout et retrait ; chaque filière peut avoir ses propres tarifs (onglets Transport et Retenues). */
+/** Produits achetés par le délégué : ajout et retrait ; chaque produit peut avoir ses propres tarifs (onglets Transport et Retenues). */
 function ChainsOf({ c, onDone }: { c: any; onDone: () => void }) {
   const { can } = useAuth();
   const chains = useAsync(() => getChains().catch(() => [] as any[]), []);
   const act = useAction();
   const [pick, setPick] = useState('');
   const list: any[] = c.assignments ?? [];
-  const name = (id: string | null) => (id ? (chains.data ?? []).find((x: any) => x.id === id)?.name ?? '…' : 'Toutes les filières');
+  const name = (id: string | null) => (id ? (chains.data ?? []).find((x: any) => x.id === id)?.name ?? '…' : 'Tous les produits');
   const free = (chains.data ?? []).filter((x: any) => !list.some((a) => a.value_chain_id === x.id));
   const may = can('collectors:manage');
   return (
     <div>
-      {list.length === 0 && <span className="muted">Aucune (toutes les filières)</span>}
+      {list.length === 0 && <span className="muted">Aucun (tous les produits)</span>}
       {list.map((a) => <span key={a.id} className="chip">{name(a.value_chain_id)}{may && <button type="button" className="chip-x" aria-label={`Retirer ${name(a.value_chain_id)}`} disabled={act.busy} onClick={() => act.run(async () => { await del(`/collectors/${c.id}/assignments/${a.id}`); onDone(); })}> ×</button>}</span>)}
       {may && free.length > 0 && <span style={{ display: 'inline-flex', gap: '.4rem', marginLeft: '.5rem' }}>
-        <select value={pick} onChange={(e) => setPick(e.target.value)} aria-label="Ajouter une filière"><option value="">+ Ajouter une filière…</option>{free.map((x: any) => <option key={x.id} value={x.id}>{x.name}</option>)}</select>
+        <select value={pick} onChange={(e) => setPick(e.target.value)} aria-label="Ajouter un produit"><option value="">+ Ajouter un produit…</option>{free.map((x: any) => <option key={x.id} value={x.id}>{x.name}</option>)}</select>
         <button type="button" className="btn btn-small" disabled={!pick || act.busy} onClick={() => act.run(async () => { await post(`/collectors/${c.id}/assignments`, { value_chain_id: pick }); setPick(''); onDone(); })}>Ajouter</button></span>}
       {act.error && <ErrorBox message={act.error} />}
     </div>
@@ -122,7 +122,7 @@ function NewDelegate({ onClose, onDone }: { onClose: () => void; onDone: (collec
         <Field label="N° de compte"><input value={f.bank_account} onChange={set('bank_account')} maxLength={40} /></Field></div>
       <div className="grid-2"><Field label="Type de pièce"><select value={f.id_doc_type} onChange={set('id_doc_type')}><option value="">—</option>{Object.entries(DOC).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></Field>
         <Field label="N° de la pièce"><input value={f.id_doc_no} onChange={set('id_doc_no')} maxLength={40} /></Field></div>
-      <Field label="Filières achetées" hint="Aucune case cochée : toutes les filières de la coopérative.">
+      <Field label="Produits achetés" hint="Aucune case cochée : tous les produits de la coopérative.">
         <div className="role-pick">{(chains.data ?? []).map((v: any) => <label key={v.id} className="check"><input type="checkbox" checked={picked.includes(v.id)} onChange={() => setPicked((p) => (p.includes(v.id) ? p.filter((x) => x !== v.id) : [...p, v.id]))} />{v.name}</label>)}</div></Field>
       {act.error && <ErrorBox message={act.error} />}
       <div className="modal-actions"><button className="btn" disabled={act.busy || !ok} onClick={() => act.run(async () => {
@@ -163,13 +163,13 @@ function Edit({ c, onClose, onDone }: { c: any; onClose: () => void; onDone: () 
   );
 }
 
-/** Onglets Transport et Retenues : tarifs au kilo préenregistrés dans le profil du délégué (général, puis propres à chaque filière achetée) ; seul l'administrateur les saisit, la caisse les reprend. */
+/** Onglets Transport et Retenues : tarifs au kilo préenregistrés dans le profil du délégué (général, puis propres à chaque produit acheté) ; seul l'administrateur les saisit, la caisse les reprend. */
 function Rates({ c, kind, onDone }: { c: any; kind: 'transport' | 'retenues'; onDone: () => void }) {
   const { can } = useAuth();
   const field = kind === 'transport' ? 'transport_per_kg' : 'retention_per_kg';
   const cfg = useAsync(() => get<any>('/convoys/settings').catch(() => null), []);
-  const chains = useAsync(() => getChains().catch(() => [] as any[]), []); // filières définies par la coopérative (Produits)
-  const [edits, setEdits] = useState<Record<string, string>>({}); // valeurs modifiées, par filière, pas encore enregistrées
+  const chains = useAsync(() => getChains().catch(() => [] as any[]), []); // produits (filières) définis par la coopérative
+  const [edits, setEdits] = useState<Record<string, string>>({}); // valeurs modifiées, par produit, pas encore enregistrées
   const [ty, setTy] = useState<string | null>(null);
   const { busy, error, run } = useAction();
   const def = kind === 'transport' ? cfg.data?.transport_unit : cfg.data?.retention_per_kg;
@@ -181,7 +181,7 @@ function Rates({ c, kind, onDone }: { c: any; kind: 'transport' | 'retenues'; on
   const covered = (id: string) => assigned.length === 0 || assigned.some((a) => !a.value_chain_id || a.value_chain_id === id);
   const label = kind === 'transport' ? 'Coût de transport au kilo (FCFA)' : 'Retenue au kilo — mise en compte (FCFA)';
   const save = (id: string) => run(async () => {
-    // La filière rejoint celles du délégué si elle n'y figure pas encore.
+    // Le produit rejoint ceux du délégué si elle n'y figure pas encore.
     if (!covered(id)) await post(`/collectors/${c.id}/assignments`, { value_chain_id: id });
     await put(`/collectors/${c.id}/rates`, { value_chain_id: id, [field]: edits[id] === '' ? null : edits[id] });
     setEdits((e) => { const { [id]: _drop, ...rest } = e; return rest; }); onDone();
@@ -189,12 +189,12 @@ function Rates({ c, kind, onDone }: { c: any; kind: 'transport' | 'retenues'; on
   return (
     <div>
       <p className="muted">{kind === 'transport'
-        ? 'Modifiez ci-dessous le coût de transport au kilo de ce délégué, filière par filière : la caisse le reprend à chaque règlement, sans pouvoir le modifier. Une case vide = tarif par défaut de la coopérative.'
-        : 'Modifiez ci-dessous la retenue au kilo de ce délégué, filière par filière : elle s\'accumule en mise en compte et est reversée à la clôture de son compte, après approbation de l\'administrateur. Une case vide = tarif par défaut de la coopérative.'}</p>
-      {list.length === 0 && !chains.loading && <p className="muted">Aucune filière : définissez-les d'abord dans Produits.</p>}
+        ? 'Modifiez ci-dessous le coût de transport au kilo de ce délégué, produit par produit : la caisse le reprend à chaque règlement, sans pouvoir le modifier. Une case vide = tarif par défaut de la coopérative.'
+        : 'Modifiez ci-dessous la retenue au kilo de ce délégué, produit par produit : elle s\'accumule en mise en compte et est reversée à la clôture de son compte, après approbation de l\'administrateur. Une case vide = tarif par défaut de la coopérative.'}</p>
+      {list.length === 0 && !chains.loading && <p className="muted">Aucun produit : définissez-les d'abord dans Produits.</p>}
       {list.length > 0 && (
         <div className="table-wrap"><table>
-          <thead><tr><th>Filière</th><th className="num">{label}</th><th></th></tr></thead>
+          <thead><tr><th>Produit</th><th className="num">{label}</th><th></th></tr></thead>
           <tbody>{list.map((x: any) => {
             const val = edits[x.id] ?? saved(x.id), dirty = edits[x.id] !== undefined && edits[x.id] !== saved(x.id);
             return (
