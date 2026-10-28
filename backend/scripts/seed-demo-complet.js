@@ -72,6 +72,9 @@ const PROFILS = [
     if (!r.ok) throw new Error('logo ' + r.status);
   });
 
+  // Codes des producteurs : format défini par la coopérative (le serveur n'en invente jamais)
+  await soft('format des codes producteurs', () => call('PUT', '/producers/code-format', { ...A, body: { enabled: true, prefix: 'SOC-', digits: 4, start: 1 } }));
+
   // ── Filière, campagne, prix
   const vc = await call('POST', '/value-chains', { ...A, body: { code: 'CACAO', name: 'Cacao' } });
   const otherChains = {};
@@ -294,7 +297,7 @@ const PROFILS = [
     try { require('child_process').execFileSync(process.execPath, [path.join(__dirname, 'seed-demo-supplement.js')], { stdio: 'inherit', env: { ...process.env, DEMO_JSON: process.env.DEMO_JSON || '/tmp/demo-accounts.json' } }); }
     catch { warnings.push('compléments de démonstration : voir les messages ci-dessus'); }
     // Chaîne complète (champ → exportateur, banques, caisse, trésorerie) puis activité de chaque profil (plus de 20 opérations chacun)
-    for (const [f, label] of [['seed-demo-chaine.js', 'chaîne complète'], ['seed-demo-activite.js', 'activité des profils'], ['seed-demo-modules.js', 'modules de distribution et de services']]) {
+    for (const [f, label] of [['seed-demo-volume.js', '70 producteurs et leurs parcelles'], ['seed-demo-chaine.js', 'chaîne complète'], ['seed-demo-activite.js', 'activité des profils'], ['seed-demo-historique.js', 'campagnes antérieures et report'], ['seed-demo-modules.js', 'modules de distribution et de services']]) {
       try { require('child_process').execFileSync(process.execPath, [path.join(__dirname, f)], { stdio: 'inherit', env: { ...process.env, DEMO_JSON: process.env.DEMO_JSON || '/tmp/demo-accounts.json' } }); }
       catch { warnings.push(label + ' de démonstration : voir les messages ci-dessus'); }
     }

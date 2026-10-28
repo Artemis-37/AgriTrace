@@ -1,5 +1,5 @@
 // Complète la démonstration sur toute la chaîne, du champ à l'exportateur : parcelles tracées pour tous les producteurs, relevés de terrain,
-// banques / mobile money / trésorerie / caisse (coopérative ET exportateur), rapprochements bancaires, écritures, paiements, ventes,
+// banques / trésorerie / caisse (coopérative ET exportateur), rapprochements bancaires, écritures, paiements, ventes,
 // livraisons réglées. Données FICTIVES. Chaque étape est facultative : un échec est signalé sans interrompre les autres.
 // Lancé à la fin de seed-demo-supplement.js (ou seul : API=… DEMO_JSON=/tmp/demo-accounts.json node scripts/seed-demo-chaine.js).
 const crypto = require('crypto');
@@ -99,28 +99,21 @@ const list = (r) => (Array.isArray(r) ? r : r.items ?? r.rows ?? []);
     if (bad.length === (r.results ?? []).length && bad.length) throw new Error(`relevés refusés : ${bad[0].error ?? bad[0].status}`);
   });
 
-  // ── 3. LA COOPÉRATIVE : banque, mobile money, trésorerie, caisse
+  // ── 3. LA COOPÉRATIVE : banque, trésorerie, caisse (pas de compte mobile money)
   const accts = await call('GET', '/financial-accounts', as(ADM));
   const bank = accts.find((a) => /Banque/.test(a.name)) ?? accts[0];
   const reg = (await call('GET', '/cash-registers', as(ADM)))[0];
   const cashAcc = accts.find((a) => a.owner_type === 'cash_register');
   const mk = (name, opening, bank_name, account_number) => call('POST', '/financial-accounts', { ...as(ADM), body: { owner_type: 'other', name, bank_name, account_number, opening_balance: opening } });
-  const wallet = await soft('compte mobile money de la coopérative', () => mk('Mobile Money coopérative (fictif)', '1500000', 'Opérateur mobile (fictif)', '0700000000'));
   const treasury = await soft('compte de trésorerie / épargne', () => mk('Trésorerie — épargne de la coopérative (fictif)', '8000000', 'Caisse d\'épargne exemple (fictive)', 'CI00 0000 0000 7788'));
   const tx = (token, org, account_id, direction, amount, reason, session) => call('POST', '/financial-transactions', { token, org, body: { idempotency_key: key('tx'), account_id, direction, amount, reason, ...(session && { cash_session_id: session }) } });
-  await soft('mouvements de la banque et du mobile money', async () => {
+  await soft('mouvements de la banque', async () => {
     const A = as(ADM);
     await tx(A.token, C, bank.id, 'in', '4200000', 'Règlement de l\'acheteur — contrat CT-DEMO-001');
     await tx(A.token, C, bank.id, 'in', '1800000', 'Subvention de campagne (fictive)');
     await tx(A.token, C, bank.id, 'out', '650000', 'Paiement du loyer du magasin');
     await tx(A.token, C, bank.id, 'out', '320000', 'Frais de transport des convois');
     await tx(A.token, C, bank.id, 'out', '18500', 'Frais bancaires du mois');
-    if (wallet) {
-      await tx(A.token, C, wallet.id, 'out', '250000', 'Paiement mobile des producteurs — lot 1');
-      await tx(A.token, C, wallet.id, 'out', '180000', 'Paiement mobile des producteurs — lot 2');
-      await tx(A.token, C, wallet.id, 'in', '600000', 'Rechargement du compte mobile depuis la banque');
-      await tx(A.token, C, bank.id, 'out', '600000', 'Rechargement du compte mobile money');
-    }
     if (treasury) {
       await tx(A.token, C, bank.id, 'out', '1000000', 'Placement en trésorerie / épargne');
       await tx(A.token, C, treasury.id, 'in', '1000000', 'Placement reçu de la banque');
@@ -139,10 +132,10 @@ const list = (r) => (Array.isArray(r) ? r : r.items ?? r.rows ?? []);
     await tx(A.token, C, reg2.account_id, 'in', '120000', 'Cotisations des membres encaissées', sess);
     if (bank) await tx(as(ADM).token, C, bank.id, 'out', '1500000', 'Retrait pour la caisse principale');
   });
-  await soft('paiements aux producteurs (mobile money, virement)', async () => {
+  await soft('paiements aux producteurs (virement, espèces)', async () => {
     const fin = ['responsable_financier', 'comptable', ADM];
-    const src = wallet ?? bank;
-    for (const [i, m, amt] of [[3, 'mobile_money', '95000'], [4, 'mobile_money', '60000'], [5, 'bank_transfer', '210000'], [6, 'bank_transfer', '175000'], [7, 'mobile_money', '48000'], [8, 'cash', '30000']]) {
+    const src = bank;
+    for (const [i, m, amt] of [[3, 'bank_transfer', '95000'], [4, 'cash', '60000'], [5, 'bank_transfer', '210000'], [6, 'bank_transfer', '175000'], [7, 'bank_transfer', '48000'], [8, 'cash', '30000']]) {
       if (!producers[i]) continue;
       const pay = await any(fin, 'POST', '/payments', { idempotency_key: key('pay'), source_account_id: m === 'cash' ? cashAcc.id : src.id, payee_type: 'producer', payee_id: producers[i].id, amount: amt, method: m });
       if (m === 'cash') continue;

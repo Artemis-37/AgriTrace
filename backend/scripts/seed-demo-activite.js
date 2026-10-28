@@ -1,6 +1,6 @@
-// Donne à chaque compte de démonstration plus de 20 opérations ou tâches à son nom (ce que son profil a le droit de faire),
+// Donne à chaque compte de démonstration au moins 40 opérations ou tâches à son nom (ce que son profil a le droit de faire),
 // pour que chaque écran soit réellement rempli. Données FICTIVES. Chaque étape est facultative : un échec est signalé sans tout arrêter.
-// Les profils en lecture seule (auditeur, acheteur, exportateur partenaire) ne font pas d'opérations : ils reçoivent 22 messages d'équipe.
+// Les profils en lecture seule (auditeur, acheteur, exportateur partenaire) ne font pas d'opérations : ils reçoivent 40 messages d'équipe.
 // Lancé à la fin de seed-demo-chaine.js (ou seul : API=… DEMO_JSON=/tmp/demo-accounts.json node scripts/seed-demo-activite.js).
 const crypto = require('crypto');
 const fs = require('fs');
@@ -11,7 +11,7 @@ const run = crypto.randomBytes(2).toString('hex').toUpperCase();
 const key = (p) => `${p}-${run}-${crypto.randomBytes(4).toString('hex')}`;
 const days = (n) => new Date(Date.now() + n * 86400000).toISOString().slice(0, 10);
 const warnings = [];
-const N = Number(process.env.DEMO_OPS || 22);
+const N = Number(process.env.DEMO_OPS || 40);
 
 /** Les serveurs en ligne limitent le débit : sur « 429 », on attend puis on recommence (le chargement est simplement plus lent). */
 async function fetchRetry(url, init) {
@@ -86,8 +86,8 @@ async function times(label, n, fn) {
     await times('transporteurs', 5, async (i) => cars.push(await call('POST', '/carriers', { ...L, body: { code: `TR${run}${i}`, name: `Transporteur ${['Gôh', 'Haut-Sassandra', 'Lôh-Djiboua', 'Marahoué', 'Nawa'][i]} (fictif)`, phone: `+22507000${String(300 + i)}` } })));
     const car = cars[0];
     if (!car) throw new Error('aucun transporteur créé');
-    await times('véhicules', 9, (i) => call('POST', '/vehicles', { ...L, body: { plate: `CI-${run}-${i}`, carrier_id: cars[i % cars.length].id, kind: i % 2 ? 'Camionnette' : 'Camion 10 t', capacity_kg: i % 2 ? '2500' : '10000' } }));
-    await times('conducteurs', 9, (i) => call('POST', '/drivers', { ...L, body: { full_name: `Conducteur ${i + 1} (fictif)`, carrier_id: cars[i % cars.length].id, phone: `+22507001${String(100 + i)}`, licence_no: `PC-${run}-${i}` } }));
+    await times('véhicules', N, (i) => call('POST', '/vehicles', { ...L, body: { plate: `CI-${run}-${i}`, carrier_id: cars[i % cars.length].id, kind: i % 2 ? 'Camionnette' : 'Camion 10 t', capacity_kg: i % 2 ? '2500' : '10000' } }));
+    await times('conducteurs', N, (i) => call('POST', '/drivers', { ...L, body: { full_name: `Conducteur ${i + 1} (fictif)`, carrier_id: cars[i % cars.length].id, phone: `+22507001${String(100 + i)}`, licence_no: `PC-${run}-${i}` } }));
   });
 
   // ── Responsable magasin : mouvements de stock
@@ -140,7 +140,7 @@ async function times(label, n, fn) {
   // ── Chaîne de livraison : achats du délégué → convois → magasin → expéditions → exportateur (alimente traçabilité, pont-bascule, analyste, caissier)
   const cycles = N;
   const sheets = [];
-  await soft('achats, convois, expéditions (22 cycles)', async () => {
+  await soft('achats, convois, expéditions (40 cycles)', async () => {
     let ok = 0;
     for (let i = 0; i < cycles; i++) {
       try {
@@ -192,7 +192,7 @@ async function times(label, n, fn) {
     await times('opérations de caisse', N, (i) => call('POST', '/financial-transactions', { ...asE('exp_caissier'), body: { idempotency_key: key('etx'), account_id: r.account_id, cash_session_id: sess, direction: i % 4 ? 'out' : 'in', amount: String(15000 + i * 1000), reason: i % 4 ? `Dépense de réception ${i + 1}` : `Approvisionnement ${i + 1}` } }));
   });
 
-  // ── Profils en lecture seule : 22 messages d'équipe chacun
+  // ── Profils en lecture seule : 40 messages d'équipe chacun
   await soft('profils en lecture seule : messages reçus', async () => {
     for (const role of ['auditeur', 'acheteur', 'exportateur']) {
       const to = await me(role);

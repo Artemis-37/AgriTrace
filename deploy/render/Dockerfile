@@ -24,7 +24,7 @@ COPY --from=web /w/dist ./web
 COPY backend/package.json ./
 COPY backend/migrations ./migrations
 # seed-demo-complet.js : données FICTIVES, pour l'essai uniquement.
-COPY backend/scripts/migrate.js backend/scripts/create-platform-admin.js backend/scripts/seed-demo-complet.js backend/scripts/seed-demo-enrichi.js backend/scripts/seed-demo-supplement.js backend/scripts/seed-demo-chaine.js backend/scripts/seed-demo-activite.js backend/scripts/seed-demo-modules.js ./scripts/
+COPY backend/scripts/migrate.js backend/scripts/create-platform-admin.js backend/scripts/seed-demo-complet.js backend/scripts/seed-demo-enrichi.js backend/scripts/seed-demo-supplement.js backend/scripts/seed-demo-volume.js backend/scripts/seed-demo-historique.js backend/scripts/seed-demo-chaine.js backend/scripts/seed-demo-activite.js backend/scripts/seed-demo-modules.js ./scripts/
 COPY docs/brand/logo-cooperative-demo.png /docs/brand/logo-cooperative-demo.png
 COPY deploy/render/prepare.js ./scripts/render-prepare.js
 COPY deploy/render/state.js ./scripts/render-state.js

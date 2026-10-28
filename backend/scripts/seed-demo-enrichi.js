@@ -147,7 +147,7 @@ async function soft(label, fn) {
   // ── Paiements aux producteurs
   await soft('paiements', async () => {
     const fin = ['responsable_financier', 'comptable', ADM];
-    for (const [i, m, amt] of [[0, 'mobile_money', '85000'], [1, 'bank_transfer', '120000'], [2, 'cash', '40000']]) {
+    for (const [i, m, amt] of [[0, 'bank_transfer', '85000'], [1, 'bank_transfer', '120000'], [2, 'cash', '40000']]) {
       const pay = await any(fin, 'POST', '/payments', { idempotency_key: key('pay'), source_account_id: bank.id, payee_type: 'producer', payee_id: producers[i].id, amount: amt, method: m });
       if (i < 2) await soft(`initiation du paiement ${i + 1}`, () => any(fin, 'POST', `/payments/${pay.id}/transition`, { to: 'initiated', note: 'Ordre transmis' }));
       if (i < 2) await soft(`confirmation du paiement ${i + 1}`, () => any(['direction', 'responsable_financier', ADM], 'POST', `/payments/${pay.id}/confirm`, { confirmation_source: 'manual', note: 'Fonds remis au bénéficiaire' }));
