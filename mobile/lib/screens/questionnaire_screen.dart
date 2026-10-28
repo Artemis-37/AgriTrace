@@ -48,7 +48,8 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
         nc++;
         final label = '${q['label']}'.trim();
         final m = _req.firstMatch(label);
-        var text = (m != null ? m.group(3)! : label).replaceAll(RegExp(r'\s+'), ' ').replaceAll('*', '').trim();
+        final o = '${ans['obs.${q['id']}'] ?? ''}'.trim();
+        var text = (o.isNotEmpty ? o : (m != null ? m.group(3)! : label)).replaceAll(RegExp(r'\s+'), ' ').replaceAll('*', '').trim();
         if (text.length > 200) text = '${text.substring(0, 197)}…';
         lines.add('${m != null ? '${m.group(1)}${m.group(2) != null ? ' ${m.group(2)}' : ''}' : 'Q${i + 1}'} — $text');
       }
@@ -70,6 +71,34 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
         else if (e.score! < 75) { final s = o.where((x) => x.startsWith('Sanctionn')); if (s.isNotEmpty && (_ans[id] == null || _ans[id] == 'Approuvé')) _ans[id] = s.first; }
       }
     }
+  }
+
+  /// Observation de l'exigence : liste déroulante selon le résultat (conforme, non conforme, non applicable), ou texte libre.
+  Widget _obsField(Map<String, dynamic> q) {
+    final id = '${q['id']}';
+    final obs = q['observations'];
+    final key = _ans[id] == 'Conforme' ? 'C' : _ans[id] == 'Non conforme' ? 'NC' : _ans[id] == 'Non applicable' ? 'NA' : null;
+    if (obs is! Map || key == null) return const SizedBox.shrink();
+    final options = ((obs[key] as List?) ?? const []).map((e) => '$e').toList();
+    const other = 'Autre (saisir)…';
+    final cur = _ans['obs.$id'] as String?;
+    final shown = cur == null ? null : (options.contains(cur) ? cur : other);
+    return Padding(padding: const EdgeInsets.only(top: 10), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      DropdownButtonFormField<String>(
+        key: ValueKey('obs-$id-${cur ?? ''}-$key'), isExpanded: true, initialValue: shown,
+        decoration: const InputDecoration(labelText: 'Observation', border: OutlineInputBorder(), isDense: true),
+        items: [for (final o in [...options, other]) DropdownMenuItem(value: o, child: Text(o, maxLines: 3, overflow: TextOverflow.ellipsis))],
+        onChanged: (v) async {
+          if (v == null) return;
+          if (v != other) { setState(() => _ans['obs.$id'] = v); return; }
+          final c = TextEditingController(text: shown == other ? cur : '');
+          final t = await showDialog<String>(context: context, builder: (d) => AlertDialog(
+            title: const Text('Observation'), content: TextField(controller: c, autofocus: true, maxLines: 3, maxLength: 300),
+            actions: [TextButton(onPressed: () => Navigator.pop(d), child: const Text('Annuler')), FilledButton(onPressed: () => Navigator.pop(d, c.text.trim()), child: const Text('OK'))]));
+          if (t != null && t.isNotEmpty) setState(() => _ans['obs.$id'] = t);
+        }),
+      if (shown == other && cur != null) Padding(padding: const EdgeInsets.only(top: 4), child: Text(cur, style: const TextStyle(color: Colors.black54))),
+    ]));
   }
 
   Widget _autoPanel() {
@@ -201,7 +230,7 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
           initialValue: _ans[id] as String?,
           decoration: const InputDecoration(border: OutlineInputBorder()),
           items: [for (final o in options) DropdownMenuItem(value: o, child: Text(o))],
-          onChanged: (x) => setState(() => _ans[id] = x),
+          onChanged: (x) => setState(() { _ans[id] = x; _ans.remove('obs.$id'); }),
         );
       case 'multi':
         final cur = List<String>.from((_ans[id] as List?) ?? const []);
@@ -248,9 +277,9 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
         for (var i = 0; i < _questions.length; i++) ...[
           Text('${i + 1}. ${_questions[i]['label']}${_questions[i]['required'] == true ? ' *' : ''}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
           const SizedBox(height: 6),
-          if (_done) Text(_show(saved['${_questions[i]['id']}']), style: const TextStyle(fontSize: 16))
+          if (_done) Text('${_show(saved['${_questions[i]['id']}'])}${(saved['obs.${_questions[i]['id']}'] ?? '').toString().isNotEmpty ? '\n${saved['obs.${_questions[i]['id']}']}' : ''}', style: const TextStyle(fontSize: 16))
           else if (_auto(_questions[i])) Text(_isSketchQ(_questions[i]) ? 'Rempli automatiquement à l\'exportation avec les parcelles du producteur.' : (_isNcQ(_questions[i]) ? (_eval(_ans).lines.isEmpty ? 'Renseigné automatiquement d\'après vos réponses.' : _eval(_ans).lines.join('\n')) : (_eval(_ans).score == null ? 'Calculée automatiquement : approuvé si la conformité atteint 75 %.' : (_eval(_ans).score! >= 75 ? 'Approuvé' : 'Non approuvé : reprise demandée')) ), style: const TextStyle(fontSize: 15, color: Colors.black87))
-          else _field(_questions[i]),
+          else ...[_field(_questions[i]), _obsField(_questions[i])],
           const SizedBox(height: 16),
         ],
         if (_error != null) Padding(padding: const EdgeInsets.only(bottom: 8), child: Text(_error!, style: TextStyle(color: Colors.red.shade700))),

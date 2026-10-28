@@ -8,6 +8,7 @@ import { AuditService } from '../audit/audit.service';
 import { DbService } from '../db/db.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ASSIGNMENT_TEMPLATES } from './assignment-templates';
+import { attachObservations } from './inspection-observations';
 
 const KIND_FR: Record<string, string> = { formation: 'Formation', distribution: 'Distribution', tache: 'Tâche', inspection: 'Inspection interne', service: 'Service' };
 export const KINDS = ['formation', 'distribution', 'tache', 'inspection', 'service'];
@@ -223,20 +224,20 @@ export class ProducerAssignmentsController {
             ORDER BY a.created_at DESC LIMIT 20000`)).rows;
           const ids = [...new Set(assignments.map((r: any) => r.questionnaire_id).filter(Boolean))];
           const questionnaires: Record<string, unknown> = {};
-          if (ids.length) for (const r of (await c.query(`SELECT id, questions FROM questionnaires WHERE id = ANY($1::uuid[])`, [ids])).rows) questionnaires[r.id] = r.questions;
+          if (ids.length) for (const r of (await c.query(`SELECT id, questions FROM questionnaires WHERE id = ANY($1::uuid[])`, [ids])).rows) questionnaires[r.id] = attachObservations(r.questions);
           return { assignments, questionnaires };
         });
       }
       return this.db.tx(req.org.id, async (c) => (await c.query(
         `SELECT t.id AS target_id, t.producer_id, t.status, t.needs_redo, t.redo_reason, t.done_at, a.id, a.kind, a.title, a.instructions, a.due_date, a.created_at, a.questionnaire_id, q.questions, an.answers
          FROM producer_assignment_targets t JOIN producer_assignments a ON a.id = t.assignment_id LEFT JOIN questionnaires q ON q.id = a.questionnaire_id
-         LEFT JOIN questionnaire_answers an ON an.target_id = t.id ORDER BY a.created_at DESC LIMIT 5000`)).rows);
+         LEFT JOIN questionnaire_answers an ON an.target_id = t.id ORDER BY a.created_at DESC LIMIT 5000`)).rows.map((r: any) => (r.questions ? { ...r, questions: attachObservations(r.questions) } : r)));
     }
     return this.db.tx(req.org.id, async (c) => producerId
       ? (await c.query(
         `SELECT t.id AS target_id, t.status, t.needs_redo, t.redo_reason, t.done_at, a.id, a.kind, a.scope, a.title, a.instructions, a.due_date, a.module_id, a.created_at, a.questionnaire_id, q.questions, an.answers
          FROM producer_assignment_targets t JOIN producer_assignments a ON a.id = t.assignment_id LEFT JOIN questionnaires q ON q.id = a.questionnaire_id
-         LEFT JOIN questionnaire_answers an ON an.target_id = t.id WHERE t.producer_id = $1 ORDER BY (t.status = 'done'), a.created_at DESC`, [producerId])).rows
+         LEFT JOIN questionnaire_answers an ON an.target_id = t.id WHERE t.producer_id = $1 ORDER BY (t.status = 'done'), a.created_at DESC`, [producerId])).rows.map((r: any) => (r.questions ? { ...r, questions: attachObservations(r.questions) } : r))
       : (await c.query(
         `SELECT a.*, count(t.id)::int AS targets, count(t.id) FILTER (WHERE t.status = 'done')::int AS done FROM producer_assignments a
          LEFT JOIN producer_assignment_targets t ON t.assignment_id = a.id GROUP BY a.id ORDER BY a.created_at DESC LIMIT 200`)).rows);

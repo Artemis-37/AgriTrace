@@ -87,7 +87,7 @@ export async function raInspectionDocx(d: RaFiche): Promise<Buffer> {
     rows.push(new TableRow({ cantSplit: true, height: { value: 700, rule: 'atLeast' }, children: [
       cell([para(r.num, { b: true, size: 16, align: AlignmentType.CENTER, after: 0 }), para(r.type, { b: true, size: 16, align: AlignmentType.CENTER, after: 0 })], cr[0], { v: true }),
       cell([para(r.text, { size: 16 })], cr[1], { v: true }),
-      cell([tick(r.answer === 'Conforme')], cr[2], { v: true }), cell([tick(r.answer === 'Non conforme')], cr[3], { v: true }), cell([tick(r.answer === 'Non applicable')], cr[4], { v: true }), cell([para('')], cr[5])] }));
+      cell([tick(r.answer === 'Conforme')], cr[2], { v: true }), cell([tick(r.answer === 'Non conforme')], cr[3], { v: true }), cell([tick(r.answer === 'Non applicable')], cr[4], { v: true }), cell([para(r.obs ?? '', { size: 14 })], cr[5])] }));
   }
   kids.push(table(cr, rows), para('', { after: 200 }));
 

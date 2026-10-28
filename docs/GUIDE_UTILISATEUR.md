@@ -281,3 +281,7 @@ Le serveur n'attribue plus de code producteur de sa propre initiative. Dans **Pa
 - Questionnaires : bouton **Exporter** par questionnaire, au format du modèle d'importation (modifiable puis réimportable).
 
 La fiche d'inspection Rainforest Alliance s'exporte aussi en **Word (.docx)**, avec la même mise en page que le PDF (bouton « Exporter (Word) » dans la fiche renseignée).
+
+## Observations proposées par exigence (fiche Rainforest Alliance)
+
+Sous chaque exigence évaluée (Conforme / Non conforme / Non applicable), le coach choisit une **observation** dans une liste déroulante adaptée à l'exigence et au résultat (65 exigences, plusieurs choix chacune), ou saisit la sienne avec « Autre (saisir)… ». L'observation choisie apparaît dans la colonne Observations du PDF et du Word, et sert de constat dans « Non-conformités relevées ». Changer le résultat d'une exigence efface l'observation choisie.

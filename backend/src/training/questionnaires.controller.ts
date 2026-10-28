@@ -11,6 +11,7 @@ import { QUESTIONNAIRE_TEMPLATES } from './questionnaire-templates';
 import { inspectionPdf, raInspectionPdf, sketchDescription } from '../common/pdf';
 import { raInspectionDocx } from '../common/word';
 import { NotificationsService } from '../notifications/notifications.service';
+import { attachObservations } from './inspection-observations';
 import { applyAuto, evaluate, findQuestion, isInspection, APPROVAL_THRESHOLD } from './inspection';
 import { CERT_SCHEMES } from './certification-logos.controller';
 
@@ -57,6 +58,11 @@ export function checkAnswers(questions: Question[], answers: Record<string, any>
     else if (q.type === 'choice') { if (!q.options!.includes(String(v))) throw new BadRequestException(`« ${q.label} » : choix invalide`); v = String(v); }
     else if (q.type === 'multi') { const a = (Array.isArray(v) ? v : [v]).map(String); if (a.some((x) => !q.options!.includes(x))) throw new BadRequestException(`« ${q.label} » : choix invalide`); v = a; }
     out[q.id] = v;
+  }
+  // Observations choisies (ou saisies) par le coach pour une exigence : « obs.<id de la question> »
+  for (const q of questions) {
+    const o = answers?.[`obs.${q.id}`];
+    if (typeof o === 'string' && o.trim() && out[q.id] !== undefined) out[`obs.${q.id}`] = o.trim().slice(0, 300);
   }
   return out;
 }
@@ -243,7 +249,7 @@ export class QuestionnairesController {
          FROM producer_assignment_targets t JOIN producer_assignments a ON a.id = t.assignment_id JOIN questionnaires q ON q.id = a.questionnaire_id
          JOIN producers p ON p.id = t.producer_id LEFT JOIN questionnaire_answers an ON an.target_id = t.id WHERE t.id = $1`, [targetId])).rows[0]);
     if (!r) throw new NotFoundException('Questionnaire introuvable');
-    return r;
+    return { ...r, questions: attachObservations(r.questions) };
   }
 
   /** Fiche remplie d'un producteur, en PDF, avec le logo de la certification choisie par l'ADG (téléversé par la coopérative). */
@@ -282,7 +288,7 @@ export class QuestionnairesController {
       const str = (v: any) => (v === undefined || v === null ? '' : Array.isArray(v) ? v.join(', ') : String(v));
       const ev = evaluate(qs, ans);
       const reqs = qs.map((q) => { const m = /^(\d+(?:\.\d+)+)\s*(EF|ES|EAC)\s*[—–-]\s*([\s\S]*)$/.exec(q.label.trim()); return m && q.options?.includes('Conforme')
-        ? { num: m[1], type: m[2], text: m[3].replace(/\s+—\s+/g, '\n').replace(/\*/g, '').trim(), answer: str(ans[q.id]) } : null; }).filter((x): x is { num: string; type: string; text: string; answer: string } => !!x);
+        ? { num: m[1], type: m[2], text: m[3].replace(/\s+—\s+/g, '\n').replace(/\*/g, '').trim(), answer: str(ans[q.id]), obs: str(ans[`obs.${q.id}`]) } : null; }).filter((x): x is { num: string; type: string; text: string; answer: string; obs: string } => !!x);
       const first = d.parcels[0];
       const fr = (n: number) => n.toFixed(2).replace('.', ',');
       const yn = (v: any) => (v === 'oui' ? true : v === 'non' ? false : null);

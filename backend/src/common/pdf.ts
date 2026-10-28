@@ -181,7 +181,7 @@ export interface RaFiche {
   orgName: string; certLogo: Buffer | null; orgLogo: Buffer | null;
   f: Record<string, string>;                       // champs d'identification (voir le contrôleur)
   owner: boolean | null; hasWorkers: boolean | null; male: boolean | null;
-  reqs: { num: string; type: string; text: string; answer: string }[];
+  reqs: { num: string; type: string; text: string; answer: string; obs?: string }[];
   decision: string | null; corrective: string; remarks: string;
   nc: string[]; score: number | null; threshold: number;
   sketch: { code: string; ha: number | null; ring: number[][] }[];
@@ -342,7 +342,9 @@ export function raInspectionPdf(d: RaFiche): Promise<Buffer> {
       const sec = SECTIONS_RA.find((s) => s[0] === pre)?.[1] ?? '';
       doc.font('Helvetica').fontSize(8);
       const th = doc.heightOfString(r.text, { width: cw[1] - 10 });
-      const rh = Math.max(34, th + 12);
+      doc.fontSize(7.5);
+      const oh = r.obs ? doc.heightOfString(r.obs, { width: cw[5] - 8 }) : 0;
+      const rh = Math.max(34, th + 12, oh + 12);
       if (sec && sec !== lastSec) {
         if (doc.y + 22 + rh > BOTTOM) { page(); header(); }
         const hy = doc.y; box(L, hy, W, 20); doc.font('Helvetica-Bold').fontSize(8.5).text(sec, L + 4, hy + 6, { width: W - 8, lineBreak: false }); doc.y = hy + 20; lastSec = sec;
@@ -352,6 +354,7 @@ export function raInspectionPdf(d: RaFiche): Promise<Buffer> {
       cw.forEach((c) => { box(x, yy, c, rh); x += c; });
       doc.font('Helvetica-Bold').fontSize(8).text(`${r.num}\n${r.type}`, L + 2, yy + 6, { width: cw[0] - 4, align: 'center' });
       doc.font('Helvetica').fontSize(8).text(r.text, L + cw[0] + 5, yy + 6, { width: cw[1] - 10 });
+      if (r.obs) doc.font('Helvetica').fontSize(7.5).text(r.obs, L + cw[0] + cw[1] + cw[2] + cw[3] + cw[4] + 4, yy + 6, { width: cw[5] - 8 });
       const col = (a: string) => (r.answer === a);
       const cells = [col('Conforme'), col('Non conforme'), col('Non applicable')];
       cells.forEach((on, i) => { if (on) tick(doc, L + cw[0] + cw[1] + i * 26 + 1, yy + rh / 2 - 12, 24, 24); });

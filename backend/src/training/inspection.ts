@@ -23,7 +23,7 @@ export function evaluate(questions: Q[], answers: Record<string, any>) {
     const a = answers?.[q.id];
     if (a === 'Conforme') conform++;
     else if (a === 'Non applicable') na++;
-    else if (a === 'Non conforme') { nonConform++; const d = describe(q, i); lines.push(`${d.num} — ${d.text}`); }
+    else if (a === 'Non conforme') { nonConform++; const d = describe(q, i); const obs = String(answers?.[`obs.${q.id}`] ?? '').trim(); lines.push(`${d.num} — ${obs || d.text}`); }
   });
   const score = conform + nonConform ? Math.round((conform / (conform + nonConform)) * 1000) / 10 : null;
   return { conform, nonConform, na, score, lines, text: lines.length ? lines.join('\n') : 'Aucune non-conformité relevée.' };

@@ -41,12 +41,16 @@ const login = async (e, p) => (await call('POST', '/auth/login', { body: { email
   const ev = questions.filter((x) => x.type === 'choice' && x.options.includes('Conforme'));
   const dec = questions.find((x) => /^Recommandation de l.inspecteur/.test(x.label)), nc = questions.find((x) => /^Non-conformités relevées/.test(x.label));
   // 1 non-conformité sur ~N : score élevé → approuvé
-  const a1 = { ...base, [ev[2].id]: 'Non conforme', [dec.id]: 'Exclu' };
+  const a1 = { ...base, [ev[2].id]: 'Non conforme', [dec.id]: 'Exclu', ['obs.' + ev[2].id]: 'Le producteur ne retrouve pas son exemplaire du contrat', ['obs.' + ev[0].id]: 'Le producteur connaît les lois applicables et s\'y conforme' };
+  const pre = (await call('GET', '/producer-assignments?mine=1&compact=1', J)).body;
+  const qq = Object.values(pre.questionnaires).find((x) => x.some((y) => y.observations));
+  check('listes d\'observations fournies avec les exigences (C / NC / N/A)', !!qq && qq.filter((y) => y.observations).length === 65 && qq.every((y) => !y.observations || (y.observations.C.length && y.observations.NC.length && y.observations.NA.length)), qq && qq.filter((y) => y.observations).length);
   const r1 = await call('POST', `/questionnaires/targets/${t1}/answers`, { ...J, body: { answers: a1 } });
   check('score ≥ 75 % : terminé et approuvé automatiquement', r1.body?.status === 'done' && r1.body.score >= 75, r1.body);
   const saved = (await call('GET', `/questionnaires/targets/${t1}`, J)).body;
   check('décision forcée à « Approuvé »', saved.answers[dec.id] === 'Approuvé', saved.answers[dec.id]);
   check('non-conformités renseignées avec le numéro de l\'exigence', /^1\.2\.7 EF — /.test(saved.answers[nc.id]) || /^\d+\.\d+\.\d+/.test(saved.answers[nc.id]), saved.answers[nc.id]);
+  check('observation enregistrée et reprise comme constat', saved.answers['obs.' + ev[2].id] === 'Le producteur ne retrouve pas son exemplaire du contrat' && /exemplaire du contrat/.test(saved.answers[nc.id]), saved.answers[nc.id]);
   const pdf = await call('GET', `/questionnaires/targets/${t1}/export`, J);
   check('export PDF avec croquis', pdf.status === 200 && pdf.buf.slice(0, 4).toString() === '%PDF' && pdf.buf.length > 3000, pdf.status);
   require('fs').writeFileSync('/tmp/inspection-test.pdf', pdf.buf);
