@@ -133,8 +133,8 @@ function ProductForm({ p, onClose, onDone }: { p: any | null; onClose: () => voi
     <Modal title={p ? 'Modifier le produit' : 'Nouveau produit'} onClose={onClose}>
       <Field label="Désignation"><input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} maxLength={80} /></Field>
       <p className="hint">Le prix d'achat et de vente de ce produit se fixe pour chaque traite (rubrique « Traites »).</p>
-      <Field label="Famille de produit (déclarations d'achat)" hint="Si une famille est choisie, les déclarations d'achat de cette famille utilisent le prix d'achat de la traite en cours pour ce produit."><select value={f.chain} onChange={(e) => setF({ ...f, chain: e.target.value })}><option value="">— Aucune —</option>{(chains.data ?? []).map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}</select></Field>
-      {(chains.data ?? []).length === 0 && <p className="hint">Aucune famille de produit disponible : demandez à l'administrateur de la coopérative de les activer.</p>}
+      <Field label="Type (déclarations d'achat)" hint="Si un type est choisi, les déclarations d'achat de ce type utilisent le prix d'achat de la traite en cours pour ce produit."><select value={f.chain} onChange={(e) => setF({ ...f, chain: e.target.value })}><option value="">— Aucune —</option>{(chains.data ?? []).map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}</select></Field>
+      {(chains.data ?? []).length === 0 && <p className="hint">Aucun type disponible : demandez à l'administrateur de la coopérative de les activer.</p>}
       <label><input type="checkbox" checked={f.active} onChange={(e) => setF({ ...f, active: e.target.checked })} /> Actif</label>
       {act.error && <ErrorBox message={act.error} />}
       <div className="modal-actions"><button className="btn" disabled={act.busy || !ok} onClick={() => act.run(async () => {
