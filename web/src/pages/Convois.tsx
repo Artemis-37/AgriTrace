@@ -131,7 +131,6 @@ export function Receive({ initial }: { initial?: { collector: string; convoyNo: 
   useEffect(() => { const e = data?.expected.find((v: any) => v.collector_id === collector && v.convoy_no === convoyNo.trim()); if (e?.product_id) setProd(e.product_id); }, [data, collector, convoyNo]);
   const [camp, setCamp] = useState('');
   useEffect(() => { if (data) { setProd((p) => p || (data.products.length === 1 ? data.products[0].id : '')); const t = new Date().toISOString().slice(0, 10); setCamp((c) => c || (data.campaigns.find((x: any) => String(x.starts_on).slice(0, 10) <= t && t <= String(x.ends_on).slice(0, 10)) ?? data.campaigns[0])?.id || ''); } }, [data]);
-  const [an, setAn] = useState<Record<string, string>>({});
   const [m, setM] = useState({ driver: '', truck: '', bags: '', kg: '' });
   const setF = (k: keyof typeof d) => (e: any) => setD((x) => ({ ...x, [k]: e.target.value }));
   const exp0 = data?.expected.find((v) => v.collector_id === collector && v.convoy_no === convoyNo.trim());
@@ -203,10 +202,6 @@ export function Receive({ initial }: { initial?: { collector: string; convoyNo: 
           <Field label="Remorque"><input value={d.trailer} onChange={setF('trailer')} maxLength={40} /></Field>
         </div>
       </fieldset>
-      <fieldset className="bloc"><legend>Analyse (facultatif)</legend>
-        <p className="muted">Peut être laissée vide et complétée plus tard depuis l'onglet Analyses.</p>
-        <div className="grid-3">{ANALYSIS.map((k) => <Field key={k} label={k}><input inputMode="decimal" value={an[k] ?? ''} onChange={(e) => setAn((x) => ({ ...x, [k]: e.target.value }))} maxLength={10} /></Field>)}</div>
-      </fieldset>
       {blocked && <p className="notice" role="status">Écart de {gapPct.toFixed(1)} % avec le poids déclaré (tolérance {tol} %) : la réception sera retenue jusqu'à validation par un responsable, et la cause est obligatoire.</p>}
       <Field label={blocked ? 'Cause de l\'écart (obligatoire)' : 'Observations (facultatif)'}><textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={500} /></Field>
       {act.error && <ErrorBox message={act.error} />}
@@ -216,8 +211,8 @@ export function Receive({ initial }: { initial?: { collector: string; convoyNo: 
           ...(manual && { driver_name: m.driver.trim(), truck_no: m.truck.trim(), ...(m.bags && { declared_bags: Number(m.bags) }), ...(m.kg && { declared_kg: m.kg }) }),
           ...(d.grade.trim() && { grade: d.grade.trim() }), ...(d.trailer.trim() && { trailer_no: d.trailer.trim() }),
           ...(d.refused && { bags_refused: Number(d.refused) }),
-          ...(Object.values(an).some((v) => v.trim()) && { analysis: Object.fromEntries(Object.entries(an).filter(([, v]) => v.trim()).map(([k, v]) => [k, v.trim()])) }) }, `Réception du convoi ${convoyNo.trim()}`);
-        setDone(`Convoi ${convoyNo.trim()} enregistré : il sera transmis à la caisse dès l'envoi au serveur.`); setConvoyNo(''); setKg(''); setBags(''); setNotes(''); setD({ grade: '', trailer: '', unl: '', refused: '' }); setAn({}); setM({ driver: '', truck: '', bags: '', kg: '' }); reload();
+        }, `Réception du convoi ${convoyNo.trim()}`);
+        setDone(`Convoi ${convoyNo.trim()} enregistré : il sera transmis à la caisse dès l'envoi au serveur.`); setConvoyNo(''); setKg(''); setBags(''); setNotes(''); setD({ grade: '', trailer: '', unl: '', refused: '' }); setM({ driver: '', truck: '', bags: '', kg: '' }); reload();
       })}>Valider la réception et transmettre à la caisse</button></div>
     </Card>
   );
