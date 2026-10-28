@@ -29,6 +29,8 @@ else
 fi
 
 if [ "$SEED" = 1 ]; then
+  # Démo : pas de verrouillage de 15 minutes après des mots de passe erronés (les limites de débit par adresse restent actives).
+  export LOGIN_LOCKOUT=off
   # Le chargement ouvre une session par compte : limites de débit relevées jusqu'au prochain redémarrage.
   export LOGIN_THROTTLE_LIMIT=100000 THROTTLE_LIMIT=100000
   (

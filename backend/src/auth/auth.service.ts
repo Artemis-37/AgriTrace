@@ -15,6 +15,8 @@ const dummyHash = () => (DUMMY ??= argon2.hash('agritrace-dummy-password', { typ
 const MAX_FAILED = 5;            // échecs avant verrouillage d'un couple (compte, adresse)
 const MAX_FAILED_ACCOUNT = 50;   // échecs toutes adresses confondues avant verrouillage du compte (attaque répartie)
 const LOCK_MINUTES = 15;
+// Démonstration publique : LOGIN_LOCKOUT=off désactive le verrouillage après échecs (jamais en production).
+const lockoutOff = () => process.env.LOGIN_LOCKOUT === 'off';
 
 export const sha256 = (v: string) => createHash('sha256').update(v).digest('hex');
 
@@ -40,7 +42,7 @@ export class AuthService {
     // Même réponse et même durée pour : compte inconnu, désactivé, copié sans mot de passe ('!'), verrouillé ou mauvais mot de passe.
     if (!u || u.status !== 'active' || String(u.password_hash).startsWith('!')) { await argon2.verify(await dummyHash(), password).catch(() => false); throw invalid; }
     const [lf] = await this.db.query(`SELECT locked_until FROM login_failures WHERE user_id = $1 AND ip = $2`, [u.id, where]);
-    if ((u.locked_until && new Date(u.locked_until) > new Date()) || (lf?.locked_until && new Date(lf.locked_until) > new Date())) {
+    if (!lockoutOff() && (u.locked_until && new Date(u.locked_until) > new Date()) || (lf?.locked_until && new Date(lf.locked_until) > new Date())) {
       await argon2.verify(await dummyHash(), password).catch(() => false);
       await this.audit.log({ actorUserId: u.id, action: 'auth.login_while_locked', ip });
       throw invalid;
@@ -97,6 +99,7 @@ export class AuthService {
 
   /** Échec : verrouille le couple (compte, adresse) après MAX_FAILED, le compte entier après MAX_FAILED_ACCOUNT (toutes adresses). */
   private async recordFailure(userId: string, ip: string) {
+    if (lockoutOff()) return;
     await this.db.query(
       `INSERT INTO login_failures(user_id, ip, failures) VALUES ($1,$2,1)
        ON CONFLICT (user_id, ip) DO UPDATE SET failures = login_failures.failures + 1, updated_at = now(),
