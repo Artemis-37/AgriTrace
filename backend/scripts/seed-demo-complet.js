@@ -157,7 +157,7 @@ const PROFILS = [
 
   // ── Achats : déclarations (collecteur) → validation → pesées (admin) → reçus (magasinier)
   let lotId = null;
-  for (let i = 0; i < 20; i++) {
+  for (let i = 0; i < 17; i++) {
     const id = crypto.randomUUID();
     const q = 2 + (i % 4);
     await call('POST', '/purchase-declarations', { ...U('collecteur'), body: { id, idempotency_key: key('decl'), producer_id: producers[i % producers.length].id, value_chain_id: vc.id, campaign_id: camp.id, operation_date: days(Math.min(-14 + i, -1)), quantity: String(q), unit: 'sac', bags: q, purchase_receipt_no: 'ACH-' + String(i + 1).padStart(4, '0') } });

@@ -138,9 +138,11 @@ async function times(label, n, fn) {
   });
 
   // ── Chaîne de livraison : achats du délégué → convois → magasin → expéditions → exportateur (alimente traçabilité, pont-bascule, analyste, caissier)
-  const cycles = N;
+  // Achats de la campagne en cours : 105 au total avec ceux des autres étapes (seed-demo-complet, enrichi, supplément). Expéditions vers l'exportateur : 70 au total, dont 4 refoulées.
+  const cycles = Number(process.env.DEMO_PURCHASES || 63);
+  const SHIPMENTS = Number(process.env.DEMO_SHIPMENTS || 70), REFUSED = Number(process.env.DEMO_REFUSED || 4);
   const sheets = [];
-  await soft('achats, convois, expéditions (40 cycles)', async () => {
+  await soft('achats, convois, expéditions (63 cycles)', async () => {
     let ok = 0;
     for (let i = 0; i < cycles; i++) {
       try {
@@ -160,8 +162,10 @@ async function times(label, n, fn) {
   });
   if (E) await soft('expéditions transmises à l\'exportateur', async () => {
     const convs = await call('GET', '/dispatch-sheets/convoys', as(ADM));
+    const already = list(await call('GET', '/deliveries', asE('exp_admin'))).length; // expéditions déjà faites par les autres étapes
     let n = 0;
     for (const [i, cv] of convs.entries()) {
+      if (already + n >= SHIPMENTS) break; // les autres convois restent au magasin
       try {
         const sh = await call('POST', '/dispatch-sheets', { ...as(ADM), body: { convoy_ids: [cv.id], bl_no: `BL-ACT-${run}-${i + 1}`, lot_id_dse: `DSE-ACT-${run}-${i + 1}`, driver_name: 'Traoré Moussa', truck_no: 'AB 1234 CI', departure_date: days(-2) } });
         await call('POST', `/dispatch-sheets/${sh.id}/transmit`, { ...as(ADM), body: { destination_org_id: E } });
@@ -172,8 +176,13 @@ async function times(label, n, fn) {
   });
   if (E) await soft('exportateur : pesées, analyses, règlements', async () => {
     const dels = list(await call('GET', '/deliveries', asE('exp_admin'))).filter((d) => ['arrived', 'announced', 'in_transit'].includes(d.status));
-    let n = 0;
+    let n = 0, refused = 0;
+    const reasons = ['Taux d\'humidité trop élevé à l\'arrivée : chargement refoulé', 'Fèves moisies constatées au déchargement : chargement refoulé', 'Écart de poids non justifié avec le bordereau : chargement refoulé', 'Présence d\'odeur de fumée : chargement refoulé'];
     for (const [i, d] of dels.entries()) {
+      // Refoulement : l'exportateur refuse 4 chargements ; leur volume revient dans le stock de la coopérative.
+      if (refused < REFUSED && i % 9 === 4) {
+        try { await call('POST', `/deliveries/${d.id}/refuse`, { ...asE('exp_admin'), body: { reason: reasons[refused % reasons.length] } }); refused++; continue; } catch { /* traité normalement ci-dessous */ }
+      }
       try {
         const kg = Number(d.declared_kg ?? 1000);
         await call('POST', `/deliveries/${d.id}/weigh-in`, { ...asE('pont_bascule'), body: { gross_kg: kg + 8000, origin: 'Hiré', transporter: 'Transafrik Logistique (fictif)', bridge_in: 'PONT 1' } });
