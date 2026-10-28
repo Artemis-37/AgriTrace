@@ -310,9 +310,11 @@ class _HomeHeader extends StatelessWidget {
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          const Flexible(child: Text('AgriTrace', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: white, fontSize: 22, fontWeight: FontWeight.w800))),
-          const SizedBox(width: 8),
-          const Text('V ${Config.appVersion}', style: TextStyle(color: white, fontSize: 13)),
+          // Le nom s'affiche toujours en entier : la version passe dessous, et les icônes de droite se serrent si besoin.
+          const Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+            Text('AgriTrace', maxLines: 1, softWrap: false, overflow: TextOverflow.visible, style: TextStyle(color: white, fontSize: 24, fontWeight: FontWeight.w800)),
+            Text('V ${Config.appVersion}', style: TextStyle(color: white, fontSize: 12)),
+          ]),
           const Spacer(),
           IconButton(
             tooltip: 'Notifications', onPressed: onNotes,

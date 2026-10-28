@@ -188,8 +188,16 @@ async function soft(label, fn) {
 
   // ── Terrain : modèles de fiches, relevés supplémentaires
   await soft('modèles de relevés', () => any(['adg', 'coach', ADM], 'POST', '/field-templates/defaults', {}));
-  await soft('modèle de relevé personnalisé', () => any(['adg', ADM], 'POST', '/field-templates', { kind: 'infrastructure', category: 'Centre de santé', definition: { questions: [
-    { key: 'nom', label: 'Nom du centre', type: 'text', required: true, options: [] }, { key: 'lits', label: 'Nombre de lits', type: 'number', required: true, options: [] }, { key: 'eau', label: 'Eau potable disponible', type: 'select', required: true, options: ['Oui', 'Non'] }] } }));
+  await soft('modèle de relevé personnalisé', () => any(['adg', ADM], 'POST', '/field-templates', { kind: 'infrastructure', category: 'Bibliothèque communautaire', definition: { questions: [
+    { key: 'nom', label: 'Nom de la bibliothèque', type: 'text', required: true, options: [] }, { key: 'lits', label: 'Nombre de places assises', type: 'number', required: true, options: [] }, { key: 'eau', label: 'Eau potable disponible', type: 'select', required: true, options: ['Oui', 'Non'] }] } }));
+  // Les modèles ne sont visibles dans l'application mobile qu'une fois déployés : on déploie toutes les infrastructures et tous les thèmes de formation.
+  await soft('déploiement des modèles de terrain (infrastructures et thèmes)', async () => {
+    const tpls = await any(['adg', ADM], 'GET', '/field-templates?all=1');
+    const rows = Array.isArray(tpls) ? tpls : tpls.items ?? tpls.rows ?? [];
+    let n = 0;
+    for (const t of rows) { try { await any(['adg', ADM], 'POST', `/field-templates/${t.id}/deployer`, {}); n++; } catch { /* déjà déployé */ } }
+    if (!n) throw new Error('aucun modèle déployé');
+  });
   await soft('relevés de terrain', async () => {
     const op = (kind, title, data, lat, lon) => ({ idempotency_key: key('fr'), type: 'field_record.create', payload: { id: crypto.randomUUID(), idempotency_key: key('frp'), kind, title, latitude: lat, longitude: lon, data } });
     const r = await call('POST', '/sync/batch', { ...as('agent_terrain'), body: { operations: [
