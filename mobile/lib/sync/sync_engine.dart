@@ -321,13 +321,25 @@ class SyncEngine {
   /// Copie du serveur, en gardant l'effet des actions faites hors connexion et pas encore envoyées (elles ne disparaissent pas de l'écran).
   Future<void> _keepLocalChanges(String kvKey, String idField, List<dynamic> rows, Map<String, String> opToValue, String field) async {
     final ops = await db.raw.query('outbox', where: "status IN ('pending','pending_validation')");
+    // Copie locale précédente : une fiche d'inspection renseignée sous le seuil (« à reprendre ») y est restée à faire ; elle ne doit pas être marquée « faite » (grisée) en attendant l'envoi.
+    final before = <dynamic, Map<String, dynamic>>{};
+    try {
+      final old = await db.getKv(kvKey);
+      if (old != null) for (final r in jsonDecode(old) as List<dynamic>) { if (r is Map<String, dynamic>) before[r[idField]] = r; }
+    } catch (_) {/* pas de copie locale exploitable */}
     for (final o in ops) {
       final v = opToValue[o['op_type']];
       if (v == null) continue;
       Map<String, dynamic> p = {};
       try { p = jsonDecode(o['payload'] as String) as Map<String, dynamic>; } catch (_) { continue; }
       final id = p['id'];
-      for (final r in rows) { if (r is Map && r[idField] == id) r[field] = v; }
+      final prev = before[id];
+      final redo = o['op_type'] == 'questionnaire.answer' && prev != null && prev['needs_redo'] == true && prev['status'] != 'done';
+      for (final r in rows) {
+        if (r is! Map || r[idField] != id) continue;
+        if (redo) { r['status'] = 'pending'; r['needs_redo'] = true; r['redo_reason'] = prev['redo_reason']; r['answers'] = prev['answers']; }
+        else { r[field] = v; }
+      }
     }
     await db.setKv(kvKey, jsonEncode(rows));
   }
