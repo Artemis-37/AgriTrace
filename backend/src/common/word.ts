@@ -111,7 +111,7 @@ export async function raInspectionDocx(d: RaFiche): Promise<Buffer> {
     para(`${BOX(dec.startsWith('Approuvé'))} approuvé          ${BOX(dec.startsWith('Sanctionn'))} sanctionné avec mesures correctives          ${BOX(dec.startsWith('Exclu'))} exclu`)], W)] })]));
   const cn = [W / 2, W / 2];
   kids.push(table(cn, [new TableRow({ children: [cell([para('Non conformités', { b: true })], cn[0]), cell([para('Mesures correctives pour l\'année en cours', { b: true })], cn[1])] }),
-    ...Array.from({ length: Math.max(5, d.nc.length) }, (_, i) => new TableRow({ height: { value: 640, rule: 'atLeast' }, children: [cell([para(d.nc[i] ?? '', { size: 15 })], cn[0]), cell([para(i === 0 ? d.corrective : '', { size: 15 })], cn[1])] }))]), para('', { after: 160 }));
+    ...Array.from({ length: Math.max(5, d.nc.length) }, (_, i) => new TableRow({ height: { value: 640, rule: 'atLeast' }, children: [cell([para(d.nc[i] ?? '', { size: 15 })], cn[0]), cell([para(d.ncMeasures ? d.ncMeasures[i] ?? '' : i === 0 ? d.corrective : '', { size: 15 })], cn[1])] }))]), para('', { after: 160 }));
 
   kids.push(table(cn, [new TableRow({ height: { value: 900, rule: 'atLeast' }, children: [cell([para('')], cn[0]), cell([para('')], cn[1])] }), new TableRow({ children: [cell([para('Signature ou empreinte digitale du membre', { b: true, size: 16 })], cn[0]), cell([para("Signature de l'Inspecteur Interne", { b: true, size: 16 })], cn[1])] })]), para('', { after: 120 }),
     table([W], [new TableRow({ height: { value: 2200, rule: 'atLeast' }, children: [cell([para('En cas de non-conformités : Vérification et description des mesures correctives :', { size: 16 })], W)] })]),

@@ -184,7 +184,7 @@ export interface RaFiche {
   owner: boolean | null; hasWorkers: boolean | null; male: boolean | null;
   reqs: { num: string; type: string; text: string; answer: string; obs?: string }[];
   decision: string | null; corrective: string; remarks: string;
-  nc: string[]; score: number | null; threshold: number;
+  nc: string[]; ncMeasures?: string[]; score: number | null; threshold: number;
   sketch: { code: string; ha: number | null; ring: number[][] }[];
 }
 
@@ -409,12 +409,13 @@ export function raInspectionPdf(d: RaFiche): Promise<Buffer> {
     const rowsNc = Math.max(5, d.nc.length);
     for (let i = 0; i < rowsNc; i++) {
       const txt = d.nc[i] ?? '';
+      const mes = d.ncMeasures ? d.ncMeasures[i] ?? '' : i === 0 ? d.corrective : '';
       doc.font('Helvetica').fontSize(7.5);
-      const h = Math.max(32, doc.heightOfString(txt, { width: W / 2 - 8 }) + 10);
+      const h = Math.max(32, doc.heightOfString(txt, { width: W / 2 - 8 }) + 10, doc.heightOfString(mes, { width: W / 2 - 8 }) + 10);
       if (y + h > BOTTOM) { page(); y = doc.y; }
       box(L, y, W / 2, h); box(L + W / 2, y, W / 2, h);
       doc.text(txt, L + 4, y + 5, { width: W / 2 - 8 });
-      if (i === 0 && d.corrective) doc.text(d.corrective, L + W / 2 + 4, y + 5, { width: W / 2 - 8, height: h - 6 });
+      if (mes) doc.text(mes, L + W / 2 + 4, y + 5, { width: W / 2 - 8 });
       y += h;
     }
     doc.y = y + 14;

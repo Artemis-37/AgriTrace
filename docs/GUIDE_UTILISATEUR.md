@@ -287,3 +287,7 @@ La fiche d'inspection Rainforest Alliance s'exporte aussi en **Word (.docx)**, a
 Sous chaque point évalué (Conforme / Non conforme / Non applicable), le coach choisit une **observation** dans une liste déroulante adaptée à l'exigence et au résultat (65 exigences, plusieurs choix chacune), ou saisit la sienne avec « Autre (saisir)… ». L'observation choisie apparaît dans la colonne Observations du PDF et du Word, et sert de constat dans « Non-conformités relevées ». Changer le résultat d'une exigence efface l'observation choisie.
 
 Les mêmes listes d'observations existent pour les fiches **Fairtrade**, **Fairtrade USA** et la **fiche unique** : pour un point répondu « Oui » (ou Conforme), l'observation proposée est de conformité ; pour « Non » (ou Partiel), elle décrit le manquement. Elles figurent aussi dans le PDF de ces fiches.
+
+## Mesures correctives proposées
+
+Pour chaque point **non conforme**, une liste « Mesure corrective (avec délai) » propose 2 mesures adaptées à l'exigence (par exemple « Faire signer le contrat avec la coopérative et en remettre un exemplaire au producteur — sous 1 mois »). Le champ « Mesures correctives pour l'année en cours » (ou « Actions correctives demandées » sur les autres fiches) est **composé automatiquement** : une ligne par point non conforme, avec la mesure choisie. **Si le coach n'en choisit pas, la première mesure proposée est retenue.** Dans le PDF et le Word de la fiche Rainforest Alliance, chaque non-conformité est face à sa mesure.

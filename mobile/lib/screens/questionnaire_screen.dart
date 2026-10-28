@@ -34,7 +34,7 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
   bool _isNcQ(Map<String, dynamic> q) => RegExp(r'^Non-conformités relevées', caseSensitive: false).hasMatch('${q['label']}');
   bool _isDecisionQ(Map<String, dynamic> q) => RegExp(r'^Recommandation de l.inspecteur', caseSensitive: false).hasMatch('${q['label']}');
   bool _isSketchQ(Map<String, dynamic> q) => RegExp(r'^Croquis de l.exploitation', caseSensitive: false).hasMatch('${q['label']}');
-  bool _auto(Map<String, dynamic> q) => _hasScore && (_isNcQ(q) || _isDecisionQ(q) || _isSketchQ(q));
+  bool _auto(Map<String, dynamic> q) => (_hasScore && (_isNcQ(q) || _isDecisionQ(q) || _isSketchQ(q))) || (_isInspection && _isCorrQ(q));
 
   ({int c, int nc, double? score, List<String> lines}) _eval(Map<String, dynamic> ans) {
     var c = 0, nc = 0;
@@ -59,6 +59,10 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
 
   /// Renseigne « Non-conformités relevées » et la décision d'après les réponses (≥ 75 % : approuvé).
   void _applyAuto() {
+    if (_isInspection) {
+      final lines = _corrLines(_ans);
+      for (final q in _questions) { if (_isCorrQ(q)) _ans['${q['id']}'] = lines.isEmpty ? 'Aucune mesure corrective nécessaire.' : lines.join('\n'); }
+    }
     if (!_hasScore) return;
     final e = _eval(_ans);
     if (e.score == null) return;
@@ -73,34 +77,61 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
     }
   }
 
-  /// Observation de l'exigence : liste déroulante selon le résultat (conforme, non conforme, non applicable), ou texte libre.
-  Widget _obsField(Map<String, dynamic> q) {
-    final id = '${q['id']}';
-    final obs = q['observations'];
-    const pos = {'Conforme', 'Conformes', 'oui', 'Oui'}, neg = {'Non conforme', 'Non conformes', 'non', 'Non', 'Partiels', 'Partielle', 'Insuffisant'};
-    final a = _ans[id];
-    final key = pos.contains(a) ? 'C' : neg.contains(a) ? 'NC' : a == 'Non applicable' ? 'NA' : null;
-    if (obs is! Map || key == null) return const SizedBox.shrink();
-    final options = ((obs[key] as List?) ?? const []).map((e) => '$e').toList();
+  static const _neg = {'Non conforme', 'Non conformes', 'non', 'Non', 'Partiels', 'Partielle', 'Insuffisant'};
+  bool get _isInspection => widget.assignment['kind'] == 'inspection';
+  bool _isCorrQ(Map<String, dynamic> q) => RegExp(r'^(Mesures correctives|Actions correctives demandées)', caseSensitive: false).hasMatch('${q['label']}');
+
+  /// Liste déroulante (observation ou mesure corrective) avec « Autre (saisir)… ».
+  Widget _pickField(String id, String storeKey, String label, List<String> options, {String? hint}) {
     const other = 'Autre (saisir)…';
-    final cur = _ans['obs.$id'] as String?;
+    final cur = _ans['$storeKey.$id'] as String?;
     final shown = cur == null ? null : (options.contains(cur) ? cur : other);
     return Padding(padding: const EdgeInsets.only(top: 10), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       DropdownButtonFormField<String>(
-        key: ValueKey('obs-$id-${cur ?? ''}-$key'), isExpanded: true, initialValue: shown,
-        decoration: const InputDecoration(labelText: 'Observation', border: OutlineInputBorder(), isDense: true),
+        key: ValueKey('$storeKey-$id-${cur ?? ''}-${options.length}'), isExpanded: true, initialValue: shown,
+        decoration: InputDecoration(labelText: label, helperText: hint, helperMaxLines: 3, border: const OutlineInputBorder(), isDense: true),
         items: [for (final o in [...options, other]) DropdownMenuItem(value: o, child: Text(o, maxLines: 3, overflow: TextOverflow.ellipsis))],
         onChanged: (v) async {
           if (v == null) return;
-          if (v != other) { setState(() => _ans['obs.$id'] = v); return; }
+          if (v != other) { setState(() => _ans['$storeKey.$id'] = v); return; }
           final c = TextEditingController(text: shown == other ? cur : '');
           final t = await showDialog<String>(context: context, builder: (d) => AlertDialog(
-            title: const Text('Observation'), content: TextField(controller: c, autofocus: true, maxLines: 3, maxLength: 300),
+            title: Text(label), content: TextField(controller: c, autofocus: true, maxLines: 3, maxLength: 300),
             actions: [TextButton(onPressed: () => Navigator.pop(d), child: const Text('Annuler')), FilledButton(onPressed: () => Navigator.pop(d, c.text.trim()), child: const Text('OK'))]));
-          if (t != null && t.isNotEmpty) setState(() => _ans['obs.$id'] = t);
+          if (t != null && t.isNotEmpty) setState(() => _ans['$storeKey.$id'] = t);
         }),
       if (shown == other && cur != null) Padding(padding: const EdgeInsets.only(top: 4), child: Text(cur, style: const TextStyle(color: Colors.black54))),
     ]));
+  }
+
+  /// Observation de l'exigence selon le résultat, et mesure corrective si non conforme.
+  Widget _obsField(Map<String, dynamic> q) {
+    final id = '${q['id']}';
+    final obs = q['observations'];
+    const pos = {'Conforme', 'Conformes', 'oui', 'Oui'};
+    final a = _ans[id];
+    final key = pos.contains(a) ? 'C' : _neg.contains(a) ? 'NC' : a == 'Non applicable' ? 'NA' : null;
+    if (obs is! Map || key == null) return const SizedBox.shrink();
+    final options = ((obs[key] as List?) ?? const []).map((e) => '$e').toList();
+    final measures = ((q['measures'] as List?) ?? const []).map((e) => '$e').toList();
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      _pickField(id, 'obs', 'Observation', options),
+      if (key == 'NC' && measures.isNotEmpty) _pickField(id, 'mes', 'Mesure corrective (avec délai)', measures, hint: 'À défaut de choix : ${measures.first}'),
+    ]);
+  }
+
+  List<String> _corrLines(Map<String, dynamic> ans) {
+    final out = <String>[];
+    for (var i = 0; i < _questions.length; i++) {
+      final q = _questions[i];
+      final ms = ((q['measures'] as List?) ?? const []).map((e) => '$e').toList();
+      if (ms.isEmpty || !_neg.contains(ans['${q['id']}'])) continue;
+      final label = '${q['label']}'.trim();
+      final m = _req.firstMatch(label);
+      final chosen = '${ans['mes.${q['id']}'] ?? ''}'.trim();
+      out.add('${m != null ? '${m.group(1)}${m.group(2) != null ? ' ${m.group(2)}' : ''}' : label.substring(0, label.length > 60 ? 60 : label.length)} — ${chosen.isNotEmpty ? chosen : ms.first}');
+    }
+    return out;
   }
 
   Widget _autoPanel() {
@@ -225,14 +256,14 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
       case 'yesno':
         return Row(children: [
           for (final v in const ['oui', 'non'])
-            Expanded(child: RadioListTile<String>(contentPadding: EdgeInsets.zero, dense: true, title: Text(v == 'oui' ? 'Oui' : 'Non'), value: v, groupValue: _ans[id] as String?, onChanged: (x) => setState(() => _ans[id] = x))),
+            Expanded(child: RadioListTile<String>(contentPadding: EdgeInsets.zero, dense: true, title: Text(v == 'oui' ? 'Oui' : 'Non'), value: v, groupValue: _ans[id] as String?, onChanged: (x) => setState(() { _ans[id] = x; _ans.remove('obs.$id'); _ans.remove('mes.$id'); }))),
         ]);
       case 'choice':
         return DropdownButtonFormField<String>(
           initialValue: _ans[id] as String?,
           decoration: const InputDecoration(border: OutlineInputBorder()),
           items: [for (final o in options) DropdownMenuItem(value: o, child: Text(o))],
-          onChanged: (x) => setState(() { _ans[id] = x; _ans.remove('obs.$id'); }),
+          onChanged: (x) => setState(() { _ans[id] = x; _ans.remove('obs.$id'); _ans.remove('mes.$id'); }),
         );
       case 'multi':
         final cur = List<String>.from((_ans[id] as List?) ?? const []);
@@ -279,7 +310,8 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
         for (var i = 0; i < _questions.length; i++) ...[
           Text('${i + 1}. ${_questions[i]['label']}${_questions[i]['required'] == true ? ' *' : ''}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
           const SizedBox(height: 6),
-          if (_done) Text('${_show(saved['${_questions[i]['id']}'])}${(saved['obs.${_questions[i]['id']}'] ?? '').toString().isNotEmpty ? '\n${saved['obs.${_questions[i]['id']}']}' : ''}', style: const TextStyle(fontSize: 16))
+          if (_done) Text('${_show(saved['${_questions[i]['id']}'])}${(saved['obs.${_questions[i]['id']}'] ?? '').toString().isNotEmpty ? '\n${saved['obs.${_questions[i]['id']}']}' : ''}${(saved['mes.${_questions[i]['id']}'] ?? '').toString().isNotEmpty ? '\nMesure : ${saved['mes.${_questions[i]['id']}']}' : ''}', style: const TextStyle(fontSize: 16))
+          else if (_auto(_questions[i]) && _isCorrQ(_questions[i])) Text(_corrLines(_ans).isEmpty ? 'Composées automatiquement d\'après les points non conformes.' : _corrLines(_ans).join('\n'), style: const TextStyle(fontSize: 15, color: Colors.black87))
           else if (_auto(_questions[i])) Text(_isSketchQ(_questions[i]) ? 'Rempli automatiquement à l\'exportation avec les parcelles du producteur.' : (_isNcQ(_questions[i]) ? (_eval(_ans).lines.isEmpty ? 'Renseigné automatiquement d\'après vos réponses.' : _eval(_ans).lines.join('\n')) : (_eval(_ans).score == null ? 'Calculée automatiquement : approuvé si la conformité atteint 75 %.' : (_eval(_ans).score! >= 75 ? 'Approuvé' : 'Non approuvé : reprise demandée')) ), style: const TextStyle(fontSize: 15, color: Colors.black87))
           else ...[_field(_questions[i]), _obsField(_questions[i])],
           const SizedBox(height: 16),

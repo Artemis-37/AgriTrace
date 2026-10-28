@@ -12,7 +12,7 @@ import { inspectionPdf, raInspectionPdf, sketchDescription } from '../common/pdf
 import { raInspectionDocx } from '../common/word';
 import { NotificationsService } from '../notifications/notifications.service';
 import { attachObservations } from './inspection-observations';
-import { applyAuto, evaluate, findQuestion, isInspection, APPROVAL_THRESHOLD } from './inspection';
+import { applyAuto, correctiveItems, evaluate, findQuestion, isInspection, APPROVAL_THRESHOLD } from './inspection';
 import { CERT_SCHEMES } from './certification-logos.controller';
 
 export type QType = 'text' | 'number' | 'yesno' | 'choice' | 'multi' | 'date';
@@ -51,7 +51,7 @@ export function checkAnswers(questions: Question[], answers: Record<string, any>
     let v = answers?.[q.id];
     const empty = v === undefined || v === null || v === '' || (Array.isArray(v) && !v.length);
     if (empty) { if (q.required) throw new BadRequestException(`Réponse obligatoire : « ${q.label} »`); continue; }
-    if (q.type === 'text') { v = String(v).trim().slice(0, 2000); }
+    if (q.type === 'text') { v = String(v).trim().slice(0, 4000); }
     else if (q.type === 'number') { const n = Number(String(v).replace(',', '.')); if (!Number.isFinite(n)) throw new BadRequestException(`« ${q.label} » : un nombre est attendu`); v = n; }
     else if (q.type === 'yesno') { if (!['oui', 'non'].includes(String(v).toLowerCase())) throw new BadRequestException(`« ${q.label} » : répondre oui ou non`); v = String(v).toLowerCase(); }
     else if (q.type === 'date') { if (!/^\d{4}-\d{2}-\d{2}$/.test(String(v))) throw new BadRequestException(`« ${q.label} » : date AAAA-MM-JJ attendue`); v = String(v); }
@@ -60,9 +60,9 @@ export function checkAnswers(questions: Question[], answers: Record<string, any>
     out[q.id] = v;
   }
   // Observations choisies (ou saisies) par le coach pour une exigence : « obs.<id de la question> »
-  for (const q of questions) {
-    const o = answers?.[`obs.${q.id}`];
-    if (typeof o === 'string' && o.trim() && out[q.id] !== undefined) out[`obs.${q.id}`] = o.trim().slice(0, 300);
+  for (const q of questions) for (const k of ['obs', 'mes']) {
+    const o = answers?.[`${k}.${q.id}`];
+    if (typeof o === 'string' && o.trim() && out[q.id] !== undefined) out[`${k}.${q.id}`] = o.trim().slice(0, 300);
   }
   return out;
 }
@@ -306,7 +306,7 @@ export class QuestionnairesController {
         },
         male: d.t.gender === 'male' ? true : d.t.gender === 'female' ? false : null, owner: yn(A(/^2\. Le membre est-il le propriétaire/)), hasWorkers: yn(A(/^5\. Le membre a-t-il des travailleurs/)),
         reqs, decision: str(A(/^Recommandation de l.inspecteur/)) || null, corrective: str(A(/^Mesures correctives/)), remarks: str(A(/^Remarques additionnelles/)),
-        nc: ev.lines, score: ev.score, threshold: APPROVAL_THRESHOLD, sketch: d.parcels,
+        nc: ev.lines, ncMeasures: correctiveItems(qs, ans).map((x) => x.measure), score: ev.score, threshold: APPROVAL_THRESHOLD, sketch: d.parcels,
       };
       if (format === 'docx') {
         const word = await raInspectionDocx(fiche);

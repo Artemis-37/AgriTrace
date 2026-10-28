@@ -41,7 +41,7 @@ const login = async (e, p) => (await call('POST', '/auth/login', { body: { email
   const ev = questions.filter((x) => x.type === 'choice' && x.options.includes('Conforme'));
   const dec = questions.find((x) => /^Recommandation de l.inspecteur/.test(x.label)), nc = questions.find((x) => /^Non-conformités relevées/.test(x.label));
   // 1 non-conformité sur ~N : score élevé → approuvé
-  const a1 = { ...base, [ev[2].id]: 'Non conforme', [dec.id]: 'Exclu', ['obs.' + ev[2].id]: 'Le producteur ne retrouve pas son exemplaire du contrat', ['obs.' + ev[0].id]: 'Le producteur connaît les lois applicables et s\'y conforme' };
+  const a1 = { ...base, [ev[2].id]: 'Non conforme', [dec.id]: 'Exclu', ['obs.' + ev[2].id]: 'Le producteur ne retrouve pas son exemplaire du contrat', ['mes.' + ev[2].id]: 'Expliquer le contenu du contrat au producteur — sous 1 mois', ['obs.' + ev[0].id]: 'Le producteur connaît les lois applicables et s\'y conforme' };
   const pre = (await call('GET', '/producer-assignments?mine=1&compact=1', J)).body;
   const qq = Object.values(pre.questionnaires).find((x) => x.some((y) => y.observations));
   check('listes d\'observations fournies avec les exigences (C / NC / N/A)', !!qq && qq.filter((y) => y.observations).length === 65 && qq.every((y) => !y.observations || (y.observations.C.length && y.observations.NC.length && y.observations.NA.length)), qq && qq.filter((y) => y.observations).length);
@@ -51,6 +51,8 @@ const login = async (e, p) => (await call('POST', '/auth/login', { body: { email
   check('décision forcée à « Approuvé »', saved.answers[dec.id] === 'Approuvé', saved.answers[dec.id]);
   check('non-conformités renseignées avec le numéro de l\'exigence', /^1\.2\.7 EF — /.test(saved.answers[nc.id]) || /^\d+\.\d+\.\d+/.test(saved.answers[nc.id]), saved.answers[nc.id]);
   check('observation enregistrée et reprise comme constat', saved.answers['obs.' + ev[2].id] === 'Le producteur ne retrouve pas son exemplaire du contrat' && /exemplaire du contrat/.test(saved.answers[nc.id]), saved.answers[nc.id]);
+  const cor = questions.find((x) => /^Mesures correctives/.test(x.label));
+  check('mesures correctives composées d\'après les non-conformités (mesure choisie reprise)', /^1\.2\.7 EF — Expliquer le contenu du contrat/.test(saved.answers[cor.id]), saved.answers[cor.id]);
   const pdf = await call('GET', `/questionnaires/targets/${t1}/export`, J);
   check('export PDF avec croquis', pdf.status === 200 && pdf.buf.slice(0, 4).toString() === '%PDF' && pdf.buf.length > 3000, pdf.status);
   require('fs').writeFileSync('/tmp/inspection-test.pdf', pdf.buf);
@@ -80,10 +82,13 @@ const login = async (e, p) => (await call('POST', '/auth/login', { body: { email
   const fa = {};
   for (const x of tg.questions) { if (x.type === 'date') fa[x.id] = '2026-10-01'; else if (x.type === 'yesno') fa[x.id] = 'oui'; else if (x.type === 'choice') fa[x.id] = x.options[0]; else if (x.type === 'multi') fa[x.id] = [x.options[0]]; else if (x.required) fa[x.id] = 'x'; }
   const nq = withObs.find((x) => x.type === 'yesno'); fa[nq.id] = 'non'; fa['obs.' + nq.id] = nq.observations.NC[0];
+  check('fiche Fairtrade : mesures proposées pour les points non conformes', withObs.filter((x) => x.measures?.length >= 2).length >= 12, withObs.filter((x) => x.measures?.length).length);
   const rf = await call('POST', `/questionnaires/targets/${tf}/answers`, { ...J, body: { answers: fa } });
   const sf = (await call('GET', `/questionnaires/targets/${tf}`, J)).body;
   check('fiche Fairtrade : observation enregistrée', rf.status === 201 && sf.answers['obs.' + nq.id] === nq.observations.NC[0], rf.body);
   const pf = await call('GET', `/questionnaires/targets/${tf}/export`, J);
+  const fcor = tg.questions.find((x) => /^Actions correctives demandées/.test(x.label));
+  check('fiche Fairtrade : actions correctives composées', sf.answers[fcor.id].includes(nq.measures[0]), sf.answers[fcor.id]);
   check('fiche Fairtrade : export PDF', pf.status === 200 && pf.buf.slice(0, 4).toString() === '%PDF', pf.status);
   console.log(`\n${ok} réussis, ${ko} échecs`); process.exit(ko ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(1); });

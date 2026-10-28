@@ -1,6 +1,8 @@
+import { MESURES_RA, MESURES_TOPICS } from './inspection-mesures';
 // Observations proposées au coach dans la fiche d'inspection interne Rainforest Alliance : une liste par exigence et par résultat
 // (conforme, non conforme, non applicable). Le coach en choisit une dans la liste déroulante, ou saisit la sienne (« Autre »).
 export interface ObsList { C: string[]; NC: string[]; NA: string[] }
+export interface Mesures { measures?: string[] }
 
 const GEN_NA = "Exigence non applicable à cette exploitation";
 const NA_W = ["Le producteur n'a aucun travailleur", "Le producteur n'emploie que des membres de sa famille"];
@@ -193,6 +195,6 @@ export function observationsForLabel(label: string): ObsList | undefined {
 
 const NUM = /^(\d+\.\d+\.\d+)\s*(?:EF|ES|EAC)\s*[—–-]/;
 /** Ajoute à chaque exigence connue sa liste d'observations (champ `observations`). Les autres questions sont inchangées. */
-export function attachObservations<T extends { label: string }>(questions: T[]): (T & { observations?: ObsList })[] {
-  return (questions ?? []).map((q) => { const m = NUM.exec(String(q.label ?? '').trim()); const o = m ? OBSERVATIONS[m[1]] : /^(Normes|Type de visite|Date|Inspecteur|Résultat|Observations|Actions|Non-conf)/i.test(String(q.label)) ? undefined : observationsForLabel(String(q.label ?? '')); return o ? { ...q, observations: o } : q; });
+export function attachObservations<T extends { label: string }>(questions: T[]): (T & { observations?: ObsList; measures?: string[] })[] {
+  return (questions ?? []).map((q) => { const m = NUM.exec(String(q.label ?? '').trim()); const o = m ? OBSERVATIONS[m[1]] : /^(Normes|Type de visite|Date|Inspecteur|Résultat|Observations|Actions|Non-conf)/i.test(String(q.label)) ? undefined : observationsForLabel(String(q.label ?? '')); const mes = m ? MESURES_RA[m[1]] : o ? MESURES_TOPICS.find((x) => norm(String(q.label)).startsWith(x[0]))?.[1] : undefined; return o ? { ...q, observations: o, ...(mes ? { measures: mes } : {}) } : q; });
 }
