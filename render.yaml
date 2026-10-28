@@ -27,6 +27,8 @@ services:
         value: "true"
       - key: REQUIRE_2FA   # essai avec les comptes de démonstration : à remettre à "true" ensuite
         value: "false"
+      - key: DEMO_PASSWORD   # mot de passe des comptes de démonstration (affiché dans l'onglet Environment) : ne plus utiliser celui, public, du dépôt
+        generateValue: true
       - key: SEED_DEMO
         value: "1"
       - key: ADMIN_EMAIL

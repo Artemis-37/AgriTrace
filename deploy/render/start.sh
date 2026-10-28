@@ -4,6 +4,7 @@ set -e
 export APP_PW=$(printf '%s' "$JWT_SECRET" | sha256sum | cut -c1-32)
 
 SEED=0
+if [ "${SEED_DEMO:-0}" = 1 ] && [ -z "${DEMO_PASSWORD:-}" ]; then echo "[render] ATTENTION : DEMO_PASSWORD absent, les comptes de démonstration utiliseraient le mot de passe par défaut, public dans le dépôt. Ajoutez DEMO_PASSWORD (12 caractères minimum) dans l'onglet Environment."; fi
 if [ "${SEED_DEMO:-0}" = 1 ] && [ -n "${ADMIN_EMAIL:-}" ]; then
   ST=$(node scripts/render-state.js)
   if [ "$ST" = partial ] || [ "$ST" = outdated ]; then
