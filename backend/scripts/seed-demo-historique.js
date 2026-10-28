@@ -127,12 +127,12 @@ const CAMPAIGNS = [
       for (const [di, d] of delegates.entries()) {
         let solde = 0;
         try {
-          const st = await call('GET', `/convoys/statement?collector_id=${d.id}&from=${from}&to=${to}`, as('comptable'));
-          solde = Math.abs(Number(st.advance_outstanding ?? 0)) || Math.abs(Number(st.solde ?? 0));
+          const st = await call('GET', `/convoys/statement?collector_id=${d.id}&from=${from}&to=${to}`, as('caissier'));
+          solde = Math.abs(Number(st.solde ?? 0)) || Math.abs(Number(st.advance_outstanding ?? 0));
         } catch { /* repli ci-dessous */ }
         if (!(solde > 0)) solde = 650000 + di * 320000 + ci * 180000; // repli : solde d'exemple si le relevé n'est pas lisible
         try {
-          await call('POST', '/convoys/advances', { ...as('comptable'), body: { idempotency_key: key('cf'), collector_id: d.id, kind: 'carry_forward', amount: String(Math.round(solde)), label: `Solde de la campagne précédente (${name})`, operation_date: next } });
+          await call('POST', '/convoys/advances', { ...as('caissier'), body: { idempotency_key: key('cf'), collector_id: d.id, kind: 'carry_forward', amount: String(Math.round(solde)), label: `Solde de la campagne précédente (${name})`, operation_date: next } });
           n++;
         } catch (e) { first ??= e; }
       }
