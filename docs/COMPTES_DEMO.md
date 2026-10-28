@@ -30,3 +30,5 @@
 | Analyste (exportateur) | Carine Amani | `analyste@exportateur-demo.test` |
 | Caissier (exportateur) | Paul Zézé | `exp.caissier@exportateur-demo.test` |
 | Administrateur (exportateur) | Yves Kouadio | `admin@exportateur-demo.test` |
+| Administrateur (2e exportateur, « Exportateur Démo Abidjan ») | Awa Traoré | `admin@exportateur-abidjan.test` |
+| Administrateur (3e exportateur, « Exportateur Démo San Pedro ») | Marcel Kouamé | `admin@exportateur-sanpedro.test` |

@@ -206,7 +206,6 @@ const PROFILS = [
     await call('POST', `/inspections/${insp.id}/results`, { ...U('responsable_qualite'), body: { results: [{ rule_id: rule.id, value_num: '7.2' }] } });
     await call('POST', `/inspections/${insp.id}/complete`, { ...U('responsable_qualite'), body: { summary: 'Humidité conforme' } });
   });
-  await soft('certificat', () => call('POST', '/certificates', { ...A, body: { holder_type: 'organization', scheme: 'Label durable (exemple fictif)', number: 'DEMO-001', issuer: 'Organisme fictif', issued_on: days(-340), expires_on: days(25) } }));
 
   // ── Ventes
   await soft('ventes', async () => {

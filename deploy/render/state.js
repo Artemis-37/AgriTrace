@@ -5,7 +5,7 @@ const { Client } = require('pg');
 // Le mot de passe de démonstration (DEMO_PASSWORD) fait partie de la version : le changer dans Render recharge la démonstration avec le nouveau mot de passe (empreinte salée, jamais le mot de passe lui-même).
 const crypto = require('crypto');
 const PW = process.env.DEMO_PASSWORD || 'Demo-AgriTrace-2026!';
-const DEMO_VERSION = '2026-10-28-ecoles-cultes-' + crypto.createHash('sha256').update(PW + (process.env.JWT_SECRET || '')).digest('hex').slice(0, 12);
+const DEMO_VERSION = '2026-10-28-socahi-1618-' + crypto.createHash('sha256').update(PW + (process.env.JWT_SECRET || '')).digest('hex').slice(0, 12);
 (async () => {
   const c = new Client({ connectionString: process.env.OWNER_DATABASE_URL });
   await c.connect();
