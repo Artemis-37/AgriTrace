@@ -704,3 +704,19 @@ tbody tr:hover { background: color-mix(in srgb, var(--c-lime) 35%, transparent);
 .registre-detail .notice.s-doit, .registre-detail p.s-doit { color: var(--bad, #8B2E22); }
 .toolbar .btn-secondary { color: var(--c-navy); border-color: var(--c-navy); font-weight: 600; }
 .mail-svg { color: var(--carbon, #2f3a33); display: block; }
+
+/* ── Couche « design system » (UI UX Pro Max, adaptée à l'identité AgriTrace) ── */
+:root { --muted: #5B655F; }                       /* 5,2:1 sur le fond crème (4,3:1 auparavant) */
+:root[data-theme="night"] { --muted: #A3AFA5; }
+.btn, .tabs button, .nav a, .menu-top, .home-tile, .stat, select, summary, [role="button"], label[for], input[type="checkbox"], input[type="radio"] { cursor: pointer; }
+.btn:disabled { cursor: not-allowed; }
+.btn, .tabs button, .nav a, .card, .stat, .badge, tbody tr, .field input, .field select, .field textarea { transition-duration: .18s; transition-timing-function: ease-out; }
+.stat-value, td.num, .num, th.num { font-variant-numeric: tabular-nums lining-nums; }
+.btn-small { min-width: 40px; }
+.tabs button { min-height: 40px; }
+.error-box { border-color: color-mix(in srgb, var(--bad) 35%, transparent); }
+.notice { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 30%, transparent); }
+@media (hover: none) { .home-tile:hover, .stat:hover { transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
+}
