@@ -2,7 +2,7 @@
 > - Palette d'identité conservée : forêt #4A6A5A, nature #7FA68B, lime #CBD8B0, soleil #D2A650, fond crème (thème « doux ») + thème nuit. Le bleu proposé par l'outil n'est PAS utilisé.
 > - Police : Poppins (identité), chiffres tabulaires pour les tableaux et indicateurs.
 > - Retenu de l'outil : style minimal fonctionnel, densité standard, mouvement discret (150–250 ms), contraste texte >= 4,5:1, focus visible, `prefers-reduced-motion`, curseur pointeur, cibles tactiles >= 40 px.
-> - Reste à faire : remplacer les emojis des tuiles d'accueil par des icônes SVG.
+> - Fait : emojis des tuiles et menus remplacés par des icônes SVG (web/src/icons.tsx).
 
 # Design System Master File
 

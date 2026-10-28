@@ -1,3 +1,4 @@
+import { RouteIcon } from './icons';
 import { ReactNode, createContext, useEffect, useRef, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 
@@ -41,7 +42,7 @@ export function TopIcons({ items, onNavigate }: { items: MenuItem[]; onNavigate:
         <div className={`menu ${open ? 'on' : ''}`}>
           <button className="top-ico" title="Paramètres" aria-label="Paramètres" aria-haspopup="true" aria-expanded={open} onClick={() => setOpen(!open)}><IconGear /></button>
           <ul className="menu-drop menu-drop-right" role="menu" hidden={!open}>
-            {settings.map((i) => <li key={i.to} role="none"><NavLink role="menuitem" to={i.to} onClick={onNavigate}><span aria-hidden="true">{i.icon}</span>{LABEL[i.to] ?? i.label}</NavLink></li>)}
+            {settings.map((i) => <li key={i.to} role="none"><NavLink role="menuitem" to={i.to} onClick={onNavigate}><span aria-hidden="true"><RouteIcon to={i.to} fallback={i.icon} /></span>{LABEL[i.to] ?? i.label}</NavLink></li>)}
           </ul>
         </div>
       )}
@@ -69,7 +70,7 @@ export function MenuBar({ items, open, onNavigate }: { items: MenuItem[]; open: 
           <button className="menu-top" aria-haspopup="true" aria-expanded={cur === g} onClick={() => setCur(cur === g ? null : g)}>{g}</button>
           {(
             <ul className="menu-drop" role="menu" hidden={cur !== g}>
-              {list.map((i) => <li key={i.to} role="none"><NavLink role="menuitem" to={i.to} onClick={onNavigate}><span aria-hidden="true">{i.icon}</span>{LABEL[i.to] ?? i.label}</NavLink></li>)}
+              {list.map((i) => <li key={i.to} role="none"><NavLink role="menuitem" to={i.to} onClick={onNavigate}><span aria-hidden="true"><RouteIcon to={i.to} fallback={i.icon} /></span>{LABEL[i.to] ?? i.label}</NavLink></li>)}
             </ul>
           )}
         </div>
