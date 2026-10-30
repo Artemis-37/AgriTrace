@@ -4,7 +4,7 @@ import { get, getBlob, post } from '../api';
 import { useAuth } from '../auth';
 import { Card, Empty, ErrorBox, Field, Loading, Modal, PageHeader, StatusBadge, Tabs, useAction, useAsync } from '../ui';
 
-const KG = (v: any) => (v === null || v === undefined || v === '' ? '' : Number(v).toLocaleString('fr-FR', { maximumFractionDigits: 3 }));
+const KG = (v: any) => (v === null || v === undefined || v === '' ? '' : Number(v).toLocaleString('fr-FR', { maximumFractionDigits: 0 }));
 const M = (v: any) => (v === null || v === undefined || v === '' ? '' : Number(v).toLocaleString('fr-FR', { maximumFractionDigits: 2 }));
 const STATUS: Record<string, [string, any]> = {
   arrived: ['Attendue', 'neutral'], weighing_in: ['Entrée pesée', 'warn'], weighed: ['Pesée terminée', 'warn'], analysed: ['Analysée', 'info'], settled: ['Réglée', 'ok'], refused: ['Refoulée', 'bad'],

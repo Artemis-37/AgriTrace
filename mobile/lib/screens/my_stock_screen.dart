@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../data/format.dart';
 import '../main.dart';
 
-/// Stock acheté du délégué : acheté, en route, livré au magasin central et solde du compte. Nécessite le réseau.
+/// Stock acheté du délégué : acheté, en route et livré au magasin central. Nécessite le réseau.
 class MyStockScreen extends StatefulWidget {
   const MyStockScreen({super.key});
   @override
@@ -29,7 +30,7 @@ class _MyStockScreenState extends State<MyStockScreen> {
     }
   }
 
-  String _kg(Object? v) => '${double.tryParse('$v')?.toStringAsFixed(1) ?? '—'} kg';
+  String _kg(Object? v) => double.tryParse('$v') == null ? '— kg' : '${fmtQty(v)} kg';
 
   @override
   Widget build(BuildContext context) {
@@ -41,11 +42,6 @@ class _MyStockScreenState extends State<MyStockScreen> {
             ListTile(title: const Text('En route (convois)'), trailing: Text(_kg(d['in_transit_kg'])), subtitle: Text('${d['in_transit_convoys']} convoi(s)')),
             ListTile(title: const Text('Livré au magasin central'), trailing: Text(_kg(d['delivered_kg'])), subtitle: Text('${d['delivered_bags']} sacs')),
             ListTile(title: const Text('Encore chez moi (estimé)'), trailing: Text(_kg(d['held_kg']))),
-            ListTile(
-              title: const Text('Solde de ma fiche (négatif : la coopérative me doit)'),
-              trailing: Text('${(-(double.tryParse('${d['balance']}') ?? 0)).toStringAsFixed(0)} FCFA', style: const TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: (d['awaiting_cashier'] as int? ?? 0) > 0 ? Text('${d['awaiting_cashier']} réception(s) en attente de la caisse') : null,
-            ),
           ];
     return Scaffold(
       appBar: AppBar(title: const Text('Mon stock')),

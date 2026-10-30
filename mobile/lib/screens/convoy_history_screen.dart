@@ -35,7 +35,7 @@ class _ConvoyHistoryScreenState extends State<ConvoyHistoryScreen> {
   }
 
   static String _date(Object? v) => v == null ? '' : '$v'.length >= 10 ? '$v'.substring(0, 10) : '$v';
-  static String _kg(Object? v) { final n = double.tryParse('$v'); return n == null ? '—' : '${n.toStringAsFixed(n == n.roundToDouble() ? 0 : 1)} kg'; }
+  static String _kg(Object? v) { final n = double.tryParse('$v'); return n == null ? '—' : '${n.round()} kg'; }
   static String _fcfa(Object? v) { final n = double.tryParse('$v'); return n == null ? '—' : '${n.toStringAsFixed(0).replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => ' ')} FCFA'; }
 
   ({String label, Color color}) _state(Map c) {

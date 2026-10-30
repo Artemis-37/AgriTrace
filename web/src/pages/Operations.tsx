@@ -22,7 +22,7 @@ function Qr({ text }: { text: string }) {
   return src ? <img src={src} alt="QR code du bulletin" width={90} height={90} /> : null;
 }
 
-const fmtKg = (v: string | null | undefined) => (v == null ? '' : `${v} kg`);
+const fmtKg = (v: string | null | undefined) => (v == null ? '' : `${Math.round(Number(v)).toLocaleString('fr-FR')} kg`);
 
 /** Bulletin de pesée, présenté par parties : connaissement, pesée, analyse, livraison produit, visas. Les lignes sans donnée ne sont pas imprimées, sauf l'analyse : non saisie, elle s'imprime à 0. */
 function Bulletin({ r }: { r: any }) {

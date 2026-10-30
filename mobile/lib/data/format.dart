@@ -1,8 +1,7 @@
 /// Quantité affichée sans décimales inutiles : "965.000" -> "965", "5.000" -> "5".
-/// Les poids (kg) et nombres de sacs sont des entiers ; une vraie fraction
-/// (ex. 0.5 tonne) reste visible.
+/// Les poids (kg) et nombres de sacs s'affichent toujours en entiers (arrondis).
 String fmtQty(Object? v) {
   final n = num.tryParse('${v ?? ''}'.replaceAll(',', '.'));
   if (n == null) return '${v ?? ''}';
-  return n == n.truncate() ? n.truncate().toString() : n.toString();
+  return n.round().toString();
 }

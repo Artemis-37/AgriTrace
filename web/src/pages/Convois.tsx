@@ -10,7 +10,7 @@ import { PeekLink } from '../peek';
 import { Badge, Card, ErrorBox, Field, Loading, Modal, PageHeader, Table, Tabs, useAction, useAsync, soldeClass } from '../ui';
 
 const STATUS: Record<string, [string, import('../format').Tone]> = { in_transit: ['En route', 'warn'], received: ['Reçu — en caisse', 'neutral'], settled: ['Réglé', 'ok'] };
-export const num = (v: any) => Number(v).toLocaleString('fr-FR', { maximumFractionDigits: 3 });
+export const num = (v: any) => Number(v).toLocaleString('fr-FR', { maximumFractionDigits: 0 });
 
 /** Convois des délégués (délégués) vers le magasin central : déclaration, réception et pesée, traitement en caisse. */
 export default function Convois() {
@@ -414,7 +414,7 @@ function Payout({ onClose }: { onClose: () => void }) {
   );
 }
 
-const FR = (v: any) => (v === null || v === undefined || v === '' ? '' : Number(v).toLocaleString('fr-FR', { maximumFractionDigits: 3 }));
+const FR = (v: any) => (v === null || v === undefined || v === '' ? '' : Number(v).toLocaleString('fr-FR', { maximumFractionDigits: 0 }));
 
 /** Fiche de suivi du compte délégué, dans la présentation de la fiche papier (solde = ce que le délégué doit à la coopérative). */
 export function Fiche({ collectorId }: { collectorId?: string }) {

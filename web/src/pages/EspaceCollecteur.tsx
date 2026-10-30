@@ -18,7 +18,7 @@ function useMine() {
 
 const cols = (): any[] => [
   { header: 'Date', render: (d: any) => date(d.operation_date) }, { header: 'Producteur', render: (d: any) => d.producer_name },
-  { header: 'Quantité', align: 'right', render: (d: any) => `${Number(d.quantity).toLocaleString('fr-FR')} ${d.unit}` },
+  { header: 'Quantité', align: 'right', render: (d: any) => `${Number(d.quantity).toLocaleString('fr-FR', { maximumFractionDigits: 0 })} ${d.unit}` },
   { header: 'Montant', align: 'right', render: (d: any) => (d.amount ? money(d.amount, d.currency ?? 'XOF') : '—') },
   { header: 'État', render: (d: any) => <StatusBadge map={DECLARATION_STATUS} value={d.status} /> },
 ];

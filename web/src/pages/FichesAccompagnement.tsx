@@ -3,7 +3,7 @@ import { download, get, post, postForm } from '../api';
 import { useAuth } from '../auth';
 import { Badge, Card, Empty, ErrorBox, Field, Loading, Modal, PageHeader, Tabs, useAction, useAsync } from '../ui';
 
-const KG = (v: any) => (v === null || v === undefined || v === '' ? '' : Number(v).toLocaleString('fr-FR', { maximumFractionDigits: 3 }));
+const KG = (v: any) => (v === null || v === undefined || v === '' ? '' : Number(v).toLocaleString('fr-FR', { maximumFractionDigits: 0 }));
 const D = (v: any) => (v ? new Date(v).toLocaleDateString('fr-FR') : '');
 const CERTS = ['Cocoa Life', 'Ferrero', 'UTZ', 'Fairtrade', 'FT USA', 'Rainforest Alliance', 'COCOA PRACTICES', 'Atsource +', 'SASSANDRA'];
 type Tab = 'convois' | 'fiches';
