@@ -48,6 +48,15 @@ class SyncEngine {
 
   SyncEngine(this.db, this.api);
 
+  /// Heure de la dernière synchronisation réussie : conservée sur l'appareil (kv), pour qu'elle survive à la fermeture de l'appli par Android.
+  Future<void> restoreLastSuccess() async {
+    try {
+      final v = await db.getKv('last_sync');
+      final d = v == null ? null : DateTime.tryParse(v);
+      if (d != null && status.value.lastSuccess == null) status.value = SyncStatus(status.value.phase, lastSuccess: d.toLocal(), message: status.value.message);
+    } catch (_) {/* sans effet : l'indication reste « pas encore synchronisé » */}
+  }
+
   static const _labels = ['Envoi de vos opérations', 'Envoi des photos', 'Éléments des profils (formations, inspections…)', 'Producteurs, parcelles et données'];
   /// Progression de la synchronisation en cours (ou de la dernière) : alimente la boîte de dialogue.
   final ValueNotifier<List<SyncStep>> steps = ValueNotifier([for (final l in _labels) SyncStep(l, SyncStepState.waiting)]);
@@ -141,7 +150,9 @@ class SyncEngine {
       _step(3, SyncStepState.done, _received == 0 ? 'Rien de nouveau' : '$_received élément(s) reçus');
       final f = failure;
       if (f is ApiException && (f.status == 401 || f.status == 403)) throw f;
-      status.value = SyncStatus(SyncPhase.idle, lastSuccess: DateTime.now());
+      final now = DateTime.now();
+      status.value = SyncStatus(SyncPhase.idle, lastSuccess: now);
+      try { await db.setKv('last_sync', now.toUtc().toIso8601String()); } catch (_) {/* indication seulement */}
       // Copies des écrans de consultation : en arrière-plan, après la synchronisation (elle n'attend plus ces appels) et au plus toutes les 5 minutes.
       unawaited(_pullReferenceSoon());
     } on NetworkException catch (e) {

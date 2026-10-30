@@ -32,7 +32,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   List<Map<String, Object?>> _items = [];
   int _pending = 0;
   int _problems = 0;
@@ -47,14 +47,22 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     services.sync.status.addListener(_reload);
     services.sync.revoked.addListener(_onRevoked);
     _reload();
   }
 
 
+  /// Retour dans l'appli après un moment : les totaux et la liste sont relus depuis le téléphone (aucune synchronisation n'est lancée).
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _reload();
+  }
+
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     services.sync.status.removeListener(_reload);
     services.sync.revoked.removeListener(_onRevoked);
     super.dispose();
@@ -377,6 +385,14 @@ class _HomeButton extends StatelessWidget {
 }
 
 class _SyncBanner extends StatelessWidget {
+  static String _two(int n) => n.toString().padLeft(2, '0');
+  String _syncedLabel(BuildContext context, DateTime d) {
+    final t = TimeOfDay.fromDateTime(d).format(context);
+    final n = DateTime.now();
+    return (d.year == n.year && d.month == n.month && d.day == n.day) ? 'Synchronisé à $t' : 'Synchronisé le ${_two(d.day)}-${_two(d.month)} à $t';
+  }
+
+
   final SyncStatus status;
   final int pending;
   final int problems;
@@ -400,7 +416,7 @@ class _SyncBanner extends StatelessWidget {
       case SyncPhase.refused:
         text = 'Synchronisation en attente : soumettez d\'abord vos éléments.'; color = Colors.orange.shade800; break;
       case SyncPhase.idle:
-        text = status.lastSuccess == null ? 'Pas encore synchronisé' : 'Synchronisé à ${TimeOfDay.fromDateTime(status.lastSuccess!).format(context)}';
+        text = status.lastSuccess == null ? 'Pas encore synchronisé' : _syncedLabel(context, status.lastSuccess!);
         color = Colors.green.shade800; break;
     }
     final extra = [if (pending > 0) '$pending à soumettre', if (problems > 0) '$problems à corriger'].join('  •  ');
