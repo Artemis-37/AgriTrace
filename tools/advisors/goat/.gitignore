@@ -1,0 +1,10 @@
+.env
+node_modules/
+.DS_Store
+
+# ton contexte business reste sur ta machine
+mon-business.md
+
+# tes conseils restent sur ta machine
+sessions/*
+!sessions/.gitkeep

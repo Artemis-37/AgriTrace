@@ -1,0 +1,15 @@
+{
+  "name": "goat",
+  "version": "1.0.0",
+  "private": true,
+  "description": "GOAT : quatre conseillers IA construits à partir du travail public de Bezos, Hormozi, Gary Vaynerchuk et Buffett jugent ta décision business dans Claude Code, en direct autour d'une table.",
+  "type": "module",
+  "scripts": {
+    "start": "node app/server.mjs",
+    "smoke": "node app/scripts/smoke.mjs",
+    "rapport": "node app/scripts/rapport.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GOAT · Entrepreneurs 2.0</title>
+  <link rel="icon" href="/brand/favicon-e2.png" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <img class="brand-logo" src="/brand/e2-logo.png" alt="Entrepreneurs 2.0">
+      <span class="brand-name">GOAT</span>
+    </div>
+    <ol class="stepper" id="stepper" aria-label="Avancement du conseil">
+      <li data-step="setup">Cadrage</li>
+      <li data-step="round1">Ouvertures</li>
+      <li data-step="cruxes">Désaccords</li>
+      <li data-step="round2">Débat</li>
+      <li data-step="round3">Vote</li>
+      <li data-step="verdict">Verdict</li>
+    </ol>
+    <div class="top-actions">
+      <span class="usage" id="usage" title="Tokens utilisés par l'app depuis son lancement"></span>
+      <button class="ghost" id="guideBtn" type="button">Comment ça marche</button>
+      <button class="ghost" id="historyBtn" type="button">Conseils passés</button>
+      <button class="ghost" id="newBtn" type="button" hidden>Nouvelle question</button>
+    </div>
+  </header>
+
+  <div class="topic" id="topic" hidden>
+    <div class="topic-main">
+      <div class="label">Sur la table</div>
+      <h1 id="topicTitle"></h1>
+    </div>
+    <div class="options" id="options"></div>
+  </div>
+
+  <main class="layout">
+    <section class="stage-wrap" aria-label="La table du conseil">
+      <div class="stage" id="stage">
+        <div class="wall" aria-hidden="true"></div>
+        <div class="spot" id="spot" aria-hidden="true"></div>
+        <div id="seats"></div>
+        <div class="table" id="table" aria-hidden="true"><img class="etch" src="/brand/e2-logo.png" alt=""></div>
+        <div id="plates"></div>
+        <svg class="links" id="links" aria-hidden="true"></svg>
+
+        <div class="center" id="center">
+          <div class="waiting" id="waiting" hidden>
+            <span class="pulse"><i></i>La salle est ouverte</span>
+            <h2 data-type>Amène ta décision au GOAT</h2>
+            <p>Dans Claude Code, tape la ligne ci-dessous avec ta décision. Le conseil s'installe ici et en débat en direct.</p>
+            <code>/goat est-ce que je ...</code>
+            <div class="row"><button class="ghost" type="button" id="waitGuide">Quoi mettre dans ta question</button><button class="ghost" type="button" id="waitHistory">Revoir un conseil passé</button></div>
+          </div>
+
+          <form class="composer" id="composer" hidden>
+            <h2 data-type>Sur quelle décision tu veux de l'aide ?</h2>
+            <textarea id="prompt" rows="3" placeholder="Donne la décision, tes options, quelques chiffres (chiffre d'affaires, trésorerie, équipe) et de quel côté tu penches." required minlength="10"></textarea>
+            <div class="samples" id="samples"></div>
+            <div class="composer-row">
+              <div class="mode" role="radiogroup" aria-label="Taille du conseil">
+                <label><input type="radio" name="mode" value="full" checked><span>Conseil complet <small>4 sièges, 3 tours</small></span></label>
+                <label><input type="radio" name="mode" value="quick"><span>Rapide <small>3 sièges, 2 tours</small></span></label>
+              </div>
+              <button class="convene" type="submit" id="convene">Réunir le conseil</button>
+            </div>
+          </form>
+
+          <div class="caption" id="caption" hidden>
+            <div class="cap-head">
+              <span class="cap-av" id="capAv"></span>
+              <span class="cap-who" id="capWho"></span>
+              <span class="cap-tag" id="capTag"></span>
+            </div>
+            <p class="cap-text" id="capText"></p>
+            <div class="cap-sub" id="capSub"></div>
+          </div>
+
+          <div class="waitcard" id="waitcard" hidden aria-live="polite">
+            <div class="wc-top"><span class="wc-step" id="wcStep"></span><span class="wc-time" id="wcTime"></span></div>
+            <p class="wc-head" id="wcHead"></p>
+            <p class="wc-sub" id="wcSub"></p>
+            <p class="wc-muse" id="wcMuse"></p>
+            <div class="wc-bar"><i id="wcBar"></i></div>
+            <p class="wc-nudge" id="wcNudge" hidden>Rien de neuf depuis un moment ? Jette un œil à Claude Code. Il attend peut-être une réponse ou une validation de ta part.</p>
+          </div>
+
+          <div class="cruxes" id="cruxes" hidden></div>
+          <div class="plate" id="plate" hidden></div>
+        </div>
+
+        <div class="playbar" id="playbar" hidden>
+          <span class="queue" id="queueInfo"></span>
+          <div class="speed" role="radiogroup" aria-label="Vitesse de lecture">
+            <button type="button" data-speed="1" aria-pressed="true">1x</button>
+            <button type="button" data-speed="1.6" aria-pressed="false">1,6x</button>
+            <button type="button" data-speed="2.5" aria-pressed="false">2,5x</button>
+          </div>
+          <button type="button" class="skip" id="skipBtn">Passer</button>
+        </div>
+      </div>
+    </section>
+
+    <aside class="panel" aria-label="Points clés">
+      <div class="panel-head" id="panelHead">Points clés</div>
+      <div class="tabpanel" id="feed">
+        <div class="empty">Une ligne par siège pendant que le conseil parle. Clique sur un siège pour lire sa carte complète.</div>
+      </div>
+    </aside>
+  </main>
+
+  <div class="sheet" id="verdictSheet" hidden>
+    <div class="sheet-inner" id="verdictBody"></div>
+  </div>
+
+  <dialog id="cardDialog" class="card-dialog">
+    <div id="cardBody"></div>
+    <form method="dialog"><button class="ghost">Fermer</button></form>
+  </dialog>
+
+  <dialog id="guideDialog" class="card-dialog">
+    <div id="guideBody"></div>
+    <form method="dialog"><button class="ghost">Fermer</button></form>
+  </dialog>
+
+  <dialog id="historyDialog" class="card-dialog">
+    <h3>Conseils passés</h3>
+    <p class="muted">Rejoue un conseil exactement comme il s'est déroulé.</p>
+    <ul class="history" id="historyList"></ul>
+    <form method="dialog"><button class="ghost">Fermer</button></form>
+  </dialog>
+
+  <div class="toast" id="toast" hidden></div>
+  <p class="disclaimer">Conseillers simulés, construits à partir du travail public de chaque personne et dessinés en caricature. Ce ne sont pas ces personnes et ils ne parlent pas en leur nom.</p>
+
+  <script src="/app.js" type="module"></script>
+</body>
+</html>

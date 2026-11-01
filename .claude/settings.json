@@ -1,14 +1,42 @@
 {
   "includeCoAuthoredBy": false,
+  "enabledPlugins": {
+    "oh-my-claudecode@omc": true,
+    "hormozi@hormozi": true,
+    "founder-skill@founder-skill": true,
+    "ycombinator-skills@ycombinator-skills": true,
+    "apply-yc@apply-yc": true
+  },
   "extraKnownMarketplaces": {
     "omc": {
       "source": {
         "source": "github",
         "repo": "Yeachan-Heo/oh-my-claudecode"
       }
+    },
+    "hormozi": {
+      "source": {
+        "source": "github",
+        "repo": "zacker-tech/hormozi-skills"
+      }
+    },
+    "founder-skill": {
+      "source": {
+        "source": "github",
+        "repo": "Jakeschincariol/founder-skill"
+      }
+    },
+    "ycombinator-skills": {
+      "source": {
+        "source": "github",
+        "repo": "jona/ycombinator-skills"
+      }
+    },
+    "apply-yc": {
+      "source": {
+        "source": "github",
+        "repo": "thisisfatih/apply-yc"
+      }
     }
-  },
-  "enabledPlugins": {
-    "oh-my-claudecode@omc": true
   }
 }

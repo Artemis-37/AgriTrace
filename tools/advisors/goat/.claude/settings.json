@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Edit(/sessions/**)",
+      "Write(/sessions/**)",
+      "Bash(python .claude/skills/goat/scripts/check_quotes.py:*)",
+      "Bash(python3 .claude/skills/goat/scripts/check_quotes.py:*)",
+      "Bash(node app/scripts/rapport.mjs:*)"
+    ]
+  }
+}
