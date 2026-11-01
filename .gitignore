@@ -16,3 +16,6 @@ mobile/android/build/
 release-private*.pem
 *.pem.private
 .claude/skills/impeccable/scripts/bin/
+
+# oh-my-claudecode runtime state
+.omc/
