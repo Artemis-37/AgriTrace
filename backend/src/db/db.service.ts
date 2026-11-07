@@ -3,7 +3,12 @@ import { Pool, PoolClient, QueryResultRow } from 'pg';
 
 @Injectable()
 export class DbService implements OnModuleDestroy {
-  readonly pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  // DATABASE_SSL=require : base hébergée (Supabase, etc.) qui impose TLS ; DATABASE_POOL_MAX borne les connexions (pooleur).
+  readonly pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.DATABASE_SSL === 'require' ? { rejectUnauthorized: false } : undefined,
+    max: Number(process.env.DATABASE_POOL_MAX) || 10,
+  });
 
   async query<T extends QueryResultRow = any>(sql: string, params: any[] = []): Promise<T[]> {
     const res = await this.pool.query<T>(sql, params);

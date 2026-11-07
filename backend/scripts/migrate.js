@@ -4,7 +4,10 @@ const fs = require('fs');
 const path = require('path');
 
 (async () => {
-  const client = new Client({ connectionString: process.env.DATABASE_URL });
+  const client = new Client({
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.DATABASE_SSL === 'require' ? { rejectUnauthorized: false } : undefined,
+  });
   await client.connect();
   await client.query(
     'CREATE TABLE IF NOT EXISTS schema_migrations (name text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now())',
