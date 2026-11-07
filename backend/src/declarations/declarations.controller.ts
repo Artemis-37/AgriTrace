@@ -12,6 +12,7 @@ import { AuditService } from '../audit/audit.service';
 import { Dec, isUniqueViolation } from '../common/dto';
 import { NotificationsService } from '../notifications/notifications.service';
 import { DbService } from '../db/db.service';
+import { bagWeightError, CORRECTABLE_STATES } from './bag-rule';
 import { canSubmit, canTransition, REASON_REQUIRED } from './declaration-states';
 import { assignReceipt, matchesMask, normalizeReceipt, receiptConfig } from './receipt.helpers';
 
@@ -43,6 +44,14 @@ class ReceiptCorrectionDto {
   @IsString() @Length(3, 500) reason: string;
 }
 class ReceiptOverrideDto { @IsString() @Length(3, 500) reason: string; }
+/** Correction d'un achat mal saisi par le responsable de traçabilité : poids, sacs, date et producteur ; motif obligatoire. */
+export class CorrectDeclarationDto {
+  @IsOptional() @IsUUID() producer_id?: string;
+  @IsOptional() @IsDateString() operation_date?: string;
+  @IsOptional() @IsInt() @Min(0) bags?: number;
+  @Dec(3) quantity: string;
+  @IsString() @Length(3, 500) reason: string;
+}
 class TransitionDto {
   @IsString() to: string;
   @IsOptional() @IsString() @Length(3, 500) reason?: string;
@@ -81,6 +90,8 @@ export class DeclarationsController {
         const today = new Date().toISOString().slice(0, 10);
         const opDate = b.operation_date ? b.operation_date.slice(0, 10) : today;
         if (opDate > new Date(Date.now() + 86400000).toISOString().slice(0, 10)) throw new BadRequestException("La date de l'achat ne peut pas être dans le futur");
+        const bagErr = bagWeightError(b.quantity, b.unit, b.bags);
+        if (bagErr) throw new BadRequestException(bagErr);
         const mine = await this.myCollector(c, req.user.id);
         const collectorId = canValidate && b.collector_id ? b.collector_id : mine;
         if (!collectorId) throw new ForbiddenException("Aucun compte délégué actif pour cet utilisateur dans cette organisation");
@@ -376,6 +387,45 @@ export class DeclarationsController {
       return up.rows[0];
     });
     await this.audit.log({ organizationId: req.org.id, actorUserId: req.user.id, action: 'declaration.transition', entityType: 'purchase_declaration', entityId: id, details: { to: b.to } });
+    return row;
+  }
+
+  /**
+   * Correction d'un achat mal saisi (le délégué a prévenu le responsable de traçabilité). Le motif est obligatoire ; les anciennes et
+   * nouvelles valeurs sont conservées. Impossible une fois l'achat validé, refusé, annulé ou reçu au magasin. L'unité ne change pas.
+   * Le montant déjà calculé est recalculé au prorata du nouveau poids (même prix retenu).
+   */
+  @Post(':id/correct')
+  @RequirePermissions('declarations:correct')
+  async correct(@Param('id', ParseUUIDPipe) id: string, @Body() b: CorrectDeclarationDto, @Req() req: any) {
+    const row = await this.db.tx(req.org.id, async (c) => {
+      const d = await this.load(c, id, req, true);
+      if (!CORRECTABLE_STATES.has(d.status)) throw new BadRequestException(`Correction impossible : déclaration « ${d.status} »`);
+      const bags = b.bags === undefined ? d.bags : b.bags;
+      const bagErr = bagWeightError(b.quantity, d.unit, bags);
+      if (bagErr) throw new BadRequestException(bagErr);
+      const opDate = b.operation_date ? b.operation_date.slice(0, 10) : String(d.operation_date).slice(0, 10);
+      if (opDate > new Date(Date.now() + 86400000).toISOString().slice(0, 10)) throw new BadRequestException("La date de l'achat ne peut pas être dans le futur");
+      if (b.producer_id && b.producer_id !== d.producer_id) {
+        const ok = await c.query(`SELECT 1 FROM producers WHERE id = $1 AND status = 'active'`, [b.producer_id]);
+        if (!ok.rowCount) throw new BadRequestException('Producteur inconnu ou inactif');
+      }
+      const prev = { producer_id: d.producer_id, operation_date: d.operation_date, bags: d.bags, quantity: d.quantity, amount: d.amount };
+      const up = await c.query(
+        `UPDATE purchase_declarations
+            SET producer_id = $2, operation_date = $3, bags = $4,
+                amount = CASE WHEN amount IS NOT NULL AND quantity::numeric > 0 THEN round(amount * $5::numeric / quantity::numeric, 4) ELSE amount END,
+                quantity = $5, updated_at = now(), updated_by = $6, version = version + 1
+          WHERE id = $1 RETURNING *`,
+        [id, b.producer_id ?? d.producer_id, opDate, bags ?? null, b.quantity, req.user.id]);
+      const now = up.rows[0];
+      await c.query(
+        `INSERT INTO purchase_declaration_corrections(organization_id, declaration_id, old_values, new_values, reason, actor_user_id) VALUES ($1,$2,$3,$4,$5,$6)`,
+        [req.org.id, id, JSON.stringify(prev), JSON.stringify({ producer_id: now.producer_id, operation_date: now.operation_date, bags: now.bags, quantity: now.quantity, amount: now.amount }), b.reason, req.user.id]);
+      await this.history(c, req.org.id, id, d.status, d.status, `Correction : ${b.reason}`, req.user.id);
+      return now;
+    });
+    await this.audit.log({ organizationId: req.org.id, actorUserId: req.user.id, action: 'declaration.correct', entityType: 'purchase_declaration', entityId: id, details: { reason: b.reason, quantity: row.quantity, bags: row.bags } });
     return row;
   }
 

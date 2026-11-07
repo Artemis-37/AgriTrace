@@ -25,3 +25,16 @@ describe('errorMessage', () => {
     expect(errorMessage(null, 'repli')).toBe('repli');
   });
 });
+
+import { bagWeightError } from './format';
+describe('règle des sacs (50 à 75 kg)', () => {
+  it('refuse 2 sacs pour 11 kg et accepte 110 kg', () => {
+    expect(bagWeightError('11', 'kg', '2')).toContain('entre 100 et 150 kg');
+    expect(bagWeightError('110', 'kg', '2')).toBeNull();
+  });
+  it('bornes incluses, autres unités ignorées', () => {
+    expect(bagWeightError('150', 'kg', 3)).toBeNull();
+    expect(bagWeightError('226', 'kg', 3)).not.toBeNull();
+    expect(bagWeightError('5', 'sac', 2)).toBeNull();
+  });
+});

@@ -1,3 +1,4 @@
+import { bagWeightError } from '../format';
 import { useState } from 'react';
 import { get, idem } from '../api';
 import { useAuth } from '../auth';
@@ -35,7 +36,8 @@ export default function NewPurchase({ onClose, onDone }: { onClose: () => void; 
   const chainId = f.value_chain_id || (chains.length === 1 ? chains[0].id : '');
   const camps = data.campaigns.filter((c) => !chainId || c.value_chain_id === chainId);
   const campId = f.campaign_id || (camps.length === 1 ? camps[0].id : '');
-  const valid = !!producer && !!chainId && !!campId && /^\d+(\.\d{1,3})?$/.test(f.kg) && Number(f.kg) > 0 && /^\d+$/.test(f.bags) && f.receipt.trim().length > 0;
+  const bagError = bagWeightError(f.kg, 'kg', f.bags);
+  const valid = !bagError && !!producer && !!chainId && !!campId && /^\d+(\.\d{1,3})?$/.test(f.kg) && Number(f.kg) > 0 && /^\d+$/.test(f.bags) && f.receipt.trim().length > 0;
   return (
     <Modal title="Achat" onClose={onClose}>
       {off.offline && <p className="notice" role="status">Hors connexion : l'achat sera enregistré sur ce poste et envoyé dès que le serveur sera joignable.</p>}
@@ -61,6 +63,7 @@ export default function NewPurchase({ onClose, onDone }: { onClose: () => void; 
           <Field label="Date de l'achat" hint="Laissée vide, la date du jour est retenue."><input type="date" max={new Date().toISOString().slice(0, 10)} value={f.operation_date} onChange={set('operation_date')} /></Field>
         </>
       )}
+      {bagError && <ErrorBox message={bagError} />}
       {act.error && <ErrorBox message={act.error} />}
       <div className="modal-actions">
         <button className="btn btn-secondary" onClick={onClose}>Annuler</button>

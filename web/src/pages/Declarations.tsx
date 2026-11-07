@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { download, get, post } from '../api';
 import { useAuth } from '../auth';
-import { DECLARATION_STATUS, NEXT_DECLARATION, date, money } from '../format';
+import { DECLARATION_STATUS, NEXT_DECLARATION, bagWeightError, date, money } from '../format';
 import { PeekLink } from '../peek';
 import ProducerCard from './ProducerCard';
 import NewPurchase from './NewPurchase';
@@ -20,6 +20,7 @@ export default function Declarations() {
   const rows = (data ?? []).filter((d) => !status || d.status === status);
   const [creating, setCreating] = useState(false);
   const [docsFor, setDocsFor] = useState<any | null>(null);
+  const [fixing, setFixing] = useState<any | null>(null);
   useEffect(() => onFlushed(reload), [reload]);
   const needsReason = (to: string) => ['to_correct', 'rejected'].includes(to);
 
@@ -49,6 +50,7 @@ export default function Declarations() {
             { header: 'Montant', align: 'right', render: (d) => money(d.amount, d.currency ?? 'XOF') },
             { header: 'Statut', render: (d) => <StatusBadge map={DECLARATION_STATUS} value={d.status} /> },
             { header: 'Pièces', render: (d) => can('documents:read') && <button className="link" onClick={() => setDocsFor(d)}>Pièces</button> },
+            { header: '', render: (d) => can('declarations:correct') && CORRECTABLE.has(d.status) && <button className="btn btn-small btn-secondary" onClick={() => setFixing(d)}>Corriger</button> },
             { header: '', render: (d) => can('declarations:validate') && (NEXT_DECLARATION[d.status] ?? []).length > 0 && (
               <div className="row-actions">
                 {NEXT_DECLARATION[d.status].map(([to, label]) => (
@@ -64,9 +66,40 @@ export default function Declarations() {
           <DocumentsPanel subjectType="declaration" subjectId={docsFor.id} kinds={['Photo du reçu', 'Copie du reçu', 'Autre']} locked={!can('documents:upload')} />
         </Modal>
       )}
+      {fixing && <CorrectPurchase d={fixing} onClose={() => setFixing(null)} onDone={() => { setFixing(null); reload(); }} />}
       {pending && <Confirm title={pending.label} reason={needsReason(pending.to)} onClose={() => setPending(null)}
         onSubmit={async (reason) => { await post(`/purchase-declarations/${pending.id}/transition`, { to: pending.to, ...(reason && { reason }) }); setPending(null); reload(); }} />}
     </>
+  );
+}
+
+/** États où un achat mal saisi peut encore être corrigé (avant validation, refus, annulation ou réception au magasin). */
+const CORRECTABLE = new Set(['draft', 'received', 'in_review', 'to_correct']);
+
+/** Le délégué s'est trompé et a prévenu par téléphone : le responsable de traçabilité corrige, avec un motif conservé au journal. */
+function CorrectPurchase({ d, onClose, onDone }: { d: any; onClose: () => void; onDone: () => void }) {
+  const [f, setF] = useState({ quantity: String(Number(d.quantity)), bags: d.bags == null ? '' : String(d.bags), operation_date: String(d.operation_date).slice(0, 10), reason: '' });
+  const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setF({ ...f, [k]: e.target.value });
+  const { busy, error, run } = useAction();
+  const bagError = bagWeightError(f.quantity, d.unit, f.bags);
+  const valid = !bagError && /^\d+(\.\d{1,3})?$/.test(f.quantity) && Number(f.quantity) > 0 && (f.bags === '' || /^\d+$/.test(f.bags)) && f.reason.trim().length >= 3;
+  return (
+    <Modal title={`Corriger l'achat — ${d.producer_name}`} onClose={onClose}>
+      <p className="notice">Un sac pèse entre 50 et 75 kg. La correction est journalisée avec son motif (anciennes et nouvelles valeurs conservées).</p>
+      <Field label={`Quantité (${d.unit})`}><input inputMode="decimal" value={f.quantity} onChange={set('quantity')} /></Field>
+      <Field label="Nombre de sacs"><input inputMode="numeric" value={f.bags} onChange={set('bags')} /></Field>
+      <Field label="Date de l'achat"><input type="date" max={new Date().toISOString().slice(0, 10)} value={f.operation_date} onChange={set('operation_date')} /></Field>
+      <Field label="Motif de la correction"><textarea rows={3} value={f.reason} onChange={set('reason')} placeholder="Ex. : le délégué a signalé un zéro oublié" /></Field>
+      {bagError && <ErrorBox message={bagError} />}
+      {error && <ErrorBox message={error} />}
+      <div className="modal-foot">
+        <button className="btn btn-secondary" onClick={onClose}>Annuler</button>
+        <button className="btn" disabled={busy || !valid} onClick={() => run(async () => {
+          await post(`/purchase-declarations/${d.id}/correct`, { quantity: f.quantity, ...(f.bags !== '' && { bags: Number(f.bags) }), operation_date: f.operation_date, reason: f.reason.trim() });
+          onDone();
+        })}>{busy ? 'En cours…' : 'Enregistrer la correction'}</button>
+      </div>
+    </Modal>
   );
 }
 

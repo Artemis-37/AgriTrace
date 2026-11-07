@@ -45,8 +45,8 @@ export const STANDARD_ROLES: Record<string, { name: string; description: string;
   },
   responsable_tracabilite: {
     name: 'Responsable de traçabilité',
-    description: 'Valide les déclarations d\'achat, suit les lots et les certificats, contrôle la chaîne de traçabilité.',
-    permissions: ['declarations:read', 'declarations:validate', 'producers:read', 'parcels:read', 'lots:read', 'lots:manage', 'receipts:search', 'certificates:read', 'documents:read', 'reports:read', 'alerts:read', 'dispatch:manage', 'deliveries:read', 'audits:read', 'audits:share', 'audits:respond', 'messages:use', 'sync:use'],
+    description: 'Valide et corrige les déclarations d\'achat, suit les lots et les certificats, contrôle la chaîne de traçabilité.',
+    permissions: ['declarations:read', 'declarations:validate', 'declarations:correct', 'producers:read', 'parcels:read', 'lots:read', 'lots:manage', 'receipts:search', 'certificates:read', 'documents:read', 'reports:read', 'alerts:read', 'dispatch:manage', 'deliveries:read', 'audits:read', 'audits:share', 'audits:respond', 'messages:use', 'sync:use'],
     hidden: ['Caisse et comptabilité', 'Finances'],
   },
   responsable_cartographie: {

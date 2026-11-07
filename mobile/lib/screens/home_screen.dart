@@ -79,6 +79,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Future<void> _reload() async {
     final items = await services.repo.declarations();
+    await services.repo.holdImplausiblePurchases();      // poids par sac hors de 50 à 75 kg : retenu jusqu'à vérification
     final pending = await services.db.pendingCount();
     final problems = await services.db.problemCount();
     final perms = await services.repo.permissions();
@@ -248,21 +249,31 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
+  /// Touche sur un achat non envoyé : il se rouvre pour être vérifié avant la synchronisation.
+  Future<void> _reopen(String? id) async {
+    if (!await services.repo.isEditableDeclaration(id)) return;
+    await _open(NewDeclarationScreen(editId: id), sync: true);
+  }
+
   Widget _pendingRow(({String label, String detail, String state, String? error, String? entity}) it) {
-    final bad = const {'to_correct', 'rejected', 'conflict'}.contains(it.state);
-    return Container(
+    final bad = const {'to_correct', 'rejected', 'conflict', 'to_verify'}.contains(it.state);
+    final verify = it.state == 'to_verify';
+    return InkWell(onTap: () => _reopen(it.entity), child: Container(
       margin: const EdgeInsets.only(bottom: 8), padding: const EdgeInsets.fromLTRB(14, 10, 4, 10),
       decoration: BoxDecoration(color: Colors.white, border: Border.all(color: const Color(0xFFDDDDDD))),
       child: Row(children: [
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(it.label, style: const TextStyle(fontSize: 17)),
           if (it.detail.isNotEmpty) Text(it.detail.toUpperCase(), style: const TextStyle(color: Colors.black54, fontSize: 15)),
-          if (bad) Text(it.error == null || it.error!.isEmpty ? 'À corriger' : 'À corriger : ${it.error}', style: TextStyle(color: Colors.red.shade700, fontSize: 13)),
+          if (verify) Text('À vérifier avant l\'envoi : ${it.error ?? ''} Touchez pour rouvrir l\'achat.', style: TextStyle(color: Colors.orange.shade900, fontSize: 13))
+          else if (bad) Text(it.error == null || it.error!.isEmpty ? 'À corriger' : 'À corriger : ${it.error}', style: TextStyle(color: Colors.red.shade700, fontSize: 13)),
         ])),
         Container(width: 1, height: 54, color: const Color(0xFFDDDDDD)),
-        IconButton(onPressed: () => syncWithDialog(context, only: it.entity), tooltip: 'Envoyer cet élément', iconSize: 34, icon: Icon(bad ? Icons.error_outline : Icons.cloud_upload_outlined, color: bad ? Colors.red : Colors.black87)),
+        verify
+            ? IconButton(onPressed: () => _reopen(it.entity), tooltip: 'Vérifier cet achat', iconSize: 34, icon: Icon(Icons.edit_note, color: Colors.orange.shade900))
+            : IconButton(onPressed: () => syncWithDialog(context, only: it.entity), tooltip: 'Envoyer cet élément', iconSize: 34, icon: Icon(bad ? Icons.error_outline : Icons.cloud_upload_outlined, color: bad ? Colors.red : Colors.black87)),
       ]),
-    );
+    ));
   }
 
   Widget _purchaseTile(Map<String, Object?> d) {
@@ -277,7 +288,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       if (d['purchase_receipt_no'] != null) 'Reçu ${d['purchase_receipt_no']}${d['receipt_conflict'] == 1 ? ' (numéro déjà utilisé — à résoudre)' : ''}',
       if (amount != null) 'Montant ${double.parse(amount).toStringAsFixed(0)} ${d['currency'] ?? ''}',
     ].join('  •  ');
-    return Container(
+    return InkWell(onTap: ls == 'pending' || ls == 'local_only' ? () => _reopen(d['id'] as String) : null, child: Container(
       margin: const EdgeInsets.only(bottom: 8), padding: const EdgeInsets.fromLTRB(14, 10, 4, 10),
       decoration: BoxDecoration(color: Colors.white, border: Border.all(color: const Color(0xFFDDDDDD))),
       child: Row(children: [
@@ -294,7 +305,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             : IconButton(onPressed: synced ? null : () => syncWithDialog(context, only: d['id'] as String), tooltip: synced ? 'Envoyé' : 'Envoyer cet achat', iconSize: 34,
                 icon: Icon(synced ? Icons.cloud_done : Icons.cloud_upload_outlined, color: synced ? _color(ls, st) : Colors.black87)),
       ]),
-    );
+    ));
   }
 }
 

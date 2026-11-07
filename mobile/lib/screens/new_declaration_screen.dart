@@ -4,10 +4,13 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../data/bag_rules.dart';
 import '../main.dart';
 
 class NewDeclarationScreen extends StatefulWidget {
-  const NewDeclarationScreen({super.key});
+  /// Identifiant d'un achat encore sur l'appareil : l'écran s'ouvre alors pour le vérifier et le corriger avant l'envoi.
+  final String? editId;
+  const NewDeclarationScreen({super.key, this.editId});
   @override
   State<NewDeclarationScreen> createState() => _NewDeclarationScreenState();
 }
@@ -36,10 +39,37 @@ class _NewDeclarationScreenState extends State<NewDeclarationScreen> {
 
   String get _dateStr => _date.toIso8601String().substring(0, 10);
 
+  bool get _editing => widget.editId != null;
+
   @override
   void initState() {
     super.initState();
     _findProducers('');
+    if (_editing) _loadForEdit();
+  }
+
+  /// Rouvre un achat non envoyé : tous les champs sont repris tels que saisis, le délégué vérifie puis valide.
+  Future<void> _loadForEdit() async {
+    final d = await services.repo.localDeclaration(widget.editId!);
+    if (d == null || !mounted) return;
+    final prods = await services.repo.searchProducers('');
+    final p = prods.where((x) => x['id'] == d['producer_id']).toList();
+    if (p.isEmpty) return setState(() => _error = "Producteur introuvable sur ce téléphone : synchronisez puis rouvrez l'achat.");
+    final chains = await services.repo.chainsFor(d['producer_id'] as String);
+    final chain = chains.where((c) => c['id'] == d['value_chain_id']).toList();
+    final camps = chain.isEmpty ? <Map<String, Object?>>[] : await services.repo.openCampaigns(d['value_chain_id'] as String);
+    final camp = camps.where((c) => c['id'] == d['campaign_id']).toList();
+    final units = chain.isEmpty ? ['kg'] : await services.repo.unitsFor(d['value_chain_id'] as String);
+    if (!mounted) return;
+    setState(() {
+      _producer = p.first; _infoOk = true; _chains = chains; _chain = chain.isEmpty ? null : chain.first; _campaigns = camps;
+      _campaign = camp.isEmpty ? null : camp.first; _units = units; _unit = '${d['unit'] ?? 'kg'}';
+      _quantity.text = '${d['quantity'] ?? ''}'; _bags.text = '${d['bags'] ?? ''}'; _notes.text = '${d['notes'] ?? ''}';
+      _receiptNo.text = '${d['purchase_receipt_no'] ?? ''}'; _date = DateTime.tryParse('${d['operation_date']}') ?? DateTime.now();
+      final msg = bagCheck(quantity: _quantity.text, bags: int.tryParse(_bags.text), unit: _unit);
+      if (msg != null) _error = msg;     // l'achat retenu s'ouvre avec l'avertissement : le délégué corrige puis valide
+    });
+    await _updateEstimate();
   }
 
   Future<void> _findProducers(String q) async {
@@ -88,20 +118,52 @@ class _NewDeclarationScreenState extends State<NewDeclarationScreen> {
     final bags = int.tryParse(_bags.text.trim());
     if (bags == null || bags <= 0) return setState(() => _error = 'Saisissez le nombre de sacs.');
     if (_receiptNo.text.trim().isEmpty) return setState(() => _error = 'Saisissez le numéro du reçu.');
+    // Règle des sacs : 50 à 75 kg chacun. Refusé tant que le poids et le nombre de sacs ne concordent pas.
+    final bad = bagCheck(quantity: q, bags: bags, unit: _unit);
+    if (bad != null) return setState(() => _error = bad);
+    if (_editing && !await _confirmReview(q, bags)) return;
     setState(() { _saving = true; _error = null; });
-    final declId = await services.repo.createDeclaration(
-        producerId: _producer!['id'] as String, chainId: _chain!['id'] as String, campaignId: _campaign!['id'] as String,
-        date: _dateStr, quantity: q, unit: _unit, bags: bags, notes: _notes.text.trim(), receiptNo: _receiptNo.text.trim());
-    if (_photoPath != null) await services.repo.queueReceiptPhoto(declarationId: declId, sourcePath: _photoPath!);
+    try {
+      final String declId;
+      if (_editing) {
+        declId = widget.editId!;
+        await services.repo.updateDeclaration(declId,
+            producerId: _producer!['id'] as String, chainId: _chain!['id'] as String, campaignId: _campaign!['id'] as String,
+            date: _dateStr, quantity: q, unit: _unit, bags: bags, notes: _notes.text.trim(), receiptNo: _receiptNo.text.trim());
+      } else {
+        declId = await services.repo.createDeclaration(
+            producerId: _producer!['id'] as String, chainId: _chain!['id'] as String, campaignId: _campaign!['id'] as String,
+            date: _dateStr, quantity: q, unit: _unit, bags: bags, notes: _notes.text.trim(), receiptNo: _receiptNo.text.trim());
+      }
+      if (_photoPath != null) await services.repo.queueReceiptPhoto(declarationId: declId, sourcePath: _photoPath!);
+    } on ArgumentError catch (e) {
+      if (mounted) setState(() { _saving = false; _error = '${e.message}'; });
+      return;
+    } on StateError catch (e) {
+      if (mounted) setState(() { _saving = false; _error = e.message; });
+      return;
+    }
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Enregistrée sur l\'appareil. Elle sera envoyée dès que possible.')));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_editing
+        ? 'Achat vérifié et corrigé. Il sera envoyé à la prochaine synchronisation.'
+        : 'Enregistrée sur l\'appareil. Elle sera envoyée dès que possible.')));
     Navigator.of(context).pop();
+  }
+
+  /// Dernier coup d'œil avant d'envoyer : le délégué relit producteur, poids, sacs et reçu.
+  Future<bool> _confirmReview(String q, int bags) async {
+    final ok = await showDialog<bool>(context: context, builder: (c) => AlertDialog(
+      title: const Text("Vérifiez l'achat avant l'envoi"),
+      content: Text('${_producer!['last_name']} ${_producer!['first_names']}\n$q kg en $bags sac(s) (${(double.parse(q) / bags).toStringAsFixed(1)} kg par sac)\nReçu ${_receiptNo.text.trim()}\n\nTout est exact ?'),
+      actions: [TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Revoir')), FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('Oui, valider'))],
+    ));
+    return ok == true;
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Acheter du produit')),
+      appBar: AppBar(title: Text(_editing ? "Vérifier l'achat" : 'Acheter du produit')),
       body: ListView(padding: const EdgeInsets.all(16), children: [
         if (_producer == null) ...[
           TextField(controller: _search, decoration: const InputDecoration(labelText: 'Rechercher un producteur (code ou nom)', prefixIcon: Icon(Icons.search), border: OutlineInputBorder()), onChanged: _findProducers),
@@ -137,7 +199,7 @@ class _NewDeclarationScreenState extends State<NewDeclarationScreen> {
                   items: [for (final u in _units) DropdownMenuItem(value: u, child: Text(u))], onChanged: (u) { setState(() => _unit = u!); _updateEstimate(); })),
             ]),
             const SizedBox(height: 12),
-            TextField(controller: _bags, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly], decoration: const InputDecoration(labelText: 'Nombre de sacs', border: OutlineInputBorder())),
+            TextField(controller: _bags, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly], decoration: const InputDecoration(labelText: 'Nombre de sacs', helperText: 'Un sac pèse entre $minKgPerBag et $maxKgPerBag kg.', border: OutlineInputBorder())),
             const SizedBox(height: 12),
             ListTile(contentPadding: EdgeInsets.zero, title: Text('Date de l\'opération : $_dateStr'), trailing: const Icon(Icons.calendar_today),
                 onTap: () async {
@@ -161,7 +223,7 @@ class _NewDeclarationScreenState extends State<NewDeclarationScreen> {
             const SizedBox(height: 8),
             const Text('Cette déclaration restera « locale » tant que le serveur ne l\'a pas confirmée. Elle ne vaut ni réception, ni paiement.', style: TextStyle(fontSize: 12)),
             const SizedBox(height: 16),
-            FilledButton.icon(icon: const Icon(Icons.save), onPressed: _saving ? null : _save, label: const Text('Enregistrer sur l\'appareil')),
+            FilledButton.icon(icon: const Icon(Icons.save), onPressed: _saving ? null : _save, label: Text(_editing ? 'Valider la correction' : 'Enregistrer sur l\'appareil')),
           ],
         ],
         if (_error != null) Padding(padding: const EdgeInsets.only(top: 12), child: Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error))),

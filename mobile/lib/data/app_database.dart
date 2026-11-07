@@ -109,7 +109,7 @@ class AppDatabase {
   }
 
   Future<int> problemCount() async {
-    final r = await raw.rawQuery("SELECT count(*) c FROM outbox WHERE status IN ('to_correct','rejected','conflict')");
+    final r = await raw.rawQuery("SELECT count(*) c FROM outbox WHERE status IN ('to_correct','rejected','conflict','to_verify')");
     final ph = await raw.rawQuery("SELECT count(*) c FROM pending_uploads WHERE status = 'error'");
     return ((r.first['c'] as int?) ?? 0) + ((ph.first['c'] as int?) ?? 0);
   }

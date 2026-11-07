@@ -56,3 +56,17 @@ export const PRODUCER_STATUS: Record<string, [string, Tone]> = {
   left: ['Sorti', 'neutral'], archived: ['Archivé', 'neutral'],
 };
 export const SEVERITY: Record<string, Tone> = { info: 'info', warning: 'warn', critical: 'bad' };
+
+/** Règle de fonctionnement : un sac pèse entre 50 et 75 kg (identique sur Windows, le mobile et le serveur). */
+export const MIN_KG_PER_BAG = 50;
+export const MAX_KG_PER_BAG = 75;
+export function bagWeightError(quantity: string | number, unit: string, bags: string | number | null | undefined): string | null {
+  const nb = Number(bags);
+  if (String(unit).toLowerCase() !== 'kg' || !nb || nb <= 0) return null;
+  const q = Number(quantity);
+  if (!Number.isFinite(q) || q <= 0) return null;
+  const lo = nb * MIN_KG_PER_BAG, hi = nb * MAX_KG_PER_BAG;
+  if (q >= lo && q <= hi) return null;
+  const n = (v: number) => (Number.isInteger(v) ? String(v) : v.toFixed(1));
+  return `${nb} sac(s) pour ${n(q)} kg font ${n(q / nb)} kg par sac. Un sac pèse entre ${MIN_KG_PER_BAG} et ${MAX_KG_PER_BAG} kg : le poids total doit être compris entre ${lo} et ${hi} kg. Vérifiez le poids et le nombre de sacs.`;
+}

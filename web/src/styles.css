@@ -706,3 +706,113 @@ tbody tr:hover { background: color-mix(in srgb, var(--c-lime) 35%, transparent);
 .mail-svg { color: var(--carbon, #2f3a33); display: block; }
 .modal-wide { width: min(980px, 100%); }
 .modal-wide .modal-actions { position: sticky; bottom: -1.4rem; background: var(--surface); padding: .75rem 0 .25rem; }
+
+/* ============================================================================
+   Thème « Windows » : mêmes couleurs, mêmes contrastes et mêmes formes que le logiciel de bureau AgriTrace
+   (bleu acier pour les boutons et les en-têtes de tableaux, vert olive pour ce qui est validé, vert-jaune pour la sélection,
+   champs crème, coins presque droits). Ajouté à la fin : il remplace les couleurs sans changer la structure des écrans.
+   ============================================================================ */
+:root {
+  --forest: #46557A; --forest-deep: #3B4863; --nature: #8FA3C2; --lime: #B5CF3A; --sun: #7A9A5E; --carbon: #2B3440;
+  --bg: #E8EDF3; --surface: #F7F9FC; --line: #C9CFD8; --muted: #646C75;
+  --coop: #A5564E; --due: #2F4A72;
+  --ok-bg: #EEF1E1; --ok: #4E6B38; --warn-bg: #FBF3E2; --warn: #9A5B00; --bad-bg: #F6E6E3; --bad: #A5564E;
+  --info-bg: #E8F1FB; --info: #2F4A72; --neutral-bg: #E3E5E8; --neutral: #4D5560;
+  --on-forest: #F1F4F9; --on-lime: #1C2410;
+  --radius: 3px; --radius-lg: 4px; --radius-md: 3px; --radius-sm: 2px;
+  --shadow: 0 1px 2px rgba(47, 74, 114, .08); --shadow-1: 0 1px 2px rgba(47, 74, 114, .08); --shadow-2: 0 4px 12px rgba(47, 74, 114, .14);
+  --tint: #EEF1F6; --brand: #4F6F9C; --green: #4F6F9C; --card: #FAFBFC; --c-navy: #2F4A72;
+  --band: linear-gradient(180deg, #3B4863 0%, #4A5877 100%);
+  --map-bg: #E8EDF3;
+  --btn: #55739F; --btn-border: #44618C; --btn-hover: #647FA9;
+  --btn2: #7890B3; --btn2-border: #62799C; --btn2-hover: #869CBC;
+  --olive: #7A9A5E; --olive-border: #62804A; --danger: #B06A62; --danger-border: #94524B;
+  --input-bg: #FAF7EC; --input-border: #A3ADBC; --head-from: #6A86AE; --head-to: #5A77A1; --zebra: #EBF0F6; --row-hover: #D6E2F0;
+  font-family: 'Segoe UI', 'Noto Sans', system-ui, -apple-system, sans-serif;
+}
+:root[data-theme="night"] {
+  --forest: #34436A; --forest-deep: #28334F; --nature: #6F86AD; --lime: #9DB83A; --sun: #8FB070; --carbon: #DCE3EF;
+  --bg: #1B2230; --surface: #242D3F; --line: #36415A; --muted: #9AA6BC;
+  --coop: #E59A92; --due: #9DB9E5;
+  --ok-bg: #26331F; --ok: #B4D08F; --warn-bg: #3A3020; --warn: #E3C078; --bad-bg: #402B2A; --bad: #EBA9A0;
+  --info-bg: #22304A; --info: #A9C4EC; --neutral-bg: #2C3548; --neutral: #BFC9DB;
+  --on-forest: #E6EBF5; --on-lime: #1C2410;
+  --shadow: 0 1px 2px rgba(0,0,0,.4); --tint: #2A3449; --card: #242D3F; --c-navy: #A9C4EC; --map-bg: #1B2230;
+  --band: linear-gradient(180deg, #28334F 0%, #34436A 100%);
+  --btn: #4B6A98; --btn-border: #3B5782; --btn-hover: #5A7AA8; --btn2: #5F7699; --btn2-border: #4D6384; --btn2-hover: #6E86AA;
+  --input-bg: #1F2736; --input-border: #4A566F; --head-from: #4B6A98; --head-to: #3F5C87; --zebra: #2A3449; --row-hover: #33415E;
+}
+body { background: linear-gradient(180deg, #F2F4F7 0%, #E1E7EF 100%) fixed; font-size: 14px; }
+:root[data-theme="night"] body { background: var(--bg); }
+.titlebar::before { display: none; }
+.titlebar { background: var(--band); border-bottom: 1px solid #38466A; box-shadow: none; }
+.shell.desk .page-header { background: var(--band); border-radius: 3px 3px 0 0; }
+
+/* Boutons : bleu acier, légèrement arrondis, texte en gras */
+.btn { background: var(--btn); border: 1px solid var(--btn-border); color: #F7F9FC; border-radius: 2px; font-weight: 600; min-height: 34px; }
+.btn:hover:not(:disabled) { background: var(--btn-hover); }
+.btn:disabled { background: #D3D9E3; border-color: #98A3BA; color: #EEF1F6; opacity: 1; }
+.btn-secondary { background: var(--btn2); border-color: var(--btn2-border); color: #F7F9FC; }
+.btn-secondary:hover:not(:disabled) { background: var(--btn2-hover); }
+.btn-danger { background: var(--danger); border-color: var(--danger-border); color: #F7F9FC; }
+.btn-danger:hover:not(:disabled) { background: #BC7A72; }
+.btn-ghost { background: transparent; color: inherit; border-color: transparent; }
+.titlebar .btn-ghost, .sidebar .btn-ghost { color: var(--on-forest); border-color: rgba(255,255,255,.4); background: transparent; }
+.shell.desk .page-header .btn-secondary { background: var(--lime); color: var(--on-lime); border-color: #9DB83A; }
+.toolbar .btn-secondary { color: #F7F9FC; border-color: var(--btn2-border); }
+.btn-small { min-height: 28px; }
+button.link { color: var(--brand); }
+
+/* Tableaux : en-tête bleu acier, lignes alternées, sélection vert-jaune */
+table { background: #F5F7FA; border: 1px solid #A9B3C2; }
+th { background: linear-gradient(180deg, var(--head-from), var(--head-to)); color: #F7F9FC; text-transform: none; letter-spacing: 0; font-size: .85rem; border-bottom: 1px solid #DCE3EC; border-right: 1px solid #DCE3EC; padding: .4rem .6rem; }
+td { border-bottom: 1px solid #DFE5EC; padding: .45rem .6rem; }
+tbody tr:nth-child(even) { background: var(--zebra); }
+tbody tr:hover { background: var(--row-hover); }
+tbody tr[aria-selected='true'], tbody tr.selected { background: var(--lime); color: var(--on-lime); font-weight: 700; }
+:root[data-theme="night"] table { background: var(--surface); border-color: #4A566F; }
+
+/* Champs de saisie : crème, bordure grise bleutée */
+.field input, .field select, .field textarea, .toolbar input, .toolbar select, .search-full {
+  background: var(--input-bg); border: 1px solid var(--input-border); border-radius: 2px; color: var(--carbon); }
+.field input:focus, .field select:focus, .field textarea:focus { border-color: var(--btn-border); outline: 2px solid rgba(79, 111, 156, .3); }
+
+/* Menus et barre d'état : comme la barre de menus du logiciel de bureau */
+.menubar { background: linear-gradient(180deg, #F6F7F9, #E6EAF0); color: #2B3440; border-bottom: 1px solid #C9CFD8; box-shadow: none; }
+:root[data-theme="night"] .menubar { background: linear-gradient(180deg, #2E3850, #263048); color: var(--carbon); border-bottom-color: #36415A; }
+.menu-top { color: inherit; font-weight: 500; border-radius: 0; }
+.menu-top:hover, .menu.on > .menu-top, .menu-top.active { background: linear-gradient(180deg, #D3E0F0, #BFD1E8); color: #1F2B3D; box-shadow: inset 0 0 0 1px #A9BEDB; }
+.menu-top::after { background: #5A77A1; }
+.menu-drop { background: #F5F4F7; border: 1px solid #8F98A6; border-radius: 0; box-shadow: 0 4px 10px rgba(47, 74, 114, .2); }
+:root[data-theme="night"] .menu-drop { background: var(--surface); border-color: #4A566F; }
+.menu-drop a { color: #1A2433; }
+:root[data-theme="night"] .menu-drop a { color: var(--carbon); }
+.menu-drop a:hover, .menu-drop a:focus-visible, .menu-drop a.active { background: linear-gradient(180deg, #D3E0F0, #BFD1E8); color: #1F2B3D; }
+.statusbar { background: #E6E9EF; color: #2B3440; border-top: 1px solid #C9CFD8; }
+:root[data-theme="night"] .statusbar { background: #202839; color: var(--carbon); border-top-color: #36415A; }
+.nav a.active { background: var(--lime); color: var(--on-lime); }
+
+/* Cartes, onglets, fenêtres, tuiles d'accueil */
+.card, .stat, .accordion, .bloc, .home-tile, .modal { border-radius: 3px; }
+.card { background: var(--surface); border: 1px solid #C4C9CF; box-shadow: none; }
+.stat { border-left: 4px solid var(--btn); }
+.stat-warn { border-left-color: #9A5B00; } .stat-bad { border-left-color: var(--danger); } .stat-info { border-left-color: #2F4A72; } .stat-neutral { border-left-color: #9EA6B2; }
+.tabs { border-bottom: 2px solid #C9CFD8; }
+.tabs button[aria-selected='true'] { color: #2F4A72; border-bottom-color: #5A77A1; }
+:root[data-theme="night"] .tabs button[aria-selected='true'] { color: #A9C4EC; }
+.modal { border: 1px solid #8F98A6; box-shadow: 0 8px 24px rgba(47, 74, 114, .3); }
+.modal-head h2 { color: #2F4A72; }
+:root[data-theme="night"] .modal-head h2 { color: #A9C4EC; }
+.home-tile { background: #FAFBFC; border: 1px solid #C4C9CF; }
+:root[data-theme="night"] .home-tile { background: var(--surface); border-color: var(--line); }
+.home-tile:hover, .home-tile:focus-visible { border-color: #5A77A1; box-shadow: 0 2px 8px rgba(47, 74, 114, .18); }
+.seg label.on { background: var(--btn); }
+.badge { border-radius: 3px; }
+.error-box { border-color: #E4B8B2; border-radius: 3px; }
+.notice { background: #FBF3E2; color: #5D3A00; border-color: #E8D3A4; border-radius: 3px; }
+:root[data-theme="night"] .notice { background: var(--warn-bg); color: var(--warn); border-color: #5A4A2A; }
+.login-art { background: linear-gradient(160deg, #3B4863, #2F3A55); }
+::selection { background: var(--lime); color: var(--on-lime); }
+:focus-visible { outline: 2px solid #5A77A1; outline-offset: 2px; }
+.chip { background: #D6E2F0; color: #1F2B3D; border-radius: 3px; }
+:root { --contours: none; }

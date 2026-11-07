@@ -107,6 +107,7 @@ class SyncEngine {
     var current = 0;
     try {
       _only = only;
+      await Repository(db).holdImplausiblePurchases();      // un achat hors de 50 à 75 kg par sac ne part jamais sans vérification
       final sending = submit || only != null;
       if (!sending) {
         // Synchroniser : refusé tant qu'il reste des éléments à soumettre, l'utilisateur doit les envoyer lui-même.

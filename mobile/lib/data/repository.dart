@@ -1,6 +1,8 @@
 import 'format.dart';
 import 'dart:convert';
 
+import 'bag_rules.dart';
+
 import 'dart:io';
 
 import 'package:decimal/decimal.dart';
@@ -105,6 +107,8 @@ class Repository {
     required String producerId, required String chainId, required String campaignId, required String date,
     required String quantity, required String unit, int? bags, String? notes, String? receiptNo,
   }) async {
+    final bad = bagCheck(quantity: quantity, bags: bags, unit: unit);
+    if (bad != null) throw ArgumentError(bad);        // refusé dès la saisie : rien n'est enregistré
     final id = _uuid.v4();
     final createKey = 'decl-${_uuid.v4()}';
     final submitKey = 'submit-${_uuid.v4()}';
@@ -123,6 +127,68 @@ class Repository {
       await txn.insert('outbox', {'idempotency_key': submitKey, 'op_type': 'purchase_declaration.submit', 'payload': jsonEncode({'id': id}), 'entity_id': id, 'created_at': now});
     });
     return id;
+  }
+
+  /// Achat encore sur l'appareil, pas encore confirmé par le serveur : le délégué peut le rouvrir, le vérifier et le corriger.
+  Future<bool> isEditableDeclaration(String? id) async {
+    if (id == null) return false;
+    final d = await db.raw.query('declarations', where: "id = ? AND local_state IN ('pending','local_only')", whereArgs: [id]);
+    if (d.isEmpty) return false;
+    final o = await db.raw.query('outbox', where: "entity_id = ? AND op_type = 'purchase_declaration.create' AND status IN ('pending','to_verify')", whereArgs: [id]);
+    return o.isNotEmpty;
+  }
+
+  Future<Map<String, Object?>?> localDeclaration(String id) async {
+    final r = await db.raw.query('declarations', where: 'id = ?', whereArgs: [id]);
+    return r.isEmpty ? null : r.first;
+  }
+
+  /// Corrige un achat non encore envoyé. La règle des 50 à 75 kg par sac s'applique comme à la saisie ; une fois l'achat
+  /// vérifié, il repart dans la file d'envoi (il n'y part jamais tant qu'il est « à vérifier »).
+  Future<void> updateDeclaration(String id, {
+    required String producerId, required String chainId, required String campaignId, required String date,
+    required String quantity, required String unit, int? bags, String? notes, String? receiptNo,
+  }) async {
+    final bad = bagCheck(quantity: quantity, bags: bags, unit: unit);
+    if (bad != null) throw ArgumentError(bad);
+    if (!await isEditableDeclaration(id)) throw StateError("Cet achat a déjà été envoyé : il ne peut plus être modifié ici.");
+    final now = DateTime.now().toIso8601String();
+    final receipt = (receiptNo == null || receiptNo.isEmpty) ? null : receiptNo.trim().toUpperCase();
+    await db.raw.transaction((txn) async {
+      await txn.update('declarations', {
+        'producer_id': producerId, 'value_chain_id': chainId, 'campaign_id': campaignId, 'operation_date': date, 'bags': bags,
+        'quantity': quantity, 'unit': unit, 'notes': notes, 'purchase_receipt_no': receipt, 'local_state': 'pending', 'local_error': null,
+      }, where: 'id = ?', whereArgs: [id]);
+      final create = await txn.query('outbox', where: "entity_id = ? AND op_type = 'purchase_declaration.create'", whereArgs: [id]);
+      final old = jsonDecode(create.first['payload'] as String) as Map<String, dynamic>;
+      final payload = {
+        'id': id, 'idempotency_key': old['idempotency_key'], 'producer_id': producerId, 'value_chain_id': chainId, 'campaign_id': campaignId,
+        'operation_date': date, if (bags != null) 'bags': bags, 'quantity': quantity, 'unit': unit, if (notes != null && notes.isNotEmpty) 'notes': notes,
+        if (receipt != null) 'purchase_receipt_no': receipt,
+      };
+      await txn.update('outbox', {'payload': jsonEncode(payload), 'status': 'pending', 'error': null, 'updated_at': now},
+          where: "entity_id = ? AND op_type = 'purchase_declaration.create'", whereArgs: [id]);
+      await txn.update('outbox', {'status': 'pending', 'error': null, 'updated_at': now},
+          where: "entity_id = ? AND op_type = 'purchase_declaration.submit' AND status = 'to_verify'", whereArgs: [id]);
+    });
+  }
+
+  /// Achats en attente dont le poids par sac sort de l'intervalle (saisis avant la règle, ou par une ancienne version) :
+  /// ils sont retenus (« à vérifier ») et ne partent pas tant que le délégué ne les a pas rouverts et validés.
+  Future<int> holdImplausiblePurchases() async {
+    var held = 0;
+    final ops = await db.raw.query('outbox', where: "op_type = 'purchase_declaration.create' AND status = 'pending'");
+    for (final o in ops) {
+      Map<String, dynamic> p;
+      try { p = jsonDecode(o['payload'] as String) as Map<String, dynamic>; } catch (_) { continue; }
+      final msg = bagCheck(quantity: '${p['quantity']}', bags: (p['bags'] as num?)?.toInt(), unit: '${p['unit'] ?? 'kg'}');
+      if (msg == null) continue;
+      held++;
+      await db.raw.transaction((txn) async {
+        await txn.update('outbox', {'status': 'to_verify', 'error': msg}, where: 'entity_id = ? AND op_type LIKE ? AND status = ?', whereArgs: [o['entity_id'], 'purchase_declaration.%', 'pending']);
+      });
+    }
+    return held;
   }
 
   /// Photo du reçu : copiée dans le stockage de l'application (le cache de l'appareil peut être vidé) et mise en attente d'envoi.
@@ -354,7 +420,7 @@ class Repository {
 
   /// Éléments conservés sur l'appareil et pas encore confirmés par le serveur (opérations puis photos), du plus récent au plus ancien.
   Future<List<({String label, String detail, String state, String? error, String? entity})>> pendingItems() async {
-    final ops = await db.raw.query('outbox', where: "status IN ('pending','pending_validation','to_correct','rejected','conflict')", orderBy: 'seq DESC', limit: 100);
+    final ops = await db.raw.query('outbox', where: "status IN ('pending','pending_validation','to_correct','rejected','conflict','to_verify')", orderBy: 'seq DESC', limit: 100);
     final out = <({String label, String detail, String state, String? error, String? entity})>[];
     final names = await producerNames(ops);
     for (final o in ops) {
