@@ -65,6 +65,8 @@ import { WorkstationsController } from './workstations/workstations.controller';
 import { MessagesController } from './messages/messages.controller';
 import { ReplicationController } from './replication/replication.controller';
 import { ReplicationService } from './replication/replication.service';
+import { WindowsReplicaController } from './replication/windows-replica.controller';
+import { WindowsReplicaService } from './replication/windows-replica.service';
 
 @Module({
   imports: [
@@ -77,9 +79,9 @@ import { ReplicationService } from './replication/replication.service';
     OrganizationsController, LogoController, PhotosController, UsersController, ReferentialsController, ProducersController,
     CollectorsController, DeclarationsController, FinanceController,
     ReceptionController, StockController, LotsController, SyncController,
-    AccountingController, LoansController, PaymentsController, QualityController, ComplianceController, ParcelsController, GeoController, ReferenceLayersController, TasksController, LogisticsController, SalesController, NotificationsController, AccessAdminController, ProducerStatusController, PrefinancingController, StockCountController, MeController, OpsController, AppUpdateController, MapPacksController, ReplicationController, MessagesController, ConvoysController, SavingsController, ProductsController, DuesController, OperationsController, BankStatementsController, ReportSchedulesController, PushTokenController, ProfileController, WorkstationsController, ReportsController, FieldRecordsController, TrainingController, TrainingExchangeController, TaskExchangeController, DispatchController, DeliveriesController, AuditsController, ProducerAssignmentsController, QuestionnairesController, CertificationLogosController,
+    AccountingController, LoansController, PaymentsController, QualityController, ComplianceController, ParcelsController, GeoController, ReferenceLayersController, TasksController, LogisticsController, SalesController, NotificationsController, AccessAdminController, ProducerStatusController, PrefinancingController, StockCountController, MeController, OpsController, AppUpdateController, MapPacksController, ReplicationController, WindowsReplicaController, MessagesController, ConvoysController, SavingsController, ProductsController, DuesController, OperationsController, BankStatementsController, ReportSchedulesController, PushTokenController, ProfileController, WorkstationsController, ReportsController, FieldRecordsController, TrainingController, TrainingExchangeController, TaskExchangeController, DispatchController, DeliveriesController, AuditsController, ProducerAssignmentsController, QuestionnairesController, CertificationLogosController,
   ],
-  providers: [NotificationsService, ReportScheduler, PushService, ReportsController, ReplicationService, 
+  providers: [NotificationsService, ReportScheduler, PushService, ReportsController, ReplicationService, WindowsReplicaService, 
     GeoService, GeoImportService,
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: AccessGuard },
