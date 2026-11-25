@@ -52,6 +52,8 @@ export class TaskDto {
   @IsOptional() @IsString() @Length(1, 4000) instructions?: string;
   @IsOptional() publish?: boolean;
 }
+/** Colonnes modifiables par « instructions officielles » : liste fermée, jamais construite depuis les noms reçus. */
+const TASK_UPDATABLE = ['title', 'description', 'priority', 'due_date', 'section', 'expected_result', 'validation_criteria', 'instructions'] as const;
 class UpdateTaskDto {
   @IsOptional() @IsString() @Length(3, 200) title?: string;
   @IsOptional() @IsString() @Length(1, 4000) description?: string;
@@ -294,7 +296,7 @@ export class TasksController {
       const t = await this.load(c, id, req, true);
       if (!['draft', 'open', 'in_progress', 'to_correct', 'pending_sync'].includes(t.status)) throw new ConflictException('Les instructions ne sont plus modifiables à ce stade');
       const { reason, ...fields } = b;
-      const keys = Object.keys(fields).filter((k) => (fields as any)[k] !== undefined);
+      const keys = TASK_UPDATABLE.filter((k) => (fields as any)[k] !== undefined);
       if (!keys.length) throw new BadRequestException('Aucune modification');
       const sets = keys.map((k, i) => `${k} = $${i + 2}`).join(', ');
       const r = (await c.query(`UPDATE tasks SET ${sets}, updated_at = now(), updated_by = $${keys.length + 2}, version = version + 1 WHERE id = $1 RETURNING *`,

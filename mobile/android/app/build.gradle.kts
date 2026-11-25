@@ -30,7 +30,7 @@ android {
     }
 
     // Signature de production : keystore fourni par l'environnement (ANDROID_KEYSTORE_FILE, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD).
-    // Sans keystore (poste de développement), la version « release » est signée avec la clé de débogage : NE PAS distribuer un tel APK.
+    // Sans keystore, la compilation « release » est REFUSÉE, sauf si ALLOW_DEBUG_SIGNING=true (APK d'essai signé avec la clé de débogage : NE PAS distribuer).
     val ksFile = System.getenv("ANDROID_KEYSTORE_FILE")
     if (ksFile != null && file(ksFile).exists()) {
         signingConfigs {
@@ -41,6 +41,13 @@ android {
                 keyPassword = System.getenv("ANDROID_KEY_PASSWORD")
             }
         }
+    }
+
+    gradle.taskGraph.whenReady {
+        val release = allTasks.any { it.name.contains("Release", ignoreCase = true) && (it.name.startsWith("assemble") || it.name.startsWith("bundle") || it.name.startsWith("package")) }
+        val signed = ksFile != null && file(ksFile).exists()
+        if (release && !signed && System.getenv("ALLOW_DEBUG_SIGNING") != "true")
+            throw GradleException("Compilation release refusée : aucune clé de signature (ANDROID_KEYSTORE_FILE). Pour un APK d'essai non distribuable : ALLOW_DEBUG_SIGNING=true.")
     }
 
     buildTypes {

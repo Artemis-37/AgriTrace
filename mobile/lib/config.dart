@@ -2,7 +2,8 @@
 ///   flutter run --dart-define=API_BASE=https://api.exemple.ci/v1
 /// (10.0.2.2 = machine hôte vue depuis l'émulateur Android)
 class Config {
-  static const apiBase = String.fromEnvironment('API_BASE', defaultValue: 'http://10.0.2.2:3000/v1');
+  /// En version de production, aucune adresse par défaut (le trafic non chiffré est interdit) : l'adresse vient de la compilation ou de l'écran « Serveur ».
+  static const apiBase = String.fromEnvironment('API_BASE', defaultValue: bool.fromEnvironment('dart.vm.product') ? '' : 'http://10.0.2.2:3000/v1');
   /// Adresse effectivement utilisée : celle choisie sur l'écran de connexion (« Serveur »), sinon celle de la compilation.
   static String apiBaseRuntime = apiBase;
   /// Adresse propre : sans « / » final et toujours terminée par « /v1 » (une adresse enregistrée sans « /v1 » donnait « Cannot POST //auth/login »).

@@ -1,7 +1,11 @@
 import { createCipheriv, createDecipheriv, hkdfSync, randomBytes } from 'crypto';
 
 // ---------- Chiffrement des petits secrets (secret TOTP) : clé dérivée de SECRETS_KEY, à défaut de JWT_SECRET ----------
-const secretKey = () => Buffer.from(hkdfSync('sha256', process.env.SECRETS_KEY || process.env.JWT_SECRET || 'dev', 'agritrace-secrets', 'v1', 32));
+const secretKey = () => {
+  const k = process.env.SECRETS_KEY || process.env.JWT_SECRET;
+  if (!k) throw new Error('SECRETS_KEY ou JWT_SECRET requis pour chiffrer les secrets');
+  return Buffer.from(hkdfSync('sha256', k, 'agritrace-secrets', 'v1', 32));
+};
 
 export function encryptSecret(plain: string): string {
   const iv = randomBytes(12); const c = createCipheriv('aes-256-gcm', secretKey(), iv);
