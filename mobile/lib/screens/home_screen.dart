@@ -16,7 +16,7 @@ import 'notifications_screen.dart';
 import 'producers_screen.dart';
 import 'add_producer_screen.dart';
 import 'distribution_screen.dart';
-import 'download_screen.dart';
+import 'polygons_screen.dart';
 import 'field_widgets.dart';
 import 'social_infra_screen.dart';
 import 'training_library_screen.dart';
@@ -216,7 +216,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     ];
     final r2 = <Widget>[
       if (_canField) _tile(Icons.add_location_alt, 'Ajouter une infrastructure sociale', () async { final d = await chooseDraft(context, 'social_infrastructure'); if (d != null) _open(SocialInfraScreen(draft: d.isEmpty ? null : d), sync: true); }, height: 150, fontSize: 11),
-      _tile(Icons.cloud_download, 'Télécharger les données', () => _open(const DownloadScreen()), height: 150, fontSize: 11),
+      _tile(Icons.hexagon_outlined, 'Polygones', () => _open(const PolygonsScreen(), sync: true), height: 150, fontSize: 11),
       if (_canField) _tile(Icons.volunteer_activism, 'Distribution et services', () async { final d = await chooseDraft(context, 'distribution'); if (d != null) _open(DistributionScreen(draft: d.isEmpty ? null : d), sync: true); }, height: 150, fontSize: 11),
     ];
     final r3 = <Widget>[

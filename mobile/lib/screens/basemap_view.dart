@@ -207,9 +207,9 @@ class _OverlayPainter extends CustomPainter {
       final path = Path()..moveTo(_at(sh[0], size).dx, _at(sh[0], size).dy);
       for (var i = 1; i < sh.length; i++) { final o = _at(sh[i], size); path.lineTo(o.dx, o.dy); }
       path.close();
-      canvas.drawPath(path, Paint()..color = const Color(0x442E7D32));
-      canvas.drawPath(path, Paint()..color = const Color(0xFFFFEB3B)..style = PaintingStyle.stroke..strokeWidth = 4);
-      canvas.drawPath(path, Paint()..color = const Color(0xFF1B5E20)..style = PaintingStyle.stroke..strokeWidth = 2);
+      // Polygone plein : intérieur jaune (translucide : l'imagerie reste lisible), contour rouge — comme l'export KML.
+      canvas.drawPath(path, Paint()..color = const Color(0xB3FFEB00));
+      canvas.drawPath(path, Paint()..color = const Color(0xFFE53935)..style = PaintingStyle.stroke..strokeWidth = 3);
     }
     if (pts.isNotEmpty) {
       final path = Path()..moveTo(_at(pts[0], size).dx, _at(pts[0], size).dy);

@@ -311,6 +311,51 @@ class Repository {
            (SELECT count(*) FROM outbox o WHERE o.entity_id = c.id AND o.op_type = 'parcel.update' AND o.status IN ('pending','pending_validation')) AS pending_updates
       FROM parcels c LEFT JOIN producers p ON p.id = c.producer_id ORDER BY c.code LIMIT 500''');
 
+  /// Polygones de tous les producteurs (écran « Polygones ») : les parcelles connues de l'appareil, plus celles qui attendent leur envoi
+  /// (importées ou relevées hors connexion). `q` filtre sur le nom, le code du producteur ou celui de la parcelle.
+  Future<List<Map<String, Object?>>> polygons({String q = ''}) async {
+    final needle = q.trim().toLowerCase();
+    final like = '%$needle%';
+    final rows = await db.raw.rawQuery('''
+      SELECT c.*, p.last_name AS last_name, p.first_names AS first_names, p.last_name || ' ' || p.first_names AS producer_name, p.internal_code AS producer_code, 0 AS pending_create,
+             (SELECT count(*) FROM outbox o WHERE o.entity_id = c.id AND o.op_type = 'parcel.update' AND o.status IN ('pending','pending_validation')) AS pending_updates
+        FROM parcels c LEFT JOIN producers p ON p.id = c.producer_id
+       WHERE ? = '' OR lower(coalesce(p.last_name,'')) LIKE ? OR lower(coalesce(p.first_names,'')) LIKE ?
+          OR lower(coalesce(p.internal_code,'')) LIKE ? OR lower(coalesce(c.code,'')) LIKE ?
+       ORDER BY p.last_name, p.first_names, c.code''', [needle, like, like, like, like]);
+    final out = <Map<String, Object?>>[...rows];
+    final producers = {for (final p in await db.raw.query('producers')) p['id'] as String: p};
+    for (final o in await db.raw.query('outbox', where: "op_type = 'parcel.create' AND status IN ('pending','pending_validation')", orderBy: 'seq')) {
+      final pl = jsonDecode(o['payload'] as String) as Map<String, dynamic>;
+      final prod = producers[pl['producer_id']];
+      final row = <String, Object?>{
+        'id': o['idempotency_key'], 'code': null, 'producer_id': pl['producer_id'], 'value_chain_id': pl['value_chain_id'],
+        'declared_area_ha': pl['declared_area_ha'], 'geometry_area_ha': pl['declared_area_ha'], 'geometry': jsonEncode(pl['geometry']),
+        'verification_status': 'pending', 'last_name': prod?['last_name'], 'first_names': prod?['first_names'], 'producer_name': prod == null ? null : '${prod['last_name']} ${prod['first_names']}', 'producer_code': prod?['internal_code'],
+        'pending_create': 1, 'pending_updates': 0,
+      };
+      final hay = '${row['last_name'] ?? ''} ${row['first_names'] ?? ''} ${row['producer_code'] ?? ''}'.toLowerCase();
+      if (needle.isEmpty || hay.contains(needle)) out.add(row);
+    }
+    return out;
+  }
+
+  /// Tous les producteurs de l'appareil (rattachement des polygones importés).
+  Future<List<Map<String, Object?>>> allProducers() => db.raw.query('producers', orderBy: 'last_name, first_names');
+
+  /// Filière d'une parcelle importée : la première filière du producteur, sinon la première filière active.
+  Future<String?> defaultChainId(String producerId) async {
+    final p = await db.raw.query('producers', where: 'id = ?', whereArgs: [producerId]);
+    if (p.isNotEmpty && p.first['value_chain_ids'] is String) {
+      try {
+        final ids = (jsonDecode(p.first['value_chain_ids'] as String) as List).whereType<String>().toList();
+        if (ids.isNotEmpty) return ids.first;
+      } catch (_) { /* liste illisible : on prend la première filière active */ }
+    }
+    final chains = await db.raw.query('value_chains', where: "status = 'active'", limit: 1);
+    return chains.isEmpty ? null : chains.first['id'] as String?;
+  }
+
   /// Nouveau producteur enregistré sur le terrain : disponible tout de suite sur le téléphone (relevé de parcelle, formation),
   /// créé côté serveur à la prochaine connexion avec le même identifiant. Le code officiel est attribué par le serveur.
   Future<String> queueProducer({
