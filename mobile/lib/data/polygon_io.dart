@@ -91,3 +91,34 @@ Future<List<String>> exportPolygons(List<Map<String, Object?>> rows, {DateTime? 
   }
   return saved;
 }
+
+/// Exporte les centres (centroïdes) des parcelles en waypoints. Une seule parcelle : GPSWpts-ANNÉE-MOIS-JOUR-wpt-CODE-NOM PRÉNOM-Parcelle.kml ;
+/// plusieurs : un seul fichier GPSWpts-ANNÉE-MOIS-JOUR-wpt-centroides.kml qui les contient tous. Enregistré dans Téléchargements.
+/// Retourne le nom du fichier enregistré, ou null si aucun tracé n'est lisible.
+Future<String?> exportWaypoints(List<Map<String, Object?>> rows, {DateTime? now}) async {
+  final date = now ?? DateTime.now();
+  final items = <Waypoint>[];
+  String? single;
+  for (final r in rows) {
+    final ring = ringFromGeometry(r['geometry']);
+    if (ring == null) continue;
+    final code = '${r['producer_code'] ?? ''}'.trim();
+    final who = '${r['last_name'] ?? ''} ${r['first_names'] ?? ''}'.trim().toUpperCase();
+    var parcel = '${r['code'] ?? ''}'.trim();
+    if (code.isNotEmpty && parcel.toUpperCase().startsWith('${code.toUpperCase()}-')) parcel = parcel.substring(code.length + 1);
+    final area = double.tryParse('${r['geometry_area_ha'] ?? ''}') ?? areaHa(ring);
+    single = polygonFileName(date: date, code: code.isEmpty ? 'SANS-CODE' : code, name: who.isEmpty ? 'SANS NOM' : who, parcel: parcel);
+    items.add(Waypoint(
+      name: '${code.isEmpty ? '' : '$code '}$who${parcel.isEmpty ? '' : ' $parcel'}'.trim(),
+      point: centerOf(ring, lat: r['latitude'], lon: r['longitude']),
+      code: code.isEmpty ? null : code, producer: who.isEmpty ? null : who, parcel: parcel.isEmpty ? null : parcel, areaHa: area,
+    ));
+  }
+  if (items.isEmpty) return null;
+  String two(int n) => n.toString().padLeft(2, '0');
+  final base = items.length == 1 ? single! : sanitizeFileName('GPSWpts-${date.year}-${two(date.month)}-${two(date.day)}-wpt-centroides');
+  final kml = waypointsToKml(name: base, items: items);
+  return _downloads.invokeMethod<String>('save', {
+    'name': '$base.kml', 'mime': 'application/vnd.google-earth.kml+xml', 'bytes': Uint8List.fromList(utf8.encode(kml)),
+  });
+}

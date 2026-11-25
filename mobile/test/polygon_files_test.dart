@@ -123,7 +123,11 @@ void main() {
       final sq = [const GeoPoint(6.8, -5.3), const GeoPoint(6.8, -5.299), const GeoPoint(6.801, -5.299), const GeoPoint(6.801, -5.3)];
       final kml = polygonToKml(name: 'AD244 ZEHOURI', points: sq, code: 'AD244', center: interiorPoint(sq));
       expect(kml, contains('<Point>'));
-      expect(kml, contains('cross-hairs'));
+      expect(kml, contains('paddle/grn-blank'));
+      final wp = waypointsToKml(name: 'x', items: [Waypoint(name: 'AD244 ZEHOURI P1', point: interiorPoint(sq), code: 'AD244', parcel: 'P1')]);
+      expect(wp, contains('<Point>'));
+      expect(wp, contains('parcelle'));
+      expect(parseKml(wp), isEmpty);
       expect(parseKml(kml).length, 1);
     });
   });

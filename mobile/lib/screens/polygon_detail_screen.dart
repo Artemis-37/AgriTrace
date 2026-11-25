@@ -49,6 +49,18 @@ class _PolygonDetailScreenState extends State<PolygonDetailScreen> {
     await _reload();
   }
 
+  Future<void> _exportWaypoint() async {
+    setState(() { _busy = true; _msg = null; });
+    try {
+      final name = await exportWaypoints([_row]);
+      if (mounted) setState(() => _msg = name == null ? 'Tracé illisible : export impossible.' : 'Waypoint (centre) enregistré dans Téléchargements : $name');
+    } catch (_) {
+      if (mounted) setState(() => _msg = "L'export a échoué : le fichier n'a pas pu être enregistré dans Téléchargements.");
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   Future<void> _export() async {
     setState(() { _busy = true; _msg = null; });
     try {
@@ -98,7 +110,7 @@ class _PolygonDetailScreenState extends State<PolygonDetailScreen> {
               _stat('Surface', ha == null ? '—' : '${ha.toStringAsFixed(2)} ha'),
               _stat('Périmètre', '${perimeterM(ring).round()} m'),
               _stat('Points', '${ring.length}'),
-              if (center != null) _stat('Centre (croix)', '${center.lat.toStringAsFixed(6)}, ${center.lon.toStringAsFixed(6)}'),
+              if (center != null) _stat('Centre', '${center.lat.toStringAsFixed(6)}, ${center.lon.toStringAsFixed(6)}'),
               if (pendingNew || pendingUpd) _stat('État', 'À envoyer'),
             ]),
           ),
@@ -116,6 +128,8 @@ class _PolygonDetailScreenState extends State<PolygonDetailScreen> {
               const Padding(padding: EdgeInsets.only(bottom: 6), child: Text('Ce polygone attend son envoi : il pourra être modifié une fois synchronisé.', style: TextStyle(color: Colors.black54))),
             const SizedBox(height: 8),
             SizedBox(width: double.infinity, child: OutlinedButton.icon(onPressed: _busy || ring == null ? null : _export, icon: const Icon(Icons.ios_share), label: const Text('Exporter en KML (Téléchargements)'))),
+            const SizedBox(height: 8),
+            SizedBox(width: double.infinity, child: OutlinedButton.icon(onPressed: _busy || ring == null ? null : _exportWaypoint, icon: const Icon(Icons.place_outlined), label: const Text('Exporter le centre (waypoint)'))),
           ]),
         ),
       ]),
