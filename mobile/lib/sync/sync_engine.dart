@@ -420,7 +420,8 @@ class SyncEngine {
       if (held.isNotEmpty) continue;
       await txn.insert('parcels', {
         'id': c['id'], 'code': c['code'], 'producer_id': c['producer_id'], 'value_chain_id': c['value_chain_id'], 'declared_area_ha': c['declared_area_ha']?.toString(),
-        'geometry_area_ha': c['geometry_area_ha']?.toString(), 'geometry': c['geometry'] == null ? null : jsonEncode(c['geometry']), 'verification_status': c['verification_status'], 'status': c['status'],
+        'geometry_area_ha': c['geometry_area_ha']?.toString(), 'geometry': c['geometry'] == null ? null : jsonEncode(c['geometry']),
+        'latitude': c['latitude']?.toString(), 'longitude': c['longitude']?.toString(), 'verification_status': c['verification_status'], 'status': c['status'],
       }, conflictAlgorithm: ConflictAlgorithm.replace);
     }
 

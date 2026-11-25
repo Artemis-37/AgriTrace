@@ -19,7 +19,11 @@ class BasemapView extends StatefulWidget {
   final List<List<GeoPoint>> shapes;
   /// Croix de visée au centre de la carte, avec la latitude et la longitude du point visé (en bas à droite) : la carte glisse sous la croix.
   final bool crosshair;
-  const BasemapView({super.key, required this.tiles, required this.points, this.me, this.height = 260, this.shapes = const [], this.crosshair = true});
+  /// Centres des parcelles (point intérieur au polygone), dessinés par la même croix que la croix de visée.
+  final List<GeoPoint> centers;
+  /// Reçoit la position visée (centre de la carte) à chaque déplacement : sert à placer un point à la main.
+  final ValueNotifier<GeoPoint>? aim;
+  const BasemapView({super.key, required this.tiles, required this.points, this.me, this.height = 260, this.shapes = const [], this.crosshair = true, this.centers = const [], this.aim});
   @override
   State<BasemapView> createState() => _BasemapViewState();
 }
@@ -51,6 +55,7 @@ class _BasemapViewState extends State<BasemapView> {
     _lon = (minLon + maxLon) / 2;
     _zoom = fitZoom(pts, _size.width, _size.height, minZoom: widget.tiles.minZoom(_layer), maxZoom: math.min(widget.tiles.maxZoom(_layer), 19)).toDouble();
     _placed = true;
+    if (widget.aim != null) { final g = GeoPoint(_lat, _lon); WidgetsBinding.instance.addPostFrameCallback((_) => widget.aim?.value = g); }
   }
 
   @override
@@ -91,6 +96,7 @@ class _BasemapViewState extends State<BasemapView> {
                 final c0 = project(_lat, _lon, _zoom);
                 final moved = unproject(c0.x - d.focalPointDelta.dx, c0.y - d.focalPointDelta.dy, _zoom);
                 _lat = moved.lat; _lon = moved.lon;
+                widget.aim?.value = GeoPoint(_lat, _lon);
                 if (oldZ != _zoom) _cache.removeWhere((k, _) => !k.startsWith('${_layer.name}/${_zoom.round()}/'));
               }),
               child: ColoredBox(color: const Color(0xFFE8ECE6), child: Stack(clipBehavior: Clip.hardEdge, children: [
@@ -103,7 +109,7 @@ class _BasemapViewState extends State<BasemapView> {
                       builder: (_, s) => s.data == null ? const SizedBox.shrink() : Image.memory(s.data!, fit: BoxFit.fill, gaplessPlayback: true, filterQuality: FilterQuality.medium),
                     ),
                   ),
-                Positioned.fill(child: CustomPaint(painter: _OverlayPainter(widget.points, widget.me, _lat, _lon, _zoom, widget.shapes))),
+                Positioned.fill(child: CustomPaint(painter: _OverlayPainter(widget.points, widget.me, _lat, _lon, _zoom, widget.shapes, widget.centers))),
               ])),
             )),
             Positioned(right: 8, top: 8, child: Column(children: [
@@ -154,23 +160,25 @@ Widget _halo(String t) => Stack(children: [
     ]);
 
 /// Croix au centre de la carte : quatre traits qui ne se touchent pas, avec un point au milieu.
+/// La croix : quatre bras noirs cerclés de blanc autour d'un point central. Même dessin pour la visée et pour le centre d'une parcelle.
+void _drawCross(Canvas canvas, Offset c) {
+  const gap = 7.0, len = 24.0;
+  final arms = <(Offset, Offset)>[
+    (c + const Offset(-len, 0), c + const Offset(-gap, 0)), (c + const Offset(gap, 0), c + const Offset(len, 0)),
+    (c + const Offset(0, -len), c + const Offset(0, -gap)), (c + const Offset(0, gap), c + const Offset(0, len)),
+  ];
+  for (final w in [(6.0, Colors.white), (3.0, Colors.black)]) {
+    final paint = Paint()..color = w.$2..strokeWidth = w.$1..strokeCap = StrokeCap.butt;
+    for (final a in arms) { canvas.drawLine(a.$1, a.$2, paint); }
+  }
+  canvas.drawCircle(c, 3.2, Paint()..color = Colors.white);
+  canvas.drawCircle(c, 2, Paint()..color = Colors.black);
+}
+
 class _CrosshairPainter extends CustomPainter {
   const _CrosshairPainter();
   @override
-  void paint(Canvas canvas, Size size) {
-    final c = Offset(size.width / 2, size.height / 2);
-    const gap = 7.0, len = 24.0;
-    final arms = <(Offset, Offset)>[
-      (c + const Offset(-len, 0), c + const Offset(-gap, 0)), (c + const Offset(gap, 0), c + const Offset(len, 0)),
-      (c + const Offset(0, -len), c + const Offset(0, -gap)), (c + const Offset(0, gap), c + const Offset(0, len)),
-    ];
-    for (final w in [(6.0, Colors.white), (3.0, Colors.black)]) {
-      final paint = Paint()..color = w.$2..strokeWidth = w.$1..strokeCap = StrokeCap.butt;
-      for (final a in arms) { canvas.drawLine(a.$1, a.$2, paint); }
-    }
-    canvas.drawCircle(c, 3.2, Paint()..color = Colors.white);
-    canvas.drawCircle(c, 2, Paint()..color = Colors.black);
-  }
+  void paint(Canvas canvas, Size size) => _drawCross(canvas, Offset(size.width / 2, size.height / 2));
   @override
   bool shouldRepaint(covariant CustomPainter old) => false;
 }
@@ -193,7 +201,8 @@ class _OverlayPainter extends CustomPainter {
   final GeoPoint? me;
   final double lat, lon, zoom;
   final List<List<GeoPoint>> shapes;
-  _OverlayPainter(this.pts, this.me, this.lat, this.lon, this.zoom, [this.shapes = const []]);
+  final List<GeoPoint> centers;
+  _OverlayPainter(this.pts, this.me, this.lat, this.lon, this.zoom, [this.shapes = const [], this.centers = const []]);
 
   Offset _at(GeoPoint g, Size size) {
     final c = project(lat, lon, zoom), p = project(g.lat, g.lon, zoom);
@@ -211,6 +220,7 @@ class _OverlayPainter extends CustomPainter {
       canvas.drawPath(path, Paint()..color = const Color(0xB3FFEB00));
       canvas.drawPath(path, Paint()..color = const Color(0xFFE53935)..style = PaintingStyle.stroke..strokeWidth = 3);
     }
+    for (final c in centers) { _drawCross(canvas, _at(c, size)); }
     if (pts.isNotEmpty) {
       final path = Path()..moveTo(_at(pts[0], size).dx, _at(pts[0], size).dy);
       for (var i = 1; i < pts.length; i++) {

@@ -8,7 +8,7 @@ import { createHash } from 'crypto';
 import { IsBoolean, IsIn, IsNumber, IsOptional, IsString, IsUUID, Length, Max, Min } from 'class-validator';
 import { PoolClient } from 'pg';
 import { RequirePermissions } from '../access/decorators';
-import { centroid, polygonAreaHa } from '../parcels/geo';
+import { interiorPoint, polygonAreaHa } from '../parcels/geo';
 import { geometryHash } from './geo-core';
 import { detectFields, GeoImportService, ImportOptions, Item, Mode } from './geo-import.service';
 import {
@@ -361,7 +361,7 @@ export class GeoController {
       const carried: string[] = [];
       await c.query(`UPDATE parcels SET status = 'archived', merged_into = $2, geometry_hash = NULL, updated_at = now() WHERE id = $1`, [rep.id, keep.id]);
       if (take.includes('geometry') && !keep.geometry && rep.geometry) {
-        const cen = centroid(rep.geometry);
+        const cen = interiorPoint(rep.geometry);
         await c.query(`UPDATE parcels SET geometry = $2, geometry_area_ha = $3, geometry_hash = $4, latitude = $5, longitude = $6, updated_at = now() WHERE id = $1`,
           [keep.id, JSON.stringify(rep.geometry), Number(polygonAreaHa(rep.geometry).toFixed(4)), geometryHash(rep.geometry), Number(cen.lat.toFixed(6)), Number(cen.lon.toFixed(6))]);
         carried.push('geometry');

@@ -11,6 +11,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:sqflite_sqlcipher/sqflite.dart';
 import 'package:uuid/uuid.dart';
 
+import '../geo/polygon.dart' show GeoPoint;
 import 'app_database.dart';
 import 'photo_vault.dart';
 import 'session_store.dart';
@@ -279,23 +280,38 @@ class Repository {
 
   /// Parcelle relevée au GPS : mise en file d'envoi (idempotente), créée côté serveur dès que le réseau revient.
   /// Le serveur recalcule la surface, détecte les doublons et les chevauchements.
-  Future<void> queueParcel({required String producerId, required String valueChainId, required String declaredAreaHa, required Map<String, Object> geometry}) async {
+  Future<void> queueParcel({required String producerId, required String valueChainId, required String declaredAreaHa, required Map<String, Object> geometry, GeoPoint? center}) async {
     final key = 'parcel-${_uuid.v4()}';
     final payload = {
       'idempotency_key': key, 'producer_id': producerId, 'value_chain_id': valueChainId,
       'declared_area_ha': declaredAreaHa, 'geometry': geometry,
+      if (center != null) ...{'latitude': double.parse(center.lat.toStringAsFixed(6)), 'longitude': double.parse(center.lon.toStringAsFixed(6))},
     };
     await db.raw.insert('outbox', {'idempotency_key': key, 'op_type': 'parcel.create', 'payload': jsonEncode(payload), 'entity_id': key, 'created_at': DateTime.now().toIso8601String()});
   }
 
   /// Nouveau tracé d'une parcelle existante : envoyé à la synchronisation, le serveur recalcule la surface et revérifie les chevauchements.
   /// Le tracé local est remplacé tout de suite ; la prochaine synchronisation le confirme (ou le corrige).
-  Future<void> queueParcelUpdate({required String parcelId, required String declaredAreaHa, required Map<String, Object> geometry}) async {
+  Future<void> queueParcelUpdate({required String parcelId, required String declaredAreaHa, required Map<String, Object> geometry, GeoPoint? center}) async {
     final key = 'parcel-upd-${_uuid.v4()}';
-    final payload = {'id': parcelId, 'declared_area_ha': declaredAreaHa, 'geometry': geometry};
+    final lat = center == null ? null : center.lat.toStringAsFixed(6), lon = center == null ? null : center.lon.toStringAsFixed(6);
+    final payload = {'id': parcelId, 'declared_area_ha': declaredAreaHa, 'geometry': geometry, if (center != null) ...{'latitude': double.parse(lat!), 'longitude': double.parse(lon!)}};
     await db.raw.transaction((txn) async {
       await txn.insert('outbox', {'idempotency_key': key, 'op_type': 'parcel.update', 'payload': jsonEncode(payload), 'entity_id': parcelId, 'created_at': DateTime.now().toIso8601String()});
-      await txn.update('parcels', {'geometry': jsonEncode(geometry), 'declared_area_ha': declaredAreaHa, 'verification_status': 'declared'}, where: 'id = ?', whereArgs: [parcelId]);
+      await txn.update('parcels', {'geometry': jsonEncode(geometry), 'declared_area_ha': declaredAreaHa, 'verification_status': 'declared', if (center != null) ...{'latitude': lat, 'longitude': lon}},
+          where: 'id = ?', whereArgs: [parcelId]);
+    });
+  }
+
+  /// Centre de la parcelle placé à la main par l'utilisateur (il doit rester dans le polygone : le serveur le refuse sinon).
+  /// Enregistré tout de suite sur l'appareil, envoyé à la prochaine synchronisation.
+  Future<void> queueParcelCenter({required String parcelId, required GeoPoint center}) async {
+    final key = 'parcel-upd-${_uuid.v4()}';
+    final lat = center.lat.toStringAsFixed(6), lon = center.lon.toStringAsFixed(6);
+    final payload = {'id': parcelId, 'latitude': double.parse(lat), 'longitude': double.parse(lon), 'reason': 'Centre placé au téléphone'};
+    await db.raw.transaction((txn) async {
+      await txn.insert('outbox', {'idempotency_key': key, 'op_type': 'parcel.update', 'payload': jsonEncode(payload), 'entity_id': parcelId, 'created_at': DateTime.now().toIso8601String()});
+      await txn.update('parcels', {'latitude': lat, 'longitude': lon}, where: 'id = ?', whereArgs: [parcelId]);
     });
   }
 

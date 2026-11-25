@@ -225,7 +225,7 @@ export class SyncController {
                                           p.updated_at AS ts FROM producers p
                                   WHERE (NOT $3::boolean OR EXISTS (SELECT 1 FROM collector_assignments a JOIN producer_value_chains x ON x.value_chain_id = a.value_chain_id
                                                                      WHERE a.collector_id = $4 AND x.producer_id = p.id))`, params: [isCollector, mine] },
-        { key: 'parcels', on: wantsParcels, sql: `SELECT id, code, producer_id, value_chain_id, declared_area_ha, geometry_area_ha, geometry, verification_status, status,
+        { key: 'parcels', on: wantsParcels, sql: `SELECT id, code, producer_id, value_chain_id, declared_area_ha, geometry_area_ha, geometry, latitude, longitude, verification_status, status,
                                          -- les parcelles importées (créées par un autre utilisateur) sont désormais envoyées : on les représente une fois (horodatage étalé)
                                          GREATEST(updated_at, TIMESTAMPTZ '2026-10-25 22:15:00+00' + (abs(hashtext(id::text)) % 100000000) * interval '1 microsecond') AS ts FROM parcels
                                   WHERE status = 'active' AND ($3::boolean OR created_by = $4)`, params: [req.org.permissions.has('parcels:update') || req.org.permissions.has('parcels:read'), req.user.id] },

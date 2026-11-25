@@ -1,4 +1,4 @@
-import { areaGapPct, centroid, polygonAreaHa, validatePolygon } from './geo';
+import { areaGapPct, centroid, interiorPoint, pointInRing, polygonAreaHa, validatePolygon } from './geo';
 
 // Carré d'environ 100 m × 100 m près de l'équateur (≈ 1 ha)
 const d = 0.0009;
@@ -23,5 +23,17 @@ describe('géométrie des parcelles', () => {
     const c = centroid(square());
     expect(c.lat).toBeCloseTo(6.80045, 4);
     expect(areaGapPct(1, 1.25)).toBeCloseTo(25, 5);
+  });
+  it('place le centre dans le polygone, même pour une parcelle en L ou en croissant', () => {
+    const sq = interiorPoint(square());
+    expect(pointInRing(square().coordinates[0], sq.lon, sq.lat)).toBe(true);
+    // U très ouvert : le centre de gravité tombe dans le vide
+    const u: any = { type: 'Polygon', coordinates: [[[0, 0], [10, 0], [10, 10], [8, 10], [8, 2], [2, 2], [2, 10], [0, 10], [0, 0]]] };
+    expect(pointInRing(u.coordinates[0], 5, 6)).toBe(false);
+    const c = interiorPoint(u);
+    expect(pointInRing(u.coordinates[0], c.lon, c.lat)).toBe(true);
+    const l: any = { type: 'Polygon', coordinates: [[[0, 0], [6, 0], [6, 1], [1, 1], [1, 6], [0, 6], [0, 0]]] };
+    const d = interiorPoint(l);
+    expect(pointInRing(l.coordinates[0], d.lon, d.lat)).toBe(true);
   });
 });

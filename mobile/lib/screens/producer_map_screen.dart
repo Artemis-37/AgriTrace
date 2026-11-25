@@ -10,7 +10,9 @@ import 'map_pack_screen.dart';
 class ProducerMapScreen extends StatelessWidget {
   final String producerName;
   final List<List<GeoPoint>> shapes;
-  const ProducerMapScreen({super.key, required this.producerName, required this.shapes});
+  /// Centre de chaque parcelle (croix, point toujours à l'intérieur du polygone).
+  final List<GeoPoint> centers;
+  const ProducerMapScreen({super.key, required this.producerName, required this.shapes, this.centers = const []});
 
   @override
   Widget build(BuildContext context) {
@@ -20,9 +22,9 @@ class ProducerMapScreen extends StatelessWidget {
             onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MapPackScreen()))),
       ]),
       body: LayoutBuilder(builder: (context, c) => Column(children: [
-        Expanded(child: BasemapView(tiles: services.tiles, points: const [], shapes: shapes, height: c.maxHeight - 40)),
+        Expanded(child: BasemapView(tiles: services.tiles, points: const [], shapes: shapes, centers: centers, height: c.maxHeight - 40)),
         Padding(padding: const EdgeInsets.all(10), child: Text(
-          shapes.isEmpty ? 'Aucune parcelle relevée pour ce producteur.' : '${shapes.length} parcelle(s) tracée(s).', style: const TextStyle(color: Colors.black54))),
+          shapes.isEmpty ? 'Aucune parcelle relevée pour ce producteur.' : '${shapes.length} parcelle(s) tracée(s) · la croix marque le centre de chaque parcelle.', style: const TextStyle(color: Colors.black54))),
       ])),
     );
   }

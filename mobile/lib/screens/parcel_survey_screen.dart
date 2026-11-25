@@ -176,11 +176,11 @@ class _ParcelSurveyScreenState extends State<ParcelSurveyScreen> {
     setState(() => _saving = true);
     final e = widget.existing;
     if (e != null) {
-      await services.repo.queueParcelUpdate(parcelId: e['id'] as String, declaredAreaHa: (_declaredHa ?? areaHa(_points)).toStringAsFixed(4), geometry: toGeoJson(_points));
+      await services.repo.queueParcelUpdate(parcelId: e['id'] as String, declaredAreaHa: (_declaredHa ?? areaHa(_points)).toStringAsFixed(4), geometry: toGeoJson(_points), center: interiorPoint(_points));
     } else {
       await services.repo.queueParcel(
         producerId: _producer!['id'] as String, valueChainId: _chainId!,
-        declaredAreaHa: (_declaredHa ?? areaHa(_points)).toStringAsFixed(4), geometry: toGeoJson(_points),
+        declaredAreaHa: (_declaredHa ?? areaHa(_points)).toStringAsFixed(4), geometry: toGeoJson(_points), center: interiorPoint(_points),
       );
     }
     if (!mounted) return;

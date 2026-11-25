@@ -100,4 +100,31 @@ void main() {
     expect(areaHa(back.points), closeTo(areaHa(square()), 1e-9));
     expect(resolveProducer('GPSWpts-2026-11-25-wpt-AD244-ZEHOURI DJEDJE.kml', back, producers)!['id'], 'p1');
   });
+
+  group('centre de la parcelle', () {
+    // U très ouvert : le centre de gravité tombe dans le vide, le centre doit rester dans le polygone.
+    final u = [for (final p in [[0.0, 0.0], [10.0, 0.0], [10.0, 10.0], [8.0, 10.0], [8.0, 2.0], [2.0, 2.0], [2.0, 10.0], [0.0, 10.0]]) GeoPoint(p[1] * 1e-4 + 6.8, p[0] * 1e-4 - 5.3)];
+    test('point intérieur : carré et parcelle en U', () {
+      final sq = [const GeoPoint(6.8, -5.3), const GeoPoint(6.8, -5.299), const GeoPoint(6.801, -5.299), const GeoPoint(6.801, -5.3)];
+      final c = interiorPoint(sq);
+      expect(pointInRing(sq, c.lat, c.lon), isTrue);
+      expect(pointInRing(u, 6.8006, -5.2995), isFalse);
+      final d = interiorPoint(u);
+      expect(pointInRing(u, d.lat, d.lon), isTrue);
+    });
+    test('centerOf garde le centre placé s\'il est dans le tracé, sinon recalcule', () {
+      final sq = [const GeoPoint(6.8, -5.3), const GeoPoint(6.8, -5.299), const GeoPoint(6.801, -5.299), const GeoPoint(6.801, -5.3)];
+      final kept = centerOf(sq, lat: '6.8002', lon: '-5.2998');
+      expect(kept.lat, closeTo(6.8002, 1e-9));
+      final fixed = centerOf(sq, lat: '7.5', lon: '-5.2998');
+      expect(pointInRing(sq, fixed.lat, fixed.lon), isTrue);
+    });
+    test('le KML exporté contient la croix du centre et se réimporte sans doublon', () {
+      final sq = [const GeoPoint(6.8, -5.3), const GeoPoint(6.8, -5.299), const GeoPoint(6.801, -5.299), const GeoPoint(6.801, -5.3)];
+      final kml = polygonToKml(name: 'AD244 ZEHOURI', points: sq, code: 'AD244', center: interiorPoint(sq));
+      expect(kml, contains('<Point>'));
+      expect(kml, contains('cross-hairs'));
+      expect(parseKml(kml).length, 1);
+    });
+  });
 }

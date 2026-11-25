@@ -79,3 +79,68 @@ Map<String, Object> toGeoJson(List<GeoPoint> pts) => {'type': 'Polygon', 'coordi
 
 /// Écart relatif (%) entre la surface déclarée et la surface mesurée.
 double gapPct(double declared, double measured) => declared <= 0 ? 0 : (declared - measured).abs() / declared * 100;
+
+/// Vrai si le point est dans l'anneau (lancer de rayon) ; un point sur le bord compte comme dedans.
+bool pointInRing(List<GeoPoint> ring, double lat, double lon) {
+  var inside = false;
+  for (var i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    final xi = ring[i].lon, yi = ring[i].lat, xj = ring[j].lon, yj = ring[j].lat;
+    final cross = (lon - xi) * (yj - yi) - (lat - yi) * (xj - xi);
+    if (cross == 0 && lon >= math.min(xi, xj) && lon <= math.max(xi, xj) && lat >= math.min(yi, yj) && lat <= math.max(yi, yj)) return true;
+    if ((yi > lat) != (yj > lat) && lon < (xj - xi) * (lat - yi) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+
+double _distSeg(double px, double py, double ax, double ay, double bx, double by) {
+  final dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy;
+  final t = l2 == 0 ? 0.0 : (((px - ax) * dx + (py - ay) * dy) / l2).clamp(0.0, 1.0);
+  return math.sqrt(math.pow(px - (ax + t * dx), 2) + math.pow(py - (ay + t * dy), 2));
+}
+
+/// « Centroïde » de la parcelle, toujours DANS le polygone (même calcul que le serveur) : le centre de gravité s'il y tombe ;
+/// sinon (parcelle en L, en U, en croissant) le point intérieur le plus éloigné des bords.
+GeoPoint interiorPoint(List<GeoPoint> ring) {
+  final lat0 = ring.fold<double>(0, (s, p) => s + p.lat) / ring.length;
+  final kx = math.cos(lat0 * math.pi / 180);
+  double a = 0, cx = 0, cy = 0;
+  for (var i = 0; i < ring.length; i++) {
+    final q = ring[(i + 1) % ring.length];
+    final x0 = ring[i].lon * kx, y0 = ring[i].lat, x1 = q.lon * kx, y1 = q.lat, f = x0 * y1 - x1 * y0;
+    a += f; cx += (x0 + x1) * f; cy += (y0 + y1) * f;
+  }
+  if (a != 0) {
+    final lon = cx / (3 * a) / kx, lat = cy / (3 * a);
+    if (pointInRing(ring, lat, lon)) return GeoPoint(lat, lon);
+  }
+  var x0 = ring.map((p) => p.lon).reduce(math.min), x1 = ring.map((p) => p.lon).reduce(math.max);
+  var y0 = ring.map((p) => p.lat).reduce(math.min), y1 = ring.map((p) => p.lat).reduce(math.max);
+  var best = GeoPoint(ring[0].lat, ring[0].lon);
+  var bestD = -1.0;
+  for (var pass = 0; pass < 4; pass++) {
+    const n = 24;
+    final sx = (x1 - x0) / n, sy = (y1 - y0) / n;
+    for (var i = 0; i <= n; i++) {
+      for (var j = 0; j <= n; j++) {
+        final lon = x0 + i * sx, lat = y0 + j * sy;
+        if (!pointInRing(ring, lat, lon)) continue;
+        var d = double.infinity;
+        for (var k = 0; k < ring.length; k++) {
+          final q = ring[(k + 1) % ring.length];
+          d = math.min(d, _distSeg(lon * kx, lat, ring[k].lon * kx, ring[k].lat, q.lon * kx, q.lat));
+        }
+        if (d > bestD) { bestD = d; best = GeoPoint(lat, lon); }
+      }
+    }
+    if (bestD < 0) break;
+    x0 = best.lon - 2 * sx; x1 = best.lon + 2 * sx; y0 = best.lat - 2 * sy; y1 = best.lat + 2 * sy;
+  }
+  return best;
+}
+
+/// Centre d'une parcelle : celui enregistré s'il est dans le tracé, sinon le point intérieur calculé.
+GeoPoint centerOf(List<GeoPoint> ring, {Object? lat, Object? lon}) {
+  final la = double.tryParse('${lat ?? ''}'), lo = double.tryParse('${lon ?? ''}');
+  if (la != null && lo != null && pointInRing(ring, la, lo)) return GeoPoint(la, lo);
+  return interiorPoint(ring);
+}

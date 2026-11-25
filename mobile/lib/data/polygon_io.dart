@@ -83,7 +83,7 @@ Future<List<String>> exportPolygons(List<Map<String, Object?>> rows, {DateTime? 
     used[base] = n;
     if (n > 1) base = '$base ($n)';
     final area = double.tryParse('${r['geometry_area_ha'] ?? ''}') ?? areaHa(ring);
-    final kml = polygonToKml(name: '${code.isEmpty ? '' : '$code '}$who${parcel.isEmpty ? '' : ' $parcel'}'.trim(), points: ring, code: code.isEmpty ? null : code, producer: who.isEmpty ? null : who, areaHa: area);
+    final kml = polygonToKml(name: '${code.isEmpty ? '' : '$code '}$who${parcel.isEmpty ? '' : ' $parcel'}'.trim(), points: ring, code: code.isEmpty ? null : code, producer: who.isEmpty ? null : who, areaHa: area, center: centerOf(ring, lat: r['latitude'], lon: r['longitude']));
     final name = await _downloads.invokeMethod<String>('save', {
       'name': '$base.kml', 'mime': 'application/vnd.google-earth.kml+xml', 'bytes': Uint8List.fromList(utf8.encode(kml)),
     });

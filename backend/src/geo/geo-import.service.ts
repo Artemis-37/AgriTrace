@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PoolClient } from 'pg';
-import { centroid, polygonAreaHa, validatePolygon } from '../parcels/geo';
+import { interiorPoint, polygonAreaHa, validatePolygon } from '../parcels/geo';
 import { Polygon } from '../parcels/geo';
 import { analysePair, AnomalyKind, bboxesOverlap, bboxOf, geometryHash, GeoSettings, isBlocking } from './geo-core';
 import { RawFeature } from './formats';
@@ -239,7 +239,7 @@ export class GeoImportService {
       if (it.outcome === 'create') {
         const seq = (await c.query(`UPDATE producers SET parcel_seq = parcel_seq + 1 WHERE id = $1 RETURNING parcel_seq, internal_code`, [it.producerId])).rows[0];
         const code = `${seq.internal_code}-P${seq.parcel_seq}`;
-        const cen = centroid(it.poly!);
+        const cen = interiorPoint(it.poly!);
         const row = (await c.query(
           `INSERT INTO parcels(organization_id, code, idempotency_key, producer_id, value_chain_id, declared_area_ha, latitude, longitude, geometry, geometry_area_ha,
                                geometry_hash, external_id, surveyed_on, gps_accuracy_m, created_by)
@@ -251,7 +251,7 @@ export class GeoImportService {
         it.parcel_id = row.id; it.parcel_code = row.code; touched.push(row.id);
       } else if (it.outcome === 'update') {
         const ex = it.existing;
-        const cen = centroid(it.poly!);
+        const cen = interiorPoint(it.poly!);
         await c.query(
           `UPDATE parcels SET declared_area_ha = coalesce($2, declared_area_ha), latitude = $3, longitude = $4, geometry = $5, geometry_area_ha = $6, geometry_hash = $7,
                   external_id = coalesce($8, external_id), surveyed_on = coalesce($9, surveyed_on), gps_accuracy_m = coalesce($10, gps_accuracy_m),

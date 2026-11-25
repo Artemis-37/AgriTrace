@@ -27,7 +27,7 @@ String _xml(String s) => s.replaceAll('&', '&amp;').replaceAll('<', '&lt;').repl
 
 /// KML d'une parcelle : polygone plein — intérieur jaune (translucide, l'imagerie reste visible dessous), contour rouge.
 /// Les couleurs KML s'écrivent aabbggrr.
-String polygonToKml({required String name, required List<GeoPoint> points, String? code, String? producer, double? areaHa}) {
+String polygonToKml({required String name, required List<GeoPoint> points, String? code, String? producer, double? areaHa, GeoPoint? center}) {
   final ring = closedRing(points).map((p) => '${p[0]},${p[1]},0').join(' ');
   final b = StringBuffer()
     ..writeln('<?xml version="1.0" encoding="UTF-8"?>')
@@ -36,6 +36,8 @@ String polygonToKml({required String name, required List<GeoPoint> points, Strin
     ..writeln('<name>${_xml(name)}</name>')
     ..writeln('<Style id="parcelle"><LineStyle><color>ff0000ff</color><width>3</width></LineStyle>'
         '<PolyStyle><color>b300ffff</color><fill>1</fill><outline>1</outline></PolyStyle></Style>')
+    ..writeln('<Style id="centre"><IconStyle><scale>1.1</scale><Icon><href>http://maps.google.com/mapfiles/kml/shapes/cross-hairs.png</href></Icon>'
+        '<hotSpot x="0.5" y="0.5" xunits="fraction" yunits="fraction"/></IconStyle></Style>')
     ..writeln('<Placemark>')
     ..writeln('<name>${_xml(name)}</name>')
     ..writeln('<styleUrl>#parcelle</styleUrl>');
@@ -48,7 +50,17 @@ String polygonToKml({required String name, required List<GeoPoint> points, Strin
   }
   b
     ..writeln('<Polygon><tessellate>1</tessellate><outerBoundaryIs><LinearRing><coordinates>$ring</coordinates></LinearRing></outerBoundaryIs></Polygon>')
-    ..writeln('</Placemark>')
+    ..writeln('</Placemark>');
+  // Centre de la parcelle (point intérieur au polygone) : une croix, comme dans l'application.
+  if (center != null) {
+    b
+      ..writeln('<Placemark>')
+      ..writeln('<name>${_xml('Centre ${name.trim()}'.trim())}</name>')
+      ..writeln('<styleUrl>#centre</styleUrl>')
+      ..writeln('<Point><coordinates>${center.lon.toStringAsFixed(6)},${center.lat.toStringAsFixed(6)},0</coordinates></Point>')
+      ..writeln('</Placemark>');
+  }
+  b
     ..writeln('</Document>')
     ..writeln('</kml>');
   return b.toString();

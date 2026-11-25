@@ -12,7 +12,7 @@ import { DbService } from '../db/db.service';
 import { GeoService } from '../geo/geo.service';
 import { geometryHash } from '../geo/geo-core';
 import { isUniqueViolation } from '../common/dto';
-import { areaGapPct, centroid, polygonAreaHa, validatePolygon } from './geo';
+import { areaGapPct, interiorPoint, pointInRing, polygonAreaHa, validatePolygon } from './geo';
 
 const DUP_RADIUS_M = 50;
 const AREA_GAP_PCT = 20;
@@ -59,16 +59,30 @@ export class ParcelsController {
     if (!r.rowCount) throw new NotFoundException();
     return r.rows[0];
   }
-  /** Normalise position et géométrie : la surface mesurée est calculée par le serveur, jamais saisie. */
-  private geo(b: { latitude?: number; longitude?: number; geometry?: any }) {
+  /**
+   * Normalise position et géométrie : la surface mesurée est calculée par le serveur, jamais saisie.
+   * Le « centre » de la parcelle (latitude, longitude) est toujours DANS le polygone : posé automatiquement (point intérieur), ou placé par l'utilisateur
+   * (refusé s'il tombe hors du polygone). Un centre déjà placé est conservé tant qu'il reste dans le nouveau tracé.
+   */
+  private geo(b: { latitude?: number; longitude?: number; geometry?: any }, existing?: { latitude: any; longitude: any; geometry: any; geometry_area_ha: any }) {
     if ((b.latitude === undefined) !== (b.longitude === undefined)) throw new BadRequestException('Latitude et longitude vont ensemble');
-    let lat = b.latitude ?? null, lon = b.longitude ?? null, geom: any = null, area: number | null = null;
+    let geom: any = null, area: number | null = null;
     if (b.geometry) {
       const err = validatePolygon(b.geometry);
       if (err) throw new BadRequestException(err);
       geom = b.geometry; area = polygonAreaHa(geom);
-      if (lat === null) { const c = centroid(geom); lat = Number(c.lat.toFixed(6)); lon = Number(c.lon.toFixed(6)); }
+    } else if (existing?.geometry) {
+      geom = typeof existing.geometry === 'string' ? JSON.parse(existing.geometry) : existing.geometry;
+      area = existing.geometry_area_ha === null || existing.geometry_area_ha === undefined ? polygonAreaHa(geom) : Number(existing.geometry_area_ha);
     }
+    let lat: number | null = b.latitude ?? null, lon: number | null = b.longitude ?? null;
+    if (lat !== null && lon !== null) {
+      if (geom && !pointInRing(geom.coordinates[0], lon, lat)) throw new UnprocessableEntityException('Le centre de la parcelle doit se trouver à l\'intérieur du polygone');
+    } else if (geom) {
+      const ex = existing && existing.latitude !== null && existing.longitude !== null ? { lat: Number(existing.latitude), lon: Number(existing.longitude) } : null;
+      if (ex && pointInRing(geom.coordinates[0], ex.lon, ex.lat)) { lat = ex.lat; lon = ex.lon; }
+      else { const c = interiorPoint(geom); lat = Number(c.lat.toFixed(6)); lon = Number(c.lon.toFixed(6)); }
+    } else if (existing) { lat = existing.latitude; lon = existing.longitude; }
     return { lat, lon, geom, area: area === null ? null : Number(area.toFixed(4)) };
   }
 
@@ -124,7 +138,7 @@ export class ParcelsController {
     const row = await this.db.tx(req.org.id, async (c) => {
       const p = await this.lock(c, id);
       if (p.status !== 'active') throw new BadRequestException('Parcelle archivée');
-      const g = (b.latitude !== undefined || b.geometry !== undefined) ? this.geo(b) : { lat: p.latitude, lon: p.longitude, geom: p.geometry, area: p.geometry_area_ha };
+      const g = (b.latitude !== undefined || b.geometry !== undefined) ? this.geo(b, p) : { lat: p.latitude, lon: p.longitude, geom: p.geometry, area: p.geometry_area_ha };
       const reset = p.verification_status !== 'declared';
       const r = (await c.query(
         `UPDATE parcels SET declared_area_ha = coalesce($2, declared_area_ha), latitude = $3, longitude = $4, geometry = $5, geometry_area_ha = $6, geometry_hash = $7,

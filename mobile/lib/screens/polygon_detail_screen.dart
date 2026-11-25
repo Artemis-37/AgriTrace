@@ -5,6 +5,7 @@ import '../geo/polygon.dart';
 import '../geo/polygon_files.dart';
 import '../main.dart';
 import 'basemap_view.dart';
+import 'center_place_screen.dart';
 import 'parcel_survey_screen.dart';
 
 const _green = Color(0xFF0B5E3B);
@@ -39,6 +40,15 @@ class _PolygonDetailScreenState extends State<PolygonDetailScreen> {
     await _reload();
   }
 
+  Future<void> _placeCenter(List<GeoPoint> ring, GeoPoint current) async {
+    final c = await Navigator.of(context).push<GeoPoint>(MaterialPageRoute(builder: (_) => CenterPlaceScreen(ring: ring, start: current, title: 'Centre de la parcelle')));
+    if (c == null || _row['id'] == null) return;
+    await services.repo.queueParcelCenter(parcelId: _row['id'] as String, center: c);
+    services.sync.run();
+    if (mounted) setState(() => _msg = 'Centre enregistré sur l\'appareil, envoyé à la prochaine connexion.');
+    await _reload();
+  }
+
   Future<void> _export() async {
     setState(() { _busy = true; _msg = null; });
     try {
@@ -57,6 +67,7 @@ class _PolygonDetailScreenState extends State<PolygonDetailScreen> {
     final who = '${_row['last_name'] ?? ''} ${_row['first_names'] ?? ''}'.trim().toUpperCase();
     final code = '${_row['producer_code'] ?? ''}';
     final ha = double.tryParse('${_row['geometry_area_ha'] ?? ''}') ?? (ring == null ? null : areaHa(ring));
+    final center = ring == null ? null : centerOf(ring, lat: _row['latitude'], lon: _row['longitude']);
     final pendingNew = _row['pending_create'] == 1;
     final pendingUpd = ((_row['pending_updates'] as int?) ?? 0) > 0;
     Widget box(String t) => Container(
@@ -78,7 +89,7 @@ class _PolygonDetailScreenState extends State<PolygonDetailScreen> {
           padding: const EdgeInsets.all(12),
           child: ring == null
               ? const Padding(padding: EdgeInsets.all(24), child: Center(child: Text('Tracé illisible.')))
-              : BasemapView(tiles: services.tiles, points: const [], shapes: [ring], height: 320, crosshair: false),
+              : BasemapView(tiles: services.tiles, points: const [], shapes: [ring], centers: [if (center != null) center], height: 320, crosshair: false),
         ),
         if (ring != null)
           Padding(
@@ -87,6 +98,7 @@ class _PolygonDetailScreenState extends State<PolygonDetailScreen> {
               _stat('Surface', ha == null ? '—' : '${ha.toStringAsFixed(2)} ha'),
               _stat('Périmètre', '${perimeterM(ring).round()} m'),
               _stat('Points', '${ring.length}'),
+              if (center != null) _stat('Centre (croix)', '${center.lat.toStringAsFixed(6)}, ${center.lon.toStringAsFixed(6)}'),
               if (pendingNew || pendingUpd) _stat('État', 'À envoyer'),
             ]),
           ),
@@ -96,6 +108,10 @@ class _PolygonDetailScreenState extends State<PolygonDetailScreen> {
           child: Column(children: [
             if (widget.canUpdate && !pendingNew)
               SizedBox(width: double.infinity, child: FilledButton.icon(onPressed: _edit, icon: const Icon(Icons.edit_location_alt), label: const Text('Modifier le tracé'))),
+            if (widget.canUpdate && !pendingNew && ring != null && center != null) ...[
+              const SizedBox(height: 8),
+              SizedBox(width: double.infinity, child: OutlinedButton.icon(onPressed: () => _placeCenter(ring, center), icon: const Icon(Icons.add_location_alt_outlined), label: const Text('Placer le centre à la main'))),
+            ],
             if (widget.canUpdate && pendingNew)
               const Padding(padding: EdgeInsets.only(bottom: 6), child: Text('Ce polygone attend son envoi : il pourra être modifié une fois synchronisé.', style: TextStyle(color: Colors.black54))),
             const SizedBox(height: 8),

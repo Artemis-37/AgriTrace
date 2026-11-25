@@ -4,7 +4,7 @@ import 'package:sqflite_sqlcipher/sqflite.dart';
 /// Base locale chiffrée (SQLCipher). Le schéma est versionné : chaque version a sa migration,
 /// pour mettre à jour l'application sans perdre les opérations en attente.
 class AppDatabase {
-  static const schemaVersion = 5;
+  static const schemaVersion = 6;
   Database raw;
   /// Fichier de la base ouverte : une base par compte, pour que chacun garde ses propres données, son curseur de synchronisation
   /// et ses saisies en attente (changer de compte ne retélécharge rien).
@@ -92,6 +92,11 @@ class AppDatabase {
         PRIMARY KEY (owner, idempotency_key))''');
       await d.execute('CREATE TABLE declarations_parked (owner TEXT NOT NULL, data TEXT NOT NULL, id TEXT NOT NULL, PRIMARY KEY (owner, id))');
       await d.execute('CREATE TABLE uploads_parked (owner TEXT NOT NULL, data TEXT NOT NULL, client_key TEXT NOT NULL, PRIMARY KEY (owner, client_key))');
+    },
+    // Version 6 : centre de la parcelle (point intérieur au polygone, posé par le système ou placé par l'utilisateur).
+    6: (d) async {
+      await d.execute('ALTER TABLE parcels ADD COLUMN latitude TEXT');
+      await d.execute('ALTER TABLE parcels ADD COLUMN longitude TEXT');
     },
   };
 

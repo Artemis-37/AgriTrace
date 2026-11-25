@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
 import '../geo/polygon.dart';
+import '../geo/polygon_files.dart' show ringFromGeometry;
 import '../main.dart';
 import '../sync/sync_state.dart';
 import 'parcel_survey_screen.dart';
@@ -135,6 +136,16 @@ class _ProducerDetailScreenState extends State<ProducerDetailScreen> {
     await services.repo.queuePhoto(subjectType: 'parcel', subjectId: parcel['id'] as String, kind: 'Photo de la parcelle', sourcePath: path);
     services.sync.run();
     if (mounted) setState(() => _msg = 'Photo conservée sur l\'appareil, envoyée dès que la connexion le permet.');
+  }
+
+  /// Centre de chaque parcelle tracée : celui enregistré, sinon le point intérieur calculé (toujours dans le polygone).
+  List<GeoPoint> get _centers {
+    final out = <GeoPoint>[];
+    for (final r in _parcels) {
+      final ring = ringFromGeometry(r['geometry']);
+      if (ring != null) out.add(centerOf(ring, lat: r['latitude'], lon: r['longitude']));
+    }
+    return out;
   }
 
   List<List<GeoPoint>> get _shapes {
@@ -290,7 +301,7 @@ class _ProducerDetailScreenState extends State<ProducerDetailScreen> {
             style: FilledButton.styleFrom(backgroundColor: _action, padding: const EdgeInsets.symmetric(vertical: 14))),
       const SizedBox(height: 8),
       OutlinedButton.icon(
-        onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ProducerMapScreen(producerName: '${p['last_name'] ?? ''} ${p['first_names'] ?? ''}'.trim(), shapes: shapes))),
+        onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ProducerMapScreen(producerName: '${p['last_name'] ?? ''} ${p['first_names'] ?? ''}'.trim(), shapes: shapes, centers: _centers))),
         icon: const Icon(Icons.location_on_outlined), label: const Text('Ouvrir la carte'),
         style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14), foregroundColor: _green),
       ),
