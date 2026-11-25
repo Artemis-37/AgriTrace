@@ -19,9 +19,9 @@ String _two(int n) => n.toString().padLeft(2, '0');
 String sanitizeFileName(String s) => s.replaceAll(RegExp(r'[\\/:*?"<>|\r\n\t]'), ' ').replaceAll(RegExp(r'\s+'), ' ').trim();
 
 /// Nom du fichier exporté, sans extension :
-/// GPSWpts-ANNÉE-MOIS-JOUR(d'exportation)-wpt-CODE du producteur-NOM et prénom du producteur.
-String polygonFileName({required DateTime date, required String code, required String name}) =>
-    sanitizeFileName('GPSWpts-${date.year}-${_two(date.month)}-${_two(date.day)}-wpt-${code.trim()}-${name.trim()}');
+/// GPSWpts-ANNÉE-MOIS-JOUR(d'exportation)-wpt-CODE du producteur-NOM et prénom du producteur-Numéro de la parcelle.
+String polygonFileName({required DateTime date, required String code, required String name, String parcel = ''}) =>
+    sanitizeFileName('GPSWpts-${date.year}-${_two(date.month)}-${_two(date.day)}-wpt-${code.trim()}-${name.trim()}${parcel.trim().isEmpty ? '' : '-${parcel.trim()}'}');
 
 String _xml(String s) => s.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
 
@@ -252,8 +252,12 @@ Map<String, Object?>? matchProducerByRest(String rest, List<Map<String, Object?>
       if (starts.length == 1) return starts.first;
     }
   }
-  final nameKey = normText(parts.length > 1 ? parts.sublist(1).join(' ') : rest);
-  if (nameKey.isNotEmpty) {
+  // Nom et prénom, avec ou sans le numéro de parcelle qui peut terminer le nom (CODE-NOM Prénom-Numéro).
+  for (final drop in [0, 1]) {
+    if (parts.length - drop < 2 && drop == 1) continue;
+    final body = parts.length > 1 ? parts.sublist(1, parts.length - drop) : parts;
+    final nameKey = normText(body.join(' '));
+    if (nameKey.isEmpty) continue;
     final byName = producers.where((p) => normText(_nameOf(p)) == nameKey || normText('${p['first_names'] ?? ''} ${p['last_name'] ?? ''}') == nameKey).toList();
     if (byName.length == 1) return byName.first;
   }

@@ -73,10 +73,10 @@ class _PolygonsScreenState extends State<PolygonsScreen> {
     }
     setState(() { _busy = true; _msg = null; });
     try {
-      final n = await exportPolygons(rows);
-      if (mounted) setState(() { _msg = n == 0 ? 'Aucun polygone exportable (tracés illisibles).' : '$n fichier(s) KML prêt(s) : GPSWpts-année-mois-jour-wpt-code-nom.'; _selecting = false; _selected.clear(); });
+      final done = await exportPolygons(rows);
+      if (mounted) setState(() { _msg = done.isEmpty ? 'Aucun polygone exportable (tracés illisibles).' : done.length == 1 ? 'Enregistré dans Téléchargements : ${done.first}' : '${done.length} fichiers KML enregistrés dans Téléchargements (dernier : ${done.last}).'; _selecting = false; _selected.clear(); });
     } catch (_) {
-      if (mounted) setState(() => _msg = "L'export a échoué : aucune application de partage n'a répondu.");
+      if (mounted) setState(() => _msg = "L'export a échoué : le fichier n'a pas pu être enregistré dans Téléchargements.");
     } finally {
       if (mounted) setState(() => _busy = false);
     }

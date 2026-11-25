@@ -42,10 +42,10 @@ class _PolygonDetailScreenState extends State<PolygonDetailScreen> {
   Future<void> _export() async {
     setState(() { _busy = true; _msg = null; });
     try {
-      final n = await exportPolygons([_row]);
-      if (mounted && n == 0) setState(() => _msg = 'Tracé illisible : export impossible.');
+      final done = await exportPolygons([_row]);
+      if (mounted) setState(() => _msg = done.isEmpty ? 'Tracé illisible : export impossible.' : 'Enregistré dans Téléchargements : ${done.first}');
     } catch (_) {
-      if (mounted) setState(() => _msg = "L'export a échoué : aucune application de partage n'a répondu.");
+      if (mounted) setState(() => _msg = "L'export a échoué : le fichier n'a pas pu être enregistré dans Téléchargements.");
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -99,7 +99,7 @@ class _PolygonDetailScreenState extends State<PolygonDetailScreen> {
             if (widget.canUpdate && pendingNew)
               const Padding(padding: EdgeInsets.only(bottom: 6), child: Text('Ce polygone attend son envoi : il pourra être modifié une fois synchronisé.', style: TextStyle(color: Colors.black54))),
             const SizedBox(height: 8),
-            SizedBox(width: double.infinity, child: OutlinedButton.icon(onPressed: _busy || ring == null ? null : _export, icon: const Icon(Icons.ios_share), label: const Text('Exporter en KML'))),
+            SizedBox(width: double.infinity, child: OutlinedButton.icon(onPressed: _busy || ring == null ? null : _export, icon: const Icon(Icons.ios_share), label: const Text('Exporter en KML (Téléchargements)'))),
           ]),
         ),
       ]),

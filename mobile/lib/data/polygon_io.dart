@@ -3,9 +3,7 @@ import 'dart:io';
 
 import 'package:archive/archive.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
+import 'package:flutter/services.dart';
 
 import '../geo/polygon.dart';
 import '../geo/polygon_files.dart';
@@ -64,33 +62,32 @@ Future<PolygonFile> readPolygonFile(String name, List<int>? bytes) async {
   }
 }
 
+const _downloads = MethodChannel('ci.agritrace/downloads');
+
 /// Exporte des parcelles (lignes de [Repository.polygons]) en fichiers KML « polygone plein », un fichier par parcelle, nommés
-/// GPSWpts-ANNÉE-MOIS-JOUR-wpt-CODE-NOM Prénom.kml, et ouvre le partage d'Android (messagerie, Drive, enregistrement…).
-/// Retourne le nombre de fichiers préparés.
-Future<int> exportPolygons(List<Map<String, Object?>> rows, {DateTime? now}) async {
-  final dir = await getTemporaryDirectory();
-  final out = Directory(p.join(dir.path, 'polygones_export'));
-  if (out.existsSync()) out.deleteSync(recursive: true); // pas de fichiers d'un export précédent
-  out.createSync(recursive: true);
+/// GPSWpts-ANNÉE-MOIS-JOUR-wpt-CODE-NOM Prénom-Numéro de parcelle.kml, et les enregistre directement dans le dossier Téléchargements du téléphone.
+/// Retourne les noms des fichiers enregistrés (Android peut ajouter « (1) » si un fichier de même nom existe déjà).
+Future<List<String>> exportPolygons(List<Map<String, Object?>> rows, {DateTime? now}) async {
   final date = now ?? DateTime.now();
   final used = <String, int>{};
-  final files = <XFile>[];
+  final saved = <String>[];
   for (final r in rows) {
     final ring = ringFromGeometry(r['geometry']);
     if (ring == null) continue;
-    final code = '${r['producer_code'] ?? r['code'] ?? ''}'.trim();
+    final code = '${r['producer_code'] ?? ''}'.trim();
     final who = '${r['last_name'] ?? ''} ${r['first_names'] ?? ''}'.trim().toUpperCase();
-    var base = polygonFileName(date: date, code: code.isEmpty ? 'SANS-CODE' : code, name: who.isEmpty ? 'SANS NOM' : who);
-    final n = (used[base] ?? 0) + 1; // plusieurs parcelles du même producteur : (2), (3)…
+    var parcel = '${r['code'] ?? ''}'.trim();
+    if (code.isNotEmpty && parcel.toUpperCase().startsWith('${code.toUpperCase()}-')) parcel = parcel.substring(code.length + 1); // numéro seul
+    var base = polygonFileName(date: date, code: code.isEmpty ? 'SANS-CODE' : code, name: who.isEmpty ? 'SANS NOM' : who, parcel: parcel);
+    final n = (used[base] ?? 0) + 1; // même nom dans un même export : (2), (3)…
     used[base] = n;
     if (n > 1) base = '$base ($n)';
     final area = double.tryParse('${r['geometry_area_ha'] ?? ''}') ?? areaHa(ring);
-    final kml = polygonToKml(name: '${code.isEmpty ? '' : '$code '}$who'.trim(), points: ring, code: code.isEmpty ? null : code, producer: who.isEmpty ? null : who, areaHa: area);
-    final f = File(p.join(out.path, '$base.kml'));
-    await f.writeAsString(kml, encoding: utf8);
-    files.add(XFile(f.path, mimeType: 'application/vnd.google-earth.kml+xml'));
+    final kml = polygonToKml(name: '${code.isEmpty ? '' : '$code '}$who${parcel.isEmpty ? '' : ' $parcel'}'.trim(), points: ring, code: code.isEmpty ? null : code, producer: who.isEmpty ? null : who, areaHa: area);
+    final name = await _downloads.invokeMethod<String>('save', {
+      'name': '$base.kml', 'mime': 'application/vnd.google-earth.kml+xml', 'bytes': Uint8List.fromList(utf8.encode(kml)),
+    });
+    saved.add(name ?? '$base.kml');
   }
-  if (files.isEmpty) return 0;
-  await Share.shareXFiles(files, subject: files.length == 1 ? 'Polygone' : '${files.length} polygones');
-  return files.length;
+  return saved;
 }

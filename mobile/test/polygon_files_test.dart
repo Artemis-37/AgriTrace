@@ -13,6 +13,7 @@ final producers = <Map<String, Object?>>[
 void main() {
   test("nom du fichier exporté : GPSWpts-année-mois-jour-wpt-code-nom", () {
     expect(polygonFileName(date: DateTime(2026, 11, 25), code: 'AD244', name: 'ZEHOURI DJEDJE'), 'GPSWpts-2026-11-25-wpt-AD244-ZEHOURI DJEDJE');
+    expect(polygonFileName(date: DateTime(2026, 11, 25), code: 'AD244', name: 'ZEHOURI DJEDJE', parcel: 'P2'), 'GPSWpts-2026-11-25-wpt-AD244-ZEHOURI DJEDJE-P2');
     expect(polygonFileName(date: DateTime(2026, 1, 5), code: 'A/1', name: 'N: "X"'), 'GPSWpts-2026-01-05-wpt-A 1-N X');
   });
 
