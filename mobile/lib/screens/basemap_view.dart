@@ -160,7 +160,7 @@ Widget _halo(String t) => Stack(children: [
     ]);
 
 /// Croix au centre de la carte : quatre traits qui ne se touchent pas, avec un point au milieu.
-/// Icône du centre d'une parcelle : une épingle verte à feuille blanche dont la pointe est sur le point.
+/// Icône du centre d'une parcelle : un point de localisation rouge (épingle à cercle blanc) dont la pointe est sur le point.
 void _drawCenterIcon(Canvas canvas, Offset tip) {
   const r = 13.0;
   final head = tip + const Offset(0, -2 * r - 3);
@@ -171,16 +171,9 @@ void _drawCenterIcon(Canvas canvas, Offset tip) {
     ..cubicTo(head.dx + r, head.dy + r * 0.2, tip.dx + r * 1.1, tip.dy - r * 1.2, tip.dx, tip.dy)
     ..close();
   canvas.drawShadow(pin, Colors.black, 3, true);
-  canvas.drawPath(pin, Paint()..color = const Color(0xFF1B7F4B));
+  canvas.drawPath(pin, Paint()..color = const Color(0xFFD32F2F));
   canvas.drawPath(pin, Paint()..color = Colors.white..style = PaintingStyle.stroke..strokeWidth = 2);
-  // feuille
-  final leaf = Path()
-    ..moveTo(head.dx - 6, head.dy + 5)
-    ..quadraticBezierTo(head.dx - 7, head.dy - 6, head.dx + 6, head.dy - 6)
-    ..quadraticBezierTo(head.dx + 7, head.dy + 6, head.dx - 6, head.dy + 5)
-    ..close();
-  canvas.drawPath(leaf, Paint()..color = Colors.white);
-  canvas.drawLine(head + const Offset(-5, 4), head + const Offset(4, -4), Paint()..color = const Color(0xFF1B7F4B)..strokeWidth = 1.4);
+  canvas.drawCircle(head, 5, Paint()..color = Colors.white);
 }
 
 /// La croix : quatre bras noirs cerclés de blanc autour d'un point central. Même dessin pour la visée et pour le centre d'une parcelle.

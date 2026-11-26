@@ -24,7 +24,7 @@ class ProducerMapScreen extends StatelessWidget {
       body: LayoutBuilder(builder: (context, c) => Column(children: [
         Expanded(child: BasemapView(tiles: services.tiles, points: const [], shapes: shapes, centers: centers, height: c.maxHeight - 40)),
         Padding(padding: const EdgeInsets.all(10), child: Text(
-          shapes.isEmpty ? 'Aucune parcelle relevée pour ce producteur.' : '${shapes.length} parcelle(s) tracée(s) · une épingle verte marque le centre de chaque parcelle.', style: const TextStyle(color: Colors.black54))),
+          shapes.isEmpty ? 'Aucune parcelle relevée pour ce producteur.' : '${shapes.length} parcelle(s) tracée(s) · un point de localisation rouge marque le centre de chaque parcelle.', style: const TextStyle(color: Colors.black54))),
       ])),
     );
   }

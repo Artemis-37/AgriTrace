@@ -226,7 +226,7 @@ class _PolygonsScreenState extends State<PolygonsScreen> {
                     return Material(
                       color: _selected.contains(id) ? const Color(0xFFE3EDB8) : Colors.white,
                       child: ListTile(
-                        leading: SizedBox(width: 48, height: 48, child: CustomPaint(painter: _ThumbPainter(ring))),
+                        leading: SizedBox(width: 48, height: 48, child: CustomPaint(painter: _ThumbPainter(ring, ring == null ? null : centerOf(ring, lat: r['latitude'], lon: r['longitude'])))),
                         title: Text(_title(r), style: const TextStyle(fontWeight: FontWeight.w700)),
                         subtitle: Text(_sub(r)),
                         trailing: _selecting
@@ -337,7 +337,8 @@ class _ProducerPickerState extends State<_ProducerPicker> {
 /// Miniature du polygone dans la liste : même rendu que l'export (intérieur jaune, contour rouge).
 class _ThumbPainter extends CustomPainter {
   final List<GeoPoint>? ring;
-  const _ThumbPainter(this.ring);
+  final GeoPoint? center;
+  const _ThumbPainter(this.ring, [this.center]);
   @override
   void paint(Canvas canvas, Size size) {
     canvas.drawRRect(RRect.fromRectAndRadius(Offset.zero & size, const Radius.circular(6)), Paint()..color = const Color(0xFFE8ECE6));
@@ -354,7 +355,12 @@ class _ThumbPainter extends CustomPainter {
     path.close();
     canvas.drawPath(path, Paint()..color = const Color(0xFFFFEB00));
     canvas.drawPath(path, Paint()..color = const Color(0xFFE53935)..style = PaintingStyle.stroke..strokeWidth = 1.6);
+    final c = center;
+    if (c != null) {
+      canvas.drawCircle(at(c), 4.2, Paint()..color = Colors.white);
+      canvas.drawCircle(at(c), 3, Paint()..color = const Color(0xFFD32F2F));
+    }
   }
   @override
-  bool shouldRepaint(covariant _ThumbPainter old) => old.ring != ring;
+  bool shouldRepaint(covariant _ThumbPainter old) => old.ring != ring || old.center != center;
 }

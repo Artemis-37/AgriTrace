@@ -25,7 +25,7 @@ String polygonFileName({required DateTime date, required String code, required S
 
 String _xml(String s) => s.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
 
-const _centreStyle = '<Style id="centre"><IconStyle><scale>1.1</scale><Icon><href>http://maps.google.com/mapfiles/kml/paddle/grn-blank.png</href></Icon>'
+const _centreStyle = '<Style id="centre"><IconStyle><scale>1.1</scale><Icon><href>http://maps.google.com/mapfiles/kml/paddle/red-blank.png</href></Icon>'
     '<hotSpot x="0.5" y="0" xunits="fraction" yunits="fraction"/></IconStyle></Style>';
 
 /// Un waypoint à exporter : le centre (centroïde) d'une parcelle.
