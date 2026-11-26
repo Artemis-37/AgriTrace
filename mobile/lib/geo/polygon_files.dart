@@ -19,56 +19,15 @@ String _two(int n) => n.toString().padLeft(2, '0');
 String sanitizeFileName(String s) => s.replaceAll(RegExp(r'[\\/:*?"<>|\r\n\t]'), ' ').replaceAll(RegExp(r'\s+'), ' ').trim();
 
 /// Nom du fichier exporté, sans extension :
-/// GPSWpts-ANNÉE-MOIS-JOUR(d'exportation)-wpt-CODE du producteur-NOM et prénom du producteur-Numéro de la parcelle.
+/// CODE du producteur-NOM et prénom du producteur-numéro de la parcelle-JOUR-MOIS-ANNÉE (date d'exportation).
 String polygonFileName({required DateTime date, required String code, required String name, String parcel = ''}) =>
-    sanitizeFileName('GPSWpts-${date.year}-${_two(date.month)}-${_two(date.day)}-wpt-${code.trim()}-${name.trim()}${parcel.trim().isEmpty ? '' : '-${parcel.trim()}'}');
+    [sanitizeFileName(code), sanitizeFileName(name), if (parcel.trim().isNotEmpty) sanitizeFileName(parcel), '${_two(date.day)}-${_two(date.month)}-${date.year}'].join('-');
 
 String _xml(String s) => s.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
 
-const _centreStyle = '<Style id="centre"><IconStyle><scale>1.1</scale><Icon><href>http://maps.google.com/mapfiles/kml/paddle/red-blank.png</href></Icon>'
-    '<hotSpot x="0.5" y="0" xunits="fraction" yunits="fraction"/></IconStyle></Style>';
-
-/// Un waypoint à exporter : le centre (centroïde) d'une parcelle.
-class Waypoint {
-  final String name;
-  final GeoPoint point;
-  final String? code, producer, parcel;
-  final double? areaHa;
-  const Waypoint({required this.name, required this.point, this.code, this.producer, this.parcel, this.areaHa});
-}
-
-/// KML de waypoints (un point par parcelle, comme les « waypoints » de l'outil GPS), tous avec l'icône du centre.
-String waypointsToKml({required String name, required List<Waypoint> items}) {
-  final b = StringBuffer()
-    ..writeln('<?xml version="1.0" encoding="UTF-8"?>')
-    ..writeln('<kml xmlns="http://www.opengis.net/kml/2.2">')
-    ..writeln('<Document>')
-    ..writeln('<name>${_xml(name)}</name>')
-    ..writeln(_centreStyle);
-  for (final w in items) {
-    b
-      ..writeln('<Placemark>')
-      ..writeln('<name>${_xml(w.name)}</name>')
-      ..writeln('<styleUrl>#centre</styleUrl>');
-    if (w.code != null || w.producer != null || w.parcel != null || w.areaHa != null) {
-      b.writeln('<ExtendedData>');
-      if (w.code != null) b.writeln('<Data name="code_producteur"><value>${_xml(w.code!)}</value></Data>');
-      if (w.producer != null) b.writeln('<Data name="producteur"><value>${_xml(w.producer!)}</value></Data>');
-      if (w.parcel != null) b.writeln('<Data name="parcelle"><value>${_xml(w.parcel!)}</value></Data>');
-      if (w.areaHa != null) b.writeln('<Data name="surface_ha"><value>${w.areaHa!.toStringAsFixed(4)}</value></Data>');
-      b.writeln('</ExtendedData>');
-    }
-    b
-      ..writeln('<Point><coordinates>${w.point.lon.toStringAsFixed(6)},${w.point.lat.toStringAsFixed(6)},0</coordinates></Point>')
-      ..writeln('</Placemark>');
-  }
-  b..writeln('</Document>')..writeln('</kml>');
-  return b.toString();
-}
-
 /// KML d'une parcelle : polygone plein — intérieur jaune (translucide, l'imagerie reste visible dessous), contour rouge.
 /// Les couleurs KML s'écrivent aabbggrr.
-String polygonToKml({required String name, required List<GeoPoint> points, String? code, String? producer, double? areaHa, GeoPoint? center}) {
+String polygonToKml({required String name, required List<GeoPoint> points, String? code, String? producer, double? areaHa}) {
   final ring = closedRing(points).map((p) => '${p[0]},${p[1]},0').join(' ');
   final b = StringBuffer()
     ..writeln('<?xml version="1.0" encoding="UTF-8"?>')
@@ -77,7 +36,6 @@ String polygonToKml({required String name, required List<GeoPoint> points, Strin
     ..writeln('<name>${_xml(name)}</name>')
     ..writeln('<Style id="parcelle"><LineStyle><color>ff0000ff</color><width>3</width></LineStyle>'
         '<PolyStyle><color>b300ffff</color><fill>1</fill><outline>1</outline></PolyStyle></Style>')
-    ..writeln(_centreStyle)
     ..writeln('<Placemark>')
     ..writeln('<name>${_xml(name)}</name>')
     ..writeln('<styleUrl>#parcelle</styleUrl>');
@@ -91,15 +49,6 @@ String polygonToKml({required String name, required List<GeoPoint> points, Strin
   b
     ..writeln('<Polygon><tessellate>1</tessellate><outerBoundaryIs><LinearRing><coordinates>$ring</coordinates></LinearRing></outerBoundaryIs></Polygon>')
     ..writeln('</Placemark>');
-  // Centre de la parcelle (point intérieur au polygone) : une croix, comme dans l'application.
-  if (center != null) {
-    b
-      ..writeln('<Placemark>')
-      ..writeln('<name>${_xml('Centre ${name.trim()}'.trim())}</name>')
-      ..writeln('<styleUrl>#centre</styleUrl>')
-      ..writeln('<Point><coordinates>${center.lon.toStringAsFixed(6)},${center.lat.toStringAsFixed(6)},0</coordinates></Point>')
-      ..writeln('</Placemark>');
-  }
   b
     ..writeln('</Document>')
     ..writeln('</kml>');
@@ -281,7 +230,13 @@ ParsedFileName? parsePolygonFileName(String fileName) {
   var base = fileName.replaceAll('\\', '/').split('/').last;
   final dot = base.lastIndexOf('.');
   if (dot > 0) base = base.substring(0, dot);
-  final m = RegExp(r'^GPSWpts-(\d{4})-(\d{2})-(\d{2})-wpt-(.+)$', caseSensitive: false).firstMatch(base.trim());
+  final n = RegExp(r'^(.+)-(\d{2})-(\d{2})-(\d{4})$').firstMatch(base.trim()); // CODE-NOM-parcelle-JJ-MM-AAAA
+  if (n != null) {
+    final d = int.parse(n.group(2)!), mo = int.parse(n.group(3)!), y = int.parse(n.group(4)!);
+    if (mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+    return ParsedFileName(DateTime(y, mo, d), n.group(1)!.trim());
+  }
+  final m = RegExp(r'^GPSWpts-(\d{4})-(\d{2})-(\d{2})-wpt-(.+)$', caseSensitive: false).firstMatch(base.trim()); // ancien nom
   if (m == null) return null;
   final y = int.parse(m.group(1)!), mo = int.parse(m.group(2)!), d = int.parse(m.group(3)!);
   if (mo < 1 || mo > 12 || d < 1 || d > 31) return null;

@@ -64,8 +64,8 @@ Future<PolygonFile> readPolygonFile(String name, List<int>? bytes) async {
 
 const _downloads = MethodChannel('ci.agritrace/downloads');
 
-/// Exporte des parcelles (lignes de [Repository.polygons]) en fichiers KML « polygone plein », un fichier par parcelle, nommés
-/// GPSWpts-ANNÉE-MOIS-JOUR-wpt-CODE-NOM Prénom-Numéro de parcelle.kml, et les enregistre directement dans le dossier Téléchargements du téléphone.
+/// Exporte des parcelles (lignes de [Repository.polygons]) en fichiers KML « polygone plein » (sans waypoint), un fichier par parcelle, nommés
+/// CODE-NOM Prénom-numéro de parcelle-JJ-MM-AAAA.kml, et les enregistre directement dans le dossier Téléchargements du téléphone.
 /// Retourne les noms des fichiers enregistrés (Android peut ajouter « (1) » si un fichier de même nom existe déjà).
 Future<List<String>> exportPolygons(List<Map<String, Object?>> rows, {DateTime? now}) async {
   final date = now ?? DateTime.now();
@@ -83,42 +83,11 @@ Future<List<String>> exportPolygons(List<Map<String, Object?>> rows, {DateTime? 
     used[base] = n;
     if (n > 1) base = '$base ($n)';
     final area = double.tryParse('${r['geometry_area_ha'] ?? ''}') ?? areaHa(ring);
-    final kml = polygonToKml(name: '${code.isEmpty ? '' : '$code '}$who${parcel.isEmpty ? '' : ' $parcel'}'.trim(), points: ring, code: code.isEmpty ? null : code, producer: who.isEmpty ? null : who, areaHa: area, center: centerOf(ring, lat: r['latitude'], lon: r['longitude']));
+    final kml = polygonToKml(name: '${code.isEmpty ? '' : '$code '}$who${parcel.isEmpty ? '' : ' $parcel'}'.trim(), points: ring, code: code.isEmpty ? null : code, producer: who.isEmpty ? null : who, areaHa: area);
     final name = await _downloads.invokeMethod<String>('save', {
       'name': '$base.kml', 'mime': 'application/vnd.google-earth.kml+xml', 'bytes': Uint8List.fromList(utf8.encode(kml)),
     });
     saved.add(name ?? '$base.kml');
   }
   return saved;
-}
-
-/// Exporte les centres (centroïdes) des parcelles en waypoints. Une seule parcelle : GPSWpts-ANNÉE-MOIS-JOUR-wpt-CODE-NOM PRÉNOM-Parcelle.kml ;
-/// plusieurs : un seul fichier GPSWpts-ANNÉE-MOIS-JOUR-wpt-centroides.kml qui les contient tous. Enregistré dans Téléchargements.
-/// Retourne le nom du fichier enregistré, ou null si aucun tracé n'est lisible.
-Future<String?> exportWaypoints(List<Map<String, Object?>> rows, {DateTime? now}) async {
-  final date = now ?? DateTime.now();
-  final items = <Waypoint>[];
-  String? single;
-  for (final r in rows) {
-    final ring = ringFromGeometry(r['geometry']);
-    if (ring == null) continue;
-    final code = '${r['producer_code'] ?? ''}'.trim();
-    final who = '${r['last_name'] ?? ''} ${r['first_names'] ?? ''}'.trim().toUpperCase();
-    var parcel = '${r['code'] ?? ''}'.trim();
-    if (code.isNotEmpty && parcel.toUpperCase().startsWith('${code.toUpperCase()}-')) parcel = parcel.substring(code.length + 1);
-    final area = double.tryParse('${r['geometry_area_ha'] ?? ''}') ?? areaHa(ring);
-    single = polygonFileName(date: date, code: code.isEmpty ? 'SANS-CODE' : code, name: who.isEmpty ? 'SANS NOM' : who, parcel: parcel);
-    items.add(Waypoint(
-      name: '${code.isEmpty ? '' : '$code '}$who${parcel.isEmpty ? '' : ' $parcel'}'.trim(),
-      point: centerOf(ring, lat: r['latitude'], lon: r['longitude']),
-      code: code.isEmpty ? null : code, producer: who.isEmpty ? null : who, parcel: parcel.isEmpty ? null : parcel, areaHa: area,
-    ));
-  }
-  if (items.isEmpty) return null;
-  String two(int n) => n.toString().padLeft(2, '0');
-  final base = items.length == 1 ? single! : sanitizeFileName('GPSWpts-${date.year}-${two(date.month)}-${two(date.day)}-wpt-centroides');
-  final kml = waypointsToKml(name: base, items: items);
-  return _downloads.invokeMethod<String>('save', {
-    'name': '$base.kml', 'mime': 'application/vnd.google-earth.kml+xml', 'bytes': Uint8List.fromList(utf8.encode(kml)),
-  });
 }

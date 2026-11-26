@@ -66,22 +66,6 @@ class _PolygonsScreenState extends State<PolygonsScreen> {
     await _load();
   }
 
-  Future<void> _exportWaypoints(List<Map<String, Object?>> rows) async {
-    if (rows.isEmpty) {
-      setState(() => _msg = 'Aucun polygone à exporter.');
-      return;
-    }
-    setState(() { _busy = true; _msg = null; });
-    try {
-      final name = await exportWaypoints(rows);
-      if (mounted) setState(() => _msg = name == null ? 'Aucun centre exportable (tracés illisibles).' : 'Waypoints (centres) enregistrés dans Téléchargements : $name');
-    } catch (_) {
-      if (mounted) setState(() => _msg = "L'export a échoué : le fichier n'a pas pu être enregistré dans Téléchargements.");
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
   Future<void> _export(List<Map<String, Object?>> rows) async {
     if (rows.isEmpty) {
       setState(() => _msg = 'Choisissez au moins un polygone à exporter.');
@@ -179,12 +163,10 @@ class _PolygonsScreenState extends State<PolygonsScreen> {
         actions: _selecting
             ? [
                 IconButton(tooltip: 'Tout sélectionner', icon: const Icon(Icons.select_all), onPressed: () => setState(() => _selected..clear()..addAll(_rows.map((r) => r['id'] as String)))),
-                IconButton(tooltip: 'Exporter les centres (waypoints)', icon: const Icon(Icons.place_outlined), onPressed: _busy ? null : () => _exportWaypoints(sel)),
                 IconButton(tooltip: 'Exporter la sélection', icon: const Icon(Icons.ios_share), onPressed: _busy ? null : () => _export(sel)),
               ]
             : [
                 IconButton(tooltip: 'Importer', icon: const Icon(Icons.file_download_outlined), onPressed: _busy ? null : _import),
-                IconButton(tooltip: 'Exporter tous les centres (waypoints)', icon: const Icon(Icons.place_outlined), onPressed: _busy || _rows.isEmpty ? null : () => _exportWaypoints(_rows)),
                 IconButton(tooltip: 'Exporter', icon: const Icon(Icons.ios_share), onPressed: _busy || _rows.isEmpty ? null : () => setState(() => _selecting = true)),
                 PopupMenuButton<String>(
                   onSelected: (v) {

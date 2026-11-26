@@ -11,10 +11,10 @@ final producers = <Map<String, Object?>>[
 ];
 
 void main() {
-  test("nom du fichier exporté : GPSWpts-année-mois-jour-wpt-code-nom", () {
-    expect(polygonFileName(date: DateTime(2026, 11, 25), code: 'AD244', name: 'ZEHOURI DJEDJE'), 'GPSWpts-2026-11-25-wpt-AD244-ZEHOURI DJEDJE');
-    expect(polygonFileName(date: DateTime(2026, 11, 25), code: 'AD244', name: 'ZEHOURI DJEDJE', parcel: 'P2'), 'GPSWpts-2026-11-25-wpt-AD244-ZEHOURI DJEDJE-P2');
-    expect(polygonFileName(date: DateTime(2026, 1, 5), code: 'A/1', name: 'N: "X"'), 'GPSWpts-2026-01-05-wpt-A 1-N X');
+  test("nom du fichier exporté : code-nom prénom-parcelle-jj-mm-aaaa", () {
+    expect(polygonFileName(date: DateTime(2026, 11, 25), code: 'AD244', name: 'ZEHOURI DJEDJE'), 'AD244-ZEHOURI DJEDJE-25-11-2026');
+    expect(polygonFileName(date: DateTime(2026, 11, 25), code: 'AD244', name: 'ZEHOURI DJEDJE', parcel: 'P2'), 'AD244-ZEHOURI DJEDJE-P2-25-11-2026');
+    expect(polygonFileName(date: DateTime(2026, 1, 5), code: 'A/1', name: 'N: "X"'), 'A 1-N X-05-01-2026');
   });
 
   test('le KML exporté est un polygone plein : intérieur jaune, contour rouge, anneau fermé', () {
@@ -119,15 +119,11 @@ void main() {
       final fixed = centerOf(sq, lat: '7.5', lon: '-5.2998');
       expect(pointInRing(sq, fixed.lat, fixed.lon), isTrue);
     });
-    test('le KML exporté contient la croix du centre et se réimporte sans doublon', () {
+    test("le KML exporté ne contient aucun waypoint et se réimporte", () {
       final sq = [const GeoPoint(6.8, -5.3), const GeoPoint(6.8, -5.299), const GeoPoint(6.801, -5.299), const GeoPoint(6.801, -5.3)];
-      final kml = polygonToKml(name: 'AD244 ZEHOURI', points: sq, code: 'AD244', center: interiorPoint(sq));
-      expect(kml, contains('<Point>'));
-      expect(kml, contains('paddle/red-blank'));
-      final wp = waypointsToKml(name: 'x', items: [Waypoint(name: 'AD244 ZEHOURI P1', point: interiorPoint(sq), code: 'AD244', parcel: 'P1')]);
-      expect(wp, contains('<Point>'));
-      expect(wp, contains('parcelle'));
-      expect(parseKml(wp), isEmpty);
+      final kml = polygonToKml(name: 'AD244 ZEHOURI', points: sq, code: 'AD244');
+      expect(kml, isNot(contains('<Point>')));
+      expect(kml, isNot(contains('paddle')));
       expect(parseKml(kml).length, 1);
     });
   });
