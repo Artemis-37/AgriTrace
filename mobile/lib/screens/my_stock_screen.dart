@@ -39,7 +39,7 @@ class _MyStockScreenState extends State<MyStockScreen> {
         ? <Widget>[]
         : [
             ListTile(title: const Text('Acheté (déclaré)'), trailing: Text(_kg(d['purchased_kg'])), subtitle: Text('${d['purchases']} achat(s) • ${d['purchased_bags']} sacs')),
-            ListTile(title: const Text('En route (convois)'), trailing: Text(_kg(d['in_transit_kg'])), subtitle: Text('${d['in_transit_convoys']} convoi(s)')),
+            ListTile(title: const Text('En route (connaissements)'), trailing: Text(_kg(d['in_transit_kg'])), subtitle: Text('${d['in_transit_convoys']} connaissement(s)')),
             ListTile(title: const Text('Livré au magasin central'), trailing: Text(_kg(d['delivered_kg'])), subtitle: Text('${d['delivered_bags']} sacs')),
             ListTile(title: const Text('Encore chez moi (estimé)'), trailing: Text(_kg(d['held_kg']))),
           ];

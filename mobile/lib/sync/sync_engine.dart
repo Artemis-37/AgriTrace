@@ -83,7 +83,7 @@ class SyncEngine {
 
   /// Une synchronisation ne démarre que sur demande de l'utilisateur (icône, bandeau, tirer pour actualiser, connexion) : `manual: true`.
   /// Les appels implicites (après une saisie, au retour du réseau) sont sans effet : le téléphone ne synchronise pas en continu.
-  /// `only` : identifiant d'un élément (achat, convoi, parcelle…) : seul cet élément et ses photos sont envoyés, rien n'est téléchargé.
+  /// `only` : identifiant d'un élément (achat, connaissement, parcelle…) : seul cet élément et ses photos sont envoyés, rien n'est téléchargé.
   ///
   /// Trois usages : synchroniser (par défaut) = recevoir seulement ce qui est nouveau ou modifié depuis la dernière fois, et refusée tant qu'il
   /// reste des éléments à soumettre ; `submit: true` = envoyer tous les éléments en attente (action de l'utilisateur), sans rien recevoir ;
@@ -301,7 +301,7 @@ class SyncEngine {
     try { await _pullReference(); } catch (_) {/* facultatif : réessayé à la prochaine synchronisation */}
   }
 
-  /// Écrans de consultation (convois, fiche, stock, historique, notifications, formations) : copiés pour rester lisibles hors connexion.
+  /// Écrans de consultation (connaissements, fiche, stock, historique, notifications, formations) : copiés pour rester lisibles hors connexion.
   /// Un droit manquant (403) ou une erreur isolée n'arrête rien ; seule la session refusée (401) remonte.
   Future<void> _pullReference() async {
     Future<dynamic> keep(String key, String path, [Map<String, String>? q]) async {

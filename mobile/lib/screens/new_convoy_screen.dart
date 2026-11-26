@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../main.dart';
 
-/// Déclaration d'un convoi par le délégué : n° de connaissement intérieur, chauffeur, camion. Fonctionne sans réseau.
+/// Déclaration d'un connaissement par le délégué : n° de connaissement intérieur, chauffeur, camion. Fonctionne sans réseau.
 class NewConvoyScreen extends StatefulWidget {
   const NewConvoyScreen({super.key});
   @override
@@ -77,7 +77,7 @@ class _NewConvoyScreenState extends State<NewConvoyScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Déclarer un convoi')),
+      appBar: AppBar(title: const Text('Déclarer un connaissement')),
       body: ListView(padding: const EdgeInsets.all(16), children: [
         if (_auto == true)
           InputDecorator(
@@ -87,7 +87,7 @@ class _NewConvoyScreenState extends State<NewConvoyScreen> {
         else
           TextField(
             controller: _no,
-            decoration: InputDecoration(labelText: 'N° de connaissement du convoi', helperText: _auto == null ? 'Laissez vide si la coopérative a un code CCC : le numéro est alors attribué à l\'envoi.' : null),
+            decoration: InputDecoration(labelText: 'N° de connaissement', helperText: _auto == null ? 'Laissez vide si la coopérative a un code CCC : le numéro est alors attribué à l\'envoi.' : null),
             onChanged: (_) => setState(() {}),
           ),
         const SizedBox(height: 12),
@@ -105,7 +105,7 @@ class _NewConvoyScreenState extends State<NewConvoyScreen> {
           const SizedBox(height: 12),
         ],
         if (_linkable.isNotEmpty) ...[
-          const Text('Achats chargés dans ce convoi (facultatif)', style: TextStyle(fontWeight: FontWeight.w600)),
+          const Text('Achats chargés dans ce connaissement (facultatif)', style: TextStyle(fontWeight: FontWeight.w600)),
           for (final d in _linkable)
             CheckboxListTile(
               dense: true, contentPadding: EdgeInsets.zero, controlAffinity: ListTileControlAffinity.leading,
@@ -122,7 +122,7 @@ class _NewConvoyScreenState extends State<NewConvoyScreen> {
         const SizedBox(height: 24),
         FilledButton(onPressed: _valid && !_busy ? _save : null, child: const Text('Enregistrer sur l\'appareil')),
         const SizedBox(height: 8),
-        const Text('Le convoi est envoyé dès que la connexion est disponible. Le magasinier le réceptionnera avec ce numéro.'),
+        const Text('Le connaissement est envoyé dès que la connexion est disponible. Le magasinier le réceptionnera avec ce numéro.'),
       ]),
     );
   }

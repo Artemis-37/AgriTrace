@@ -17,7 +17,7 @@ import 'photo_vault.dart';
 import 'session_store.dart';
 
 /// Accès aux données locales et création d'opérations hors connexion.
-/// Produits proposés à la déclaration d'un convoi : les produits actifs seulement.
+/// Produits proposés à la déclaration d'un connaissement : les produits actifs seulement.
 List<Map<String, Object?>> activeProducts(List<dynamic> rows) => [for (final r in rows) if ((r as Map)['active'] != false) Map<String, Object?>.from(r)];
 
 class Repository {
@@ -212,7 +212,7 @@ class Repository {
 
   Future<int> pendingPhotos() async => Sqflite.firstIntValue(await db.raw.rawQuery("SELECT count(*) FROM pending_uploads WHERE status = 'pending'")) ?? 0;
 
-  /// Convoi vers le magasin central : mis en file d'envoi, envoyé dès que le réseau revient (idempotent).
+  /// Connaissement vers le magasin central : mis en file d'envoi, envoyé dès que le réseau revient (idempotent).
   Future<void> queueConvoy({String? convoyNo, required String driverName, required String truckNo, int? declaredBags, String? declaredKg, String? productId, List<String> declarationIds = const []}) async {
     final key = 'convoy-${_uuid.v4()}';
     final payload = {
@@ -251,20 +251,24 @@ class Repository {
     }
   }
 
-  /// Convois créés sur l'appareil et pas encore envoyés : sert à prévoir le prochain numéro automatique hors connexion.
-  Future<int> pendingConvoys() async => Sqflite.firstIntValue(await db.raw.rawQuery("SELECT count(*) FROM outbox WHERE op_type = 'convoy.create'")) ?? 0;
+  /// États d'une opération encore à la charge de l'appareil : une fois acceptée par le serveur, elle quitte la file d'attente.
+  static const _unsentStatuses = "('pending','pending_validation','to_correct','rejected','conflict','to_verify')";
 
-  /// Convois créés sur l'appareil, pas encore envoyés ou refusés : affichés en tête de l'historique des convois.
+  /// Connaissements créés sur l'appareil et pas encore envoyés : sert à prévoir le prochain numéro automatique hors connexion.
+  Future<int> pendingConvoys() async => Sqflite.firstIntValue(await db.raw.rawQuery("SELECT count(*) FROM outbox WHERE op_type = 'convoy.create' AND status IN $_unsentStatuses")) ?? 0;
+
+  /// Connaissements créés sur l'appareil, pas encore envoyés ou refusés : affichés en tête de l'historique. Dès que la synchronisation
+  /// les a fait accepter par le serveur, ils disparaissent d'ici (ils figurent alors dans la liste du serveur).
   Future<List<Map<String, Object?>>> localConvoys() async {
     final out = <Map<String, Object?>>[];
-    for (final o in await db.raw.query('outbox', where: "op_type = 'convoy.create'", orderBy: 'created_at DESC')) {
+    for (final o in await db.raw.query('outbox', where: "op_type = 'convoy.create' AND status IN $_unsentStatuses", orderBy: 'created_at DESC')) {
       final p = Map<String, Object?>.from(jsonDecode(o['payload'] as String) as Map);
       out.add({...p, 'local_status': o['status'] ?? 'pending', 'created_at': o['created_at']});
     }
     return out;
   }
 
-  /// Achats que le délégué peut charger dans un convoi : envoyés (ou en attente d'envoi) et pas déjà chargés dans un convoi de cet appareil.
+  /// Achats que le délégué peut charger dans un connaissement : envoyés (ou en attente d'envoi) et pas déjà chargés dans un convoi de cet appareil.
   /// [serverAvailableIds] : achats que le serveur déclare libres (null hors connexion) ; un achat déjà parti sur le serveur absent de la liste est écarté.
   Future<List<Map<String, Object?>>> linkableDeclarations({Set<String>? serverAvailableIds}) async {
     final rows = await db.raw.rawQuery('''
@@ -457,7 +461,7 @@ class Repository {
     return {for (final r in rows) r['id'] as String: '${r['last_name'] ?? ''} ${r['first_names'] ?? ''}'.trim().toUpperCase()};
   }
 
-  /// Libellé d'une opération en attente : ce qu'elle est et à quoi elle se rapporte (producteur, convoi, titre…).
+  /// Libellé d'une opération en attente : ce qu'elle est et à quoi elle se rapporte (producteur, connaissement, titre…).
   static ({String label, String detail}) opLabel(String t, Map<String, dynamic> p, [Map<String, String> producers = const {}]) {
     final who = producers['${p['producer_id']}'] ?? '';
     String label, detail = '';
@@ -470,7 +474,7 @@ class Repository {
       case 'parcel.update': label = 'Nouveau tracé de parcelle'; detail = who; break;
       case 'purchase_declaration.create': label = 'Achat'; detail = [who, '${fmtQty(p['quantity'])} ${p['unit'] ?? ''}'.trim()].where((x) => x.isNotEmpty).join(' · '); break;
       case 'purchase_declaration.submit': label = 'Achat à soumettre'; break;
-      case 'convoy.create': label = 'Convoi'; detail = '${p['convoy_no'] ?? ''}'; break;
+      case 'convoy.create': label = 'Connaissement'; detail = '${p['convoy_no'] ?? ''}'; break;
       case 'producer_assignment.done': label = 'Élément du profil marqué fait'; break;
       case 'questionnaire.answer': label = 'Questionnaire rempli'; detail = who; break;
       case 'training_result.create': label = 'Résultats de formation'; detail = '${p['village'] ?? ''}'; break;

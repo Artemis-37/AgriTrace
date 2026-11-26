@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../main.dart';
 
-/// Historique des convois du délégué : ceux créés sur l'appareil (pas encore envoyés), puis ceux du serveur avec leur état
-/// (en route, réceptionné au magasin, réglé), le poids pesé, l'écart et le montant. Un convoi se déplie pour montrer les achats chargés.
+/// Historique des connaissements du délégué : ceux créés sur l'appareil (pas encore envoyés), puis ceux du serveur avec leur état
+/// (en route, réceptionné au magasin, réglé), le poids pesé, l'écart et le montant. Un connaissement se déplie pour montrer les achats chargés.
 class ConvoyHistoryScreen extends StatefulWidget {
   const ConvoyHistoryScreen({super.key});
   @override
@@ -28,9 +28,9 @@ class _ConvoyHistoryScreenState extends State<ConvoyHistoryScreen> {
     final r = await services.repo.cachedGet('convoys', () => services.api.get('/convoys'));
     if (!mounted) return;
     if (r == null) {
-      setState(() => _error = 'Hors connexion : seuls les convois de cet appareil sont affichés. Tirez pour réessayer.');
+      setState(() => _error = 'Hors connexion : seuls les connaissements de cet appareil sont affichés. Tirez pour réessayer.');
     } else {
-      setState(() { _remote = r.data as List<dynamic>; _error = r.stale ? 'Hors connexion : dernière copie des convois. Tirez pour actualiser.' : null; });
+      setState(() { _remote = r.data as List<dynamic>; _error = r.stale ? 'Hors connexion : dernière copie des connaissements. Tirez pour actualiser.' : null; });
     }
   }
 
@@ -50,7 +50,7 @@ class _ConvoyHistoryScreenState extends State<ConvoyHistoryScreen> {
     final remote = (_remote ?? []).where((c) => _filter == 'all' || '${(c as Map)['status']}' == _filter).toList();
     final total = remote.fold<double>(0, (s, c) => s + (double.tryParse('${(c as Map)['total_kg'] ?? c['declared_kg']}') ?? 0));
     return Scaffold(
-      appBar: AppBar(title: const Text('Historique des convois')),
+      appBar: AppBar(title: const Text('Historique des connaissements')),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(padding: const EdgeInsets.fromLTRB(12, 8, 12, 24), children: [
@@ -59,7 +59,7 @@ class _ConvoyHistoryScreenState extends State<ConvoyHistoryScreen> {
             for (final f in const [('all', 'Tous'), ('in_transit', 'En route'), ('received', 'Réceptionnés'), ('settled', 'Réglés')])
               ChoiceChip(label: Text(f.$2), selected: _filter == f.$1, onSelected: (_) => setState(() => _filter = f.$1)),
           ]),
-          if (_remote != null) Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: Text('${remote.length} convoi(s) · ${_kg(total)}', style: const TextStyle(color: Colors.black54))),
+          if (_remote != null) Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: Text('${remote.length} connaissement(s) · ${_kg(total)}', style: const TextStyle(color: Colors.black54))),
           if (_filter == 'all' && _local.isNotEmpty) ...[
             const Padding(padding: EdgeInsets.only(top: 4, bottom: 4), child: Text('Sur cet appareil, pas encore envoyés', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFB26A00)))),
             for (final c in _local)
@@ -67,10 +67,10 @@ class _ConvoyHistoryScreenState extends State<ConvoyHistoryScreen> {
                 leading: const Icon(Icons.schedule_send_outlined),
                 title: Text('${c['convoy_no'] ?? 'Numéro automatique'}'),
                 subtitle: Text('${c['driver_name']} · ${c['truck_no']}\nDéclaré : ${_kg(c['declared_kg'])}${c['declared_bags'] != null ? ' · ${c['declared_bags']} sacs' : ''}'),
-                isThreeLine: true, trailing: Text('${c['local_status']}' == 'pending' ? 'À envoyer' : 'À corriger', style: const TextStyle(color: Color(0xFFB26A00))))),
+                isThreeLine: true, trailing: Text(const ['pending', 'pending_validation'].contains('${c['local_status']}') ? 'À envoyer' : 'À corriger', style: const TextStyle(color: Color(0xFFB26A00))))),
           ],
           if (_remote == null && _error == null) const Padding(padding: EdgeInsets.all(32), child: Center(child: CircularProgressIndicator())),
-          if (_remote != null && remote.isEmpty) const Padding(padding: EdgeInsets.all(24), child: Center(child: Text('Aucun convoi.'))),
+          if (_remote != null && remote.isEmpty) const Padding(padding: EdgeInsets.all(24), child: Center(child: Text('Aucun connaissement.'))),
           for (final c in remote) _tile(Map<String, dynamic>.from(c as Map)),
         ]),
       ),
@@ -105,7 +105,7 @@ class _ConvoyHistoryScreenState extends State<ConvoyHistoryScreen> {
         SizedBox(width: 130, child: Text(k, style: const TextStyle(color: Colors.black54))), Expanded(child: Text(v))]));
 }
 
-/// Achats chargés dans le convoi (chargés à l'ouverture de la ligne).
+/// Achats chargés dans le connaissement (chargés à l'ouverture de la ligne).
 class _Purchases extends StatefulWidget {
   const _Purchases({required this.convoyId});
   final String convoyId;
@@ -127,7 +127,7 @@ class _PurchasesState extends State<_Purchases> {
 
   @override
   Widget build(BuildContext context) {
-    if (_failed) return const Padding(padding: EdgeInsets.only(top: 6), child: Text('Achats non encore chargés : ouvrez ce convoi une fois avec du réseau (ou lancez la synchronisation).', style: TextStyle(color: Colors.black54)));
+    if (_failed) return const Padding(padding: EdgeInsets.only(top: 6), child: Text('Achats non encore chargés : ouvrez ce connaissement une fois avec du réseau (ou lancez la synchronisation).', style: TextStyle(color: Colors.black54)));
     if (_rows == null) return const Padding(padding: EdgeInsets.only(top: 8), child: LinearProgressIndicator());
     if (_rows!.isEmpty) return const Padding(padding: EdgeInsets.only(top: 6), child: Text('Aucun achat rattaché.', style: TextStyle(color: Colors.black54)));
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
